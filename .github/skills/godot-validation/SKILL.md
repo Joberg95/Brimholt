@@ -14,6 +14,6 @@ description: Use when checking Brimholt Godot script parsing, scenes, grid/colli
 7. Inspect graphical movement, camera following, oblique wall occlusion, and facing-aligned gear if graphical execution is possible. Document any gap between headless state coverage and visual verification.
 8. Report the exact checks that ran and any missing executable, permission, network, or graphical limitation. Do not bypass denied tool approvals or install system-wide tooling without authorization.
 
-For end-to-end coverage, run the automated playthrough (`tools/playtest.py`, bots in `tests/playthrough.gd`) and report its findings.
+For end-to-end coverage, run the automated playthrough (`tools/testing/playtest.py`, bots in `tests/integration/playthrough.gd`) and report its findings.
 
-Current checks: `tests/rules_test.gd`, `tests/peer_test.gd` via `tools/test_lan.py`, and `tests/visual_test.gd` via `tools/test_visual.py` (offscreen rendering; open `.tools/visual-report.html` in the browser side panel instead of showing a game window). Follow the commands and prerequisites in `README.md`; check the executable path rather than assuming Godot is installed.
+Current checks: `tests/unit/rules_test.gd`, `tests/integration/peer_test.gd` via `tools/testing/test_lan.py`, and `tests/visual/visual_test.gd` via `tools/testing/test_visual.py` (offscreen rendering; open `.tools/visual-report.html` in the browser side panel instead of showing a game window). Run them with `make test`, `make test-visual`, `make check`, or `make playtest` (`docs/testing.md`); check the executable path rather than assuming Godot is installed.

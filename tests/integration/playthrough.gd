@@ -5,12 +5,12 @@ extends SceneTree
 ## gold, walk to Cinder Landing and sail to Mossford, walk to Reedmere and sail to Blackreed
 ## Isle, then duel there (white skull, self-defence, death, item loss, looting the corpse).
 ## Rendering goes to an offscreen buffer; screenshots land in .tools/playtest. Run it through
-## tools/playtest.py, which starts the server and writes the report.
+## tools/testing/playtest.py, which starts the server and writes the report.
 ## Output lines: PLAYTEST <role> <phase> <ok|fail|info|finding> <detail>, PLAYTEST_SHOT <file> <caption>.
 
-const World = preload("res://game/world.gd")
-const Combat = preload("res://game/combat.gd")
-const Balance = preload("res://game/balance.gd")
+const World = preload("res://game/core/world.gd")
+const Combat = preload("res://game/core/combat.gd")
+const Balance = preload("res://game/data/balance.gd")
 const ATTACK_SPELLS: Dictionary = {"knight": "brutal_blow", "sorcerer": "ember_bolt", "paladin": "piercing_shot", "druid": "frost_bolt"}
 const HEAL_SPELLS: Dictionary = {"knight": "light_heal", "sorcerer": "light_heal", "paladin": "light_heal", "druid": "mend"}
 const HUNT_SECONDS: float = 200.0

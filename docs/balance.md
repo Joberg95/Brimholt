@@ -1,11 +1,11 @@
 # Brimholt balance sheet
 
-Curves for levels 1-50 and four vocations, used by combat (`game/combat.gd`), monsters
-(`game/monsters.gd`), spells (`game/spells.gd`), and items. `game/balance.gd` is the one source.
+Curves for levels 1-50 and four vocations, used by combat (`game/core/combat.gd`), monsters
+(`game/data/monsters.gd`), spells (`game/data/spells.gd`), and items. `game/data/balance.gd` is the one source.
 Regenerate the tables after changing a constant:
 
 ```sh
-godot --headless --path . --script res://tools/balance_table.gd
+godot --headless --path . --script res://tools/generators/balance_table.gd
 ```
 
 ## The final boss
@@ -83,7 +83,7 @@ constant at every level.
 - **Spells** – damage is attack × spell power; mana costs are a share of max mana.
 
 Leveling needs `4 + 3 × (level − 1)` same-level normal kills per level, so level 2 takes
-about 4 kills and the whole climb to 50 about 3,700. Experience from a kill is shared by damage dealt; a sharing party pools it and splits it evenly with a ×1.2–×2 vocation bonus (README, Parties). Dying costs 10% of total
+about 4 kills and the whole climb to 50 about 3,700. Experience from a kill is shared by damage dealt; a sharing party pools it and splits it evenly with a ×1.2–×2 vocation bonus ([gameplay](gameplay.md#parties-and-shared-experience)). Dying costs 10% of total
 experience, which can lose levels; below level 8, players keep their items and gold.
 
 ## Early game

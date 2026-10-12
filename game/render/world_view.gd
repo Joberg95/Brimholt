@@ -3,10 +3,10 @@ extends Node2D
 ## drawn west to east with ground items, characters, ferrymen, oblique walls, and trees so
 ## nearer objects cover what stands behind them. Names are drawn last, on top.
 
-const World = preload("res://game/world.gd")
-const SpriteArt = preload("res://game/sprite_art.gd")
-const Monsters = preload("res://game/monsters.gd")
-const Balance = preload("res://game/balance.gd")
+const World = preload("res://game/core/world.gd")
+const SpriteArt = preload("res://game/render/sprite_art.gd")
+const Monsters = preload("res://game/data/monsters.gd")
+const Balance = preload("res://game/data/balance.gd")
 const TARGET_COLOR: Color = Color("#ff3a2a")
 ## Extra tiles drawn around the view: tall sprites below the view reach up into it.
 const MARGIN: Rect2i = Rect2i(-2, -2, 4, 6)

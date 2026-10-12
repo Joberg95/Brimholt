@@ -1,6 +1,6 @@
 extends SceneTree
 
-const World = preload("res://game/world.gd")
+const World = preload("res://game/core/world.gd")
 var game: Node2D
 var role: String = ""
 var stage: int = 0

@@ -1,14 +1,14 @@
 extends Node2D
 
-const World = preload("res://game/world.gd")
-const SpriteArt = preload("res://game/sprite_art.gd")
-const WorldView = preload("res://game/world_view.gd")
-const Keybinds = preload("res://game/keybinds.gd")
-const Combat = preload("res://game/combat.gd")
-const Monsters = preload("res://game/monsters.gd")
-const Spells = preload("res://game/spells.gd")
+const World = preload("res://game/core/world.gd")
+const SpriteArt = preload("res://game/render/sprite_art.gd")
+const WorldView = preload("res://game/render/world_view.gd")
+const Keybinds = preload("res://game/input/keybinds.gd")
+const Combat = preload("res://game/core/combat.gd")
+const Monsters = preload("res://game/data/monsters.gd")
+const Spells = preload("res://game/data/spells.gd")
 const MESSAGE_SECONDS: float = 4.0
-const ControlsMenu = preload("res://game/controls_menu.gd")
+const ControlsMenu = preload("res://game/ui/controls_menu.gd")
 const BAR_SLOT: float = 44.0
 const NPC_SERVICES: Dictionary = {"travel": "Travel", "buy": "Buy", "quests": "Quests"}
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
@@ -20,7 +20,7 @@ const VIEW_ORIGIN: Vector2 = Vector2(16, 76)
 const VIEW_SIZE: Vector2 = Vector2(VIEW_TILES * World.TILE_SIZE) * ZOOM
 const PANEL_ORIGIN: Vector2 = Vector2(992, 76)
 const SLOT_STEP: float = 36.0
-const Balance = preload("res://game/balance.gd")
+const Balance = preload("res://game/data/balance.gd")
 ## Tibia-style paperdoll grid: necklace/helmet/charm, main hand/armor/off hand, ring/-/ring.
 const PAPERDOLL: Dictionary = {
 	"necklace": Vector2(0, 0), "helmet": Vector2(1, 0), "charm": Vector2(2, 0),

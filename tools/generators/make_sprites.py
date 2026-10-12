@@ -29,7 +29,7 @@ ITEM_ORDER = (
 )
 # Monster materials: id -> icon shape.
 MATERIAL_SHAPES = {"vole_tail": "tail", "toad_slime": "vial", "boar_tusk": "fang", "bandit_badge": "badge", "wolf_pelt": "pelt", "lurker_eye": "orb", "waxed_bowstring": "coil", "golem_core": "crystal", "wraith_ash": "pile", "hollow_sigil": "badge", "stalker_fang": "fang", "reedfang_scale": "scale", "bog_heart": "orb", "warden_crest": "badge"}
-# Map editor palette order; must match TERRAINS in tools/make_map.gd.
+# Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
 TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b")
 
 
@@ -1179,7 +1179,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--preview", type=Path, help="also write a 4x preview sheet to this path")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent.parent / "assets" / "sprites"
+    root = Path(__file__).resolve().parents[2] / "assets" / "sprites"
     outputs = {
         "body.png": character_sheet(split_body(False)),
         "cloth.png": character_sheet(split_body(True)),

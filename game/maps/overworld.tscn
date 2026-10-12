@@ -1,10 +1,10 @@
 [gd_scene load_steps=6 format=4]
 
 [ext_resource type="TileSet" path="res://game/maps/terrain.tres" id="1_0us64"]
-[ext_resource type="Script" path="res://game/maps/ferryman.gd" id="2_vknn6"]
-[ext_resource type="Script" path="res://game/maps/item_spawn.gd" id="3_yncsc"]
-[ext_resource type="Script" path="res://game/maps/zone.gd" id="4_bbq1k"]
-[ext_resource type="Script" path="res://game/maps/monster_spawn.gd" id="5_xkg0o"]
+[ext_resource type="Script" path="res://game/maps/markers/ferryman.gd" id="2_vknn6"]
+[ext_resource type="Script" path="res://game/maps/markers/item_spawn.gd" id="3_yncsc"]
+[ext_resource type="Script" path="res://game/maps/markers/zone.gd" id="4_bbq1k"]
+[ext_resource type="Script" path="res://game/maps/markers/monster_spawn.gd" id="5_xkg0o"]
 
 [node name="Overworld" type="Node2D"]
 

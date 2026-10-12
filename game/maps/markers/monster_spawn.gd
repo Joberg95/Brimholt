@@ -1,6 +1,6 @@
 extends Marker2D
 ## Where monsters will appear once combat exists; not used in play yet.
-## Levels should come from game/balance.gd (1-50).
+## Levels should come from game/data/balance.gd (1-50).
 
 @export var monster: String = ""
 @export_range(1, 50) var level: int = 1

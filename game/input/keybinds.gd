@@ -3,7 +3,7 @@ extends RefCounted
 ## physical key position so layouts such as Swedish or AZERTY keep the same hand placement.
 ## Bindings are saved per user in user://keybinds.cfg.
 
-const Spells = preload("res://game/spells.gd")
+const Spells = preload("res://game/data/spells.gd")
 const PATH: String = "user://keybinds.cfg"
 const SLOTS: int = 9
 ## Action id -> [label, primary default, secondary default]; KEY_NONE means unbound.

@@ -18,7 +18,7 @@ def main():
     scenario.add_argument("--host-loss", action="store_true", help="Verify host loss is reported and state cleared")
     scenario.add_argument("--occupied-port", action="store_true", help="Verify hosting fails on an occupied UDP port")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parents[2]
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
@@ -48,7 +48,7 @@ def main():
         mode = ("--headless-server" if args.dedicated else "--host") if role == "host" else "--join=127.0.0.1"
         command = [
             args.godot, "--headless", "--path", str(root),
-            "--script", "res://tests/peer_test.gd", "--",
+            "--script", "res://tests/integration/peer_test.gd", "--",
             mode, f"--port={port}", f"--test-role={test_role(role)}",
         ] + (["--vocation=druid"] if role == "client" else [])
         process = subprocess.Popen(

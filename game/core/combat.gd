@@ -10,10 +10,10 @@ extends RefCounted
 ##   {kind: "missile", from, to, color}, {kind: "area", cells, color}, {kind: "ground", cells},
 ##   {kind: "message", id, text}.
 
-const World = preload("res://game/world.gd")
-const Balance = preload("res://game/balance.gd")
-const Monsters = preload("res://game/monsters.gd")
-const Spells = preload("res://game/spells.gd")
+const World = preload("res://game/core/world.gd")
+const Balance = preload("res://game/data/balance.gd")
+const Monsters = preload("res://game/data/monsters.gd")
+const Spells = preload("res://game/data/spells.gd")
 
 const TICK_SECONDS: float = 0.1
 const REGEN_SECONDS: float = 2.0

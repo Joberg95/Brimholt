@@ -3,7 +3,7 @@ extends RefCounted
 ## that at least ten level-50 players with every vocation are needed (enrage timer, healing
 ## pressure, and tank swaps). Combat and mobs are not implemented yet; these curves are the
 ## design targets for mobs, items, vocations, and levelling.
-## Print the full table with: godot --headless --path . --script res://tools/balance_table.gd
+## Print the full table with: godot --headless --path . --script res://tools/generators/balance_table.gd
 
 const MAX_LEVEL: int = 50
 const FINAL_BOSS_HEALTH: int = 350000

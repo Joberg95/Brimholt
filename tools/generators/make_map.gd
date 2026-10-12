@@ -2,7 +2,7 @@ extends SceneTree
 ## Generates the first-draft 256x256 overworld for the Godot map editor: a western coast with
 ## four ferry ports, one irregular inland lake with a lakeside town, and Blackreed Isle, a
 ## high-level PvP hunting island reached by ferry from the lake.
-##   godot --headless --path . --script res://tools/make_map.gd [-- --force]
+##   godot --headless --path . --script res://tools/generators/make_map.gd [-- --force]
 ## Writes game/maps/terrain.tres (the editor tile set) and game/maps/overworld.tscn.
 ## It refuses to overwrite an existing overworld unless --force is given: once the map has
 ## been edited in Godot, that scene is the source of truth. Run the sprite import first.
@@ -12,10 +12,10 @@ const TILE: int = 32
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILESET_PATH: String = "res://game/maps/terrain.tres"
 const PALETTE: String = "res://assets/sprites/terrain_palette.png"
-const FERRYMAN_SCRIPT: Script = preload("res://game/maps/ferryman.gd")
-const ITEM_SCRIPT: Script = preload("res://game/maps/item_spawn.gd")
-const ZONE_SCRIPT: Script = preload("res://game/maps/zone.gd")
-const MONSTER_SCRIPT: Script = preload("res://game/maps/monster_spawn.gd")
+const FERRYMAN_SCRIPT: Script = preload("res://game/maps/markers/ferryman.gd")
+const ITEM_SCRIPT: Script = preload("res://game/maps/markers/item_spawn.gd")
+const ZONE_SCRIPT: Script = preload("res://game/maps/markers/zone.gd")
+const MONSTER_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 ## Palette order in terrain_palette.png; the tile set stores each as custom data "terrain".
 const TERRAINS: Array[String] = [".", ",", "~", "#", "T", ":", "=", "b"]
 const WALKABLE: String = ".,:=b"

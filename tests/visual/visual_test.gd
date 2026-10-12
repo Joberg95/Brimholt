@@ -1,8 +1,8 @@
 extends SceneTree
 
-const World = preload("res://game/world.gd")
-const SpriteArt = preload("res://game/sprite_art.gd")
-const WorldViewScript = preload("res://game/world_view.gd")
+const World = preload("res://game/core/world.gd")
+const SpriteArt = preload("res://game/render/sprite_art.gd")
+const WorldViewScript = preload("res://game/render/world_view.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 var game: Node2D
 ## The game renders offscreen into this buffer; the real window only needs to exist.

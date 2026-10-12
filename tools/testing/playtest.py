@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Automated full-game playthrough: a real dedicated server and two bot clients (Knight and
-Sorcerer, tests/playthrough.gd) play through every system over ENet. Bots render offscreen;
+Sorcerer, tests/integration/playthrough.gd) play through every system over ENet. Bots render offscreen;
 Godot only opens two 64x64 windows in a screen corner. Writes .tools/playtest/report.html.
 Python standard library only."""
 
@@ -23,7 +23,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--godot", default="godot", help="Godot 4 executable")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parents[2]
     out = root / ".tools" / "playtest"
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
@@ -65,7 +65,7 @@ def main():
             if line.startswith("BRIMHOLT_HOST_READY") and "knight" not in processes:
                 for role, slot in (("knight", 2), ("sorcerer", 1)):
                     launch(role, [args.godot, "--position", "99999,99999", "--resolution", "64x64", "--path", str(root),
-                                  "--script", "res://tests/playthrough.gd", "--", "--join=127.0.0.1", f"--port={port}",
+                                  "--script", "res://tests/integration/playthrough.gd", "--", "--join=127.0.0.1", f"--port={port}",
                                   f"--vocation={role}", f"--bot={role}"])
             if line.startswith("PLAYTEST_SHOT "):
                 file, caption = line[len("PLAYTEST_SHOT "):].split(" ", 1)

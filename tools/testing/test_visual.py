@@ -28,14 +28,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--godot", default="godot", help="Godot 4 executable")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parents[2]
     tools = root / ".tools"
     tools.mkdir(exist_ok=True)
     for name, _ in CAPTURES:
         (tools / name).unlink(missing_ok=True)
     command = [
         args.godot, "--position", "99999,99999", "--resolution", "64x64",
-        "--path", str(root), "--script", "res://tests/visual_test.gd",
+        "--path", str(root), "--script", "res://tests/visual/visual_test.gd",
     ]
     try:
         result = subprocess.run(command, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

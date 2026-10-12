@@ -1,13 +1,13 @@
 extends SceneTree
 
-const World = preload("res://game/world.gd")
-const SpriteArt = preload("res://game/sprite_art.gd")
-const Balance = preload("res://game/balance.gd")
-const Keybinds = preload("res://game/keybinds.gd")
-const Combat = preload("res://game/combat.gd")
-const Monsters = preload("res://game/monsters.gd")
-const Spells = preload("res://game/spells.gd")
-const SpriteArtSheets = preload("res://game/sprite_art.gd")
+const World = preload("res://game/core/world.gd")
+const SpriteArt = preload("res://game/render/sprite_art.gd")
+const Balance = preload("res://game/data/balance.gd")
+const Keybinds = preload("res://game/input/keybinds.gd")
+const Combat = preload("res://game/core/combat.gd")
+const Monsters = preload("res://game/data/monsters.gd")
+const Spells = preload("res://game/data/spells.gd")
+const SpriteArtSheets = preload("res://game/render/sprite_art.gd")
 var failures: int = 0
 var checks: int = 0
 var clock: float = 0.0

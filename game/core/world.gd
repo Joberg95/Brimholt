@@ -1,10 +1,10 @@
 extends RefCounted
 
-const Balance = preload("res://game/balance.gd")
+const Balance = preload("res://game/data/balance.gd")
 
 const TILE_SIZE: int = 32
 const WORLD_NAME: String = "Cinder Crossing"
-## The world is painted in Godot's TileMap editor; see README "Designing the world".
+## The world is painted in Godot's TileMap editor; see docs/world-editing.md.
 const MAP_SCENE: String = "res://game/maps/overworld.tscn"
 ## Terrain characters: grass, dirt road, water, stone wall, tree, sand, cobblestone, pier/bridge.
 const TERRAINS: String = ".,~#T:=b"
@@ -73,7 +73,7 @@ const GROUND_STACK_MAX: int = 6
 const ITEM_SECONDS: float = 0.15
 
 var players: Dictionary = {}
-## Live monsters by negative id; game/combat.gd owns their behaviour.
+## Live monsters by negative id; game/core/combat.gd owns their behaviour.
 var monsters: Dictionary = {}
 var ground: Dictionary = {}
 

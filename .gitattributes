@@ -1,0 +1,9 @@
+# Normalise text to LF (Godot's own convention) and keep binary assets untouched.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ogg binary
+*.wav binary
+*.ttf binary
+*.otf binary
+*.zip binary

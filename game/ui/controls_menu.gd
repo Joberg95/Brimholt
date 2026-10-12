@@ -3,7 +3,7 @@ extends PanelContainer
 ## the binding and Escape cancels. A key already used elsewhere moves to the new action.
 ## Changes are saved immediately.
 
-const Keybinds = preload("res://game/keybinds.gd")
+const Keybinds = preload("res://game/input/keybinds.gd")
 
 var keybinds: Keybinds
 var waiting: Array = []

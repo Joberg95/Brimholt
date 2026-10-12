@@ -1,8 +1,8 @@
 extends SceneTree
 ## Prints Brimholt's level 1-50 balance table as Markdown.
-## godot --headless --path . --script res://tools/balance_table.gd
+## godot --headless --path . --script res://tools/generators/balance_table.gd
 
-const Balance = preload("res://game/balance.gd")
+const Balance = preload("res://game/data/balance.gd")
 
 
 func _initialize() -> void:

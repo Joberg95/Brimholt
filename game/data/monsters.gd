@@ -1,5 +1,5 @@
 extends RefCounted
-## Original monster catalog. Health, damage, and experience come from game/balance.gd using
+## Original monster catalog. Health, damage, and experience come from game/data/balance.gd using
 ## the level on each map spawn marker and the monster's rank. "look" picks the sprite: a
 ## tinted creature sheet (quadruped, blob, golem, wraith) or a humanoid wearing "gear".
 
