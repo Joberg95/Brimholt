@@ -6,8 +6,8 @@ How Brimholt plays: key bindings, combat, parties, loot, death, the world, inven
 
 The nine-slot action bar sits at the bottom of the game window, with each slot's key in its
 corner. The bar holds spells only: right-click a slot to pick one of your vocation's spells
-or clear it. Change gear on the equipment panel; targeting, pick up, and the world map have
-their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
+or clear it. Change gear on the equipment panel; targeting, pick up, the world map, and the
+health and mana potions (Q and E) have their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
 position, so WASD stays under your hand on any keyboard layout. Bindings and bar contents
@@ -50,8 +50,8 @@ members (gold rim for the leader) and a faint shield for open invitations. Party
 cannot attack each other, even on Blackreed Isle.
 
 Like Tibia's shared experience, the party pools its members' share of each kill and splits
-it evenly among members who are within 20 tiles of the kill and fought, cast a spell
-(healing too), or were hit in the last 2 minutes. So a Knight who tanks while a Sorcerer
+it evenly among members who are within 20 tiles of the kill and dealt damage, were hit,
+or healed another player in the last 2 minutes (casting at full health does not count). So a Knight who tanks while a Sorcerer
 deals the damage levels just as fast. Sharing needs at least two such members whose lowest
 level is at least two thirds of the highest (otherwise everyone keeps their own damage
 share). Distinct vocations among them multiply the pool: ×1.2 for one, ×1.3 for two, ×1.6
@@ -60,13 +60,13 @@ for three, and ×2 for all four.
 ## Loot
 
 Each monster has a loot table in `game/data/monsters.gd` (`Monsters.LOOT`): every `[item,
-chance]` row rolls independently, then gold piles are added (one per 10 levels plus a 60%
-chance of one more; elites +3). Rows are a material unique to the monster (vole tails, toad
-slime, boar tusks, bandit badges, wolf pelts, ... warden crests; 20–50% chance) and
-occasional equipment (1–8%). Materials have a shop `value` in `World.ITEMS` for the
-upcoming shops. Add a monster's row to `LOOT`, and a new material to `World.ITEMS`,
-`SpriteArt.ITEM_ORDER`, and `tools/generators/make_sprites.py` (icon shape and palette). Loot is not
-reserved for the killer yet.
+chance]` row rolls independently. Rows are a material unique to the monster (vole tails,
+toad slime, boar tusks, ... warden crests; 20–50% chance), which vendors will buy for its
+`value`. On top, gold piles drop as one stack (one pile per 10 levels plus a 60% chance of
+one more; elites and bosses +3), and a piece of **tiered gear** from the monster's level tier (4% from normal
+monsters, 25% from elites; 30% of those come from the tier below). Loot spills onto nearby
+tiles when the corpse tile is full and is not reserved for the killer yet. A new material
+needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
 
 ## Death and skulls
 
@@ -92,48 +92,164 @@ top-left of the game window.
 ## Talking to people
 
 There is no typed dialogue: right-click a person to open their menu and pick an option.
-Ferrymen offer **Travel**; shops (**Buy**) and **Quests** will use the same menu later.
+Ferrymen and coachmen offer **Travel**, vendors **Trade**, bankers **Bank**, and quest givers
+(gold names) **Quests**. Stand within 2 tiles; a dialog closes when you walk away.
 
-## The world and ferries
+## Vendors, potions, and bankers
 
-The world is 256×256 tiles: walking straight across takes about 46 seconds. Cinder
-Crossing, the starting town, sits in the north-west corner with gates to the east and
-south. A sea runs down the whole western edge with four port towns on its coast:
-**Cinder Landing**, **Mossford**, **Saltmere**, and **Wrenhollow**. Their ferries sail
-between each other. Inland to the east lies one large, irregular lake with the town of
-**Reedmere** on its west shore. Its ferry is the only way to **Blackreed Isle**, the
-island in the lake: a **level 40–50 PvP hunting ground**. Entering it shows a red banner,
-and the island is tinted red on the minimap and world map.
+Every town has a vendor and a banker on its plaza (green and pale blue on the maps).
 
-Each port has a ferryman at the end of its pier. Stand within 2 tiles, right-click him,
-choose **Travel**, and pick a destination; the host checks your
-distance, the route, that you are standing still, a 1-second travel cooldown, and your
-gold, then deducts the fare and lands you next to the destination ferryman. A crowded
-dock refuses passengers.
+**Vendors** sell health and mana potions (20 gold each, in ones or tens) and levelling gear:
+the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your vocation.
+Gear costs about 40 × level^1.05 gold (weapons a quarter more): 40–50 gold at tier 1,
+215–270 at tier 5, and 450–560 at tier 10. Better gear comes from monsters and quests. Vendors
+buy monster materials for their value (one stack, or **Sell all materials**) and unbound gear
+for a quarter of its price; they never buy potions, relics, or packs.
 
-Everyone starts with 100 gold. Gold coin piles lie around the wilds; picking one up adds
-25 gold to your purse without using a backpack slot. Coastal fares are 15–30 gold; the
-island crossing costs 40 each way. Extra gold lies near the island's monster spawns.
+**Potions** stack like materials. A health potion restores 20% of your maximum health, a mana
+potion 25% of your maximum mana; potions share a 1-second cooldown and are refused at full.
+Right-click one in the backpack, or press Q (health) or E (mana) to drink the first one.
+
+**Bankers** keep your gold and an item depot, the same at every banker in the world. Deposit
+or withdraw any amount; banked gold and depot items are never lost on death. The depot has
+24 slots: drag items between it and your backpack, or right-click (backpack items go into the
+depot while the bank dialog is open, depot items come back). Stacks merge as usual. Items
+reach the depot only through the backpack, never straight from equipment or the ground.
+Like the rest of your character, the bank and depot are saved on the host (see
+[Saved characters](../README.md#saved-characters)).
+
+## Town tasks and packs
+
+Three quest givers hand out hunting tasks: **Warden Brask** in Cinder Crossing (15 thornback
+boars, levels 5–7), **Captain Ardo** in Ashford (25 outlaw archers, levels 19–23), and
+**Marshal Venn** in Emberfall (30 hollow knights, levels 33–35). Accept a task, then every
+kill of that monster that earns you experience (your own or your party's shared kills) counts;
+progress shows in the message line and in the quest dialog. Turn it in to the giver.
+
+Each finished task gives you the next **pack**, worn in the bag slot (top right of the
+paperdoll): a Traveler's pack (12 backpack slots), then an Explorer's pack (16), then a
+Pathfinder's pack (20), whichever task you finish first. Packs are bound: they never come off,
+drop, or get lost on death. Backpack slots beyond your pack are shown dark and locked.
+
+## The world, towns, and travel
+
+The world is 768×768 tiles: walking straight across takes about three and a half minutes.
+**Cinder Crossing**, the starting town, sits in the north-west corner with gates to the east
+and south. A sea runs down the whole western edge with two ports: **Cinder Landing** at the
+top and **Lastlight** at the bottom, joined by one ferry. In the middle of the world lies a
+great irregular lake with **Blackreed Isle** in it, a **level 40–50 PvP hunting ground**
+reached only by the ferry from **Reedmere** on the west shore; entering it shows a red
+banner, and the island is tinted red on the minimap and world map.
+
+Towns ring the lake: **Ashford** to the north, **Reedmere** to the west, **Emberfall** to the
+east, and **Dunmere** to the south, with **Highmoor** as an outpost among the north-eastern
+rock ridges. Every town (Cinder Crossing and the ports too) is a **safe zone**: no PvP, and
+monsters never cross into it; a green banner shows when you enter. A desert spreads across
+the south-west, and the Hollow Reach waits in the far south-east, well away from the towns.
+
+**Coaches** are the fast travel: each town has a coachman, and Cinder Crossing has a coach
+stop just outside its east gate. Coaches run between every station; ferries run along the
+coast and to the island. Stand within 2 tiles of a ferryman or coachman, right-click them,
+choose **Travel**, and pick a destination; the host checks your distance, the route, that
+you are standing still, a 1-second travel cooldown, and your gold, then deducts the fare and
+lands you next to the destination's ferryman or coachman. A crowded stop refuses passengers.
+
+Everyone starts with 100 gold. Gold coin piles lie around the wilds; picking one up adds 25
+gold per coin pile in the stack to your purse without using a backpack slot. Coach fares are about 5 gold per 60
+tiles (Cinder Crossing to Reedmere is about 45), the coastal ferry from top to bottom costs
+65, and the island crossing 40 each way. Monsters grow from level 1-4 around Cinder
+Crossing to level 45 in the far east and south.
 
 ## Inventory
 
-The right-hand panel shows a Tibia-style paperdoll with eight slots (necklace,
-helmet, charm / main hand, armor, off hand / two rings), an eight-slot backpack, and
-your stat sheet. Everyone starts with an Ember cap, Moss coat, Copper blade, Oak
-buckler, and Copper band. A Garnet ring, River pendant, Hearth charm, and a few other
-items lie around Cinder Crossing. Rings fit either ring slot; right-clicking a ring
-fills an empty ring slot first. Helmets, armor, and both hands are drawn on the
-character; rings, necklaces, and charms are too small to show. Items can be dropped
-on any walkable tile, stacking up to six per tile, and the top item is picked up.
-Ground tiles must be your own tile or one of the eight around you.
+The right-hand panel shows a Tibia-style paperdoll with ten slots (necklace, helmet, pack /
+main hand, armor, off hand / ring, cape, ring / charm), a backpack of 8 slots (up to 20 with
+a pack from a town task), and your stat sheet. Each vocation starts with a tier-1 kit in its backpack: Ember cap and Moss coat
+for everyone, plus a Copper blade and Oak buckler (Knight), a Willow shortbow and Oak
+buckler (Paladin), a Kindling wand and Tattered primer (Sorcerer), or a Sapling rod and
+Tattered primer (Druid). Tier-5 gear for every vocation lies around Cinder Crossing. Rings
+fit either ring slot; right-clicking a ring fills an empty ring slot first. Helmets, capes,
+armor, and both hands are drawn on the character (a cape replaces your tinted cloak);
+rings, amulets, and charms are too small to show. Items can be dropped on any walkable
+tile, stacking up to six per tile, and the top item is picked up. Ground tiles must be
+your own tile or one of the eight around you.
 
-Peer 1 validates every item move: location shape, reach, slot type, free space,
-stack limit, and a 150 ms item cooldown. Dragging onto an occupied slot swaps
+Peer 1 validates every item move: location shape, reach, slot type, level and vocation,
+free space, stack limit, and a 150 ms item cooldown. Dragging onto an occupied slot swaps
 items when both fit; a worn item displaced from the ground goes back to that tile.
 Equipped items are visible to everyone; backpack contents are sent only to their
 owner. Late joiners receive ground items in the snapshot. Items carried by a
 player who leaves disappear with them; ground items remain until the host stops.
-The backpack is flat: there are no nested containers or trading.
+The backpack is flat: there are no nested containers or player trading.
+
+**Stacking.** Items without an equipment slot (monster materials, glowcaps, potions, gold piles)
+stack up to 100 in one backpack slot or ground entry; the count shows in the corner of the
+slot or tile and in the tooltip. Picking one up merges it into a matching backpack stack
+with room, or uses a free slot. Dragging onto a matching stack merges; dropping on the
+ground merges with a matching top entry (even on a tile already holding six entries). A
+stack always moves whole; there is no splitting yet. Loot and death drops merge the same
+way, and a dead player's purse becomes one gold stack. Equipment never stacks.
+
+## Gear tiers
+
+Equipment comes in ten tiers, every five levels (1, 5, 10 … 45), each in its own material
+and colour: copper, iron, bronze, steel, silverleaf, cobalt, embersteel, duskiron,
+starforged, and wyrmglass. Every tier has a helmet and armor for everyone, a weapon per
+vocation (Knights: swords, axes, and maces; Paladins: bows and crossbows; Sorcerers: wands;
+Druids: rods), and an off-hand (shields for Knights and Paladins, spellbooks for Sorcerers
+and Druids). **Amulets, capes, charms, and rings start at tier 20.** An item needs its tier
+level and, for weapons and off-hands, your vocation: the server refuses to equip it
+otherwise, and worn items you no longer qualify for (after losing levels) give no stats.
+Tooltips show the tier, level, and who can use an item; a coloured bar under each slot
+shows its tier, red when you cannot use it yet. Stats come from the balance curves
+(`game/data/items.gd`); the full table is in [balance.md](balance.md#gear-tiers).
+
+## The Hollow Reach
+
+The endgame zone fills the south-east corner (tiles 700-757 x 690-753): a **high-risk level 45-50
+PvP zone**
+of blighted violet soil and dead trees inside an obsidian wall, entered on foot through a
+single gate in its west wall (a clearing in the forest leads to it). An obsidian road runs
+east past void wraiths, obsidian golems (elite), and hollow knights to the **Hollow
+Sanctum**: an antechamber of pillars, a narrow gallery, and at the very end the throne room
+where **Vaelith, Sovereign of the Hollow** sits. Void wraiths glow faintly; Vaelith wears
+his own glowing relics. Obsidian walls block movement and sight like stone walls.
+
+**Dying in the Hollow Reach drops everything**: your backpack, your gold, and every worn
+item (as with a red skull), not the usual 10% chance per worn item. Only bound relics stay
+with you. The banner warns you as you enter. Beginner protection (below level 8) still
+applies. Zones get this rule with the `full_loot` flag on their marker.
+
+## Final bosses and relics
+
+Three level-50 final bosses each guard a lair: **Morvain the Drowned** at the far end of
+Blackreed Isle, **Kharzul the Cinder Colossus** in the far east, and **Sylvaine the Hollow
+Bloom** in the south-eastern forest, west of the Hollow Reach. The ultimate boss, **Vaelith**, waits in the Hollow
+Sanctum's throne room and respawns after an hour. Each boss has the 350,000 health of the
+raid boss (so it takes a ten-player group), drops gold, and respawns 30 minutes after it
+dies.
+
+Bosses fight like raid bosses. When one engages, everyone within 20 tiles is warned that it
+**enrages after 255 seconds**: from then on it hits ten times as hard, so the raid needs its
+damage. Every 4 seconds it **pulses** dark energy at every player within 8 tiles, ignoring
+defense; across a ten-player raid that adds up to about 2.2 Druids' healing per second.
+Each of its hits **wounds** its target, so every next hit on that player lands 25% harder
+until 12 seconds pass without one: two Knights must take turns, the second pulling the boss
+with **Challenge** (Knight spell from level 20: monsters within 2 tiles turn on the caster).
+If the raid leaves, the boss walks home, heals, and forgets the fight. Its nameplate shows
+ENRAGED once it enrages.
+
+Glowing **relics** are quest rewards. Everyone who took part in the fight earns one
+**trophy** for that boss when it dies: players who damaged it, players it hit, and players
+who healed any of them. Standing nearby, or casting at full health, earns nothing. Right-click **Ysolde**, the Relic keeper in Cinder Crossing (gold name), choose
+**Quests**, and trade a trophy for any one of that boss's four relics: Morvain gives
+Knight and shared armor, Kharzul a Paladin bow, Sorcerer wand, amulet, and charm, and
+Sylvaine a Druid rod, spellbook, cape, and ring. Vaelith's trophies buy the strongest
+relics: a void weapon for each vocation (Voidrend, Eclipse bow, Starless wand, Nightbloom
+rod) or the Sovereign's mantle. Trophies stack, so kill a boss again for
+another relic. Relics are level 50, beat the best tiered gear, glow in their boss's colour
+with drifting sparks, and are **bound**: they cannot be dropped and are never lost on death,
+even with a red skull.
 
 ## Stats and balance
 

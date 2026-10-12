@@ -2,7 +2,7 @@ extends SceneTree
 ## Automated playthrough bot. Two of these join a real dedicated server as a Knight and a
 ## Sorcerer and play through every system using the same client calls as the UI: gear up,
 ## walk out of town with pathfinding, hunt the nearest monsters with spells and healing, loot
-## gold, walk to Cinder Landing and sail to Mossford, walk to Reedmere and sail to Blackreed
+## gold, walk to the coach stop and ride to Reedmere, walk to the pier and sail to Blackreed
 ## Isle, then duel there (white skull, self-defence, death, item loss, looting the corpse).
 ## Rendering goes to an offscreen buffer; screenshots land in .tools/playtest. Run it through
 ## tools/testing/playtest.py, which starts the server and writes the report.
@@ -358,7 +358,7 @@ func _hunt() -> void:
 				% [HUNT_LEVEL, elapsed, kills, me()["experience"], Balance.experience_to_next(me()["level"])])
 		report("ok", "hunt over: %d kills, level %d, %d experience, %d gold, %d deaths" % [kills, me()["level"],
 			me()["experience"], me()["gold"], deaths])
-		var materials: Array = me()["backpack"].filter(func(kind: String) -> bool: return World.ITEMS.get(kind, {}).has("value"))
+		var materials: Array = me()["backpack"].filter(func(kind: String) -> bool: return World.ITEMS.get(World.kind_of(kind), {}).has("value"))
 		report("info", "carrying %d monster materials: %s" % [materials.size(), ", ".join(materials)])
 		if role == "knight":
 			var gap: int = partner_state().get("level", 1) - me()["level"]
@@ -378,7 +378,7 @@ func _hunt() -> void:
 	var room: bool = me()["backpack"].has("")
 	for cell: Vector2i in game.ground_view:
 		var stack: Array = game.ground_view[cell]
-		var top: String = stack[-1] if not stack.is_empty() else ""
+		var top: String = World.kind_of(stack[-1]) if not stack.is_empty() else ""
 		# Gold is worth a detour; materials only when close, so looting does not pull into other spawns.
 		var reach: int = 8 if top == "gold_coins" else (3 if room and World.ITEMS.get(top, {}).has("value") else -1)
 		if Combat.distance(cell, me()["cell"]) <= reach:
@@ -407,26 +407,36 @@ func defend() -> bool:
 	return false
 
 
+## Walks to the coach stop outside Cinder Crossing's east gate.
 func _to_port() -> void:
 	if defend():
 		return
-	if walk_to(dock_cell("cinder_landing")):
-		report("ok", "reached Cinder Landing in %.0f s" % (now() - phase_since))
+	# Through Cinder Crossing, a safe zone monsters cannot enter, rather than across the spawns.
+	if not flags.get("through_town", false):
+		if walk_to(Vector2i(11, 14), 1):
+			flags["through_town"] = true
+		elif now() - phase_since > WALK_SECONDS:
+			report("fail", "could not walk back into Cinder Crossing from %s" % me()["cell"])
+			_finish()
+		return
+	if walk_to(dock_cell("cinder_coach")):
+		report("ok", "reached the Cinder Crossing coach stop in %.0f s" % (now() - phase_since))
 		_enter("sail_coast")
 	elif now() - phase_since > WALK_SECONDS:
-		report("fail", "could not reach Cinder Landing from %s" % me()["cell"])
+		report("fail", "could not reach the coach stop from %s" % me()["cell"])
 		_finish()
 
 
+## Rides the coach across the 768-tile world to Reedmere (fast travel), like a player would.
 func _sail_coast() -> void:
-	if Combat.distance(me()["cell"], World.FERRYMEN["mossford"]["cell"]) <= World.TALK_RANGE:
-		report("ok", "sailed to Mossford; gold now %d" % me()["gold"])
-		shot("mossford", "Arrived at Mossford by ferry")
+	if Combat.distance(me()["cell"], World.FERRYMEN["reedmere_coach"]["cell"]) <= World.TALK_RANGE:
+		report("ok", "rode the coach to Reedmere; gold now %d" % me()["gold"])
+		shot("coach", "Arrived at Reedmere by coach")
 		_enter("to_reedmere")
-	elif throttle(1.2) and not sail("cinder_landing", "mossford"):
+	elif throttle(1.2) and not sail("cinder_coach", "reedmere_coach"):
 		_finish()
 	elif now() - phase_since > 15.0:
-		report("fail", "the ferry did not sail: %s" % game.last_action_message)
+		report("fail", "the coach did not leave: %s" % game.last_action_message)
 		_finish()
 
 
@@ -434,7 +444,7 @@ func _to_reedmere() -> void:
 	if defend():
 		return
 	if walk_to(dock_cell("reedmere")):
-		report("ok", "walked to Reedmere in %.0f s" % (now() - phase_since))
+		report("ok", "walked to the Reedmere pier in %.0f s" % (now() - phase_since))
 		_enter("sail_isle")
 	elif now() - phase_since > WALK_SECONDS:
 		report("fail", "could not reach Reedmere from %s" % me()["cell"])
@@ -587,7 +597,7 @@ func _recover() -> void:
 		var stack: Array = game.ground_view[cell]
 		# Own belongings are gold and gear; monster materials from earlier kills stay behind.
 		if Combat.distance(cell, corpse) <= Combat.SPILL_RADIUS and not stack.is_empty() \
-				and not World.ITEMS.get(stack[-1], {}).has("value"):
+				and not World.ITEMS.get(World.kind_of(stack[-1]), {}).has("value"):
 			if walk_to(cell, 1) and throttle(0.3):
 				game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 			return

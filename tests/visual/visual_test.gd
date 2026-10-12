@@ -1,8 +1,13 @@
 extends SceneTree
 
+const CAPES: Array[String] = ["silverleaf_cape", "cobalt_cape", "ember_cape", "dusk_cape"]
+
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const WorldViewScript = preload("res://game/render/world_view.gd")
+const WorldOverlay = preload("res://game/render/world_overlay.gd")
+const Monsters = preload("res://game/data/monsters.gd")
+const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 var game: Node2D
 ## The game renders offscreen into this buffer; the real window only needs to exist.
@@ -41,8 +46,13 @@ func _run() -> void:
 	game = load("res://game/main.tscn").instantiate()
 	game.close_ends_session = false
 	screen.add_child(game)
+	# Never touch the player's real saves or identity.
+	game.save_enabled = false
+	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
 	game.port = 0
 	game.host_game()
+	# Pixel checks compare against sprite texels, so pin bright noon; night is checked at the end.
+	game._world_view.lighting.time_override = 0.5
 	if not game.connected:
 		quit(1)
 		return
@@ -60,6 +70,9 @@ func _run() -> void:
 			return
 		game.world.players[id]["facing"] = directions[id - 1]
 		game.world.players[id]["next_item"] = 0.0
+		# Capes are later-stage gear: level 20+, one tier per actor.
+		game.world.players[id]["level"] = 20 + 5 * (id - 1)
+		game.world.players[id]["backpack"][5] = CAPES[id - 1]
 		for slot: String in SpriteArt.VISIBLE_SLOTS:
 			var result: Dictionary = game.world.toggle_equipment(id, slot, float(id) + SpriteArt.VISIBLE_SLOTS.find(slot))
 			if not result["ok"]:
@@ -152,9 +165,17 @@ func _run() -> void:
 		return
 	if not await _check_ferry_and_maps():
 		return
+	if not await _check_relics():
+		return
+	if not await _check_town_services():
+		return
+	if not await _check_hollow_reach():
+		return
+	if not await _check_night_and_particles():
+		return
 	print("BRIMHOLT_VISUAL_PASS four facings, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, Hollow Reach gate and throne room, night lighting and particles")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -238,6 +259,112 @@ func _check_mouse_inventory() -> bool:
 		return false
 	await process_frame
 	return true
+
+
+## Right-clicks an NPC and chooses one of their services from the real menu.
+func _open_service(npc: String, service: String) -> bool:
+	var cell: Vector2i = World.npc(npc)["cell"]
+	await _push_mouse(_tile_center(cell), MOUSE_BUTTON_RIGHT, true)
+	await _push_mouse(_tile_center(cell), MOUSE_BUTTON_RIGHT, false)
+	if not _expect(game._npc_menu.visible and game._npc_menu_target == npc, "Right-clicking %s opened no menu" % npc):
+		return false
+	var chosen: int = -1
+	for index: int in game._npc_menu.item_count:
+		if game._npc_menu.get_item_text(index) == service:
+			chosen = game._npc_menu.get_item_id(index)
+	game._npc_menu.id_pressed.emit(chosen)
+	game._npc_menu.hide()
+	await process_frame
+	return _expect(chosen >= 0 and game._travel_panel.visible and game._talking_to == npc, "%s did not open %s" % [service, npc])
+
+
+func _move_beside(npc: String) -> void:
+	var player: Dictionary = game.world.players[1]
+	var cell: Vector2i = World.npc(npc)["cell"]
+	for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
+		if World.walkable(cell + step):
+			player["cell"] = cell + step
+			player["from"] = cell + step
+			break
+	game._publish_actor(1)
+	await process_frame
+	await process_frame
+
+
+## Distinct colours in a screen rectangle: an empty slot has a few, a drawn icon many.
+func _colours(image: Image, area: Rect2) -> int:
+	var seen: Dictionary = {}
+	for y: int in range(int(area.position.y), int(area.end.y)):
+		for x: int in range(int(area.position.x), int(area.end.x)):
+			seen[image.get_pixel(x, y).to_html()] = true
+	return seen.size()
+
+
+## Buys potions with the vendor's real Buy button, drinks one with the potion key, deposits the
+## stack into the depot by right-clicking it while the bank is open, and checks that the depot,
+## the pack slot, and the unlocked backpack slots are drawn.
+func _check_town_services() -> bool:
+	var player: Dictionary = game.world.players[1]
+	player["gold"] = 500
+	player["next_item"] = 0.0
+	for index: int in player["backpack"].size():
+		player["backpack"][index] = ""
+	await _move_beside("cinder_vendor")
+	if not await _open_service("cinder_vendor", "Trade"):
+		return false
+	var buy: Button = null
+	for row: Node in game._travel_list.find_children("*", "HBoxContainer", true, false):
+		var named: bool = false
+		for child: Node in row.get_children():
+			named = named or (child is Label and child.text.begins_with("Health potion"))
+		for child: Node in row.get_children():
+			if named and child is Button and child.text == "Buy 10":
+				buy = child
+	if not _expect(buy != null and not buy.disabled and game.dialogs.mode == "trade", "The vendor offers no health potions"):
+		return false
+	buy.pressed.emit()
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-trade.png")
+	if not _expect(player["backpack"][0] == "health_potion#10" and player["gold"] == 500 - 10 * World.ITEMS["health_potion"]["price"]
+			and game._travel_list.get_child(1).text.contains(str(player["gold"])), "Buying potions did not update the trade window"):
+		return false
+	player["health"] = 1
+	game._publish_actor(1)
+	await process_frame
+	await _press("health_potion")
+	await process_frame
+	if not _expect(player["health"] > 1 and player["backpack"][0] == "health_potion#9", "The potion key did not drink a potion"):
+		return false
+	game._close_travel()
+	await create_timer(World.ITEM_SECONDS + 0.05).timeout
+	await _move_beside("cinder_banker")
+	if not await _open_service("cinder_banker", "Bank") or not _expect(game.dialogs.banking(), "The bank dialog is not open"):
+		return false
+	var slot_center: Vector2 = game.slot_position({"type": "backpack", "index": 0}) + Vector2.ONE * World.TILE_SIZE / 2.0
+	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, true)
+	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, false)
+	if not _expect(player["depot"][0] == "health_potion#9" and player["backpack"][0] == "",
+			"Right-clicking a backpack item with the bank open did not deposit it"):
+		return false
+	game.world.wear_pack(1, "pathfinder_pack")
+	game._publish_actor(1)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var image: Image = screen.get_texture().get_image()
+	image.save_png("res://.tools/visual-bank.png")
+	var depot_slot: Control = null
+	for slot: Control in game.inventory._slots:
+		if is_instance_valid(slot) and slot.get_meta("location") == {"type": "depot", "index": 0}:
+			depot_slot = slot
+	var bag: Rect2 = Rect2(game.slot_position({"type": "equipment", "slot": "bag"}), Vector2.ONE * World.TILE_SIZE)
+	var last: Rect2 = Rect2(game.slot_position({"type": "backpack", "index": World.BACKPACK_MAX - 1}), Vector2.ONE * World.TILE_SIZE)
+	return _expect(depot_slot != null and _colours(image, depot_slot.get_global_rect()) > 12, "The depot slot did not draw its item") \
+		and _expect(_colours(image, bag) > _colours(image, last) + 4, "The pack slot did not draw the worn pack") \
+		and _expect(game.inventory.capacity() == World.BACKPACK_MAX and not game.inventory._locked({"type": "backpack", "index": World.BACKPACK_MAX - 1})
+			and _colours(image, last) <= 6, "The pack did not unlock the last backpack slot")
 
 
 func _tile_center(cell: Vector2) -> Vector2:
@@ -324,8 +451,9 @@ func _check_ferry_and_maps() -> bool:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-landing.png")
-	if not await _sail("cinder_landing", "mossford"):
+	if not await _sail("cinder_landing", "lastlight"):
 		return false
+	player["gold"] = 400
 	var gold: int = player["gold"]
 	dock = game.world.arrival_cell("reedmere", game._now())
 	player["cell"] = dock
@@ -358,9 +486,11 @@ func _check_ferry_and_maps() -> bool:
 	var world_map: Image = screen.get_texture().get_image()
 	world_map.save_png("res://.tools/visual-map.png")
 	var map_size := Vector2(World.width(), World.height())
-	var scale: float = maxf(1.0, floorf(minf(game.VIEW_SIZE.x / map_size.x, (game.VIEW_SIZE.y - 32.0) / map_size.y)))
+	var fit: float = minf(game.VIEW_SIZE.x / map_size.x, (game.VIEW_SIZE.y - 32.0) / map_size.y)
+	var scale: float = floorf(fit) if fit >= 1.0 else fit
 	var origin: Vector2 = ((game.VIEW_SIZE - map_size * scale) / 2.0).floor() + Vector2(0, 12)
-	var corner: Vector2i = Vector2i(World.width() - 1, World.height() - 1)
+	# A tile a little inside the south-east border (forest), sampled at its scaled centre.
+	var corner: Vector2i = Vector2i(World.width() - 2, World.height() - 2)
 	var pixel: Vector2 = game.VIEW_ORIGIN + origin + (Vector2(corner) + Vector2(0.5, 0.5)) * scale
 	if not _expect(game._world_map.visible and world_map.get_pixelv(Vector2i(pixel)).is_equal_approx(
 			game.MAP_COLORS[World.terrain(corner)]), "The world map key did not open the world map"):
@@ -435,9 +565,198 @@ func _check_combat() -> bool:
 	image.save_png("res://.tools/visual-combat.png")
 	var corner: Vector2 = Vector2(game.world.monsters[spawned[0]]["cell"]) * World.TILE_SIZE
 	var edge: Vector2 = game.map_to_screen(corner + Vector2(1.5, World.TILE_SIZE / 2.0))
-	if not _expect(image.get_pixelv(Vector2i(edge)).is_equal_approx(WorldViewScript.TARGET_COLOR), "The target square is not drawn"):
+	if not _expect(image.get_pixelv(Vector2i(edge)).is_equal_approx(WorldOverlay.TARGET_COLOR), "The target square is not drawn"):
 		return false
 	var hit: bool = false
 	for effect: Dictionary in game.effects:
 		hit = hit or effect["kind"] == "text"
 	return _expect(hit and game.world.monsters[spawned[0]]["health"] < 1000, "The locked monster was not attacked")
+
+
+## Claims a relic through Ysolde's real right-click Quests window, then checks that the additive
+## glow layer lights relic gear, a relic on the ground, and two bosses.
+func _check_relics() -> bool:
+	game.world.monsters.clear()
+	game.monsters.clear()
+	var player: Dictionary = game.world.players[1]
+	var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"]
+	var beside: Vector2i = keeper + Vector2i.DOWN
+	player["cell"] = beside
+	player["from"] = beside
+	player["target"] = 0
+	player["level"] = 50
+	player["trophies"] = {"morvain": 1}
+	player["backpack"][World.BACKPACK_SIZE - 1] = ""
+	player["next_item"] = 0.0
+	game._publish_actor(1)
+	await process_frame
+	await process_frame
+	await _push_mouse(_tile_center(keeper), MOUSE_BUTTON_RIGHT, true)
+	await _push_mouse(_tile_center(keeper), MOUSE_BUTTON_RIGHT, false)
+	if not _expect(game._npc_menu.visible and game._npc_menu_target == "relic_keeper", "Right-clicking Ysolde opened no menu"):
+		return false
+	var quests: int = -1
+	for index: int in game._npc_menu.item_count:
+		if game._npc_menu.get_item_text(index) == "Quests":
+			quests = game._npc_menu.get_item_id(index)
+	game._npc_menu.id_pressed.emit(quests)
+	game._npc_menu.hide()
+	if not _expect(quests >= 0 and game._travel_panel.visible and game._talking_to == "relic_keeper",
+			"Choosing Quests did not open the relic quests"):
+		return false
+	var claim: Button = null
+	var locked: int = 0
+	for child: Node in game._travel_list.get_children():
+		if child is Button and child.text.contains("Abyssal plate"):
+			claim = child
+		elif child is Button and child.text.contains("Claim") and child.disabled:
+			locked += 1
+	var others: int = 0
+	for boss: String in Monsters.MONSTERS:
+		if boss != "morvain":
+			others += Monsters.MONSTERS[boss].get("relics", []).size()
+	if not _expect(claim != null and not claim.disabled and locked == others,
+			"The quest window should offer Morvain's relics and lock the bosses you have not slain"):
+		return false
+	claim.pressed.emit()
+	await process_frame
+	var plate: int = player["backpack"].find("abyssal_plate")
+	if not _expect(plate >= 0 and player["trophies"].is_empty() and not game._travel_panel.visible,
+			"Claiming did not trade the trophy for the relic"):
+		return false
+	if not _expect(game.world.move_item(1, {"type": "backpack", "index": plate}, {"type": "equipment", "slot": "armor"}, game._now())["ok"],
+			"The claimed relic could not be worn"):
+		return false
+	player["equipment"]["helmet"] = "abyssal_greathelm"
+	player["equipment"]["main_hand"] = "cinderheart_bow"
+	player["equipment"]["cape"] = "hollowbloom_cape"
+	player["facing"] = Vector2i.DOWN
+	game._publish_actor(1)
+	var free: Array[Vector2i] = []
+	for dy: int in range(-3, 4):
+		for dx: int in range(-4, 5):
+			var cell: Vector2i = beside + Vector2i(dx, dy)
+			if absi(dx) >= 2 and World.walkable(cell) and not game.world.occupied(cell, game._now()) and not game.world.ground.has(cell):
+				free.append(cell)
+	if not _expect(free.size() >= 3, "No room around the Relic keeper for the relic showcase"):
+		return false
+	var relic_cell: Vector2i = free[0]
+	game.world.ground[relic_cell] = ["verdant_codex"]
+	game._apply_ground(relic_cell, ["verdant_codex"])
+	var bosses: Array[int] = []
+	for kind: String in ["morvain", "kharzul"]:
+		var events: Array = []
+		var cell: Vector2i = free[-1] if bosses.is_empty() else free[free.size() / 2]
+		var id: int = game.combat.spawn_monster(kind, 50, cell, game._now(), -1, events)
+		game.world.monsters[id]["next_move"] = INF
+		game.world.monsters[id]["next_attack"] = INF
+		game._handle_events(events)
+		bosses.append(id)
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var lit: Image = screen.get_texture().get_image()
+	lit.save_png("res://.tools/visual-relics.png")
+	game._world_view.glow.visible = false
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var plain: Image = screen.get_texture().get_image()
+	game._world_view.glow.visible = true
+	var spots: Dictionary = {"the relic-wearing player": beside, "the relic on the ground": relic_cell}
+	for id: int in bosses:
+		spots[Monsters.MONSTERS[game.world.monsters[id]["kind"]]["name"]] = game.world.monsters[id]["cell"]
+	for label: String in spots:
+		var corner: Vector2 = game.map_to_screen(Vector2(spots[label]) * World.TILE_SIZE - Vector2(8, 24))
+		var region := Rect2i(Vector2i(corner), Vector2i(48, 56) * int(game.ZOOM))
+		if not _expect(lit.get_region(region).get_data() != plain.get_region(region).get_data(), "No glow around %s" % label):
+			return false
+	return true
+
+
+## The endgame zone: its gate from the forest, and Vaelith in the Sanctum's throne room.
+func _check_hollow_reach() -> bool:
+	game.world.monsters.clear()
+	game.monsters.clear()
+	game.world.ground.clear()
+	game.ground_view.clear()
+	var player: Dictionary = game.world.players[1]
+	var zone: Dictionary = World.ZONES.filter(func(candidate: Dictionary) -> bool: return candidate["name"] == "The Hollow Reach")[0]
+	var gate: Vector2i = Vector2i(zone["rect"].position.x - 3, EndgameZone.GATE_Y)
+	for stop: Array in [[gate, "visual-hollow-gate.png"], [EndgameZone.THRONE_SEAT + Vector2i(-5, 0), "visual-hollow-throne.png"]]:
+		player["cell"] = stop[0]
+		player["from"] = stop[0]
+		player["facing"] = Vector2i.RIGHT
+		game._publish_actor(1)
+		if stop[1] == "visual-hollow-throne.png":
+			var events: Array = []
+			var boss: int = game.combat.spawn_monster("vaelith", 50, EndgameZone.THRONE_SEAT, game._now(), -1, events)
+			game.world.monsters[boss]["next_move"] = INF
+			game.world.monsters[boss]["next_attack"] = INF
+			game._handle_events(events)
+		await create_timer(0.3).timeout
+		await RenderingServer.frame_post_draw
+		var image: Image = screen.get_texture().get_image()
+		image.save_png("res://.tools/" + stop[1])
+		if not _expect(game._zone_label.visible == (stop[1] != "visual-hollow-gate.png") or stop[1] == "visual-hollow-gate.png",
+				"Zone banner state is wrong"):
+			return false
+	if not _expect(game._zone_label.visible and game._zone_label.text.contains("The Hollow Reach")
+			and game._zone_label.text.contains("HIGH-RISK PvP"), "Entering the Hollow Reach did not show its high-risk banner"):
+		return false
+	if not _expect(game._world_view.lighting.ambient().v < 0.85, "The Hollow Reach is not dimmer than daylight"):
+		return false
+	# Compare floor texels without the zone's violet ambient, lights, or glow.
+	game._world_view.lighting.visible = false
+	game._world_view.glow.visible = false
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var unlit: Image = screen.get_texture().get_image()
+	game._world_view.lighting.visible = true
+	game._world_view.glow.visible = true
+	var floor_cell: Vector2i = EndgameZone.THRONE_SEAT + Vector2i(-4, -2)
+	var region: Rect2 = SpriteArt._tile_region(SpriteArt.obsidian_variant(floor_cell))
+	return _expect(_matches_texel(unlit, SpriteArt.TILES, Rect2(region.position + Vector2(2, 20), Vector2(4, 4)),
+		Vector2(floor_cell) * World.TILE_SIZE + Vector2(2, 20)), "The throne room floor is not drawn with obsidian tiles")
+
+
+## Night in Cinder Crossing: darker world, a lantern around the player, unlit UI, and particle
+## bursts for a hit and a spell.
+func _check_night_and_particles() -> bool:
+	game.world.monsters.clear()
+	game.monsters.clear()
+	var player: Dictionary = game.world.players[1]
+	player["cell"] = World.SPAWNS[0]
+	player["from"] = World.SPAWNS[0]
+	game._publish_actor(1)
+	var lighting: Node2D = game._world_view.lighting
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	var day: Image = screen.get_texture().get_image()
+	lighting.time_override = 0.0
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	var night: Image = screen.get_texture().get_image()
+	night.save_png("res://.tools/visual-night.png")
+	var near: Vector2i = Vector2i(game.map_to_screen((Vector2(World.SPAWNS[0]) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
+	var far: Vector2i = Vector2i(game.map_to_screen((Vector2(World.SPAWNS[0]) + Vector2(6.5, -2.5)) * World.TILE_SIZE))
+	var panel: Vector2i = Vector2i(game.PANEL_ORIGIN + Vector2(4, 300))
+	if not _expect(night.get_pixelv(far).get_luminance() < day.get_pixelv(far).get_luminance() * 0.75,
+			"Night does not darken the world"):
+		return false
+	if not _expect(night.get_pixelv(near).get_luminance() > night.get_pixelv(far).get_luminance() * 1.3,
+			"The player's lantern does not light the ground around them"):
+		return false
+	if not _expect(night.get_pixelv(panel).is_equal_approx(day.get_pixelv(panel)), "Night lighting leaked into the UI panel"):
+		return false
+	var fx: Node2D = game._world_view.fx
+	var before: int = fx.get_child_count()
+	game._show_effect({"kind": "hit", "target": 1, "amount": 12, "style": "critical"})
+	game._show_effect({"kind": "area", "cells": [World.SPAWNS[0] + Vector2i(2, 0), World.SPAWNS[0] + Vector2i(2, 1)],
+		"color": Color("#ff9a5a")})
+	if not _expect(fx.get_child_count() >= before + 3, "Hits and spells did not emit particles"):
+		return false
+	await create_timer(0.12).timeout
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-particles.png")
+	await create_timer(1.6).timeout
+	lighting.time_override = 0.5
+	return _expect(fx.get_child_count() == before, "Finished particle bursts were not freed")

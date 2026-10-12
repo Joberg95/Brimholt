@@ -15,6 +15,10 @@ config/description="An original four-player LAN tile-world prototype."
 run/main_scene="res://game/main.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 
+[debug]
+
+gdscript/warnings/untyped_declaration=2
+
 [display]
 
 window/size/viewport_width=1200

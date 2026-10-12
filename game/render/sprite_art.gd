@@ -17,6 +17,8 @@ const OUTLINE: Color = Color("#1a1612")
 const COLORS: Array[Color] = [Color("#b06a48"), Color("#6a88a8"), Color("#8c6a8a"), Color("#b89a55")]
 const BODY: Texture2D = preload("res://assets/sprites/body.png")
 const CLOTH: Texture2D = preload("res://assets/sprites/cloth.png")
+## The player-tinted cloak, replaced by a worn cape.
+const CLOAK: Texture2D = preload("res://assets/sprites/cloak.png")
 const MARKER: Texture2D = preload("res://assets/sprites/marker.png")
 const ITEM_ICONS: Texture2D = preload("res://assets/sprites/items.png")
 const TILES: Texture2D = preload("res://assets/sprites/tiles.png")
@@ -42,21 +44,22 @@ const MONSTER_DETAILS: Dictionary = {
 }
 ## Characters' feet sit this far below the tile centre; monsters scale around that point.
 const FEET: Vector2 = Vector2(0, 13.5)
-const ITEM_ORDER: Array[String] = [
-	"ember_cap", "moss_coat", "copper_blade", "iron_coif", "ash_tunic", "flint_hatchet", "glowcap",
-	"oak_buckler", "copper_band", "garnet_ring", "river_pendant", "hearth_charm", "gold_coins",
-	"vole_tail", "toad_slime", "boar_tusk", "bandit_badge", "wolf_pelt", "lurker_eye", "waxed_bowstring", "golem_core", "wraith_ash", "hollow_sigil", "stalker_fang", "reedfang_scale", "bog_heart", "warden_crest",
-]
-## Slots drawn on the character. Rings, necklaces, and charms are too small to show when worn.
-const VISIBLE_SLOTS: Array[String] = ["helmet", "armor", "main_hand", "off_hand"]
-const GEAR: Dictionary = {
-	"ember_cap": preload("res://assets/sprites/gear/ember_cap.png"),
-	"iron_coif": preload("res://assets/sprites/gear/iron_coif.png"),
-	"moss_coat": preload("res://assets/sprites/gear/moss_coat.png"),
-	"ash_tunic": preload("res://assets/sprites/gear/ash_tunic.png"),
-	"copper_blade": preload("res://assets/sprites/gear/copper_blade.png"),
-	"flint_hatchet": preload("res://assets/sprites/gear/flint_hatchet.png"),
-	"oak_buckler": preload("res://assets/sprites/gear/oak_buckler.png"),
+## Source rectangles of tiles.png by tile index (4 per row), computed once.
+static var TILE_REGIONS: Array[Rect2] = _tile_regions()
+## Icon order in items.png: the catalog order of game/data/items.json.
+static var ITEM_ORDER: Array[String] = _item_order()
+## Slots drawn on the character (a cape replaces the tinted cloak). Rings, necklaces, and charms
+## are too small to show when worn.
+const VISIBLE_SLOTS: Array[String] = ["helmet", "cape", "armor", "main_hand", "off_hand"]
+## One sheet per visible item: assets/sprites/gear/<id>.png.
+static var GEAR: Dictionary = _gear_sheets()
+## Relics glow: white halo sheets (gear/<id>_glow.png, items_glow.png, monsters/<look>_glow.png)
+## drawn additively in the item's "glow" colour by game/render/glow_layer.gd.
+static var GEAR_GLOW: Dictionary = _gear_sheets("_glow")
+const ITEM_GLOW: Texture2D = preload("res://assets/sprites/items_glow.png")
+const MONSTER_GLOW: Dictionary = {
+	"golem": preload("res://assets/sprites/monsters/golem_glow.png"),
+	"wraith": preload("res://assets/sprites/monsters/wraith_glow.png"),
 }
 const GRASS_TILES: Array[int] = [0, 1, 2, 0, 1, 2, 0, 3]
 const DIRT_TILE: int = 4
@@ -67,8 +70,27 @@ const SAND_TILE: int = 20
 const COBBLE_TILE: int = 24
 const PLANK_TILE: int = 28
 const VERTICAL_PLANK_TILE: int = 30
+const DUSK_TILE: int = 32
+const OBSIDIAN_TILE: int = 36
+## objects.png: three living trees, then two dead trees of the Hollow Reach.
+const DEAD_TREE_FIRST: int = 3
+const DEAD_TREE_VARIANTS: int = 2
 ## Edge overlay order in the tile sheet: north, east, south, west.
 const EDGES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+
+
+static func _item_order() -> Array[String]:
+	var order: Array[String] = []
+	order.assign(World.ITEMS.keys())
+	return order
+
+
+static func _gear_sheets(suffix: String = "") -> Dictionary:
+	var sheets: Dictionary = {}
+	for kind: String in World.ITEMS:
+		if VISIBLE_SLOTS.has(World.ITEMS[kind]["slot"]) and (suffix.is_empty() or World.ITEMS[kind].has("glow")):
+			sheets[kind] = load("res://assets/sprites/gear/%s%s.png" % [kind, suffix])
+	return sheets
 
 
 static func tile_at(cell: Vector2i) -> String:
@@ -80,7 +102,14 @@ static func noise(cell: Vector2i, salt: int) -> int:
 
 
 static func _tile_region(index: int) -> Rect2:
-	return Rect2(Vector2(index % 4, index / 4) * TILE, Vector2.ONE * TILE)
+	return TILE_REGIONS[index]
+
+
+static func _tile_regions() -> Array[Rect2]:
+	var regions: Array[Rect2] = []
+	for index: int in 64:
+		regions.append(Rect2(Vector2(index % 4, index / 4) * TILE, Vector2.ONE * TILE))
+	return regions
 
 
 static func draw_floor(canvas: CanvasItem, cell: Vector2i, time: float) -> void:
@@ -98,16 +127,28 @@ static func draw_floor(canvas: CanvasItem, cell: Vector2i, time: float) -> void:
 		index = SAND_TILE + noise(cell, 4) % 4
 	elif tile == "=":
 		index = COBBLE_TILE + noise(cell, 5) % 4
+	elif tile == "d" or tile == "D" or tile == "O":
+		index = DUSK_TILE + noise(cell, 8) % 4
+	elif tile == "o":
+		index = obsidian_variant(cell)
 	canvas.draw_texture_rect_region(TILES, dest, _tile_region(index))
+	# Only roads, dusk soil, water, and piers have edge overlays; skip neighbour lookups otherwise.
+	if tile != "," and tile != "d" and tile != "~" and tile != "b":
+		return
 	for side: int in EDGES.size():
 		var neighbor: String = tile_at(cell + EDGES[side])
-		if tile == "," and neighbor == ".":
+		if (tile == "," and neighbor == ".") or (tile == "d" and neighbor in [".", ","]):
 			canvas.draw_texture_rect_region(TILES, dest, _tile_region(DIRT_EDGE_TILE + side))
 		elif (tile == "~" or tile == "b") and not neighbor.is_empty() and neighbor in World.LAND:
 			canvas.draw_texture_rect_region(TILES, dest, _tile_region(SHORE_TILE + side))
 	if tile == "b":
 		var plank: int = PLANK_TILE if _run(cell, Vector2i.DOWN) > _run(cell, Vector2i.RIGHT) else VERTICAL_PLANK_TILE
 		canvas.draw_texture_rect_region(TILES, dest, _tile_region(plank + noise(cell, 6) % 2))
+
+
+## Obsidian flagstones; the rune-carved stone (variant 0) appears on about one tile in twelve.
+static func obsidian_variant(cell: Vector2i) -> int:
+	return OBSIDIAN_TILE + (0 if noise(cell, 9) % 12 == 0 else 1 + noise(cell, 10) % 3)
 
 
 ## Length of the pier or bridge through a cell along an axis; boards run across the longer one.
@@ -125,6 +166,8 @@ static func _run(cell: Vector2i, axis: Vector2i) -> int:
 static func draw_tree(canvas: CanvasItem, cell: Vector2i) -> void:
 	var dest: Rect2 = Rect2((Vector2(cell) + Vector2(0.5, 0.5)) * TILE - TREE_ANCHOR, TREE_SIZE)
 	var variant: int = noise(cell, 7) % TREE_VARIANTS
+	if tile_at(cell) == "D":
+		variant = DEAD_TREE_FIRST + noise(cell, 7) % DEAD_TREE_VARIANTS
 	canvas.draw_texture_rect_region(OBJECTS, dest, Rect2(Vector2(variant * TREE_SIZE.x, 0), TREE_SIZE))
 
 
@@ -133,13 +176,14 @@ static func wall_mask(cell: Vector2i) -> int:
 	var mask: int = 0
 	var bits: Array[Vector2i] = [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]
 	for bit: int in bits.size():
-		if tile_at(cell + bits[bit]) != "#":
+		if tile_at(cell + bits[bit]) not in World.WALLS or tile_at(cell + bits[bit]).is_empty():
 			mask |= 1 << bit
 	return mask
 
 
 static func wall_region(cell: Vector2i) -> Rect2:
-	return Rect2(wall_mask(cell) * WALL_SIZE, 0, WALL_SIZE, WALL_SIZE)
+	# Row 0: grey stone; row 1: obsidian.
+	return Rect2(wall_mask(cell) * WALL_SIZE, WALL_SIZE if tile_at(cell) == "O" else 0.0, WALL_SIZE, WALL_SIZE)
 
 
 static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
@@ -169,8 +213,16 @@ static func draw_actor(canvas: CanvasItem, center: Vector2, state: Dictionary, l
 		canvas.draw_texture_rect_region(held, dest, source)
 	if shield != null and facing.x != 0:
 		canvas.draw_texture_rect_region(shield, dest, source)
+	var cloth: Color = tint if tint.a > 0.0 else COLORS[int(state["id"]) % COLORS.size()]
 	canvas.draw_texture_rect_region(BODY, dest, source)
-	canvas.draw_texture_rect_region(CLOTH, dest, source, tint if tint.a > 0.0 else COLORS[int(state["id"]) % COLORS.size()])
+	canvas.draw_texture_rect_region(CLOTH, dest, source, cloth)
+	# The cloak sheet holds only the cloak pixels left visible around the body, so a cape
+	# sheet (the same pixels in the cape's colours) can stand in for it in any facing.
+	var cape: Texture2D = GEAR.get(equipment.get("cape", ""), null)
+	if cape != null:
+		canvas.draw_texture_rect_region(cape, dest, source)
+	else:
+		canvas.draw_texture_rect_region(CLOAK, dest, source, cloth)
 	for slot: String in ["armor", "helmet"]:
 		var layer: Texture2D = GEAR.get(equipment.get(slot, ""), null)
 		if layer != null:
@@ -189,6 +241,15 @@ static func item_region(kind: String) -> Rect2:
 static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: Color = Color.WHITE) -> void:
 	canvas.draw_texture_rect_region(ITEM_ICONS, Rect2(center - Vector2.ONE * TILE / 2.0, Vector2.ONE * TILE),
 		item_region(kind), tint)
+
+
+## A stack count in the bottom-right corner (right-aligned at `corner`).
+static func draw_count(canvas: CanvasItem, corner: Vector2, count: int) -> void:
+	var font: Font = ThemeDB.fallback_font
+	var text: String = str(count)
+	var at: Vector2 = corner - Vector2(font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, 0)
+	canvas.draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 3, OUTLINE)
+	canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("#f2e6c4"))
 
 
 static func draw_slot_hint(canvas: CanvasItem, center: Vector2, slot: String) -> void:
@@ -265,3 +326,46 @@ static func draw_skull(canvas: CanvasItem, at: Vector2, skull: String) -> void:
 	canvas.draw_rect(Rect2(at + Vector2(-2, 1), Vector2(4, 3)), bone)
 	canvas.draw_rect(Rect2(at + Vector2(-2, -1), Vector2(1.5, 1.5)), OUTLINE)
 	canvas.draw_rect(Rect2(at + Vector2(0.5, -1), Vector2(1.5, 1.5)), OUTLINE)
+
+
+# ---------------------------------------------------------------- glow (additive pass)
+
+## Halos of worn relics; call on an additive canvas with the same centre as draw_actor.
+static func draw_actor_glow(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float, strength: float) -> bool:
+	var source: Rect2 = frame_region(state["facing"], stride)
+	var dest: Rect2 = Rect2(center - FRAME_ANCHOR, Vector2.ONE * FRAME)
+	var glowing: bool = false
+	for slot: String in VISIBLE_SLOTS:
+		var kind: String = String(state["equipment"].get(slot, ""))
+		if GEAR_GLOW.has(kind):
+			canvas.draw_texture_rect_region(GEAR_GLOW[kind], dest, source, Color(World.ITEMS[kind]["glow"], strength))
+			glowing = true
+	return glowing
+
+
+## Boss halos: glowing relic gear on humanoids, or the creature's own "glow" colour.
+static func draw_monster_glow(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float, strength: float) -> bool:
+	var definition: Dictionary = Monsters.MONSTERS.get(state["kind"], {})
+	if definition.is_empty():
+		return false
+	var glowing: bool = false
+	canvas.draw_set_transform(center + FEET, 0.0, Vector2.ONE * definition["size"])
+	if definition["look"] == "humanoid":
+		glowing = draw_actor_glow(canvas, -FEET, {"facing": state["facing"], "equipment": definition.get("gear", {})},
+			stride, strength)
+	elif definition.has("glow") and MONSTER_GLOW.has(definition["look"]):
+		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
+		canvas.draw_texture_rect_region(MONSTER_GLOW[definition["look"]], dest, frame_region(state["facing"], stride),
+			Color(definition["glow"], strength))
+		glowing = true
+	canvas.draw_set_transform(Vector2.ZERO)
+	return glowing
+
+
+static func draw_item_glow(canvas: CanvasItem, center: Vector2, entry: String, strength: float) -> bool:
+	var kind: String = World.kind_of(entry)
+	if not World.ITEMS.has(kind) or not World.ITEMS[kind].has("glow"):
+		return false
+	canvas.draw_texture_rect_region(ITEM_GLOW, Rect2(center - Vector2.ONE * TILE / 2.0, Vector2.ONE * TILE),
+		item_region(kind), Color(World.ITEMS[kind]["glow"], strength))
+	return true

@@ -10,6 +10,12 @@ extends Node2D
 		queue_redraw()
 ## Players may attack each other here once combat exists.
 @export var pvp: bool = false
+## A town: a safe zone with no PvP that monsters (which never cross zone borders) cannot enter.
+@export var town: bool = false
+## High risk: dying here drops every worn item (bound relics excepted), not just the usual 10%.
+@export var full_loot: bool = false
+## Light inside the zone multiplies the time of day (white: unchanged).
+@export var ambient: Color = Color.WHITE
 @export_range(1, 50) var min_level: int = 1
 @export_range(1, 50) var max_level: int = 50
 

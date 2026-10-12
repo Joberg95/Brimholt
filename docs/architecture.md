@@ -6,48 +6,77 @@
 project.godot            Godot project; the entry scene is game/main.tscn
 Makefile                 Developer commands (`make help`)
 game/
-  main.tscn, main.gd     Entry scene: ENet lifecycle, RPC endpoint (/root/Main), UI, camera, input
+  main.tscn, main.gd     Entry scene: ENet lifecycle, RPC endpoint (/root/Main), camera, input; assembles the UI
   core/                  Server-authoritative simulation shared by every peer (no nodes)
-    world.gd             Map loading, item catalog, movement, inventory, travel
-    combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot
+    world.gd             Map loading, item catalog, movement, inventory and depot, packs, travel
+    combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
+    economy.gd           Vendors (stock, buying, selling) and bankers (gold accounts)
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
-    monsters.gd          Monster catalog and loot tables
+    items.json           Item catalog (also read by the sprite generator)
+    items.gd             Loads items.json; derives tier and relic stats and vendor prices
+    quests.gd            Town hunting tasks and the packs they award
+    monsters.gd          Monster catalog, loot tables, bosses and their relics
     spells.gd            Spell catalog and cooldown groups
+  persistence/           Host-side saves and the client identity
+    character_store.gd   Signed per-character save files; capture, restore, and sanitizing
+    identity.gd          This computer's secret identity token (user://identity.cfg)
   input/keybinds.gd      Rebindable keys and the spells-only action bar
-  ui/controls_menu.gd    Key-binding window
+  ui/                    UI components; each gets the main node and builds controls into its UI layer
+    layout.gd            Shared screen layout constants (game window, panel origin, zoom, bar slot)
+    game_window.gd       Game window: world SubViewport, vignette, overlay; forwards map input to main
+    hud.gd               Title row, status line, action message, zone banner, vitals, Controls menu
+    inventory_panel.gd   Paperdoll and backpack slots, drag-and-drop, stat sheet, item tooltips
+    action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation
+    world_maps.gd        Minimap and world map drawn from one terrain texture
+    npc_dialogs.gd       NPC service menu; travel, trade, bank (depot), and quest dialogs; player party menu
+    start_panel.gd       Start menu shown until you host or join
+    controls_menu.gd     Key-binding window
   render/                Client-side drawing only
-    world_view.gd        Depth-ordered world, nameplates, effects
+    floor_layer.gd       Floors drawn once into cached 16x16-tile chunks (one chunk per frame)
+    water.gdshader       Animated water and pier chunks, no redraw needed
+    world_view.gd        Depth-ordered walls, trees, NPCs, items and actors (sparse, cached)
+    world_overlay.gd     Unlit layer: nameplates, NPC names, target square, floating numbers
+    lighting.gd          Day/night and zone ambient (CanvasModulate), pooled point lights
+    fx.gd                One-shot particle bursts (CC0 Kenney textures)
+    glow_layer.gd        Additive pass: relic and boss halos, sparks
+    vignette.gdshader    Soft dark edge around the game window
     sprite_art.gd        Sprite-sheet regions and character layers
   maps/
     overworld.tscn       The world, painted in Godot's TileMap editor
     terrain.tres         Editor tile set (terrain custom data)
-    markers/             Inspector scripts for spawn, item, ferryman, zone, monster markers
+    markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, zone, monster markers
 assets/sprites/          Original generated sprite sheets (+ Godot .import files)
+assets/third_party/      CC0 textures with their licenses (CREDITS.md)
 tests/
   unit/                  Deterministic rule checks (no networking, no rendering)
   integration/           Real ENet peers and the two-bot playthrough
   visual/                Offscreen rendering checks
 tools/
-  generators/            make_sprites.py, make_map.gd, balance_table.gd
+  generators/            make_sprites.py, make_map.gd, endgame_zone.gd, balance_table.gd, gear_table.gd
   testing/               Python runners that supervise Godot processes and write reports
 docs/                    Gameplay, world editing, art, balance, testing, this file
 .tools/                  Ignored: test reports, captures, downloads
 ```
 
-Dependencies point one way: `render/`, `ui/`, and `input/` may use `core/` and `data/`;
+Dependencies point one way: `render/`, `ui/`, and `input/` may use `core/` and `data/`,
+and `ui/` also uses `render/` (sprite drawing, the world view) and `input/` (key bindings);
 `core/` uses `data/` but never nodes, rendering, or input; `data/` depends on nothing
-else in the game. `main.gd` wires them together.
+else in the game. `main.gd` wires them together: UI components hold an untyped reference
+to the main node, read its replicated state (`actors`, `self_id`, `ground_view`), and send
+actions through its `*_local` functions, never through RPCs of their own.
 
 ```mermaid
 flowchart LR
-    main[main.gd<br/>RPCs, UI, camera] --> core
+    main[main.gd<br/>RPCs, camera, input] --> core
     main --> render
     main --> input
     main --> ui
     render --> core
     render --> data
-    ui --> input
+    ui[ui/<br/>hud, inventory, action bar,<br/>maps, dialogs, start menu] --> input
+    ui --> render
+    ui -. state and *_local actions .-> main
     core[core/<br/>world, combat] --> data[data/<br/>balance, monsters, spells]
     core --> maps[maps/overworld.tscn]
 ```
@@ -58,17 +87,33 @@ flowchart LR
 spawns) and owns the item catalog and authoritative movement, inventory, and travel rules.
 `game/core/combat.gd` runs targeting, attacks, spells, monster AI, deaths, experience, loot,
 and respawns on the host; `game/data/monsters.gd` and `game/data/spells.gd` are their catalogs. `game/main.gd` handles ENet,
-sender-validated RPCs, host/join UI, the camera, the inventory panel,
-drag-and-drop, the ferry menu, the minimap and world map, and interpolation.
+sender-validated RPCs, the camera, input, and interpolation, and assembles the UI components in
+`game/ui/` (inventory panel and drag-and-drop, action bar, NPC menus and dialogs, minimap and
+world map, HUD, start menu).
 `game/render/world_view.gd` draws the visible, depth-ordered part of the world and `game/render/sprite_art.gd` maps tiles, walls, characters, gear, and icons to
-sprite-sheet regions. Peer 1 keeps gameplay authority; clients request actions,
+sprite-sheet regions. Floors are not redrawn per frame: `floor_layer.gd` draws each
+16x16-tile chunk once (visible chunks first, at most one per frame, far chunks freed), and
+water is a separate chunk animated by `water.gdshader`. `world_view.gd` caches the walls,
+trees, and NPCs around the view and each frame visits only cells with content, sorted by
+depth. On the host, monster steps share one occupied-tile set per tick
+(`World.occupied_cells`). Backpack and ground entries are strings: an item id, or
+`"id#count"` for a stack (`World.kind_of`, `World.count_of`, `World.make_entry`).
+Peer 1 keeps gameplay authority; clients request actions,
 never positions, item contents, or appearance.
+Characters persist on the host only: `game/persistence/character_store.gd` saves each player as
+signed JSON (HMAC-SHA256 with a per-host key) named after the SHA-256 of the client's identity
+token (`game/persistence/identity.gd`, sent in the `hello` handshake), and sanitizes every
+loaded field against the catalog. `main.gd` admits a joining identity once, restores its save
+(or creates and saves a new character), and saves on leave, every 30 s, and when the host
+quits.
 The connection handshake checks matching map scene, catalog, ground items, inventory
 and movement parameters, player capacity, and protocol. Command-line startup exits nonzero if hosting
 cannot bind its UDP port or the supplied join address is empty.
 
 ## Conventions
 
+- `game/data/items.json` is read at runtime with `FileAccess`; an exported build must
+  include `*.json` in its export filter.
 - Typed GDScript, tabs, snake_case files; `preload("res://...")` with full paths
   (no `class_name` globals). Keep `.uid` files next to their scripts and commit them.
 - Moving a file: use `git mv` for the file and its `.uid`, update `res://` paths, then run

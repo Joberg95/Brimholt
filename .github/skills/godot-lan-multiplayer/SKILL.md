@@ -16,6 +16,6 @@ description: Use when implementing or changing Brimholt ENet hosting/joining, RP
 9. Keep headless host mode optional and share its state logic with the playing host. Check bind failures, capacity, unreachable host, host loss, and bounded peer cleanup.
 10. Verify with a real two-peer session when Godot tooling is available. Never claim ENet interoperability from static inspection alone.
 
-This is trusted-LAN prototyping, not Internet-ready authentication, encryption, anti-cheat, persistence, or an MMO backend.
+This is trusted-LAN prototyping, not Internet-ready authentication, encryption, anti-cheat, or an MMO backend. Characters persist on the host only (signed saves keyed by a hashed per-computer identity token, sent unencrypted in `hello`); see `game/persistence/`.
 
 Current implementation: `game/main.gd` holds the shared `/root/Main` RPC endpoint; `game/core/world.gd` owns deterministic rules. Run the actual ENet harness in `tools/testing/test_lan.py` with `make test-lan` (see `docs/testing.md`).

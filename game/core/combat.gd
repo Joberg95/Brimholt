@@ -14,6 +14,8 @@ const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Spells = preload("res://game/data/spells.gd")
+const Items = preload("res://game/data/items.gd")
+const Quests = preload("res://game/data/quests.gd")
 
 const TICK_SECONDS: float = 0.1
 const REGEN_SECONDS: float = 2.0
@@ -49,6 +51,23 @@ const SHARE_RANGE: int = 20
 const SHARE_ACTIVE_SECONDS: float = 120.0
 const SHARE_LEVEL_RATIO: float = 2.0 / 3.0
 const SHARE_BONUS: Array[float] = [1.0, 1.2, 1.3, 1.6, 2.0]
+## Final-boss raid mechanics (Balance: ENRAGE_SECONDS, BOSS_HEALING_PRESSURE, MIN_TANKS).
+## Every PULSE_SECONDS the boss damages every player within PULSE_RADIUS, a raid-wide total of
+## BOSS_HEALING_PRESSURE full healers' healing per second for the intended raid. Each boss hit
+## adds a wound to its target: +WOUND_STEP damage from the boss per stack, cleared after
+## WOUND_SECONDS without a new hit, so two Knights must swap with Challenge. After
+## ENRAGE_SECONDS of fighting the boss deals ENRAGE_MULTIPLIER times damage. Leaving it resets.
+const PULSE_SECONDS: float = 4.0
+const PULSE_RADIUS: int = 8
+const WOUND_STEP: float = 0.25
+const WOUND_SECONDS: float = 12.0
+const ENRAGE_MULTIPLIER: float = 10.0
+## Chance per kill of one equipment piece from the monster's tier (Combat.gear_drop).
+## Bosses drop relics from their loot table instead.
+const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.04, "elite": 0.25, "boss": 0.0}
+const GEAR_LOWER_TIER_CHANCE: float = 0.3
+## Shared cooldown between potions.
+const POTION_SECONDS: float = 1.0
 const PARTY_ACTIONS: Array[String] = ["invite", "revoke", "join", "leave"]
 const STEPS: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
@@ -76,7 +95,8 @@ static func line_of_sight(from: Vector2i, to: Vector2i) -> bool:
 	var steps: int = maxi(absi(to.x - from.x), absi(to.y - from.y))
 	for step: int in range(1, steps):
 		var cell := Vector2i(Vector2(from).lerp(Vector2(to), float(step) / steps).round())
-		if World.terrain(cell) in ["#", "T", " ", ""]:
+		var tile: String = World.terrain(cell)
+		if tile.is_empty() or tile == " " or tile in World.WALLS or tile in World.TREES:
 			return false
 	return true
 
@@ -181,7 +201,7 @@ func export_monster(id: int, now: float) -> Dictionary:
 		"id": id, "kind": monster["kind"], "level": monster["level"], "cell": monster["cell"],
 		"from": monster["from"] if remaining > 0.0 else monster["cell"],
 		"remaining": remaining, "duration": monster["step"], "facing": monster["facing"],
-		"health": monster["health"], "max_health": monster["max_health"],
+		"health": monster["health"], "max_health": monster["max_health"], "enraged": monster["enraged"],
 	}
 
 
@@ -226,6 +246,9 @@ func spawn_monster(kind: String, level: int, cell: Vector2i, now: float, spawn: 
 		"id": id, "kind": kind, "level": clampi(level, 1, Balance.MAX_LEVEL), "spawn": spawn, "home": cell,
 		"cell": cell, "from": cell, "next_move": now, "step": definition["step"], "facing": Vector2i.DOWN,
 		"health": health, "max_health": health, "target": 0, "next_attack": now, "damage_by": {},
+		"engaged_at": -1.0, "next_pulse": INF, "enraged": false, "wounds": {},
+		## Players who damaged this monster, were hit by it, or healed someone in the fight.
+		"fought": {},
 	}
 	events.append({"kind": "monster", "id": id, "movement": false})
 	return id
@@ -277,7 +300,6 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 			or not in_reach(player["cell"], creature(target)["cell"], definition.get("range", 1))):
 		return {"ok": false, "reason": "You need a target in range", "events": []}
 	var events: Array = []
-	player["active_at"] = now
 	player["mana"] -= cost
 	player["cooldowns"][spell] = now + definition["cooldown"]
 	player["groups"][definition["group"]] = now + Spells.GROUP_SECONDS[definition["group"]]
@@ -290,15 +312,21 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 			_area(center, definition["radius"], definition["color"], events)
 			for victim: int in _enemies_near(id, center, definition["radius"]):
 				_hit(id, victim, definition["power"], now, events)
+		"taunt":
+			_area(player["cell"], definition["radius"], definition["color"], events)
+			for monster: int in world.monsters:
+				if distance(world.monsters[monster]["cell"], player["cell"]) <= definition["radius"]:
+					world.monsters[monster]["target"] = id
+			events.append({"kind": "message", "id": id, "text": "You challenge every monster around you."})
 		"heal_self":
-			_heal(id, roundi(limits["health"] * definition["power"] * rng.randf_range(0.9, 1.1)), events)
+			_heal(id, roundi(limits["health"] * definition["power"] * rng.randf_range(0.9, 1.1)), events, id, now)
 			_area(player["cell"], 0, definition["color"], events)
 		"heal_area":
 			var amount: int = maxi(1, roundi(limits["healing"] * definition["power"]))
 			_area(player["cell"], definition["radius"], definition["color"], events)
 			for friend: int in world.players:
 				if distance(world.players[friend]["cell"], player["cell"]) <= definition["radius"]:
-					_heal(friend, amount, events)
+					_heal(friend, amount, events, id, now)
 	events.append({"kind": "player", "id": id})
 	return {"ok": true, "events": events}
 
@@ -323,11 +351,15 @@ func attack_of(id: int) -> float:
 	if id > 0:
 		return world.player_stats(id)["attack"]
 	var monster: Dictionary = world.monsters[id]
-	return Balance.mob_damage(monster["level"], monster_def(id)["rank"])
+	return Balance.mob_damage(monster["level"], monster_def(id)["rank"]) * (ENRAGE_MULTIPLIER if monster["enraged"] else 1.0)
 
 
 func _hit(attacker: int, target: int, power: float, now: float, events: Array) -> void:
 	var raw: float = attack_of(attacker) * power * rng.randf_range(0.85, 1.15)
+	if attacker < 0 and target > 0 and monster_def(attacker)["rank"] == "boss":
+		raw *= 1.0 + WOUND_STEP * wound_stacks(attacker, target, now)
+		var wounds: Dictionary = world.monsters[attacker]["wounds"]
+		wounds[target] = [wound_stacks(attacker, target, now) + 1, now + WOUND_SECONDS]
 	var critical: bool = attacker > 0 and rng.randi_range(1, 100) <= world.player_stats(attacker)["critical"]
 	if critical:
 		raw *= CRITICAL_MULTIPLIER
@@ -343,8 +375,11 @@ func _damage(attacker: int, target: int, amount: int, style: String, now: float,
 			world.players[id]["active_at"] = now
 	victim["health"] -= amount
 	events.append({"kind": "hit", "target": target, "amount": amount, "style": style})
+	if attacker < 0 and target > 0 and world.monsters.has(attacker):
+		world.monsters[attacker]["fought"][target] = true
 	if target < 0:
 		if attacker > 0:
+			victim["fought"][attacker] = true
 			victim["damage_by"][attacker] = victim["damage_by"].get(attacker, 0) + amount
 			if victim["target"] == 0:
 				victim["target"] = attacker
@@ -379,10 +414,19 @@ func _register_aggression(attacker: int, target: int, now: float, events: Array)
 	events.append({"kind": "player", "id": attacker})
 
 
-func _heal(id: int, amount: int, events: Array) -> void:
+## Restores health. A healer who actually restores health to someone else counts as active
+## (party sharing), and healing anyone a monster is fighting joins that monster's fight
+## (boss trophies). Casting at full health earns neither.
+func _heal(id: int, amount: int, events: Array, healer: int = 0, now: float = 0.0) -> void:
 	var player: Dictionary = world.players[id]
 	var healed: int = mini(amount, world.player_stats(id)["health"] - player["health"])
 	player["health"] += healed
+	if healer > 0 and healed > 0 and world.players.has(healer):
+		if healer != id:
+			world.players[healer]["active_at"] = now
+		for monster: int in world.monsters:
+			if world.monsters[monster]["fought"].has(id):
+				world.monsters[monster]["fought"][healer] = true
 	events.append({"kind": "hit", "target": id, "amount": healed, "style": "heal"})
 	events.append({"kind": "player", "id": id})
 
@@ -397,7 +441,7 @@ func _area(center: Vector2i, radius: int, color: Color, events: Array) -> void:
 	for dy: int in range(-radius, radius + 1):
 		for dx: int in range(-radius, radius + 1):
 			var cell: Vector2i = center + Vector2i(dx, dy)
-			if World.terrain(cell) not in ["#", " ", ""]:
+			if World.terrain(cell) not in [" ", ""] and World.terrain(cell) not in World.WALLS:
 				cells.append(cell)
 	events.append({"kind": "area", "cells": cells, "color": color})
 
@@ -406,7 +450,10 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 	var monster: Dictionary = world.monsters[id]
 	var definition: Dictionary = monster_def(id)
 	var experience: int = Balance.mob_experience(monster["level"], definition["rank"])
-	_award_experience(experience, monster["damage_by"], monster["cell"], now, events)
+	var credited: Array[int] = _award_experience(experience, monster["damage_by"], monster["cell"], now, events)
+	_credit_tasks(monster["kind"], credited, events)
+	if definition.has("relics"):
+		_award_trophies(monster["kind"], monster["fought"], events)
 	_drop_loot(monster, events)
 	world.monsters.erase(id)
 	events.append({"kind": "monster_gone", "id": id})
@@ -415,17 +462,19 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 			world.players[player]["target"] = 0
 			events.append({"kind": "player", "id": player})
 	if monster["spawn"] >= 0:
-		respawns.append([now + Monsters.RESPAWN_SECONDS, monster["spawn"]])
+		respawns.append([now + definition.get("respawn", Monsters.RESPAWN_SECONDS), monster["spawn"]])
 
 
 ## Splits a kill's experience by damage dealt; a sharing party pools its members' portions
 ## and divides the pool (with the vocation bonus) evenly among its active members nearby.
-func _award_experience(experience: int, damage_by: Dictionary, cell: Vector2i, now: float, events: Array) -> void:
+## Returns every player credited with the kill.
+func _award_experience(experience: int, damage_by: Dictionary, cell: Vector2i, now: float, events: Array) -> Array[int]:
+	var credited: Array[int] = []
 	var total: int = 0
 	for attacker: int in damage_by:
 		total += damage_by[attacker]
 	if total <= 0:
-		return
+		return credited
 	var pools: Dictionary = {}
 	for attacker: int in damage_by:
 		if not world.players.has(attacker):
@@ -436,11 +485,161 @@ func _award_experience(experience: int, damage_by: Dictionary, cell: Vector2i, n
 			pools[leader] = pools.get(leader, 0.0) + portion
 		else:
 			grant_experience(attacker, roundi(portion), events)
+			credited.append(attacker)
 	for leader: int in pools:
 		var members: Array[int] = sharing_members(leader, cell, now)
 		var each: int = roundi(pools[leader] * share_bonus(members) / members.size())
 		for member: int in members:
 			grant_experience(member, each, events)
+			if member not in credited:
+				credited.append(member)
+	return credited
+
+
+# ---------------------------------------------------------------- relic quests
+
+## Everyone who took part in the fight earns one trophy: players who damaged the boss, players
+## it hit (tanks), and players who healed any of them. Standing nearby is not enough.
+func _award_trophies(boss: String, fought: Dictionary, events: Array) -> void:
+	var name: String = Monsters.MONSTERS[boss]["name"]
+	for id: int in fought:
+		if not world.players.has(id):
+			continue
+		var player: Dictionary = world.players[id]
+		player["trophies"][boss] = player["trophies"].get(boss, 0) + 1
+		events.append({"kind": "message", "id": id, "text": "You helped slay %s. Claim a relic from %s." % [name, relic_keeper_text()]})
+		events.append({"kind": "player", "id": id})
+
+
+static func relic_keeper_text() -> String:
+	for id: String in World.QUEST_GIVERS:
+		if World.QUEST_GIVERS[id]["task"].is_empty():
+			return "%s in %s" % [World.QUEST_GIVERS[id]["name"], World.QUEST_GIVERS[id]["place"]]
+	return "the Relic keeper"
+
+
+## The boss whose quest rewards a relic, or "".
+static func relic_boss(relic: String) -> String:
+	for boss: String in Monsters.MONSTERS:
+		if relic in Monsters.MONSTERS[boss].get("relics", []):
+			return boss
+	return ""
+
+
+## Trades one of the boss's trophies for a relic, in range of a quest giver, into the backpack.
+func claim_relic(id: int, npc: Variant, relic: Variant, now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	if typeof(npc) != TYPE_STRING or not World.QUEST_GIVERS.has(npc) or not World.QUEST_GIVERS[npc]["task"].is_empty():
+		return {"ok": false, "reason": "Unknown quest giver", "events": []}
+	var player: Dictionary = world.players[id]
+	var keeper: Dictionary = World.QUEST_GIVERS[npc]
+	if distance(player["cell"], keeper["cell"]) > World.TALK_RANGE:
+		return {"ok": false, "reason": "Walk closer to %s" % keeper["name"], "events": []}
+	var boss: String = relic_boss(relic) if typeof(relic) == TYPE_STRING else ""
+	if boss.is_empty():
+		return {"ok": false, "reason": "Unknown relic", "events": []}
+	if player["trophies"].get(boss, 0) <= 0:
+		return {"ok": false, "reason": "Slay %s first" % Monsters.MONSTERS[boss]["name"], "events": []}
+	var slot: int = player["backpack"].find("")
+	if slot < 0:
+		return {"ok": false, "reason": "Your backpack is full", "events": []}
+	player["trophies"][boss] -= 1
+	if player["trophies"][boss] == 0:
+		player["trophies"].erase(boss)
+	player["backpack"][slot] = relic
+	var events: Array = [{"kind": "player", "id": id},
+		{"kind": "message", "id": id, "text": "%s hands you the %s." % [keeper["name"], World.ITEMS[relic]["name"]]}]
+	return {"ok": true, "events": events}
+
+
+# ---------------------------------------------------------------- town tasks
+
+## Accepts ("accept") or turns in ("complete") the hunting task of a quest giver in range.
+## Turning in a finished task replaces your pack with the next, bigger one.
+func task_action(id: int, npc: Variant, action: Variant, now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	var player: Dictionary = world.players[id]
+	if not World.serves(npc, "quests", player["cell"]) or World.QUEST_GIVERS[npc]["task"].is_empty():
+		return {"ok": false, "reason": "Walk closer to a quest giver", "events": []}
+	var task: String = World.QUEST_GIVERS[npc]["task"]
+	var definition: Dictionary = Quests.TASKS[task]
+	var giver: String = World.QUEST_GIVERS[npc]["name"]
+	if player["done_tasks"].has(task):
+		return {"ok": false, "reason": "You already finished %s" % definition["title"], "events": []}
+	var monster: String = Monsters.MONSTERS[definition["monster"]]["name"]
+	var text: String = ""
+	match action:
+		"accept":
+			if player["tasks"].has(task):
+				return {"ok": false, "reason": "You are already on that task", "events": []}
+			player["tasks"][task] = 0
+			text = "%s: slay %d %ss, then return to %s." % [definition["title"], definition["count"], monster.to_lower(), giver]
+		"complete":
+			if player["tasks"].get(task, 0) < definition["count"]:
+				return {"ok": false, "reason": "Slay %d %ss first" % [definition["count"], monster.to_lower()], "events": []}
+			var pack: String = Quests.next_pack(player["equipment"].get("bag", ""))
+			player["tasks"].erase(task)
+			player["done_tasks"][task] = true
+			if pack.is_empty():
+				text = "%s thanks you. Your pack is already the largest there is." % giver
+			else:
+				world.wear_pack(id, pack)
+				text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], player["backpack"].size()]
+		_:
+			return {"ok": false, "reason": "Unknown task request", "events": []}
+	return {"ok": true, "events": [{"kind": "player", "id": id}, {"kind": "message", "id": id, "text": text}]}
+
+
+func _credit_tasks(kind: String, credited: Array[int], events: Array) -> void:
+	for id: int in credited:
+		var tasks: Dictionary = world.players[id]["tasks"]
+		for task: String in tasks:
+			var definition: Dictionary = Quests.TASKS[task]
+			if definition["monster"] == kind and tasks[task] < definition["count"]:
+				tasks[task] += 1
+				var done: bool = tasks[task] == definition["count"]
+				events.append({"kind": "message", "id": id, "text": "%s: %d/%d%s" % [definition["title"], tasks[task],
+					definition["count"], ". Return to the quest giver." if done else ""]})
+				events.append({"kind": "player", "id": id})
+
+
+# ---------------------------------------------------------------- potions
+
+## Drinks one potion from a backpack stack: restores its share of maximum health or mana.
+func drink(id: int, index: Variant, now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	var player: Dictionary = world.players[id]
+	var backpack: Array = player["backpack"]
+	if typeof(index) != TYPE_INT or index < 0 or index >= backpack.size():
+		return {"ok": false, "reason": "Unknown item location", "events": []}
+	var kind: String = World.kind_of(backpack[index])
+	if not World.ITEMS.get(kind, {}).has("drink"):
+		return {"ok": false, "reason": "You cannot drink that", "events": []}
+	if now < player["next_potion"]:
+		return {"ok": false, "reason": "Potion cooldown", "events": []}
+	var limits: Dictionary = world.player_stats(id)
+	var restores: Dictionary = World.ITEMS[kind]["drink"]
+	var needed: bool = false
+	for stat: String in restores:
+		needed = needed or player[stat] < limits[stat]
+	if not needed:
+		return {"ok": false, "reason": "You are already at full %s" % " and ".join(restores.keys()), "events": []}
+	backpack[index] = World.make_entry(kind, World.count_of(backpack[index]) - 1) if World.count_of(backpack[index]) > 1 else ""
+	player["next_potion"] = now + POTION_SECONDS
+	var events: Array = []
+	for stat: String in restores:
+		var amount: int = maxi(1, roundi(limits[stat] * restores[stat]))
+		if stat == "health":
+			_heal(id, amount, events)
+		else:
+			var gained: int = mini(amount, limits[stat] - player[stat])
+			player[stat] += gained
+			events.append({"kind": "hit", "target": id, "amount": gained, "style": "mana"})
+	events.append({"kind": "player", "id": id})
+	return {"ok": true, "events": events}
 
 
 # ---------------------------------------------------------------- parties
@@ -579,12 +778,28 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 	for entry: Array in Monsters.LOOT.get(kind, []):
 		if rng.randf() < float(entry[1]):
 			loot.append(entry[0])
+	if rng.randf() < GEAR_DROP_CHANCE.get(Monsters.MONSTERS[kind]["rank"], 0.0):
+		loot.append(gear_drop(level))
 	var piles: int = level / 10 + (1 if rng.randf() < 0.6 else 0)
 	if Monsters.MONSTERS[kind]["rank"] != "normal":
 		piles += 3
-	for pile: int in piles:
-		loot.append("gold_coins")
+	if piles > 0:
+		loot.append(World.make_entry("gold_coins", piles))
 	return loot
+
+
+## A random equipment piece from the monster's level tier, or (GEAR_LOWER_TIER_CHANCE) the
+## tier below. Accessories exist only from Items.ACCESSORY_LEVEL, so lower monsters never drop them.
+func gear_drop(level: int) -> String:
+	var tier: int = Items.tier_for(level)
+	var index: int = Items.TIER_LEVELS.find(tier)
+	if index > 0 and rng.randf() < GEAR_LOWER_TIER_CHANCE:
+		tier = Items.TIER_LEVELS[index - 1]
+	var choices: Array[String] = []
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind]["level"] == tier and not World.ITEMS[kind]["slot"].is_empty() and not World.bound(kind):
+			choices.append(kind)
+	return choices[rng.randi_range(0, choices.size() - 1)]
 
 
 func _drop_loot(monster: Dictionary, events: Array) -> void:
@@ -606,11 +821,14 @@ func spill(origin: Vector2i, items: Array[String]) -> Array[Vector2i]:
 		var cell: Vector2i = cells[index]
 		index += 1
 		var stack: Array = world.ground.get(cell, [])
-		if World.walkable(cell) and stack.size() < World.GROUND_STACK_MAX:
-			while not items.is_empty() and stack.size() < World.GROUND_STACK_MAX:
-				stack.append(items.pop_back())
-			world.ground[cell] = stack
-			changed.append(cell)
+		if World.walkable(cell):
+			var placed: bool = false
+			while not items.is_empty() and World.stack_onto(stack, items.back()):
+				items.pop_back()
+				placed = true
+			if placed:
+				world.ground[cell] = stack
+				changed.append(cell)
 		for step: Vector2i in STEPS:
 			var next: Vector2i = cell + step
 			if not seen.has(next) and distance(next, origin) <= SPILL_RADIUS and World.terrain(next) not in ["", " "]:
@@ -701,22 +919,28 @@ func _kill_player(id: int, now: float, events: Array, killer: int = 0) -> void:
 
 
 ## Drops the backpack, purse gold, and unlucky (or, with a red skull, all) worn items around
-## the death tile. Returns ["backpack", worn item names...] or [] if nothing was carried.
+## the death tile; in a full-loot zone every worn item drops. Bound relics and packs, banked
+## gold, and the depot always stay. Returns ["backpack", worn item names...] or [] if nothing was carried.
 func _drop_belongings(id: int, events: Array) -> Array[String]:
 	var player: Dictionary = world.players[id]
 	if player["level"] < PROTECTION_LEVEL:
 		return []
 	var dropped: Array[String] = []
 	var lost_worn: Array[String] = []
-	for index: int in World.BACKPACK_SIZE:
-		if not player["backpack"][index].is_empty():
+	# High-risk zones (the Hollow Reach) drop everything worn, like a red skull.
+	var full_loot: bool = World.zone_at(player["cell"]).get("full_loot", false)
+	for index: int in player["backpack"].size():
+		if not player["backpack"][index].is_empty() and not World.bound(player["backpack"][index]):
 			dropped.append(player["backpack"][index])
 			player["backpack"][index] = ""
-	for pile: int in player["gold"] / World.ITEMS["gold_coins"]["gold"]:
-		dropped.append("gold_coins")
+	var piles: int = player["gold"] / World.ITEMS["gold_coins"]["gold"]
+	while piles > 0:
+		dropped.append(World.make_entry("gold_coins", mini(piles, World.STACK_MAX)))
+		piles -= World.STACK_MAX
 	player["gold"] = 0
 	for slot: String in World.SLOTS:
-		if player["equipment"].has(slot) and (player["skull"] == "red" or rng.randf() < EQUIPMENT_LOSS_CHANCE):
+		if player["equipment"].has(slot) and not World.bound(player["equipment"][slot]) \
+				and (player["skull"] == "red" or full_loot or rng.randf() < EQUIPMENT_LOSS_CHANCE):
 			dropped.append(player["equipment"][slot])
 			lost_worn.append(World.ITEMS[player["equipment"][slot]]["name"])
 			player["equipment"].erase(slot)
@@ -808,6 +1032,10 @@ func _monster_tick(id: int, now: float, events: Array) -> void:
 		if target != 0:
 			monster["next_attack"] = maxf(monster["next_attack"], now + 1.0)
 	monster["target"] = target
+	if target != 0 and monster_def(id)["rank"] == "boss":
+		_boss_tick(id, now, events)
+		if not world.monsters.has(id) or not world.players.has(target):
+			return
 	if target != 0:
 		var goal: Vector2i = world.players[target]["cell"]
 		if in_reach(monster["cell"], goal, reach_of(id)):
@@ -822,19 +1050,79 @@ func _monster_tick(id: int, now: float, events: Array) -> void:
 				_hit(id, target, 1.0, now, events)
 		elif now >= monster["next_move"]:
 			_monster_step(id, goal, now, events)
+	elif monster["engaged_at"] >= 0.0 and monster["cell"] == monster["home"]:
+		monster["health"] = monster["max_health"]
+		monster["damage_by"].clear()
+		monster["fought"].clear()
+		_reset_boss(monster)
+		events.append({"kind": "monster", "id": id, "movement": false})
 	elif monster["cell"] != monster["home"] and now >= monster["next_move"]:
 		_monster_step(id, monster["home"], now, events)
 		if distance(monster["cell"], monster["home"]) <= 1:
 			monster["health"] = monster["max_health"]
 			monster["damage_by"].clear()
+			monster["fought"].clear()
+			_reset_boss(monster)
+
+
+func wound_stacks(boss: int, player: int, now: float) -> int:
+	var wound: Array = world.monsters[boss]["wounds"].get(player, [0, -INF])
+	return wound[0] if now < wound[1] else 0
+
+
+## Engage, raid-wide pulses, and enrage for a boss with a target; called every tick.
+func _boss_tick(id: int, now: float, events: Array) -> void:
+	var monster: Dictionary = world.monsters[id]
+	var name: String = monster_def(id)["name"]
+	if monster["engaged_at"] < 0.0:
+		monster["engaged_at"] = now
+		monster["next_pulse"] = now + PULSE_SECONDS
+		_raid_message(id, "%s awakens! Defeat it within %d seconds before it enrages." % [name, roundi(Balance.ENRAGE_SECONDS)], events)
+	if not monster["enraged"] and now - monster["engaged_at"] >= Balance.ENRAGE_SECONDS:
+		monster["enraged"] = true
+		_raid_message(id, "%s enrages!" % name, events)
+		events.append({"kind": "monster", "id": id, "movement": false})
+	if now >= monster["next_pulse"]:
+		monster["next_pulse"] += PULSE_SECONDS
+		var amount: int = pulse_damage(monster["level"]) * (roundi(ENRAGE_MULTIPLIER) if monster["enraged"] else 1)
+		_area(monster["cell"], 2, Color("#b06aff"), events)
+		for player: int in world.players.keys():
+			if world.players.has(player) and distance(world.players[player]["cell"], monster["cell"]) <= PULSE_RADIUS:
+				_damage(id, player, amount, "damage", now, events)
+
+
+## A pulse's damage to each player: the intended raid shares BOSS_HEALING_PRESSURE full healers'
+## healing per second.
+static func pulse_damage(level: int) -> int:
+	var raid: int = 0
+	for vocation: String in Balance.RAID:
+		raid += Balance.RAID[vocation]
+	var healer: float = Balance.base_stats(level, "druid")["healing"]
+	return roundi(Balance.BOSS_HEALING_PRESSURE * healer * PULSE_SECONDS / raid)
+
+
+func _raid_message(boss: int, text: String, events: Array) -> void:
+	for player: int in world.players:
+		if distance(world.players[player]["cell"], world.monsters[boss]["cell"]) <= SHARE_RANGE:
+			events.append({"kind": "message", "id": player, "text": text})
+
+
+## A boss walking home forgets the fight: no timer, wounds, or enrage.
+func _reset_boss(monster: Dictionary) -> void:
+	monster["engaged_at"] = -1.0
+	monster["next_pulse"] = INF
+	monster["enraged"] = false
+	monster["wounds"].clear()
 
 
 func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 	var monster: Dictionary = world.monsters[id]
 	var home: Vector2i = monster["home"]
+	var taken: Dictionary = world.occupied_cells(now, id)
+	var home_zoned: bool = not World.zone_at(home).is_empty()
 	var step: Vector2i = path_step(monster["cell"], goal, func(cell: Vector2i) -> bool:
-		return world.occupied(cell, now, id) or distance(cell, home) > Monsters.LEASH \
-			or World.zone_at(cell).is_empty() != World.zone_at(home).is_empty())
+		return taken.has(cell) or distance(cell, home) > Monsters.LEASH \
+			or World.zone_at(cell).is_empty() == home_zoned)
 	monster["next_move"] = now + monster["step"]
 	if step == Vector2i.ZERO:
 		return

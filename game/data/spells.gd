@@ -3,6 +3,7 @@ extends RefCounted
 ## mana; damage multiplies the caster's attack; heals restore a fraction of the healed
 ## player's max health ("heal_self") or the caster's healing stat times power ("heal_area").
 ## Like Tibia, every spell has its own cooldown and also starts its group's shared cooldown.
+## "taunt" (Challenge) turns nearby monsters, bosses included, onto the caster: the tank swap.
 
 const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0}
 const SPELLS: Dictionary = {
@@ -12,6 +13,8 @@ const SPELLS: Dictionary = {
 		"power": 2.0, "mana": 0.15, "cooldown": 4.0, "group": "attack", "color": Color("#e0b060")},
 	"whirling_strike": {"name": "Whirling strike", "vocations": ["knight"], "level": 10, "kind": "area_self",
 		"radius": 1, "power": 1.4, "mana": 0.25, "cooldown": 6.0, "group": "attack", "color": Color("#e0d0a0")},
+	"challenge": {"name": "Challenge", "vocations": ["knight"], "level": 20, "kind": "taunt", "radius": 2,
+		"power": 0.0, "mana": 0.1, "cooldown": 4.0, "group": "attack", "color": Color("#f0c060")},
 	"piercing_shot": {"name": "Piercing shot", "vocations": ["paladin"], "level": 1, "kind": "target", "range": 6,
 		"power": 1.8, "mana": 0.1, "cooldown": 4.0, "group": "attack", "color": Color("#f0e6b0")},
 	"holy_mend": {"name": "Holy mend", "vocations": ["paladin"], "level": 8, "kind": "heal_self", "power": 0.3,

@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import test test-unit test-lan test-visual playtest check \
-	sprites map map-force balance-table clean
+	sprites map map-force endgame-zone gear-table balance-table clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -41,10 +41,11 @@ test-unit: ## Deterministic rule checks
 		echo "$$out" | grep -E 'BRIMHOLT_RULES|FAIL|ERROR|SCRIPT'; \
 		echo "$$out" | grep -q 'BRIMHOLT_RULES: [0-9]* checks, 0 failures'
 
-test-lan: ## Real ENet scenarios: playing host, dedicated, host loss, occupied port
+test-lan: ## Real ENet scenarios: playing host, dedicated, host loss, occupied port, persistence
 	$(PYTHON) tools/testing/test_lan.py --godot $(GODOT)
 	$(PYTHON) tools/testing/test_lan.py --godot $(GODOT) --dedicated
 	$(PYTHON) tools/testing/test_lan.py --godot $(GODOT) --host-loss
+	$(PYTHON) tools/testing/test_lan.py --godot $(GODOT) --persistence
 	$(PYTHON) tools/testing/test_lan.py --godot $(GODOT) --occupied-port
 
 test-visual: ## Offscreen graphical checks; writes .tools/visual-report.html
@@ -62,8 +63,14 @@ sprites: ## Regenerate the original sprite sheets in assets/sprites
 map: ## Generate the overworld draft (refuses to overwrite an edited map)
 	$(GODOT) --headless --path . --script res://tools/generators/make_map.gd
 
+endgame-zone: ## Repaint the Hollow Reach into the existing overworld (keeps other map edits)
+	$(GODOT) --headless --path . --script res://tools/generators/endgame_zone.gd
+
 map-force: ## Regenerate the overworld draft, overwriting game/maps/overworld.tscn
 	$(GODOT) --headless --path . --script res://tools/generators/make_map.gd -- --force
+
+gear-table: ## Print the gear tier and relic tables (paste into docs/balance.md)
+	@$(GODOT) --headless --path . --script res://tools/generators/gear_table.gd 2>/dev/null | grep '^|'
 
 balance-table: ## Print the level 1-50 balance table (paste into docs/balance.md)
 	@$(GODOT) --headless --path . --script res://tools/generators/balance_table.gd 2>/dev/null | grep '^|'

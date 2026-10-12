@@ -129,6 +129,11 @@ static func gear_attack_budget(level: int) -> int:
 	return geared_attack(level) - base_attack(level)
 
 
+## Unrounded gear_attack_budget, for item tiers whose budgets are only a few points.
+static func gear_attack_budget_exact(level: int) -> float:
+	return MOB_HEALTH_LEVEL_1 * _scale(level) * (1.0 / GEARED_HITS_PER_KILL - 1.0 / BASE_HITS_PER_KILL)
+
+
 ## Defense reduces incoming damage hyperbolically: 100 defense halves it.
 static func damage_taken(raw: int, defense: int) -> int:
 	return roundi(raw * 100.0 / (100.0 + maxi(defense, 0)))

@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" path="res://assets/sprites/terrain_palette.png" id="1_3clg0"]
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_n2vx8"]
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_3clg0"]
 texture = ExtResource("1_3clg0")
 texture_region_size = Vector2i(32, 32)
 0:0/0 = 0
@@ -21,9 +21,17 @@ texture_region_size = Vector2i(32, 32)
 6:0/0/custom_data_0 = "="
 7:0/0 = 0
 7:0/0/custom_data_0 = "b"
+8:0/0 = 0
+8:0/0/custom_data_0 = "d"
+9:0/0 = 0
+9:0/0/custom_data_0 = "o"
+10:0/0 = 0
+10:0/0/custom_data_0 = "O"
+11:0/0 = 0
+11:0/0/custom_data_0 = "D"
 
 [resource]
 tile_size = Vector2i(32, 32)
 custom_data_layer_0/name = "terrain"
 custom_data_layer_0/type = 4
-sources/0 = SubResource("TileSetAtlasSource_n2vx8")
+sources/0 = SubResource("TileSetAtlasSource_3clg0")

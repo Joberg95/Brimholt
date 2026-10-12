@@ -1,45 +1,34 @@
 extends Node2D
+## The entry scene (/root/Main): ENet hosting and joining, the sender-validated RPC endpoint,
+## replicated client state, the camera, and input. The UI components in game/ui/ build and
+## draw the panels; main keeps shortcuts to their controls and thin wrappers for tests.
 
 const World = preload("res://game/core/world.gd")
-const SpriteArt = preload("res://game/render/sprite_art.gd")
-const WorldView = preload("res://game/render/world_view.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
-const Monsters = preload("res://game/data/monsters.gd")
-const Spells = preload("res://game/data/spells.gd")
-const MESSAGE_SECONDS: float = 4.0
-const ControlsMenu = preload("res://game/ui/controls_menu.gd")
-const BAR_SLOT: float = 44.0
-const NPC_SERVICES: Dictionary = {"travel": "Travel", "buy": "Buy", "quests": "Quests"}
-const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
-	"join": "Join party", "leave": "Leave party"}
-## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
-const ZOOM: float = 2.0
-const VIEW_TILES: Vector2i = Vector2i(15, 11)
-const VIEW_ORIGIN: Vector2 = Vector2(16, 76)
-const VIEW_SIZE: Vector2 = Vector2(VIEW_TILES * World.TILE_SIZE) * ZOOM
-const PANEL_ORIGIN: Vector2 = Vector2(992, 76)
-const SLOT_STEP: float = 36.0
+const Economy = preload("res://game/core/economy.gd")
+const CharacterStore = preload("res://game/persistence/character_store.gd")
+const Identity = preload("res://game/persistence/identity.gd")
 const Balance = preload("res://game/data/balance.gd")
-## Tibia-style paperdoll grid: necklace/helmet/charm, main hand/armor/off hand, ring/-/ring.
-const PAPERDOLL: Dictionary = {
-	"necklace": Vector2(0, 0), "helmet": Vector2(1, 0), "charm": Vector2(2, 0),
-	"main_hand": Vector2(0, 1), "armor": Vector2(1, 1), "off_hand": Vector2(2, 1),
-	"ring_1": Vector2(0, 2), "ring_2": Vector2(2, 2),
-}
-const MINIMAP_SCALE: float = 2.0
-const PVP_TINT: Color = Color("#c43c32")
-const MAP_COLORS: Dictionary = {
-	".": Color("#4e693b"), ",": Color("#a08a6a"), "~": Color("#2d5a78"), "#": Color("#9196a0"),
-	"T": Color("#26401f"), ":": Color("#d8c48a"), "=": Color("#b0aca4"), "b": Color("#8a5a34"),
-}
-const STAT_LABELS: Dictionary = {
-	"health": "Health", "mana": "Mana", "attack": "Attack", "defense": "Defense", "critical": "Critical",
-	"regen": "Regen", "healing": "Healing",
-}
+const Layout = preload("res://game/ui/layout.gd")
+const GameWindow = preload("res://game/ui/game_window.gd")
+const Hud = preload("res://game/ui/hud.gd")
+const InventoryPanel = preload("res://game/ui/inventory_panel.gd")
+const WorldMaps = preload("res://game/ui/world_maps.gd")
+const ActionBar = preload("res://game/ui/action_bar.gd")
+const NpcDialogs = preload("res://game/ui/npc_dialogs.gd")
+const StartPanel = preload("res://game/ui/start_panel.gd")
+## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
+const ZOOM: float = Layout.ZOOM
+const VIEW_TILES: Vector2i = Layout.VIEW_TILES
+const VIEW_ORIGIN: Vector2 = Layout.VIEW_ORIGIN
+const VIEW_SIZE: Vector2 = Layout.VIEW_SIZE
+const PANEL_ORIGIN: Vector2 = Layout.PANEL_ORIGIN
+const MAP_COLORS: Dictionary = WorldMaps.MAP_COLORS
 
 var world := World.new()
 var combat := Combat.new(world)
+var economy := Economy.new(world)
 var actors: Dictionary = {}
 ## Client view of monsters, interpolated like actors.
 var monsters: Dictionary = {}
@@ -61,42 +50,50 @@ var _leaving: bool = false
 var _move_pending_since: float = -1.0
 var _next_move_attempt: float = 0.0
 var _status_message: String = "Offline — host a world or join a LAN address."
+var _view: GameWindow
+var _world_view: Node2D
+## Clients add this to their clock to follow the host's time of day.
+var _clock_offset: float = 0.0
+var keybinds := Keybinds.new()
+## Hosts save characters (game/persistence/character_store.gd) unless started with --no-save;
+## --save-dir=PATH picks the folder (default user://saves).
+var save_enabled: bool = true
+var save_dir: String = CharacterStore.DEFAULT_DIR
+var store: CharacterStore
+## Peer id -> save account (SHA-256 of the identity token) of every character in the world.
+var _accounts: Dictionary = {}
+var _next_autosave: float = 0.0
+## Welcome-back messages for restored characters, sent after their snapshot.
+var _greetings: Dictionary = {}
+## This computer's identity token (game/persistence/identity.gd): from --profile=NAME, a new
+## one per run with --fresh-identity (tests), or --token=HEX.
+var identity_token: String = ""
+var identity_profile: String = ""
+## Automated tests and bots run in hidden windows and set this false, so a stray OS close
+## request (a click or shortcut meant for another app) cannot end their session.
+var close_ends_session: bool = true
+var hud: Hud
+var inventory: InventoryPanel
+var maps: WorldMaps
+var action_bar: ActionBar
+var dialogs: NpcDialogs
+var start_panel: StartPanel
+# Shortcuts to component controls, used by input handling and the tests.
 var _address: LineEdit
 var _vocation: OptionButton
-var _status: Label
-var _action: Label
-var _backpack_label: Label
-var _stat_values: Dictionary = {}
-var _slots: Array[Control] = []
-var _view: ColorRect
-var _world_view: Node2D
-var _map_texture: ImageTexture
+var _controls: PanelContainer
+var _zone_label: Label
 var _minimap: Control
 var _world_map: Control
 var _travel_panel: PanelContainer
 var _travel_list: VBoxContainer
-var _talking_to: String = ""
-var keybinds := Keybinds.new()
-## Automated tests and bots run in hidden windows and set this false, so a stray OS close
-## request (a click or shortcut meant for another app) cannot end their session.
-var close_ends_session: bool = true
-var _bar_slots: Array[Control] = []
-var _bar_menu: PopupMenu
-var _bar_menu_slot: int = -1
-var _controls: PanelContainer
 var _npc_menu: PopupMenu
-var _npc_menu_target: String = ""
-var _player_menu: PopupMenu
-var _player_menu_target: int = 0
-var _zone_label: Label
-var _zone_name: String = ""
-var _vitals: Control
-var _start_panel: PanelContainer
-var _start_status: Label
-var _start_address: LineEdit
-var _start_vocation: OptionButton
-var _shown_message: String = ""
-var _message_since: float = 0.0
+var _talking_to: String:
+	get:
+		return dialogs.talking_to
+var _npc_menu_target: String:
+	get:
+		return dialogs.npc_menu_target
 
 
 func _ready() -> void:
@@ -125,6 +122,21 @@ func _ready() -> void:
 				get_tree().quit(1)
 				return
 			port = int(value)
+	for arg: String in args:
+		if arg == "--no-save":
+			save_enabled = false
+		elif arg.begins_with("--save-dir="):
+			save_dir = arg.trim_prefix("--save-dir=")
+		elif arg == "--fresh-identity":
+			identity_token = Identity.fresh()
+		elif arg.begins_with("--token="):
+			identity_token = arg.trim_prefix("--token=")
+		elif arg.begins_with("--profile="):
+			identity_profile = arg.trim_prefix("--profile=")
+	if not Identity.valid_profile(identity_profile) or not (identity_token.is_empty() or Identity.valid_token(identity_token)):
+		_fail("Profiles use letters, digits, - and _; tokens are 64 lowercase hex digits.")
+		get_tree().quit(1)
+		return
 	dedicated = "--headless-server" in args
 	if "--host" in args or dedicated:
 		host_game()
@@ -144,6 +156,11 @@ func _now() -> float:
 	return Time.get_ticks_msec() / 1000.0
 
 
+## The host's clock, for the day and night cycle on every peer.
+func world_clock() -> float:
+	return _now() + _clock_offset
+
+
 func _process(delta: float) -> void:
 	var now: float = _now()
 	if _joining_since >= 0.0 and now - _joining_since > 8.0:
@@ -161,6 +178,9 @@ func _process(delta: float) -> void:
 					_pending_peers[id] = now
 	if hosting and not _leaving:
 		_handle_events(combat.tick(now))
+		if store != null and now >= _next_autosave:
+			_next_autosave = now + CharacterStore.AUTOSAVE_SECONDS
+			save_all()
 	for group: Dictionary in [actors, monsters]:
 		for id: int in group:
 			var actor: Dictionary = group[id]
@@ -179,25 +199,14 @@ func _process(delta: float) -> void:
 		if direction != Vector2i.ZERO:
 			move_local(direction)
 	_update_labels()
-	for slot: Control in _slots:
-		var kind: String = _local_item(slot.get_meta("location"))
-		slot.tooltip_text = item_tooltip(kind)
-		slot.queue_redraw()
+	inventory.redraw_slots()
 	_world_view.position = (VIEW_SIZE / 2.0 - camera_focus() * ZOOM).round()
 	_world_view.queue_redraw()
-	if not _talking_to.is_empty() and (not actors.has(self_id) or World.chebyshev(
-			actors[self_id]["state"]["cell"], World.FERRYMEN[_talking_to]["cell"]) > World.TALK_RANGE):
-		_close_travel()
-	_update_zone()
-	_start_panel.visible = not connected and not dedicated
-	if _start_panel.visible:
-		_start_status.text = _status_message
-	_vitals.queue_redraw()
-	for slot: Control in _bar_slots:
-		slot.queue_redraw()
-	_minimap.queue_redraw()
-	if _world_map.visible:
-		_world_map.queue_redraw()
+	dialogs.refresh()
+	hud.refresh()
+	start_panel.refresh()
+	action_bar.redraw()
+	maps.redraw()
 
 
 func _input_direction() -> Vector2i:
@@ -241,6 +250,8 @@ func _run_action(action: String) -> void:
 		pick_up_local()
 	elif action == "target_nearest":
 		target_nearest()
+	elif action in ["health_potion", "mana_potion"]:
+		drink_kind(action)
 
 
 func _reset_session() -> void:
@@ -250,6 +261,10 @@ func _reset_session() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	world = World.new()
 	combat = Combat.new(world)
+	economy = Economy.new(world)
+	store = null
+	_accounts.clear()
+	_greetings.clear()
 	actors.clear()
 	monsters.clear()
 	effects.clear()
@@ -284,17 +299,27 @@ func host_game() -> void:
 	if error != OK:
 		_fail("Cannot host on UDP port %d: %s" % [port, error_string(error)])
 		return
+	if save_enabled:
+		store = CharacterStore.new(save_dir)
+		var unusable: String = store.open()
+		if not unusable.is_empty():
+			_fail(unusable)
+			return
+		_next_autosave = _now() + CharacterStore.AUTOSAVE_SECONDS
 	multiplayer.multiplayer_peer = peer
 	hosting = true
 	connected = true
 	ground_view = world.ground_snapshot()
 	if not dedicated:
 		self_id = 1
-		if not world.add_player(1, _now(), selected_vocation()):
-			_fail("The host could not find a valid spawn.")
+		var refused: String = _admit(1, own_token(), selected_vocation())
+		if not refused.is_empty():
+			_fail(refused)
 			return
 		_apply_actor(world.export_player(1, _now(), true))
-		_fill_spell_slots(selected_vocation())
+		action_bar.fill_spell_slots(world.players[1]["vocation"])
+		last_action_message = _greetings.get(1, "")
+		_greetings.erase(1)
 	_handle_events(combat.populate(_now()))
 	_status_message = "Hosting on UDP %d%s" % [port, " (dedicated)" if dedicated else " — you are the host"]
 	get_viewport().gui_release_focus()
@@ -319,6 +344,8 @@ func join_game() -> void:
 
 
 func leave_game() -> void:
+	if hosting:
+		save_all()
 	var leaving_peer: ENetMultiplayerPeer = peer
 	_leaving = true
 	connected = false
@@ -348,7 +375,54 @@ func _peer_connected(id: int) -> void:
 
 
 func _connected_to_host() -> void:
-	hello.rpc_id(1, World.signature(), selected_vocation())
+	hello.rpc_id(1, World.signature(), selected_vocation(), own_token())
+
+
+## This computer's identity token, loaded or created on first use.
+func own_token() -> String:
+	if identity_token.is_empty():
+		identity_token = Identity.load_or_create(identity_profile)
+	return identity_token
+
+
+## Adds a joining player: their saved character if the host has one for this identity, else a
+## new one of the chosen vocation (saved at once). Returns "" or why they cannot join.
+func _admit(id: int, token: String, vocation: String) -> String:
+	if not Identity.valid_token(token):
+		return "Your client sent no valid identity."
+	var owner: String = CharacterStore.account(token)
+	if owner in _accounts.values():
+		return "That character is already in the world."
+	var saved: Dictionary = {}
+	if store != null:
+		var loaded: Dictionary = store.load_character(owner)
+		if loaded["status"] == "invalid":
+			push_warning("Refused a join: the save %s %s." % [ProjectSettings.globalize_path(store.path_for(owner)), loaded["reason"]])
+			return "Your saved character on this host %s. Ask the host to restore its .bak file." % loaded["reason"]
+		saved = loaded["data"]
+	var returning: bool = not CharacterStore.saved_vocation(saved).is_empty()
+	if not world.add_player(id, _now(), CharacterStore.saved_vocation(saved) if returning else vocation):
+		return "This world is full (%d players maximum)." % World.MAX_PLAYERS
+	_accounts[id] = owner
+	if returning:
+		CharacterStore.restore(world, id, saved, _now())
+		var player: Dictionary = world.players[id]
+		_greetings[id] = "Welcome back: your level %d %s." % [player["level"], Balance.VOCATIONS[player["vocation"]]["name"]]
+	elif store != null:
+		_save_player(id)
+	return ""
+
+
+func _save_player(id: int) -> void:
+	if store != null and _accounts.has(id) and world.players.has(id):
+		if not store.save_character(_accounts[id], CharacterStore.capture(world, id, _now())):
+			push_warning("Could not save a character to %s." % ProjectSettings.globalize_path(store.dir))
+
+
+## Saves every character in the world (autosave, and when the host leaves).
+func save_all() -> void:
+	for id: int in _accounts:
+		_save_player(id)
 
 
 func _connection_failed() -> void:
@@ -367,6 +441,8 @@ func _peer_left(id: int) -> void:
 	_closing_peers.erase(id)
 	_request_windows.erase(id)
 	if world.players.has(id):
+		_save_player(id)
+		_accounts.erase(id)
 		var events: Array = []
 		combat.leave_party(id, events)
 		world.remove_player(id)
@@ -377,7 +453,7 @@ func _peer_left(id: int) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func hello(map_signature: Variant, vocation: Variant) -> void:
+func hello(map_signature: Variant, vocation: Variant, token: Variant) -> void:
 	if not hosting:
 		return
 	var sender: int = multiplayer.get_remote_sender_id()
@@ -391,11 +467,15 @@ func hello(map_signature: Variant, vocation: Variant) -> void:
 	if typeof(vocation) != TYPE_STRING or not Balance.VOCATIONS.has(vocation):
 		_reject_connection(sender, "Unknown vocation.")
 		return
-	if not world.add_player(sender, _now(), vocation):
-		_reject_connection(sender, "This world is full (%d players maximum)." % World.MAX_PLAYERS)
+	var refused: String = _admit(sender, token if typeof(token) == TYPE_STRING else "", vocation)
+	if not refused.is_empty():
+		_reject_connection(sender, refused)
 		return
-	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), combat.monster_snapshot(_now()))
+	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), combat.monster_snapshot(_now()), world_clock())
 	_publish_actor(sender)
+	if _greetings.has(sender):
+		_send_feedback(sender, _greetings[sender], 0.0, false)
+		_greetings.erase(sender)
 
 
 func _reject_connection(id: int, reason: String) -> void:
@@ -415,9 +495,10 @@ func connection_rejected(reason: String) -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dictionary) -> void:
+func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dictionary, host_clock: float) -> void:
 	if hosting:
 		return
+	_clock_offset = host_clock - _now()
 	actors.clear()
 	for id: int in states:
 		_apply_actor(states[id])
@@ -432,7 +513,7 @@ func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dicti
 	connected = true
 	_joining_since = -1.0
 	_status_message = "Connected to %s:%d" % [_address.text, port]
-	_fill_spell_slots(actors[self_id]["state"]["vocation"])
+	action_bar.fill_spell_slots(actors[self_id]["state"]["vocation"])
 
 
 func move_local(direction: Vector2i) -> void:
@@ -494,6 +575,75 @@ func travel_local(ferryman: String, destination: String) -> void:
 		request_travel.rpc_id(1, ferryman, destination)
 
 
+func quest_local(npc: String, relic: String) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_quest(1, npc, relic)
+	else:
+		request_quest.rpc_id(1, npc, relic)
+
+
+# ---------------------------------------------------------------- town services
+
+func task_local(npc: String, action: String) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_task(1, npc, action)
+	else:
+		request_task.rpc_id(1, npc, action)
+
+
+func buy_local(npc: String, kind: String, count: int) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_buy(1, npc, kind, count)
+	else:
+		request_buy.rpc_id(1, npc, kind, count)
+
+
+## Sells the backpack stack at `index`, or with -1 every monster material.
+func sell_local(npc: String, index: int) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_sell(1, npc, index)
+	else:
+		request_sell.rpc_id(1, npc, index)
+
+
+func bank_local(npc: String, action: String, amount: int) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_bank(1, npc, action, amount)
+	else:
+		request_bank.rpc_id(1, npc, action, amount)
+
+
+func drink_local(index: int) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_drink(1, index)
+	else:
+		request_drink.rpc_id(1, index)
+
+
+## Drinks the first potion of `kind` in the backpack (the potion keys).
+func drink_kind(kind: String) -> void:
+	if not actors.has(self_id):
+		return
+	var backpack: Array = actors[self_id]["state"].get("backpack", [])
+	for index: int in backpack.size():
+		if World.kind_of(backpack[index]) == kind:
+			drink_local(index)
+			return
+	last_action_message = "You have no %ss." % World.ITEMS[kind]["name"].to_lower()
+
+
 # ---------------------------------------------------------------- combat
 
 func target_local(target: int) -> void:
@@ -549,12 +699,12 @@ func _chase_direction() -> Vector2i:
 	var goal: Vector2i = target["state"]["cell"]
 	if Combat.in_reach(own["cell"], goal, Combat.VOCATION_RANGE.get(own["vocation"], 1)):
 		return Vector2i.ZERO
-	return Combat.path_step(own["cell"], goal, func(cell: Vector2i) -> bool:
-		for group: Dictionary in [actors, monsters]:
-			for id: int in group:
-				if id != self_id and group[id]["state"]["cell"] == cell:
-					return true
-		return false)
+	var taken: Dictionary = {}
+	for group: Dictionary in [actors, monsters]:
+		for id: int in group:
+			if id != self_id:
+				taken[group[id]["state"]["cell"]] = true
+	return Combat.path_step(own["cell"], goal, func(cell: Vector2i) -> bool: return taken.has(cell))
 
 
 func _creature_at(cell: Vector2i) -> int:
@@ -584,6 +734,93 @@ func _handle_party(id: int, action: Variant, other: Variant) -> void:
 	var result: Dictionary = combat.party_action(id, action, other, _now())
 	if result["ok"]:
 		_handle_events(result["events"])
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_quest(npc: Variant, relic: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_quest(sender, npc, relic)
+
+
+func _handle_quest(id: int, npc: Variant, relic: Variant) -> void:
+	var result: Dictionary = combat.claim_relic(id, npc, relic, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_task(npc: Variant, action: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_task(sender, npc, action)
+
+
+func _handle_task(id: int, npc: Variant, action: Variant) -> void:
+	var result: Dictionary = combat.task_action(id, npc, action, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_drink(index: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_drink(sender, index)
+
+
+func _handle_drink(id: int, index: Variant) -> void:
+	var result: Dictionary = combat.drink(id, index, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_buy(npc: Variant, kind: Variant, count: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_buy(sender, npc, kind, count)
+
+
+func _handle_buy(id: int, npc: Variant, kind: Variant, count: Variant) -> void:
+	_publish_service(id, economy.buy(id, npc, kind, count, _now()))
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_sell(npc: Variant, index: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_sell(sender, npc, index)
+
+
+func _handle_sell(id: int, npc: Variant, index: Variant) -> void:
+	_publish_service(id, economy.sell(id, npc, index, _now()))
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_bank(npc: Variant, action: Variant, amount: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_bank(sender, npc, action, amount)
+
+
+func _handle_bank(id: int, npc: Variant, action: Variant, amount: Variant) -> void:
+	_publish_service(id, economy.bank(id, npc, action, amount, _now()))
+
+
+## Vendor and bank results change only the requesting player's private state.
+func _publish_service(id: int, result: Dictionary) -> void:
+	if result["ok"]:
+		_publish_actor(id)
+		_send_feedback(id, result["message"], 0.0, false)
 	else:
 		_send_feedback(id, result["reason"], 0.0, false)
 
@@ -624,7 +861,7 @@ func _handle_events(events: Array) -> void:
 				monsters_changed[event["id"]] = monsters_changed.get(event["id"], false) or event["movement"]
 			"monster_gone":
 				monsters_changed.erase(event["id"])
-				monsters.erase(event["id"])
+				_monster_died(event["id"])
 				for peer_id: int in _remote_players():
 					monster_gone.rpc_id(peer_id, event["id"])
 			"ground":
@@ -656,6 +893,12 @@ func monster_updated(state: Dictionary) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func monster_gone(id: int) -> void:
+	_monster_died(id)
+
+
+func _monster_died(id: int) -> void:
+	if monsters.has(id) and _world_view != null:
+		_world_view.fx.burst("death", (monsters[id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color(0.75, 0.7, 0.8))
 	monsters.erase(id)
 
 
@@ -688,48 +931,27 @@ func _show_effect(event: Dictionary) -> void:
 			var styles: Dictionary = {
 				"damage": [str(event["amount"]), Color("#ff4a3a")], "critical": ["%d!" % event["amount"], Color("#ffa030")],
 				"heal": ["+%d" % event["amount"], Color("#6ae07a")], "experience": ["%d xp" % event["amount"], Color("#f4f4f4")],
+				"mana": ["+%d" % event["amount"], Color("#6aa8ff")],
 			}
 			var style: Array = styles.get(event["style"], styles["damage"])
-			effects.append({"kind": "text", "pos": (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE,
-				"text": style[0], "color": style[1], "born": born, "big": event["style"] == "critical"})
+			var at: Vector2 = (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
+			effects.append({"kind": "text", "pos": at, "text": style[0], "color": style[1], "born": born,
+				"big": event["style"] == "critical"})
+			if event["style"] in ["damage", "critical"] and event["amount"] > 0:
+				_world_view.fx.burst("critical" if event["style"] == "critical" else "hit", at + Vector2(0, -8), style[1])
+			elif event["style"] in ["heal", "mana"]:
+				_world_view.fx.burst("heal", at, style[1])
 		"missile":
 			effects.append({"kind": "missile", "from": _map_point(event["from"]), "to": _map_point(event["to"]),
 				"color": event["color"], "born": born})
+			var landing: Vector2 = _map_point(event["to"])
+			var tint: Color = event["color"]
+			get_tree().create_timer(0.25).timeout.connect(func() -> void:
+				if _world_view != null:
+					_world_view.fx.burst("impact", landing, tint))
 		"area":
 			effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born})
-
-
-func _draw_vitals() -> void:
-	if not actors.has(self_id) or not actors[self_id]["state"].has("mana"):
-		return
-	var state: Dictionary = actors[self_id]["state"]
-	var font: Font = ThemeDB.fallback_font
-	var rows: Array = [[state["health"], state["max_health"], Color("#c0392b"), "HP"],
-		[state["mana"], state["max_mana"], Color("#2e6fd0"), "MP"]]
-	for index: int in rows.size():
-		var row: Array = rows[index]
-		var area := Rect2(0, index * 17, _vitals.size.x, 14)
-		_vitals.draw_rect(area, Color(0, 0, 0, 0.6))
-		_vitals.draw_rect(Rect2(area.position, Vector2(area.size.x * clampf(float(row[0]) / maxf(1.0, row[1]), 0.0, 1.0), 14)), row[2])
-		_vitals.draw_rect(area, Color("#0b0e12"), false, 1.0)
-		_vitals.draw_string(font, area.position + Vector2(4, 11), "%s %d / %d" % [row[3], row[0], row[1]],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
-
-
-## Replaces spells of other vocations and fills empty bar slots with this vocation's spells.
-func _fill_spell_slots(vocation: String) -> void:
-	var own: Array[String] = Spells.for_vocation(vocation)
-	for slot: int in Keybinds.SLOTS:
-		var entry: String = keybinds.bar[slot]
-		if entry.begins_with("spell:") and entry.trim_prefix("spell:") not in own:
-			keybinds.bar[slot] = ""
-	for spell: String in own:
-		if "spell:" + spell in keybinds.bar:
-			continue
-		for slot: int in Keybinds.SLOTS:
-			if keybinds.bar[slot].is_empty():
-				keybinds.bar[slot] = "spell:" + spell
-				break
+			_world_view.fx.area(event["cells"], event["color"])
 
 
 func _valid_sender(sender: int) -> bool:
@@ -811,7 +1033,7 @@ func _publish_item_result(id: int, result: Dictionary) -> void:
 func _send_feedback(id: int, reason: String, retry: float, movement: bool) -> void:
 	if id == 1:
 		action_feedback(reason, retry, movement)
-	else:
+	elif id in multiplayer.get_peers():
 		action_feedback.rpc_id(id, reason, retry, movement)
 
 
@@ -871,6 +1093,8 @@ func _apply_actor(state: Dictionary, movement: bool = false) -> void:
 		Vector2(state["cell"]), 1.0 - remaining / World.MOVE_SECONDS)
 	if actors.has(id) and actors[id]["state"]["cell"] == state["cell"]:
 		start = actors[id]["visual"]
+	if actors.has(id) and state.get("level", 1) > actors[id]["state"].get("level", 1) and _world_view != null:
+		_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color("#ffd86a"))
 	actors[id] = {
 		"state": state.duplicate(true), "start": start, "visual": start,
 		"duration": remaining, "elapsed": 0.0, "received": _now(),
@@ -886,601 +1110,91 @@ func actor_left(id: int) -> void:
 	actors.erase(id)
 
 
+# ---------------------------------------------------------------- UI
+
+## Builds the game window and the panels through the components in game/ui/.
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
-	_view = ColorRect.new()
-	_view.color = Color("#07090c")
-	_view.position = VIEW_ORIGIN
-	_view.size = VIEW_SIZE
-	_view.clip_contents = true
-	_view.set_drag_forwarding(_map_drag, _map_can_drop, _map_drop)
-	_view.gui_input.connect(_map_input)
+	_view = GameWindow.new()
+	_view.setup(self)
 	layer.add_child(_view)
-	_world_view = WorldView.new()
-	_world_view.game = self
-	_world_view.scale = Vector2.ONE * ZOOM
-	_view.add_child(_world_view)
-	var row := HBoxContainer.new()
-	row.position = Vector2(16, 12)
-	layer.add_child(row)
-	var title := Label.new()
-	title.text = "BRIMHOLT  ·  " + World.WORLD_NAME + "   "
-	title.add_theme_font_size_override("font_size", 20)
-	row.add_child(title)
-	_add_button(row, "Host", host_game)
-	_address = LineEdit.new()
-	_address.text = "127.0.0.1"
-	_address.placeholder_text = "Host LAN IP"
-	_address.custom_minimum_size.x = 200
-	row.add_child(_address)
-	_add_button(row, "Join", join_game)
-	_add_button(row, "Leave", leave_game)
-	_add_button(row, "Controls", func() -> void: _controls.visible = not _controls.visible)
-	_vitals = Control.new()
-	_vitals.position = VIEW_ORIGIN + Vector2(10, 8)
-	_vitals.size = Vector2(220, 34)
-	_vitals.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vitals.draw.connect(_draw_vitals)
-	_vocation = OptionButton.new()
-	for vocation: String in Balance.VOCATIONS:
-		_vocation.add_item(Balance.VOCATIONS[vocation]["name"])
-	_vocation.select(Balance.VOCATIONS.keys().find(Balance.DEFAULT_VOCATION))
-	_vocation.tooltip_text = "Vocation used when you host or join"
-	row.add_child(_vocation)
-	_status = Label.new()
-	_status.position = Vector2(16, 48)
-	layer.add_child(_status)
-	_action = Label.new()
-	_action.position = VIEW_ORIGIN + Vector2(0, VIEW_SIZE.y - 40 - BAR_SLOT - 8)
-	_action.size = Vector2(VIEW_SIZE.x, 32)
-	_action.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_action.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_action.add_theme_color_override("font_color", Color("#f4f0e6"))
-	_action.add_theme_color_override("font_outline_color", Color("#101010"))
-	_action.add_theme_constant_override("outline_size", 6)
-	layer.add_child(_action)
-	_build_inventory(layer)
-	_build_maps(layer)
-	_build_action_bar(layer)
-	_build_travel_panel(layer)
-	_build_start_panel(layer)
-	_zone_label = Label.new()
-	_zone_label.position = VIEW_ORIGIN + Vector2(0, 44)
-	_zone_label.size = Vector2(VIEW_SIZE.x, 24)
-	_zone_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_zone_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_zone_label.add_theme_color_override("font_color", Color("#ff8a7a"))
-	_zone_label.add_theme_color_override("font_outline_color", Color("#1a0605"))
-	_zone_label.add_theme_constant_override("outline_size", 6)
-	_zone_label.visible = false
-	layer.add_child(_zone_label)
-	layer.add_child(_vitals)
-	layer.move_child(_world_map, -1)
-	layer.move_child(_travel_panel, -1)
-	_npc_menu = PopupMenu.new()
-	_npc_menu.id_pressed.connect(_npc_service_chosen)
-	add_child(_npc_menu)
-	_player_menu = PopupMenu.new()
-	_player_menu.id_pressed.connect(func(index: int) -> void:
-		var action: String = _player_menu.get_item_metadata(_player_menu.get_item_index(index))
-		party_local(action, 0 if action == "leave" else _player_menu_target))
-	add_child(_player_menu)
-	_controls = ControlsMenu.new()
-	_controls.visible = false
-	_controls.setup(keybinds, func() -> void: _controls.hide())
-	_controls.position = VIEW_ORIGIN + Vector2(VIEW_SIZE.x / 2.0 - 190, 40)
-	layer.add_child(_controls)
+	_world_view = _view.world_view
+	hud = Hud.new()
+	inventory = InventoryPanel.new()
+	maps = WorldMaps.new()
+	action_bar = ActionBar.new()
+	dialogs = NpcDialogs.new()
+	for component: Node in [hud, inventory, maps, action_bar, dialogs]:
+		add_child(component)
+	hud.build(self, layer)
+	inventory.build(self, layer)
+	maps.build(self, layer)
+	action_bar.build(self, layer)
+	dialogs.build(self, layer)
+	start_panel = StartPanel.new()
+	start_panel.setup(self, hud.address, hud.vocation)
+	layer.add_child(start_panel)
+	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals,
+	# world map, dialog panel, and Controls menu.
+	for top: Control in [hud.zone_label, hud.vitals, maps.world_map, dialogs.panel, hud.controls]:
+		layer.move_child(top, -1)
+	_address = hud.address
+	_vocation = hud.vocation
+	_controls = hud.controls
+	_zone_label = hud.zone_label
+	_minimap = maps.minimap
+	_world_map = maps.world_map
+	_travel_panel = dialogs.panel
+	_travel_list = dialogs.list
+	_npc_menu = dialogs.npc_menu
 
 
-## The start menu shown until you host or join: vocation, Host, and Join with an address.
-func _build_start_panel(layer: CanvasLayer) -> void:
-	_start_panel = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#151a20")
-	style.border_color = Color("#3a4450")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	style.set_content_margin_all(18)
-	_start_panel.add_theme_stylebox_override("panel", style)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	_start_panel.add_child(box)
-	var title := Label.new()
-	title.text = "Welcome to Brimholt"
-	title.add_theme_font_size_override("font_size", 24)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
-	var intro := Label.new()
-	intro.text = "Host a game for your friends, or join one on your network.\nEveryone starts in Cinder Crossing."
-	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	intro.modulate = Color("#a7b0b8")
-	box.add_child(intro)
-	var vocation_row := HBoxContainer.new()
-	box.add_child(vocation_row)
-	var vocation_label := Label.new()
-	vocation_label.text = "Vocation"
-	vocation_label.custom_minimum_size.x = 90
-	vocation_row.add_child(vocation_label)
-	_start_vocation = OptionButton.new()
-	for vocation: String in Balance.VOCATIONS:
-		_start_vocation.add_item("%s  (%s)" % [Balance.VOCATIONS[vocation]["name"], Balance.VOCATIONS[vocation]["role"]])
-	_start_vocation.select(_vocation.selected)
-	_start_vocation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_start_vocation.item_selected.connect(func(index: int) -> void: _vocation.select(index))
-	_vocation.item_selected.connect(func(index: int) -> void: _start_vocation.select(index))
-	vocation_row.add_child(_start_vocation)
-	var host := Button.new()
-	host.text = "Host a game"
-	host.pressed.connect(host_game)
-	box.add_child(host)
-	var join_row := HBoxContainer.new()
-	box.add_child(join_row)
-	_start_address = LineEdit.new()
-	_start_address.text = _address.text
-	_start_address.placeholder_text = "Host's LAN IP, e.g. 192.168.1.20"
-	_start_address.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_start_address.text_changed.connect(func(text: String) -> void: _address.text = text)
-	_start_address.text_submitted.connect(func(_text: String) -> void: join_game())
-	join_row.add_child(_start_address)
-	var join := Button.new()
-	join.text = "Join"
-	join.pressed.connect(join_game)
-	join_row.add_child(join)
-	_start_status = Label.new()
-	_start_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_start_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_start_status.custom_minimum_size.x = 380
-	_start_status.modulate = Color("#e4bd8a")
-	box.add_child(_start_status)
-	_start_panel.custom_minimum_size = Vector2(420, 0)
-	_start_panel.position = VIEW_ORIGIN + Vector2(VIEW_SIZE.x / 2.0 - 210, VIEW_SIZE.y / 2.0 - 140)
-	layer.add_child(_start_panel)
+func _update_labels() -> void:
+	hud.update_labels()
+	inventory.update_stats()
+
+
+# Entry points the tests and bots call on the main node; the components implement them.
+
+func slot_position(location: Dictionary) -> Vector2:
+	return inventory.slot_position(location)
+
+
+func item_tooltip(kind: String) -> String:
+	return inventory.item_tooltip(kind)
+
+
+func party_options(person: int) -> Array[String]:
+	return dialogs.party_options(person)
+
+
+func open_player_menu(person: int, at: Vector2i) -> bool:
+	return dialogs.open_player_menu(person, at)
+
+
+func talk_to(ferryman: String) -> void:
+	dialogs.talk_to(ferryman)
+
+
+func open_quests(npc: String) -> void:
+	dialogs.open_quests(npc)
+
+
+func open_trade(npc: String) -> void:
+	dialogs.open_trade(npc)
+
+
+func open_bank(npc: String) -> void:
+	dialogs.open_bank(npc)
+
+
+func _close_travel() -> void:
+	dialogs.close()
 
 
 func selected_vocation() -> String:
 	return Balance.VOCATIONS.keys()[maxi(0, _vocation.selected)]
-
-
-func _add_button(parent: Node, text: String, callback: Callable) -> void:
-	var button := Button.new()
-	button.text = text
-	button.pressed.connect(callback)
-	parent.add_child(button)
-
-
-func _build_inventory(layer: CanvasLayer) -> void:
-	var frame := ColorRect.new()
-	frame.color = Color("#151a20")
-	frame.position = PANEL_ORIGIN - Vector2(8, 0)
-	frame.size = Vector2(200, VIEW_SIZE.y)
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(frame)
-	_add_panel_label(layer, "Equipment", PANEL_ORIGIN + Vector2(0, 6))
-	for slot: String in World.SLOTS:
-		_add_slot(layer, {"type": "equipment", "slot": slot}, slot_position({"type": "equipment", "slot": slot}))
-	_backpack_label = _add_panel_label(layer, "Backpack", PANEL_ORIGIN + Vector2(0, 146))
-	for index: int in World.BACKPACK_SIZE:
-		_add_slot(layer, {"type": "backpack", "index": index}, slot_position({"type": "backpack", "index": index}))
-	_build_stat_sheet(layer)
-	var hint: Label = _add_panel_label(layer, "Drag / right-click items and people.\nRight-click a bar slot to change it.",
-		PANEL_ORIGIN + Vector2(0, 648))
-	hint.add_theme_font_size_override("font_size", 11)
-	hint.modulate = Color("#a7b0b8")
-
-
-func slot_position(location: Dictionary) -> Vector2:
-	if location["type"] == "equipment":
-		return PANEL_ORIGIN + Vector2(42, 32) + PAPERDOLL[location["slot"]] * SLOT_STEP
-	var index: int = location["index"]
-	return PANEL_ORIGIN + Vector2(24, 172) + Vector2(index % 4, index / 4) * SLOT_STEP
-
-
-func _build_stat_sheet(layer: CanvasLayer) -> void:
-	_add_panel_label(layer, "Stats", PANEL_ORIGIN + Vector2(0, 252))
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.position = PANEL_ORIGIN + Vector2(0, 278)
-	grid.add_theme_constant_override("h_separation", 16)
-	grid.add_theme_constant_override("v_separation", 0)
-	layer.add_child(grid)
-	for stat: String in ["vocation", "level", "experience", "gold"] + Array(Balance.STATS):
-		var name := Label.new()
-		name.text = {"vocation": "Vocation", "level": "Level", "experience": "Experience", "gold": "Gold"}.get(stat,
-			STAT_LABELS.get(stat, stat))
-		name.modulate = Color("#a7b0b8")
-		name.add_theme_font_size_override("font_size", 13)
-		grid.add_child(name)
-		var value := Label.new()
-		value.add_theme_font_size_override("font_size", 13)
-		grid.add_child(value)
-		_stat_values[stat] = value
-
-
-func item_tooltip(kind: String) -> String:
-	if not World.ITEMS.has(kind):
-		return ""
-	var item: Dictionary = World.ITEMS[kind]
-	var lines: PackedStringArray = [item["name"]]
-	if not item["slot"].is_empty():
-		lines.append(item["slot"].capitalize())
-	for stat: String in item["stats"]:
-		lines.append("%+d %s%s" % [item["stats"][stat], STAT_LABELS[stat], "%" if stat == "critical" else ""])
-	if item.has("gold"):
-		lines.append("Worth %d gold; picked up into your purse" % item["gold"])
-	return "\n".join(lines)
-
-
-func _build_maps(layer: CanvasLayer) -> void:
-	var lookup := PackedColorArray()
-	lookup.resize(128)
-	lookup.fill(Color.BLACK)
-	for terrain: String in MAP_COLORS:
-		lookup[terrain.unicode_at(0)] = MAP_COLORS[terrain]
-	var image := Image.create(World.width(), World.height(), false, Image.FORMAT_RGB8)
-	for y: int in World.height():
-		var row: PackedByteArray = World.ROWS[y].to_ascii_buffer()
-		for x: int in row.size():
-			image.set_pixel(x, y, lookup[row[x] & 127])
-	for zone: Dictionary in World.ZONES:
-		if not zone["pvp"]:
-			continue
-		var area: Rect2i = zone["rect"].intersection(Rect2i(0, 0, World.width(), World.height()))
-		for y: int in range(area.position.y, area.end.y):
-			for x: int in range(area.position.x, area.end.x):
-				if World.terrain(Vector2i(x, y)) not in ["~", " "]:
-					image.set_pixel(x, y, image.get_pixel(x, y).lerp(PVP_TINT, 0.45))
-	_map_texture = ImageTexture.create_from_image(image)
-	_minimap = Control.new()
-	_minimap.position = PANEL_ORIGIN + Vector2(0, 504)
-	_minimap.size = Vector2(184, 136)
-	_minimap.clip_contents = true
-	_minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_minimap.draw.connect(_draw_minimap)
-	layer.add_child(_minimap)
-	_world_map = Control.new()
-	_world_map.position = VIEW_ORIGIN
-	_world_map.size = VIEW_SIZE
-	_world_map.visible = false
-	_world_map.draw.connect(_draw_world_map)
-	_world_map.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed:
-			_world_map.hide())
-	layer.add_child(_world_map)
-
-
-func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2) -> void:
-	for id: String in World.FERRYMEN:
-		var at: Vector2 = origin + (Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0.5, 0.5)) * scale
-		if area.has_point(at):
-			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#7fe0d0"))
-	for id: int in actors:
-		var at: Vector2 = origin + (actors[id]["visual"] + Vector2(0.5, 0.5)) * scale
-		var mine: bool = id == self_id
-		var radius: float = 2.5 if mine else 1.5
-		if area.has_point(at):
-			canvas.draw_rect(Rect2(at - Vector2.ONE * radius, Vector2.ONE * radius * 2.0),
-				Color("#f2cf6a") if mine else Color.WHITE)
-
-
-func _draw_minimap() -> void:
-	var view := Rect2(Vector2.ZERO, _minimap.size)
-	_minimap.draw_rect(view, Color.BLACK)
-	var tiles: Vector2 = _minimap.size / MINIMAP_SCALE
-	var region := Rect2(camera_focus() / World.TILE_SIZE - tiles / 2.0, tiles)
-	var visible := region.intersection(Rect2(0, 0, World.width(), World.height()))
-	if visible.has_area():
-		_minimap.draw_texture_rect_region(_map_texture,
-			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE), visible)
-	_draw_markers(_minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
-	_minimap.draw_rect(view, Color("#3a4450"), false, 1.0)
-
-
-func _draw_world_map() -> void:
-	var map_size := Vector2(World.width(), World.height())
-	var scale: float = maxf(1.0, floorf(minf(VIEW_SIZE.x / map_size.x, (VIEW_SIZE.y - 32.0) / map_size.y)))
-	var origin: Vector2 = ((VIEW_SIZE - map_size * scale) / 2.0).floor() + Vector2(0, 12)
-	_world_map.draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.03, 0.04, 0.05))
-	_world_map.draw_texture_rect(_map_texture, Rect2(origin, map_size * scale), false)
-	_draw_markers(_world_map, origin, scale, Rect2(Vector2.ZERO, VIEW_SIZE))
-	var font: Font = ThemeDB.fallback_font
-	var labels: Array = [[World.WORLD_NAME, Vector2(World.SPAWNS[0]) + Vector2(4, -3)]]
-	for id: String in World.FERRYMEN:
-		var place: String = World.FERRYMEN[id]["place"]
-		if World.zone_at(World.FERRYMEN[id]["cell"]).get("name", "") != place:
-			labels.append([place, Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0, -3)])
-	for zone: Dictionary in World.ZONES:
-		var text: String = "%s (%s, level %d-%d)" % [zone["name"], "PvP" if zone["pvp"] else "safe",
-			zone["min_level"], zone["max_level"]]
-		labels.append([text, Vector2(zone["rect"].get_center().x, zone["rect"].end.y + 3), PVP_TINT.lightened(0.35)])
-	for label: Array in labels:
-		var at: Vector2 = origin + label[1] * scale - Vector2(font.get_string_size(label[0], 0, -1, 13).x / 2.0, 0)
-		_world_map.draw_string_outline(font, at, label[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color.BLACK)
-		_world_map.draw_string(font, at, label[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
-			label[2] if label.size() > 2 else Color("#f4ecd8"))
-	_world_map.draw_string(font, Vector2(12, 22), "World map: gold = you, cyan = ferrymen, red = PvP. Click to close.",
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
-
-
-func _build_travel_panel(layer: CanvasLayer) -> void:
-	_travel_panel = PanelContainer.new()
-	_travel_panel.visible = false
-	_travel_panel.position = VIEW_ORIGIN + Vector2(VIEW_SIZE.x / 2.0 - 150, 120)
-	_travel_panel.custom_minimum_size = Vector2(300, 0)
-	_travel_list = VBoxContainer.new()
-	_travel_panel.add_child(_travel_list)
-	layer.add_child(_travel_panel)
-
-
-## Right-clicking a person opens their services; there is no typed dialogue.
-func open_npc_menu(npc: String, at: Vector2i) -> void:
-	if not World.FERRYMEN.has(npc):
-		return
-	_npc_menu.clear()
-	_npc_menu.add_separator(World.FERRYMEN[npc]["name"])
-	var services: Array = World.FERRYMEN[npc]["services"]
-	for index: int in services.size():
-		_npc_menu.add_item(NPC_SERVICES.get(services[index], String(services[index]).capitalize()), index)
-		_npc_menu.set_item_metadata(_npc_menu.get_item_index(index), services[index])
-	_npc_menu_target = npc
-	_npc_menu.popup(Rect2i(at, Vector2i.ZERO))
-
-
-func _is_self_at(cell: Vector2i) -> bool:
-	if not actors.has(self_id):
-		return false
-	var at: Vector2i = Vector2i(actors[self_id]["visual"].round())
-	return cell == at or cell == at + Vector2i.DOWN
-
-
-## Party options for a player you right-click (yourself: leave). Returns false when there are none.
-func party_options(person: int) -> Array[String]:
-	var options: Array[String] = []
-	if not actors.has(self_id) or not actors.has(person):
-		return options
-	var mine: Dictionary = actors[self_id]["state"]
-	var theirs: Dictionary = actors[person]["state"]
-	var my_party: int = mine.get("party", 0)
-	if person == self_id:
-		if my_party != 0:
-			options.append("leave")
-		return options
-	if person in mine.get("invites", []) and my_party == 0:
-		options.append("join")
-	elif theirs.get("party", 0) == 0 and (my_party == 0 or my_party == self_id):
-		options.append("revoke" if person in mine.get("invited", []) else "invite")
-	if my_party != 0 and theirs.get("party", 0) == my_party:
-		options.append("leave")
-	return options
-
-
-func open_player_menu(person: int, at: Vector2i) -> bool:
-	var options: Array[String] = party_options(person)
-	if options.is_empty():
-		return false
-	var state: Dictionary = actors[person]["state"]
-	_player_menu.clear()
-	_player_menu.add_separator("You" if person == self_id else "%s %d" % [
-		Balance.VOCATIONS.get(state.get("vocation", ""), {"name": "Player"})["name"], state.get("level", 1)])
-	for index: int in options.size():
-		_player_menu.add_item(PARTY_LABELS[options[index]], index)
-		_player_menu.set_item_metadata(_player_menu.get_item_index(index), options[index])
-	_player_menu_target = person
-	_player_menu.popup(Rect2i(at, Vector2i.ZERO))
-	return true
-
-
-func _npc_service_chosen(id: int) -> void:
-	var service: Variant = _npc_menu.get_item_metadata(_npc_menu.get_item_index(id))
-	if service == "travel":
-		talk_to(_npc_menu_target)
-
-
-## Opens a ferryman's routes and fares when you stand within range.
-func talk_to(ferryman: String) -> void:
-	if not actors.has(self_id) or not World.FERRYMEN.has(ferryman):
-		return
-	var npc: Dictionary = World.FERRYMEN[ferryman]
-	if World.chebyshev(actors[self_id]["state"]["cell"], npc["cell"]) > World.TALK_RANGE:
-		last_action_message = "Walk closer to %s." % npc["name"]
-		return
-	for child: Node in _travel_list.get_children():
-		child.queue_free()
-	var title := Label.new()
-	title.text = "%s, %s\n\"Where can I take you?\"" % [npc["name"], npc["place"]]
-	_travel_list.add_child(title)
-	var gold: int = actors[self_id]["state"].get("gold", 0)
-	for destination: String in npc["routes"]:
-		var fare: int = npc["routes"][destination]
-		var button := Button.new()
-		button.text = "%s  —  %d gold" % [World.FERRYMEN[destination]["place"], fare]
-		button.disabled = gold < fare
-		button.pressed.connect(func() -> void:
-			travel_local(ferryman, destination)
-			_close_travel())
-		_travel_list.add_child(button)
-	var close := Button.new()
-	close.text = "Not today"
-	close.pressed.connect(_close_travel)
-	_travel_list.add_child(close)
-	_talking_to = ferryman
-	_travel_panel.reset_size()
-	_travel_panel.show()
-
-
-func _update_zone() -> void:
-	var zone: Dictionary = World.zone_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else {}
-	var name: String = zone.get("name", "")
-	if name != _zone_name and not name.is_empty():
-		last_action_message = "Entering %s." % name
-	_zone_name = name
-	_zone_label.visible = not zone.is_empty()
-	if not zone.is_empty():
-		_zone_label.text = "%s  —  %s  ·  monsters level %d-%d" % [name,
-			"PvP zone: other players can attack you" if zone["pvp"] else "safe zone", zone["min_level"], zone["max_level"]]
-
-
-func _build_action_bar(layer: CanvasLayer) -> void:
-	var start: Vector2 = VIEW_ORIGIN + Vector2((VIEW_SIZE.x - Keybinds.SLOTS * BAR_SLOT) / 2.0, VIEW_SIZE.y - BAR_SLOT - 6)
-	for slot: int in Keybinds.SLOTS:
-		var button := Control.new()
-		button.position = start + Vector2(slot * BAR_SLOT, 0)
-		button.size = Vector2.ONE * (BAR_SLOT - 4)
-		button.draw.connect(_draw_bar_slot.bind(button, slot))
-		button.gui_input.connect(func(event: InputEvent) -> void:
-			if event is InputEventMouseButton and event.pressed:
-				if event.button_index == MOUSE_BUTTON_LEFT:
-					use_bar_slot(slot)
-				elif event.button_index == MOUSE_BUTTON_RIGHT:
-					_open_bar_menu(slot, Vector2i(button.global_position + event.position)))
-		layer.add_child(button)
-		_bar_slots.append(button)
-	_bar_menu = PopupMenu.new()
-	_bar_menu.id_pressed.connect(func(index: int) -> void:
-		var entry: String = _bar_menu.get_item_metadata(_bar_menu.get_item_index(index))
-		if keybinds.set_bar(_bar_menu_slot, entry):
-			keybinds.save())
-	add_child(_bar_menu)
-
-
-## Lists the spells of your vocation, with their level, and an option to clear the slot.
-func _open_bar_menu(slot: int, at: Vector2i) -> void:
-	_bar_menu_slot = slot
-	_bar_menu.clear()
-	var entries: Array[String] = []
-	if actors.has(self_id):
-		_bar_menu.add_separator("Spells")
-		var level: int = actors[self_id]["state"].get("level", 1)
-		for spell: String in Spells.for_vocation(actors[self_id]["state"]["vocation"]):
-			var definition: Dictionary = Spells.SPELLS[spell]
-			entries.append("spell:" + spell)
-			_bar_menu.add_item("%s%s" % [definition["name"], "" if level >= definition["level"]
-				else "  (level %d)" % definition["level"]], entries.size() - 1)
-			_bar_menu.set_item_metadata(_bar_menu.get_item_index(entries.size() - 1), "spell:" + spell)
-		_bar_menu.add_separator()
-	entries.append("")
-	_bar_menu.add_item("Clear slot", entries.size() - 1)
-	_bar_menu.set_item_metadata(_bar_menu.get_item_index(entries.size() - 1), "")
-	_bar_menu.popup(Rect2i(at, Vector2i.ZERO))
-
-
-func _draw_bar_slot(button: Control, slot: int) -> void:
-	var area := Rect2(Vector2.ZERO, button.size)
-	button.draw_rect(area, Color(0.08, 0.1, 0.12, 0.85))
-	button.draw_rect(area, Color("#4a5560"), false, 1.0)
-	var entry: String = keybinds.bar[slot]
-	var center: Vector2 = button.size / 2.0
-	var font: Font = ThemeDB.fallback_font
-	if entry.begins_with("spell:") and Spells.SPELLS.has(entry.trim_prefix("spell:")):
-		_draw_spell_slot(button, entry.trim_prefix("spell:"))
-	var key: String = Keybinds.key_name(keybinds.keys["slot_%d" % (slot + 1)][0])
-	button.draw_string_outline(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color.BLACK)
-	button.draw_string(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#f2e6c4"))
-
-
-## A spell slot: coloured rune with initials, dimmed when unusable, with a cooldown shade.
-func _draw_spell_slot(button: Control, spell: String) -> void:
-	var definition: Dictionary = Spells.SPELLS[spell]
-	var center: Vector2 = button.size / 2.0
-	var state: Dictionary = actors[self_id]["state"] if actors.has(self_id) else {}
-	var usable: bool = not state.is_empty() and state.get("level", 1) >= definition["level"]
-	button.draw_circle(center + Vector2(0, 2), 13.0, Color(definition["color"], 1.0 if usable else 0.35))
-	button.draw_arc(center + Vector2(0, 2), 13.0, 0, TAU, 24, Color("#0b0e12"), 1.0)
-	var initials: String = "".join(Array(definition["name"].split(" ")).map(func(word: String) -> String: return word[0]))
-	var font: Font = ThemeDB.fallback_font
-	button.draw_string(font, Vector2(0, center.y + 6), initials, HORIZONTAL_ALIGNMENT_CENTER, button.size.x, 12, Color("#14181c"))
-	if state.is_empty():
-		return
-	var elapsed: float = _now() - actors[self_id].get("received", _now())
-	var left: float = maxf(state.get("cooldowns", {}).get(spell, 0.0), state.get("groups", {}).get(definition["group"], 0.0)) - elapsed
-	if left > 0.0:
-		var share: float = clampf(left / maxf(definition["cooldown"], Spells.GROUP_SECONDS[definition["group"]]), 0.0, 1.0)
-		button.draw_rect(Rect2(Vector2(0, button.size.y * (1.0 - share)), Vector2(button.size.x, button.size.y * share)),
-			Color(0, 0, 0, 0.6))
-
-
-func _close_travel() -> void:
-	_talking_to = ""
-	_travel_panel.hide()
-
-
-func _add_panel_label(layer: CanvasLayer, text: String, at: Vector2) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.position = at
-	layer.add_child(label)
-	return label
-
-
-func _add_slot(layer: CanvasLayer, location: Dictionary, at: Vector2) -> void:
-	var slot := Control.new()
-	slot.position = at
-	slot.size = Vector2.ONE * World.TILE_SIZE
-	slot.set_meta("location", location)
-	slot.draw.connect(_draw_slot.bind(slot, location))
-	slot.gui_input.connect(_slot_input.bind(location))
-	slot.set_drag_forwarding(_item_drag.bind(slot, location), _item_can_drop.bind(location), _item_drop.bind(location))
-	layer.add_child(slot)
-	_slots.append(slot)
-
-
-func _local_item(location: Dictionary) -> String:
-	if location["type"] == "ground":
-		var stack: Array = ground_view.get(location["cell"], [])
-		return stack.back() if not stack.is_empty() else ""
-	if not actors.has(self_id):
-		return ""
-	var state: Dictionary = actors[self_id]["state"]
-	if location["type"] == "equipment":
-		return state["equipment"].get(location["slot"], "")
-	var backpack: Array = state.get("backpack", [])
-	return backpack[location["index"]] if location["index"] < backpack.size() else ""
-
-
-func _draw_slot(slot: Control, location: Dictionary) -> void:
-	slot.draw_rect(Rect2(Vector2.ZERO, slot.size), Color("#232a33"))
-	slot.draw_rect(Rect2(Vector2(-1, -1), slot.size + Vector2(2, 2)), Color("#0b0e12"), false, 1.0)
-	slot.draw_rect(Rect2(Vector2.ZERO, Vector2(slot.size.x, 1)), Color("#3a4450"))
-	slot.draw_rect(Rect2(Vector2.ZERO, Vector2(1, slot.size.y)), Color("#3a4450"))
-	var kind: String = _local_item(location)
-	if not kind.is_empty():
-		SpriteArt.draw_item(slot, slot.size / 2.0, kind)
-	elif location["type"] == "equipment":
-		SpriteArt.draw_slot_hint(slot, slot.size / 2.0, location["slot"])
-
-
-func _item_drag(_at: Vector2, source: Control, location: Dictionary) -> Variant:
-	var kind: String = _local_item(location)
-	if not connected or kind.is_empty():
-		return null
-	var preview := Control.new()
-	preview.draw.connect(func() -> void: SpriteArt.draw_item(preview, Vector2.ZERO, kind))
-	source.set_drag_preview(preview)
-	return {"brimholt_item": location}
-
-
-func _item_can_drop(_at: Vector2, data: Variant, target: Dictionary) -> bool:
-	return connected and typeof(data) == TYPE_DICTIONARY and data.has("brimholt_item") \
-		and data["brimholt_item"] != target
-
-
-func _item_drop(at: Vector2, data: Variant, target: Dictionary) -> void:
-	if _item_can_drop(at, data, target):
-		move_item_local(data["brimholt_item"], target)
-
-
-func _slot_input(event: InputEvent, location: Dictionary) -> void:
-	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT):
-		return
-	var kind: String = _local_item(location)
-	if kind.is_empty():
-		return
-	if location["type"] != "backpack":
-		move_item_local(location, {"type": "backpack"})
-	elif actors.has(self_id):
-		var slot: String = World.slot_for(kind, actors[self_id]["state"]["equipment"])
-		if not slot.is_empty():
-			move_item_local(location, {"type": "equipment", "slot": slot})
 
 
 ## Map pixel the camera centres: your character's interpolated position, else the map centre.
@@ -1504,15 +1218,15 @@ func _map_location(at: Vector2) -> Dictionary:
 
 
 func _map_drag(at: Vector2) -> Variant:
-	return _item_drag(at, _view, _map_location(at))
+	return inventory.item_drag(at, _view, _map_location(at))
 
 
 func _map_can_drop(at: Vector2, data: Variant) -> bool:
-	return _item_can_drop(at, data, _map_location(at))
+	return inventory.item_can_drop(at, data, _map_location(at))
 
 
 func _map_drop(at: Vector2, data: Variant) -> void:
-	_item_drop(at, data, _map_location(at))
+	inventory.item_drop(at, data, _map_location(at))
 
 
 func _map_input(event: InputEvent) -> void:
@@ -1521,62 +1235,15 @@ func _map_input(event: InputEvent) -> void:
 		var cell: Vector2i = _map_location(event.position)["cell"]
 		var npc: String = World.NPC_CELLS.get(cell, World.NPC_CELLS.get(cell + Vector2i.DOWN, ""))
 		if event.button_index == MOUSE_BUTTON_RIGHT and not npc.is_empty():
-			open_npc_menu(npc, Vector2i(VIEW_ORIGIN + event.position))
+			dialogs.open_npc_menu(npc, Vector2i(VIEW_ORIGIN + event.position))
 			return
 		var creature: int = _creature_at(cell)
 		if event.button_index == MOUSE_BUTTON_RIGHT and connected:
-			var person: int = creature if creature > 0 else (self_id if _is_self_at(cell) else 0)
-			if person > 0 and open_player_menu(person, Vector2i(VIEW_ORIGIN + event.position)):
+			var person: int = creature if creature > 0 else (self_id if dialogs.is_self_at(cell) else 0)
+			if person > 0 and dialogs.open_player_menu(person, Vector2i(VIEW_ORIGIN + event.position)):
 				return
 		if event.button_index == MOUSE_BUTTON_LEFT and creature != 0:
 			target_local(0 if creature == own_target() else creature)
 			return
-		_slot_input(event, _map_location(event.position))
+		inventory.slot_input(event, _map_location(event.position))
 
-
-func _update_labels() -> void:
-	_status.text = _status_message + ("  |  %d/%d players" % [actors.size(), World.MAX_PLAYERS] if connected else "")
-	_status.modulate = Color("#9ccea4") if connected else Color("#e4bd8a")
-	if last_action_message != _shown_message:
-		_shown_message = last_action_message
-		_message_since = _now()
-	elif not last_action_message.is_empty() and _now() - _message_since > MESSAGE_SECONDS:
-		last_action_message = ""
-		_shown_message = ""
-	_action.text = last_action_message
-	var carried: int = 0
-	if actors.has(self_id):
-		carried = World.BACKPACK_SIZE - actors[self_id]["state"].get("backpack", []).count("")
-	_backpack_label.text = "Backpack  %d/%d" % [carried, World.BACKPACK_SIZE]
-	if not actors.has(self_id):
-		for value: Label in _stat_values.values():
-			value.text = "-"
-		return
-	var state: Dictionary = actors[self_id]["state"]
-	var level: int = state.get("level", 1)
-	var vocation: String = state.get("vocation", Balance.DEFAULT_VOCATION)
-	var stats: Dictionary = World.stats(level, state["equipment"], vocation)
-	var base: Dictionary = Balance.base_stats(level, vocation)
-	_stat_values["vocation"].text = Balance.VOCATIONS[vocation]["name"]
-	_stat_values["vocation"].tooltip_text = Balance.VOCATIONS[vocation]["role"]
-	_stat_values["vocation"].mouse_filter = Control.MOUSE_FILTER_PASS
-	var next: int = Balance.experience_to_next(level)
-	_stat_values["level"].text = "%d / %d" % [level, Balance.MAX_LEVEL]
-	_stat_values["experience"].text = "%d / %d" % [state.get("experience", 0), next] if next > 0 else "max"
-	_stat_values["gold"].text = str(state.get("gold", 0))
-	for stat: String in Balance.STATS:
-		var bonus: int = stats[stat] - base[stat]
-		var text: String = str(stats[stat])
-		if stat in ["health", "mana"] and state.has(stat):
-			text = "%d / %d" % [state[stat], stats[stat]]
-		if stat == "critical":
-			text += "%"
-		elif stat == "defense":
-			text += "  (-%d%%)" % (100 - Balance.damage_taken(100, stats[stat]))
-		elif stat == "regen":
-			text += " / 10 s"
-		elif stat == "healing":
-			text += " / s"
-		if bonus != 0:
-			text += "  %+d" % bonus
-		_stat_values[stat].text = text

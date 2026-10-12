@@ -1,17 +1,61 @@
 extends Node2D
-## Draws the visible part of the world in map pixels. Floors come first; then each row is
-## drawn west to east with ground items, characters, ferrymen, oblique walls, and trees so
-## nearer objects cover what stands behind them. Names are drawn last, on top.
+## Draws the visible part of the world in map pixels, inside the lit world viewport. Floors
+## come first; then each row is drawn west to east with ground items, characters, NPCs,
+## oblique walls, and trees so nearer objects cover what stands behind them. Children add
+## ambient light and lights (lighting.gd), additive glow (glow_layer.gd), and particles
+## (fx.gd). Names, bars, and floating numbers are drawn unlit by world_overlay.gd.
 
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Balance = preload("res://game/data/balance.gd")
-const TARGET_COLOR: Color = Color("#ff3a2a")
+const GlowLayer = preload("res://game/render/glow_layer.gd")
+const Lighting = preload("res://game/render/lighting.gd")
+const Fx = preload("res://game/render/fx.gd")
+const FloorLayer = preload("res://game/render/floor_layer.gd")
+const FERRYMAN_GEAR: Dictionary = {"helmet": "ember_cap"}
+const NPC_NAME: Color = Color("#9fe0c8")
+## Quest givers stand out: gold cloth, a starweave cape, and a gold name.
+const QUEST_GIVER_GEAR: Dictionary = {"cape": "starweave_cape"}
+const QUEST_GIVER_TINT: Color = Color("#a8843a")
+const QUEST_GIVER_NAME: Color = Color("#ffcf6a")
+## Vendors wear a cap and coat, bankers a bronze coat.
+const TOWNSFOLK_LOOKS: Dictionary = {
+	"vendor": [{"helmet": "ember_cap", "armor": "moss_coat"}, Color("#8a6a3a")],
+	"banker": [{"armor": "bronze_scale_coat"}, Color("#4a4a6a")],
+}
 ## Extra tiles drawn around the view: tall sprites below the view reach up into it.
 const MARGIN: Rect2i = Rect2i(-2, -2, 4, 6)
 
 var game: Node
+var glow: Node2D
+var lighting: Node2D
+var fx: Node2D
+## [centre, name, colour] of NPCs drawn this frame, for the unlit overlay.
+var npc_names: Array = []
+
+
+## Walls, trees, and NPCs of the cached area (the view plus TALL_MARGIN tiles) by cell,
+## rebuilt only when the view leaves it.
+const TALL_MARGIN: int = 8
+var _tall: Dictionary = {}
+var _tall_area: Rect2i = Rect2i()
+var floor_layer: Node2D
+
+
+func _ready() -> void:
+	floor_layer = FloorLayer.new()
+	floor_layer.view = self
+	add_child(floor_layer)
+
+	lighting = Lighting.new()
+	lighting.view = self
+	add_child(lighting)
+	glow = GlowLayer.new()
+	glow.view = self
+	add_child(glow)
+	fx = Fx.new()
+	add_child(fx)
 
 
 ## Tiles to draw, as a rectangle clamped to the map.
@@ -26,64 +70,86 @@ func visible_cells() -> Rect2i:
 func _draw() -> void:
 	var time: float = Time.get_ticks_msec() / 1000.0
 	var area: Rect2i = visible_cells()
-	for y: int in range(area.position.y, area.end.y):
-		for x: int in range(area.position.x, area.end.x):
-			SpriteArt.draw_floor(self, Vector2i(x, y), time)
+	if not _tall_area.encloses(area):
+		_cache_tall(area.grow(TALL_MARGIN).intersection(Rect2i(0, 0, World.width(), World.height())))
 	for effect: Dictionary in game.effects:
 		if effect["kind"] == "area":
 			var fade: float = 1.0 - (time - effect["born"]) / 0.45
 			for cell: Vector2i in effect["cells"]:
 				draw_rect(Rect2(Vector2(cell) * World.TILE_SIZE, Vector2.ONE * World.TILE_SIZE), Color(effect["color"], 0.45 * fade))
+	# Only cells with something standing on them are visited, in row-major (depth) order.
 	var occupants: Dictionary = {}
+	var keys := PackedInt32Array()
+	var width: int = World.width()
+	for cell: Vector2i in _tall:
+		if area.has_point(cell):
+			keys.append(cell.y * width + cell.x)
 	for group: Dictionary in [game.actors, game.monsters]:
 		for id: int in group:
 			var visual: Vector2 = group[id]["visual"]
 			# A stepping creature belongs to the further south/east of its two tiles.
 			var cell: Vector2i = Vector2i(ceili(visual.x - 0.001), ceili(visual.y - 0.001))
+			if not area.has_point(cell):
+				continue
 			if not occupants.has(cell):
 				occupants[cell] = []
+				if not (_tall.has(cell) and area.has_point(cell)):
+					keys.append(cell.y * width + cell.x)
 			occupants[cell].append(id)
+	for cell: Vector2i in game.ground_view:
+		if area.has_point(cell) and not _tall.has(cell) and not occupants.has(cell):
+			keys.append(cell.y * width + cell.x)
+	keys.sort()
 	var names: Array = []
+	for key: int in keys:
+		var cell := Vector2i(key % width, key / width)
+		var tile: String = _tall.get(cell, "")
+		if tile in World.WALLS and not tile.is_empty():
+			SpriteArt.draw_wall(self, cell)
+			continue
+		if game.ground_view.has(cell):
+			_draw_stack(cell, game.ground_view[cell])
+		if tile == "npc":
+			var npc: Dictionary = World.npc(World.NPC_CELLS[cell])
+			var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
+			var keeper: bool = "quests" in npc["services"]
+			var look: Array = TOWNSFOLK_LOOKS.get(npc.get("role", ""),
+				[QUEST_GIVER_GEAR, QUEST_GIVER_TINT] if keeper else [FERRYMAN_GEAR, SpriteArt.NPC_TINT])
+			SpriteArt.draw_actor(self, center, {"id": 0, "facing": npc["facing"], "equipment": look[0]}, false, 0.0, look[1])
+			names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME])
+		for id: int in occupants.get(cell, []):
+			if id > 0:
+				_draw_actor(id)
+			else:
+				_draw_monster(id)
+		if tile in World.TREES and not tile.is_empty():
+			SpriteArt.draw_tree(self, cell)
+	npc_names = names
+
+
+## Walls, trees, and NPCs in the area: the static things drawn in depth order with creatures.
+func _cache_tall(area: Rect2i) -> void:
+	_tall.clear()
+	_tall_area = area
 	for y: int in range(area.position.y, area.end.y):
 		var row: String = World.ROWS[y]
 		for x: int in range(area.position.x, area.end.x):
-			var cell: Vector2i = Vector2i(x, y)
 			var tile: String = row[x]
-			if tile == "#":
-				SpriteArt.draw_wall(self, cell)
-				continue
-			if game.ground_view.has(cell):
-				_draw_stack(cell, game.ground_view[cell])
-			if World.NPC_CELLS.has(cell):
-				var ferryman: Dictionary = World.FERRYMEN[World.NPC_CELLS[cell]]
-				var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
-				SpriteArt.draw_actor(self, center, {"id": 0, "facing": ferryman["facing"],
-					"equipment": {"helmet": "ember_cap"}}, false, 0.0, SpriteArt.NPC_TINT)
-				names.append([center, ferryman["name"]])
-			for id: int in occupants.get(cell, []):
-				if id > 0:
-					_draw_actor(id)
-				else:
-					_draw_monster(id)
-			if tile == "T":
-				SpriteArt.draw_tree(self, cell)
-	_draw_overlays(area, time)
-	var font: Font = ThemeDB.fallback_font
-	for entry: Array in names:
-		var width: float = font.get_string_size(entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
-		var at: Vector2 = entry[0] + Vector2(-width / 2.0, -SpriteArt.FRAME_ANCHOR.y + 6)
-		draw_string_outline(font, at, entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, SpriteArt.OUTLINE)
-		draw_string(font, at, entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("#9fe0c8"))
+			if tile in World.WALLS or tile in World.TREES:
+				_tall[Vector2i(x, y)] = tile
+	for cell: Vector2i in World.NPC_CELLS:
+		if area.has_point(cell):
+			_tall[cell] = "npc"
 
 
+## The top entry of a ground stack, with its stack count (or the number of entries beneath).
 func _draw_stack(cell: Vector2i, stack: Array) -> void:
 	var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
-	SpriteArt.draw_item(self, center, stack.back())
-	if stack.size() > 1:
-		var font: Font = ThemeDB.fallback_font
-		var at: Vector2 = center + Vector2(7, 14)
-		draw_string_outline(font, at, str(stack.size()), HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 3, SpriteArt.OUTLINE)
-		draw_string(font, at, str(stack.size()), HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("#f2e6c4"))
+	var top: String = stack.back()
+	SpriteArt.draw_item(self, center, World.kind_of(top))
+	var shown: int = World.count_of(top) if World.count_of(top) > 1 else stack.size()
+	if shown > 1:
+		SpriteArt.draw_count(self, center + Vector2(15, 14), shown)
 
 
 func _draw_actor(id: int) -> void:
@@ -106,57 +172,3 @@ func _draw_monster(id: int) -> void:
 
 func _center_of(view: Dictionary) -> Vector2:
 	return (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
-
-
-## "leader"/"member" for your party, "invited" for an open invitation either way, else "".
-func _party_mark(id: int, state: Dictionary) -> String:
-	if not game.actors.has(game.self_id):
-		return ""
-	var mine: Dictionary = game.actors[game.self_id]["state"]
-	var party: int = mine.get("party", 0)
-	if party != 0 and state.get("party", 0) == party:
-		return "leader" if id == party else "member"
-	if id in mine.get("invites", []) or id in mine.get("invited", []):
-		return "invited"
-	return ""
-
-
-## Target square, nameplates, missiles, and floating numbers, drawn above the world.
-func _draw_overlays(area: Rect2i, time: float) -> void:
-	var target: int = game.own_target()
-	var view: Dictionary = game.creature_view(target)
-	if not view.is_empty():
-		var corner: Vector2 = view["visual"] * World.TILE_SIZE
-		draw_rect(Rect2(corner + Vector2.ONE, Vector2.ONE * (World.TILE_SIZE - 2)), TARGET_COLOR, false, 2.0)
-	var shown := Rect2(Vector2(area.position) * World.TILE_SIZE, Vector2(area.size) * World.TILE_SIZE)
-	for id: int in game.monsters:
-		var monster: Dictionary = game.monsters[id]
-		var center: Vector2 = _center_of(monster)
-		if shown.has_point(center):
-			var definition: Dictionary = Monsters.MONSTERS.get(monster["state"]["kind"], {"name": "?", "size": 1.0})
-			var own_level: int = game.actors[game.self_id]["state"].get("level", 1) if game.actors.has(game.self_id) else 1
-			SpriteArt.draw_nameplate(self, center, "%s %d" % [definition["name"], monster["state"]["level"]],
-				monster["state"]["health"], monster["state"]["max_health"], definition["size"], "",
-				SpriteArt.danger_color(monster["state"]["level"], own_level))
-	for id: int in game.actors:
-		var actor: Dictionary = game.actors[id]
-		var center: Vector2 = _center_of(actor)
-		if shown.has_point(center) and actor["state"].has("health"):
-			var state: Dictionary = actor["state"]
-			var title: String = "%s %d" % [Balance.VOCATIONS.get(state.get("vocation", ""), {"name": "Player"})["name"],
-				state.get("level", 1)]
-			SpriteArt.draw_nameplate(self, center, title, state["health"], state["max_health"], 1.0, state.get("skull", ""),
-				Color.TRANSPARENT, _party_mark(id, state))
-	var font: Font = ThemeDB.fallback_font
-	for effect: Dictionary in game.effects:
-		var age: float = time - effect["born"]
-		if effect["kind"] == "missile":
-			var weight: float = clampf(age / 0.25, 0.0, 1.0)
-			var at: Vector2 = effect["from"].lerp(effect["to"], weight)
-			draw_line(at - (effect["to"] - effect["from"]).normalized() * 6.0, at, effect["color"], 2.0)
-			draw_circle(at, 2.0, effect["color"])
-		elif effect["kind"] == "text":
-			var at: Vector2 = effect["pos"] + Vector2(-8, -20.0 - age * 22.0)
-			var size: int = 11 if effect.get("big", false) else 9
-			draw_string_outline(font, at, effect["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, size, 3, SpriteArt.OUTLINE)
-			draw_string(font, at, effect["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, size, effect["color"])

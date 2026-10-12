@@ -1,6 +1,6 @@
 extends Marker2D
-## Where monsters will appear once combat exists; not used in play yet.
-## Levels should come from game/data/balance.gd (1-50).
+## A monster spawn: Combat keeps `count` monsters of this id and level within `radius` tiles.
+## Ids come from game/data/monsters.gd; levels 1-50 (bosses are level 50).
 
 @export var monster: String = ""
 @export_range(1, 50) var level: int = 1

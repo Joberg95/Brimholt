@@ -93,6 +93,64 @@ new player survives 15–30 same-level hits instead of 15. Twelve spawns of leve
 and toads ring Cinder Crossing within 45 tiles; beyond that, levels rise by about one per
 8.5 tiles. Spawns stay at least 7 steps from roads and sit in small clearings.
 
+## Gear tiers
+
+Ten tiers every five levels; accessories from tier 20; relics at level 50 from boss quests.
+`game/data/items.gd` derives every item's stats from the curves above, so gear follows any
+balance change:
+
+- **Weapons** add the vocation's share of `gear_attack_budget(tier + 2)`, the attack that
+  lifts a player from base to geared hits (about six per same-level kill), with a floor that
+  rises one point per tier so early tiers still upgrade.
+- **Defense** of a full set (helmet 22%, armor 42%, shield 36%) rises from 14 at tier 1 to
+  70 at tier 45 (about a third less damage taken). Armor adds 1% of reference health as
+  regeneration; spellbooks give 12% of the set defense plus 10% of reference mana.
+- **Accessories** take shares of the reference health and mana at their level: amulets 6%
+  health, capes 8% defense share and 6% mana, charms 2% regen and 1% healing, rings 3%
+  health and 3% mana each.
+- **Relics** are computed at level 50 and multiplied by 1.15 (Vaelith's by 1.3).
+
+Regenerate with `make gear-table`:
+
+| Tier | Helmet | Armor | Shield (Knight, Paladin) | Spellbook (Sorcerer, Druid) |
+| ---: | --- | --- | --- | --- |
+| 1 | Ember cap (3 def) | Moss coat (6 def, 2 regen) | Oak buckler (5 def) | Tattered primer (2 def, 6 mana) |
+| 5 | Iron coif (4 def) | Ash tunic (8 def, 2 regen) | Hide targe (7 def) | Apprentice grimoire (2 def, 8 mana) |
+| 10 | Bronze helm (6 def) | Bronze scale coat (11 def, 3 regen) | Bronze heater (9 def) | Bound codex (3 def, 13 mana) |
+| 15 | Steel kettle hat (7 def) | Steel hauberk (13 def, 5 regen) | Steel kite shield (11 def) | Runed tome (4 def, 20 mana) |
+| 20 | Silverleaf helm (8 def) | Silverleaf mail (16 def, 8 regen) | Silverleaf shield (14 def) | Silverleaf folio (5 def, 30 mana) |
+| 25 | Cobalt sallet (10 def) | Cobalt brigandine (19 def, 12 regen) | Cobalt tower shield (16 def) | Cobalt codex (5 def, 47 mana) |
+| 30 | Embersteel helm (11 def) | Embersteel cuirass (21 def, 18 regen) | Embersteel aegis (18 def) | Ember tome (6 def, 71 mana) |
+| 35 | Duskiron visor (13 def) | Duskiron plate (24 def, 27 regen) | Duskiron bulwark (21 def) | Dusk grimoire (7 def, 109 mana) |
+| 40 | Starforged helm (14 def) | Starforged plate (27 def, 42 regen) | Starforged bulwark (23 def) | Star atlas (8 def, 168 mana) |
+| 45 | Wyrmglass greathelm (15 def) | Wyrmglass plate (29 def, 64 regen) | Wyrmglass ward (25 def) | Wyrmglass codex (8 def, 257 mana) |
+| Tier | Knight | Paladin | Sorcerer | Druid |
+| ---: | --- | --- | --- | --- |
+| 1 | Copper blade (2 atk) | Willow shortbow (2 atk) | Kindling wand (2 atk) | Sapling rod (2 atk) |
+| 5 | Flint hatchet (3 atk) | Yew hunting bow (3 atk) | Spark wand (3 atk) | Thornwood rod (3 atk) |
+| 10 | Bronze mace (4 atk) | Bronze recurve (4 atk) | Ember wand (4 atk) | Moss rod (4 atk) |
+| 15 | Steel longsword (5 atk) | Steel longbow (5 atk) | Flame wand (6 atk) | Rootbound rod (5 atk) |
+| 20 | Silverleaf axe (6 atk) | Silverleaf bow (8 atk) | Silverfire wand (10 atk) | Silverleaf rod (6 atk) |
+| 25 | Cobalt warhammer (7 atk) | Cobalt crossbow (12 atk) | Storm wand (15 atk) | Tide rod (7 atk) |
+| 30 | Embersteel blade (11 atk) | Ember recurve (18 atk) | Blaze wand (23 atk) | Emberthorn rod (8 atk) |
+| 35 | Duskiron cleaver (16 atk) | Dusk longbow (27 atk) | Dusk wand (35 atk) | Duskbloom rod (11 atk) |
+| 40 | Starforged maul (25 atk) | Starforged crossbow (41 atk) | Starfire wand (54 atk) | Starbloom rod (17 atk) |
+| 45 | Wyrmglass greatsword (38 atk) | Wyrmglass bow (63 atk) | Wyrmglass wand (82 atk) | Wyrmglass rod (25 atk) |
+| Tier | Amulet | Cape | Charm | Ring |
+| ---: | --- | --- | --- | --- |
+| 20 | River pendant (46 hp) | Silverleaf cape (3 def, 18 mana) | Hearth charm (15 regen, 8 heal) | Garnet ring (23 hp, 9 mana) |
+| 25 | Cobalt amulet (70 hp) | Cobalt cape (4 def, 28 mana) | Tide charm (23 regen, 12 heal) | Cobalt ring (35 hp, 14 mana) |
+| 30 | Ember amulet (107 hp) | Ember cape (4 def, 43 mana) | Cinder charm (36 regen, 18 heal) | Ember ring (53 hp, 21 mana) |
+| 35 | Dusk amulet (164 hp) | Dusk cape (5 def, 66 mana) | Dusk charm (55 regen, 27 heal) | Dusk ring (82 hp, 33 mana) |
+| 40 | Star amulet (251 hp) | Starweave cape (5 def, 101 mana) | Star charm (84 regen, 42 heal) | Star ring (126 hp, 50 mana) |
+| 45 | Wyrmglass amulet (385 hp) | Wyrmscale cape (6 def, 154 mana) | Wyrm charm (128 regen, 64 heal) | Wyrmglass ring (192 hp, 77 mana) |
+| Boss | Relics (level 50, bound; one trophy each) |
+| --- | --- |
+| Vaelith, Sovereign of the Hollow | Voidrend (64 atk); Eclipse bow (107 atk); Starless wand (139 atk); Nightbloom rod (43 atk); Sovereign's mantle (8 def, 307 mana) |
+| Morvain the Drowned | Abyssal greathelm (20 def); Abyssal plate (37 def, 113 regen); Tidebreaker (56 atk); Abyssal ward (31 def) |
+| Kharzul the Cinder Colossus | Cinderheart bow (94 atk); Cinderheart wand (123 atk); Molten heart (679 hp); Cinderheart charm (227 regen, 113 heal) |
+| Sylvaine the Hollow Bloom | Bloomheart rod (38 atk); Verdant codex (10 def, 452 mana); Hollowbloom cape (7 def, 271 mana); Bloomsoul ring (339 hp, 136 mana) |
+
 ## Level table (reference vocation: Paladin)
 
 | Level | Player HP | Base atk | Geared atk | Mob HP | Elite HP | Boss HP | Mob hit | Elite hit | Boss hit | Mob XP | XP to next |

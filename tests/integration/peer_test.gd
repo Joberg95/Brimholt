@@ -1,6 +1,10 @@
 extends SceneTree
 
 const World = preload("res://game/core/world.gd")
+const Items = preload("res://game/data/items.gd")
+## The druid client drops its spare armor for the late-joining paladin to pick up and wear.
+const DROPPED: String = "moss_coat"
+const DROPPED_INDEX: int = 1
 var game: Node2D
 var role: String = ""
 var stage: int = 0
@@ -20,7 +24,16 @@ var ferried: bool = false
 var sparring: int = 0
 var saw_hit: bool = false
 var saw_party: bool = false
+var ring_given_at: float = -1.0
+var quest_ready: bool = false
+var saw_relic: bool = false
+## Town services: when the relic was claimed, and which NPC the client was last carried to.
+var relic_at: float = -1.0
+var errand: String = ""
+var saw_task: bool = false
 var finishing: bool = false
+## Persistence: whether the host has seen a character in the world.
+var had_player: bool = false
 
 
 func _initialize() -> void:
@@ -49,6 +62,10 @@ func _process(_delta: float) -> bool:
 	if role == "loss_client":
 		_loss_client_tick()
 		return false
+	if role == "persist_duplicate":
+		if game._status_message.contains("That character is already in the world"):
+			finish()
+		return false
 	if not game.connected:
 		return false
 	match role:
@@ -58,6 +75,9 @@ func _process(_delta: float) -> bool:
 		"dedicated_host": _dedicated_host_tick()
 		"dedicated_client": _dedicated_client_tick(now)
 		"loss_host": _loss_host_tick()
+		"persist_host": _persist_host_tick()
+		"persist_first": _persist_first_tick(now)
+		"persist_return": _persist_return_tick(now)
 		_: fail("Unknown test role")
 	return false
 
@@ -118,9 +138,9 @@ func _host_tick(now: float) -> void:
 			saw_equipped = true
 		if id == client_id and saw_equipped and not state(id)["equipment"].has("helmet"):
 			saw_unequipped = true
-		if id != client_id and state(id)["cell"].y == 7 and state(id)["equipment"].has("main_hand"):
+		if id != client_id and state(id)["cell"].y == 7 and state(id)["equipment"].has("armor"):
 			saw_late_move = true
-	_watch_ground(Vector2i(8, 6), "copper_blade")
+	_watch_ground(Vector2i(8, 6), DROPPED)
 	if not _others_hide_backpacks():
 		fail("Host view exposes another player's backpack")
 		return
@@ -198,24 +218,24 @@ func _client_tick(now: float) -> void:
 				advance()
 		9:
 			if game.last_action_message == "Unknown item location" and now - stage_since > 0.2:
-				game.move_item_local({"type": "backpack", "index": 2}, {"type": "ground", "cell": Vector2i(8, 7)})
+				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": Vector2i(8, 7)})
 				advance()
 		10:
 			if game.last_action_message == "Items cannot be placed there" and now - stage_since > 0.2:
-				if state(own)["backpack"][2] != "copper_blade":
+				if state(own)["backpack"][DROPPED_INDEX] != DROPPED:
 					fail("Rejected drop changed the backpack")
 					return
-				game.move_item_local({"type": "backpack", "index": 2}, {"type": "ground", "cell": Vector2i(8, 6)})
+				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": Vector2i(8, 6)})
 				advance()
 		11:
-			if game.ground_view.get(Vector2i(8, 6), []) == ["copper_blade"] and state(own)["backpack"][2] == "":
+			if game.ground_view.get(Vector2i(8, 6), []) == [DROPPED] and state(own)["backpack"][DROPPED_INDEX] == "":
 				print("BRIMHOLT_CLIENT_EQUIPPED")
 				advance()
 		12:
 			if now - stage_since < 0.2:
 				return
 			for id: int in game.actors:
-				if id != 1 and id != own and state(id)["equipment"].has("main_hand"):
+				if id != 1 and id != own and state(id)["equipment"].has("armor"):
 					late_id = id
 					game.equip_local("helmet")
 					game.party_local("invite", late_id)
@@ -254,11 +274,12 @@ func _late_tick(now: float) -> void:
 			if late_spawn == state(1)["cell"] or late_spawn == state(client_id)["cell"]:
 				fail("Late join reused an occupied spawn")
 				return
-			if game.ground_view.get(Vector2i(8, 6), []) != ["copper_blade"] \
-					or game.ground_view.get(Vector2i(10, 1), []) != ["glowcap", "glowcap"]:
+			if game.ground_view.get(Vector2i(8, 6), []) != [DROPPED] \
+					or game.ground_view.get(Vector2i(10, 1), []) != ["glowcap#2"]:
 				fail("Late join did not receive the ground snapshot")
 				return
-			if not _others_hide_backpacks() or state(game.self_id)["backpack"].slice(0, World.START_KIT.size()) != World.START_KIT:
+			var kit: Array = World.start_kit("paladin")
+			if not _others_hide_backpacks() or state(game.self_id)["backpack"].slice(0, kit.size()) != kit:
 				fail("Late join backpack snapshot is wrong")
 				return
 			if game.monsters.size() != game.monsters.keys().filter(func(id: int) -> bool: return id < 0).size() \
@@ -269,12 +290,12 @@ func _late_tick(now: float) -> void:
 			game.move_item_local({"type": "ground", "cell": Vector2i(8, 6)}, {"type": "backpack"})
 			advance()
 		1:
-			if not game.ground_view.has(Vector2i(8, 6)) and state(game.self_id)["backpack"][World.START_KIT.size()] == "copper_blade" \
-					and now - stage_since > 0.2:
-				game.equip_local("main_hand")
+			if not game.ground_view.has(Vector2i(8, 6)) \
+					and state(game.self_id)["backpack"][World.start_kit("paladin").size()] == DROPPED and now - stage_since > 0.2:
+				game.equip_local("armor")
 				advance()
 		2:
-			if not state(client_id)["equipment"].has("helmet") and state(game.self_id)["equipment"].has("main_hand"):
+			if not state(client_id)["equipment"].has("helmet") and state(game.self_id)["equipment"].has("armor"):
 				game.move_local(Vector2i.DOWN)
 				advance()
 		3:
@@ -302,9 +323,20 @@ func _dedicated_host_tick() -> void:
 			saw_late_move = true
 	_watch_ground(Vector2i(5, 7), "ember_cap")
 	for id: int in game.actors:
-		if state(id)["equipment"].get("ring_2", "") == "copper_band" and state(id)["level"] == 1 \
+		if state(id)["equipment"].get("ring_2", "") == "garnet_ring" and state(id)["level"] == Items.ACCESSORY_LEVEL \
 				and not state(id).has("backpack"):
 			saw_ring = true
+	# Test-only: hand the client a level-20 ring at level 1, then level it up a second later, so
+	# the client sees the server refuse and then accept the same equip request.
+	for id: int in game.world.players:
+		var player: Dictionary = game.world.players[id]
+		if ring_given_at < 0.0 and saw_pickup and player["backpack"].has(""):
+			player["backpack"][player["backpack"].find("")] = "garnet_ring"
+			game._publish_actor(id)
+			ring_given_at = game._now()
+		elif ring_given_at >= 0.0 and game._now() - ring_given_at > 1.0 and player["level"] < Items.ACCESSORY_LEVEL:
+			player["level"] = Items.ACCESSORY_LEVEL
+			game._publish_actor(id)
 	# Test-only shortcut on the server: carry the client to Cinder Landing instead of a long walk.
 	for id: int in game.world.players:
 		var player: Dictionary = game.world.players[id]
@@ -314,10 +346,10 @@ func _dedicated_host_tick() -> void:
 			player["from"] = dock
 			game._publish_actor(id)
 			ferried = true
-		var mossford: Vector2i = World.FERRYMEN["mossford"]["cell"]
-		if ferried and World.chebyshev(player["cell"], mossford) <= World.TALK_RANGE:
+		var lastlight: Vector2i = World.FERRYMEN["lastlight"]["cell"]
+		if ferried and World.chebyshev(player["cell"], lastlight) <= World.TALK_RANGE:
 			saw_voyage = true
-	# Test-only: put a weak monster next to the client once it has landed in Mossford.
+	# Test-only: put a weak monster next to the client once it has landed in Lastlight.
 	if saw_voyage and sparring == 0:
 		for id: int in game.world.players:
 			var cell: Vector2i = game.world.players[id]["cell"]
@@ -327,8 +359,46 @@ func _dedicated_host_tick() -> void:
 					sparring = game.combat.spawn_monster("field_vole", 1, cell + step, game._now(), -1, events)
 					game.world.monsters[sparring]["health"] = 6
 					game._handle_events(events)
-	if saw_late_move and saw_drop and saw_pickup and saw_ring and saw_voyage and sparring != 0 \
-			and not game.world.monsters.has(sparring) and game.actors.is_empty():
+	# Test-only: after the fight, grant a boss trophy and carry the client to the Relic keeper.
+	if saw_voyage and sparring != 0 and not game.world.monsters.has(sparring) and not quest_ready:
+		for id: int in game.world.players:
+			var player: Dictionary = game.world.players[id]
+			var beside: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"] + Vector2i.DOWN
+			player["trophies"] = {"kharzul": 1}
+			player["cell"] = beside
+			player["from"] = beside
+			game._publish_actor(id)
+			quest_ready = true
+	for id: int in game.world.players:
+		var player: Dictionary = game.world.players[id]
+		if player["backpack"].has("cinderheart_bow") and relic_at < 0.0:
+			relic_at = game._now()
+		saw_relic = saw_relic or player["backpack"].has("cinderheart_bow")
+		saw_task = saw_task or player["tasks"].has("boar_cull")
+		# Test-only: carry the client to the vendor (hurt, to test potions), then the banker, then
+		# Warden Brask, each once the client has finished its business with the previous one.
+		var next: String = ""
+		if errand.is_empty() and relic_at >= 0.0 and game._now() - relic_at > 1.5:
+			next = "cinder_vendor"
+		elif errand == "cinder_vendor" and player["backpack"].has("health_potion#2"):
+			next = "cinder_banker"
+		elif errand == "cinder_banker" and player["depot"].has("health_potion#2"):
+			next = "warden_brask"
+		if not next.is_empty():
+			var cell: Vector2i = World.npc(next)["cell"]
+			for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
+				if World.walkable(cell + step):
+					cell += step
+					break
+			player["cell"] = cell
+			player["from"] = cell
+			if next == "cinder_vendor":
+				player["health"] = 1
+				player["gold"] += 200
+			game._publish_actor(id)
+			errand = next
+	if saw_late_move and saw_drop and saw_pickup and saw_ring and saw_voyage and sparring != 0 and saw_relic \
+			and saw_task and not game.world.monsters.has(sparring) and game.actors.is_empty():
 		finish()
 
 
@@ -354,54 +424,178 @@ func _dedicated_client_tick(now: float) -> void:
 		3:
 			if not game.ground_view.has(Vector2i(5, 7)) and state(own)["backpack"][0] == "ember_cap" \
 					and now - stage_since > 0.2:
-				var ring: int = state(own)["backpack"].find("copper_band")
-				game.move_item_local({"type": "backpack", "index": ring}, {"type": "equipment", "slot": "ring_2"})
 				advance()
 		4:
-			if state(own)["equipment"].get("ring_2", "") == "copper_band" and state(own)["level"] == 1 \
-					and not state(own)["backpack"].has("copper_band"):
-				game.travel_local("cinder_landing", "mossford")
+			var ring: int = state(own)["backpack"].find("garnet_ring")
+			if ring >= 0 and state(own)["level"] == 1:
+				game.move_item_local({"type": "backpack", "index": ring}, {"type": "equipment", "slot": "ring_2"})
 				advance()
 		5:
+			if game.last_action_message == "The Garnet ring requires level %d" % Items.ACCESSORY_LEVEL:
+				if state(own)["equipment"].has("ring_2"):
+					fail("The server equipped a ring below its level")
+					return
+				advance()
+		6:
+			if state(own)["level"] == Items.ACCESSORY_LEVEL and now - stage_since > 0.2:
+				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("garnet_ring")},
+					{"type": "equipment", "slot": "ring_2"})
+				advance()
+		7:
+			if state(own)["equipment"].get("ring_2", "") == "garnet_ring" and not state(own)["backpack"].has("garnet_ring"):
+				game.travel_local("cinder_landing", "lastlight")
+				advance()
+		8:
 			if game.last_action_message == "Walk closer to the ferryman":
 				game.move_local(Vector2i.RIGHT)
 				advance()
-		6:
+		9:
 			var landing: Vector2i = World.FERRYMEN["cinder_landing"]["cell"]
 			if World.chebyshev(state(own)["cell"], landing) <= World.TALK_RANGE and now - stage_since > 0.25:
 				game.request_travel.rpc_id(1, "cinder_landing", "nowhere")
 				advance()
-		7:
+		10:
 			if game.last_action_message == "That ferryman does not sail there":
 				game.request_travel.rpc_id(1, 5, null)
 				advance()
-		8:
+		11:
 			if game.last_action_message == "Unknown ferryman":
-				game.travel_local("cinder_landing", "mossford")
+				game.travel_local("cinder_landing", "lastlight")
 				advance()
-		9:
-			var fare: int = World.FERRYMEN["cinder_landing"]["routes"]["mossford"]
-			if World.chebyshev(state(own)["cell"], World.FERRYMEN["mossford"]["cell"]) <= World.TALK_RANGE \
-					and state(own)["gold"] == World.START_GOLD - fare and game.last_action_message.contains("Mossford"):
+		12:
+			var fare: int = World.FERRYMEN["cinder_landing"]["routes"]["lastlight"]
+			if World.chebyshev(state(own)["cell"], World.FERRYMEN["lastlight"]["cell"]) <= World.TALK_RANGE \
+					and state(own)["gold"] == World.START_GOLD - fare and game.last_action_message.contains("Lastlight"):
 				advance()
-		10:
+		13:
 			for id: int in game.monsters:
 				if World.chebyshev(game.monsters[id]["state"]["cell"], state(own)["cell"]) == 1:
 					sparring = id
 					game.request_target.rpc_id(1, "not-a-creature")
 					advance()
-		11:
+		14:
 			if game.last_action_message == "Unknown target":
 				game.target_local(sparring)
 				advance()
-		12:
+		15:
 			if state(own)["target"] == sparring:
 				game.cast_local("piercing_shot")
 				advance()
-		13:
+		16:
 			for effect: Dictionary in game.effects:
 				saw_hit = saw_hit or effect["kind"] == "text"
 			if not game.monsters.has(sparring) and state(own)["experience"] > 0 and state(own)["target"] == 0 and saw_hit:
+				advance()
+		17:
+			var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"]
+			if state(own)["trophies"].get("kharzul", 0) == 1 and World.chebyshev(state(own)["cell"], keeper) <= World.TALK_RANGE:
+				game.quest_local("relic_keeper", "tidebreaker")
+				advance()
+		18:
+			if game.last_action_message == "Slay Morvain the Drowned first":
+				game.quest_local("relic_keeper", "cinderheart_bow")
+				advance()
+		19:
+			var relic: int = state(own)["backpack"].find("cinderheart_bow")
+			if relic >= 0 and state(own)["trophies"].is_empty():
+				game.move_item_local({"type": "backpack", "index": relic}, {"type": "ground", "cell": state(own)["cell"]})
+				advance()
+		20:
+			if game.last_action_message == "The Cinderheart bow is bound to you" and now - stage_since > 0.2:
+				if not state(own)["backpack"].has("cinderheart_bow") or game.ground_view.has(state(own)["cell"]):
+					fail("A bound relic left the backpack")
+					return
+				advance()
+		21:
+			if World.chebyshev(state(own)["cell"], World.npc("cinder_vendor")["cell"]) <= World.TALK_RANGE:
+				game.request_buy.rpc_id(1, "cinder_vendor", "abyssal_greathelm", 1)
+				advance()
+		22:
+			if game.last_action_message == "The vendor does not sell that":
+				game.sell_local("cinder_vendor", state(own)["backpack"].find("cinderheart_bow"))
+				advance()
+		23:
+			if game.last_action_message == "The vendor will not buy the Cinderheart bow":
+				game.buy_local("cinder_vendor", "health_potion", 3)
+				advance()
+		24:
+			var potions: int = state(own)["backpack"].find("health_potion#3")
+			if potions >= 0 and state(own)["gold"] == World.START_GOLD - World.FERRYMEN["cinder_landing"]["routes"]["lastlight"] + 200 - 60 \
+					and now - stage_since > 0.2:
+				game.drink_local(potions)
+				advance()
+		25:
+			if state(own)["backpack"].has("health_potion#2") and state(own)["health"] > 1 \
+					and World.chebyshev(state(own)["cell"], World.npc("cinder_banker")["cell"]) <= World.TALK_RANGE:
+				game.bank_local("cinder_banker", "deposit", 10)
+				advance()
+		26:
+			if state(own).get("bank", 0) == 10 and now - stage_since > 0.2:
+				game.request_bank.rpc_id(1, "cinder_banker", "withdraw", 999)
+				advance()
+		27:
+			if game.last_action_message == "You only have 10 gold in the bank":
+				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("health_potion#2")}, {"type": "depot"})
+				advance()
+		28:
+			if state(own)["depot"][0] == "health_potion#2" and not state(own)["backpack"].has("health_potion#2") \
+					and World.chebyshev(state(own)["cell"], World.npc("warden_brask")["cell"]) <= World.TALK_RANGE:
+				game.task_local("warden_brask", "accept")
+				advance()
+		29:
+			if state(own)["tasks"].get("boar_cull", -1) == 0 and game.last_action_message.begins_with("Boar cull"):
+				finish()
+
+
+## A dedicated host with a save folder: passes once a character has joined, left, and been
+## written as exactly one signed save.
+func _persist_host_tick() -> void:
+	had_player = had_player or not game.world.players.is_empty()
+	if had_player and game.world.players.is_empty() and multiplayer_peers_gone():
+		var saves: PackedStringArray = DirAccess.get_files_at(game.store.dir + "/characters")
+		var json: Array = Array(saves).filter(func(file: String) -> bool: return file.ends_with(".json"))
+		if json.size() != 1 or game.store.load_character(String(json[0]).get_basename())["status"] != "ok":
+			fail("Expected one valid save, found %s" % saves)
+			return
+		finish()
+
+
+func multiplayer_peers_gone() -> bool:
+	return game.multiplayer.get_peers().is_empty()
+
+
+## First visit: a druid steps down from its spawn and equips its weapon, then leaves.
+func _persist_first_tick(now: float) -> void:
+	var own: int = game.self_id
+	match stage:
+		0:
+			if game.actors.has(own) and state(own)["cell"] == Vector2i(5, 6):
+				game.move_local(Vector2i.DOWN)
+				advance()
+		1:
+			if state(own)["cell"] == Vector2i(5, 7) and now - stage_since > 0.25:
+				game.equip_local("main_hand")
+				advance()
+		2:
+			if state(own)["equipment"].get("main_hand", "") == "sapling_rod":
+				finish()
+
+
+## After the host restarted: the same identity (asking for a knight) gets the saved druid back.
+func _persist_return_tick(now: float) -> void:
+	var own: int = game.self_id
+	match stage:
+		0:
+			if game.actors.has(own) and game.last_action_message.begins_with("Welcome back"):
+				var mine: Dictionary = state(own)
+				if mine["vocation"] != "druid" or mine["cell"] != Vector2i(5, 7) \
+						or mine["equipment"].get("main_hand", "") != "sapling_rod" or mine["backpack"].has("sapling_rod"):
+					fail("The saved character was not restored: %s" % mine)
+					return
+				print("BRIMHOLT_PERSIST_IN")
+				advance()
+		1:
+			if now - stage_since > 2.5:
 				finish()
 
 

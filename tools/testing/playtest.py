@@ -46,7 +46,7 @@ def main():
             events.put((name, None))
         threading.Thread(target=read, daemon=True).start()
 
-    launch("server", [args.godot, "--headless", "--path", str(root), "--", "--headless-server", f"--port={port}"])
+    launch("server", [args.godot, "--headless", "--path", str(root), "--", "--headless-server", f"--port={port}", "--no-save"])
     rows, shots, errors, done = [], [], [], set()
     try:
         while time.monotonic() - started < DEADLINE and done != {"knight", "sorcerer"}:
@@ -66,7 +66,7 @@ def main():
                 for role, slot in (("knight", 2), ("sorcerer", 1)):
                     launch(role, [args.godot, "--position", "99999,99999", "--resolution", "64x64", "--path", str(root),
                                   "--script", "res://tests/integration/playthrough.gd", "--", "--join=127.0.0.1", f"--port={port}",
-                                  f"--vocation={role}", f"--bot={role}"])
+                                  f"--vocation={role}", f"--bot={role}", "--fresh-identity"])
             if line.startswith("PLAYTEST_SHOT "):
                 file, caption = line[len("PLAYTEST_SHOT "):].split(" ", 1)
                 shots.append((file, caption))

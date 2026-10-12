@@ -21,6 +21,11 @@ CAPTURES = (
     ("visual-isle.png", "Blackreed Isle: PvP zone banner, action bar, red minimap"),
     ("visual-map.png", "World map (M) with the PvP island"),
     ("visual-combat.png", "Combat: locked target, nameplates, health/mana bars, floating damage"),
+    ("visual-hollow-gate.png", "The Hollow Reach: obsidian wall, gate, dusk soil, dead trees"),
+    ("visual-hollow-throne.png", "The Hollow Sanctum: Vaelith on the obsidian throne room floor"),
+    ("visual-night.png", "Night: darker world, the player's lantern, unlit names and UI"),
+    ("visual-particles.png", "Particles: critical-hit stars and a fire spell's sparks and flash"),
+    ("visual-relics.png", "Relics: claimed from Ysolde's quest window; glowing relic gear, a relic on the ground, glowing bosses"),
 )
 
 
