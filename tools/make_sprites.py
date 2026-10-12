@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Generate Brimholt's original pixel-art sprite sheets (Python standard library only).
 
-Writes assets/sprites/*.png. Character, shirt, marker, and gear sheets use 48x48 frames:
+Writes assets/sprites/*.png. Character, cloth, marker, and gear sheets use 64x64 frames:
 three columns (stand, step A, step B) and four rows (down, up, left, right), with the
-tile centre at frame pixel (24, 24). Items and floor tiles are 32x32 cells; walls are
+tile centre at frame pixel (32, 40). Items and floor tiles are 32x32 cells; walls are
 48x48 cells drawn 16 pixels up and left of their tile, indexed by open sides
-(1 north, 2 west, 4 south, 8 east).
+(1 north, 2 west, 4 south, 8 east). objects.png holds 64x96 trees whose trunk base sits on
+the tile centre at (32, 80). terrain_palette.png is the map editor's tile palette.
 
 Re-running overwrites the sheets. Once a sheet has been edited by hand (for example in
 Aseprite), treat that PNG as the source of truth and stop regenerating it.
@@ -17,12 +18,16 @@ import struct
 import zlib
 from pathlib import Path
 
-FRAME = 48
+FRAME = 64
 TILE = 32
+WALL = 48
 DIRECTIONS = ("down", "up", "left", "right")
 ITEM_ORDER = (
     "ember_cap", "moss_coat", "copper_blade", "iron_coif", "ash_tunic", "flint_hatchet", "glowcap",
+    "oak_buckler", "copper_band", "garnet_ring", "river_pendant", "hearth_charm", "gold_coins",
 )
+# Map editor palette order; must match TERRAINS in tools/make_map.gd.
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b")
 
 
 def rgba(value, alpha=255):
@@ -36,86 +41,24 @@ def scale(color, factor):
 
 OUTLINE = rgba("1a1612")
 SHADOW = (0, 0, 0, 72)
-SKIN, SKIN_SHADE, SKIN_LIGHT = rgba("eabf98"), rgba("c9946e"), rgba("f6d6b5")
-HAIR, HAIR_DARK, HAIR_LIGHT = rgba("5b3a26"), rgba("3d2517"), rgba("7d5434")
-EYE, MOUTH = rgba("1d2230"), rgba("a8664f")
-PANTS, PANTS_DARK = rgba("3b4256"), rgba("2a2f3e")
-BOOTS, BOOTS_DARK = rgba("4a3426"), rgba("2e2018")
-BELT, BUCKLE = rgba("6a4a30"), rgba("d8b04a")
-# Shirt pixels are greyscale and tinted per player at runtime.
-SHIRT_LIGHT, SHIRT, SHIRT_DARK = (255, 255, 255, 255), (206, 206, 206, 255), (140, 140, 140, 255)
-SHIRT_COLORS = {SHIRT_LIGHT, SHIRT, SHIRT_DARK}
 MARKER = rgba("f2cf6a")
 
 PALETTES = {
-    "ember_cap": (rgba("ce8657"), rgba("edbd78"), rgba("e0d3a4")),
-    "moss_coat": (rgba("6b9a68"), rgba("a9c287"), rgba("3a5c49")),
-    "copper_blade": (rgba("d5d9cc"), rgba("cd945a"), rgba("8c5a32")),
-    "iron_coif": (rgba("7c8590"), rgba("aeb6bf"), rgba("4f5862")),
-    "ash_tunic": (rgba("8a4b46"), rgba("b8706a"), rgba("4d2b2a")),
-    "flint_hatchet": (rgba("a3a79c"), rgba("8a6040"), rgba("5c3e2a")),
-    "glowcap": (rgba("7fd6c2"), rgba("e8f2d0"), rgba("d9c9a3")),
+    "ember_cap": (rgba("a8673f"), rgba("cf9663"), rgba("e2c38a")),
+    "moss_coat": (rgba("5f7f55"), rgba("8ea777"), rgba("3a5241")),
+    "copper_blade": (rgba("c9ccc2"), rgba("b98450"), rgba("6e4a2e")),
+    "iron_coif": (rgba("767d86"), rgba("a3aab2"), rgba("4d535b")),
+    "ash_tunic": (rgba("7d4840"), rgba("a5685d"), rgba("4a2a26")),
+    "flint_hatchet": (rgba("9a9c92"), rgba("7c5838"), rgba("4f3725")),
+    "glowcap": (rgba("74c4b0"), rgba("dcecc8"), rgba("cbb894")),
+    "oak_buckler": (rgba("86603d"), rgba("ad865a"), rgba("8a9097")),
+    "copper_band": (rgba("b07444"), rgba("dca46c"), rgba("744526")),
+    "garnet_ring": (rgba("c39b46"), rgba("e6cc86"), rgba("962c38")),
+    "river_pendant": (rgba("a4adb5"), rgba("dbe2e6"), rgba("3d78a8")),
+    "hearth_charm": (rgba("c8b590"), rgba("e8dcbe"), rgba("c85a2c")),
+    "gold_coins": (rgba("d6aa3c"), rgba("f2d37a"), rgba("9c7424")),
 }
-
-HEADS = {
-    "down": [
-        "...hhhhhh...",
-        ".hhjjjhhhhh.",
-        "hhjjhhhhhhHH",
-        "hhhhhhhhhhHH",
-        "hhksssssssHH",
-        "hksssssssssH",
-        "hsssessessSH",
-        "hsssessessSH",
-        "hsssssssssSH",
-        ".ssssmmsssS.",
-        "..sssssssS..",
-        "...SSSSSS...",
-    ],
-    "up": [
-        "...hhhhhh...",
-        ".hhjjjhhhhh.",
-        "hhjjhhhhhhHH",
-        "hhjhhhhhhhHH",
-        "hhhhhhhhhhHH",
-        "hhhhhhhhhhHH",
-        "hhhhhhhhhHHH",
-        "hhhhhhhhhHHH",
-        "hhhhhhhhhHHH",
-        ".hhhhhhhHHH.",
-        "..SsssssSS..",
-        "...SSSSSS...",
-    ],
-    "left": [
-        "...hhhhhh...",
-        "..hhjjjhhhh.",
-        ".hjjhhhhhhHH",
-        ".hhhhhhhhhHH",
-        ".kssssshhhHH",
-        ".sssssshhhHH",
-        ".sesssShhhHH",
-        "ssesssShhhHH",
-        ".sssssShhhHH",
-        ".ssmssShhHH.",
-        "..ssssSShH..",
-        "...SSSSS....",
-    ],
-}
-HEAD_PALETTE = {
-    "h": HAIR, "H": HAIR_DARK, "j": HAIR_LIGHT, "s": SKIN, "S": SKIN_SHADE, "k": SKIN_LIGHT,
-    "e": EYE, "m": MOUTH,
-}
-CAP = [
-    "......aa......",
-    "....mmmmmm....",
-    "...mllmmmmmd..",
-    "..mlmmmmmmmdd.",
-    "..mmmmmmmmmdd.",
-    "..mmmmmmmmmdd.",
-    "llllllllllllll",
-    ".dddddddddddd.",
-]
-
+LEATHER = rgba("5a4030")
 
 class Image:
     def __init__(self, width, height):
@@ -275,6 +218,15 @@ def sheet(frames, columns, cell):
     return result
 
 
+def sheet_row(frames):
+    result = Image(sum(frame.width for frame in frames), max(frame.height for frame in frames))
+    x = 0
+    for frame in frames:
+        result.over(frame, x, 0)
+        x += frame.width
+    return result
+
+
 def character_sheet(builder):
     frames = []
     for direction in DIRECTIONS:
@@ -287,82 +239,235 @@ def character_sheet(builder):
 
 
 # ---------------------------------------------------------------- characters
+# 64x64 frames; the tile centre is frame pixel (32, 40) and feet rest near y 53, so
+# characters stand about 1.3 tiles tall and overlap the tile behind them.
 
 def swing(frame):
     return (0, 1, -1)[frame]
 
 
 def side_arm_x(frame):
-    return (22, 24, 20)[frame]
+    return (30, 33, 27)[frame]
 
 
-def draw_leg(image, x, height, pants, pants_dark, boots=BOOTS):
-    top = 31
-    image.rect(x, top, 4, height - 2, pants)
-    image.rect(x + 3, top, 1, height - 2, pants_dark)
-    image.rect(x, top + height - 2, 4, 1, boots)
-    image.rect(x, top + height - 1, 4, 1, BOOTS_DARK)
+def steps(points, x, y, dx, dy, limit=3):
+    count = 0
+    while count < limit and (x + dx * (count + 1), y + dy * (count + 1)) in points:
+        count += 1
+    return count
 
 
-def draw_arm(image, x, top, outer_left):
-    sleeve = (SHIRT_LIGHT, SHIRT, SHIRT) if outer_left else (SHIRT, SHIRT, SHIRT_DARK)
-    skin = (SKIN_LIGHT, SKIN, SKIN) if outer_left else (SKIN, SKIN, SKIN_SHADE)
-    for column in range(3):
-        image.rect(x + column, top, 1, 4, sleeve[column])
-        image.rect(x + column, top + 4, 1, 5, skin[column])
+def shade(image, points, tones, dither=True):
+    """Soft top-left lighting with checkerboard dithering at the tone boundaries."""
+    light, main, dark = tones
+    for x, y in points:
+        near_light = min(steps(points, x, y, 0, -1), steps(points, x, y, -1, 0))
+        near_dark = min(steps(points, x, y, 0, 1), steps(points, x, y, 1, 0))
+        checker = (x + y) % 2 == 0
+        if near_light == 0:
+            color = light
+        elif near_dark == 0:
+            color = dark
+        elif dither and near_dark == 1:
+            color = dark if checker else main
+        elif dither and near_light == 1:
+            color = light if checker else main
+        else:
+            color = main
+        image.set(x, y, color)
 
 
-def body_groups(direction, frame):
-    """Main silhouette and, in side views, the near arm (outlined separately)."""
-    main, arm = Image(FRAME, FRAME), Image(FRAME, FRAME)
+def grey(*values):
+    return tuple((value, value, value, 255) for value in values)
+
+
+SKIN_TONES = (rgba("ebc4a0"), rgba("d9a982"), rgba("b8835f"))
+HAIR_TONES = (rgba("6b4a33"), rgba("4b3324"), rgba("33221a"))
+LINEN = (rgba("cdbd9c"), rgba("b3a283"), rgba("8c7d63"))
+TROUSERS = (rgba("5e554a"), rgba("4d453c"), rgba("38322b"))
+TROUSERS_FAR = (rgba("443d35"), rgba("3a342d"), rgba("2c2722"))
+BOOT_TONES = (rgba("54402f"), rgba("3a2a1f"), rgba("261b14"))
+BELT_TONE, BUCKLE_TONE = rgba("5e432d"), rgba("c9a24a")
+# Greyscale cloth is tinted per player at runtime; every value here is unique to cloth.
+TABARD = grey(240, 210, 162)
+HOOD = grey(198, 172, 130)
+CLOAK = grey(178, 146, 106)
+CLOAK_FOLD = grey(90)[0]
+EMBLEM = grey(252)[0]
+TINT_COLORS = set(TABARD) | set(HOOD) | set(CLOAK) | {CLOAK_FOLD, EMBLEM}
+
+HEADS = {
+    "down": [
+        "..hhhhhh..",
+        ".hjjhhhhh.",
+        "hjhhhhhhhH",
+        "hhhhhhhhhH",
+        "hhssssssHH",
+        "hsssssssSH",
+        "hsesssseSH",
+        "hsssssssSH",
+        ".sssmmssS.",
+        "..sssssS..",
+    ],
+    "up": [
+        "..hhhhhh..",
+        ".hjjhhhhh.",
+        "hjhhhhhhhH",
+        "hjhhhhhhhH",
+        "hhhhhhhhHH",
+        "hhhhhhhhHH",
+        "hhhhhhhhHH",
+        "hhhhhhhHHH",
+        ".hhhhhhHH.",
+        "..SsssSS..",
+    ],
+    "left": [
+        "..hhhhhh..",
+        ".hhjjhhhh.",
+        "hjjhhhhhhH",
+        "hhhhhhhhhH",
+        ".ssssshhHH",
+        "sssssShhHH",
+        "sesssShhHH",
+        "ssssSShhHH",
+        ".smssShhH.",
+        "..sssShH..",
+    ],
+}
+HEAD_PALETTE = {
+    "h": HAIR_TONES[1], "H": HAIR_TONES[2], "j": HAIR_TONES[0], "s": SKIN_TONES[1], "S": SKIN_TONES[2],
+    "k": SKIN_TONES[0], "e": rgba("1f1a1c"), "m": rgba("9c6048"),
+}
+
+
+def layer(points, tones, dither=True):
+    image = Image(FRAME, FRAME)
+    shade(image, points, tones, dither)
+    return image
+
+
+def cloak_points(top, bottom, start_half, end_half):
+    points = set()
+    for y in range(top, bottom + 1):
+        half = round(start_half + (end_half - start_half) * (y - top) / (bottom - top))
+        points |= box(32 - half, y, half * 2, 1)
+    return points - {(32 - start_half, top), (31 + start_half, top)}
+
+
+def cloak_layer(points, folds):
+    image = layer(points, CLOAK)
+    for x in folds:
+        for y in range(min(p[1] for p in points) + 8, max(p[1] for p in points)):
+            if (x, y) in points and y % 2 == 0:
+                image.set(x, y, CLOAK_FOLD)
+    return image
+
+
+def leg_points(x, lifted):
+    return box(x, 37, 5, 15 if lifted else 17)
+
+
+def leg_layer(x, lifted, far=False):
+    bottom = 51 if lifted else 53
+    image = layer(box(x, 37, 5, bottom - 40), TROUSERS_FAR if far else TROUSERS)
+    image.over(layer(box(x, bottom - 3, 5, 4), BOOT_TONES))
+    return image
+
+
+def arm_layer(x, top):
+    image = layer(box(x, top, 3, 14), LINEN)
+    image.rect(x, top + 13, 3, 1, LINEN[2])
+    image.over(layer(box(x, top + 14, 3, 3), SKIN_TONES, False))
+    return image
+
+
+TORSO_FRONT = box(24, 23, 16, 4) - {(24, 23), (39, 23)} | box(25, 27, 14, 8) | box(26, 35, 12, 2)
+TORSO_SIDE = box(27, 23, 10, 14) - {(27, 23), (36, 23)}
+HOOD_FRONT = box(28, 21, 8, 1) | box(26, 22, 12, 1) | box(25, 23, 14, 2) | box(26, 25, 12, 1)
+HOOD_SIDE = box(29, 21, 8, 1) | box(28, 22, 10, 3)
+TABARD_FRONT = box(28, 25, 8, 16) | box(29, 41, 6, 1) | box(30, 42, 4, 1)
+TABARD_SIDE = box(27, 25, 3, 16) | box(27, 41, 2, 1)
+
+
+def body_layers(direction, frame):
+    """Ordered (image, outlined) layers, plus masks that worn armour must not cover."""
+    layers = []
+    covers = Image(FRAME, FRAME)
     if direction in ("down", "up"):
-        draw_leg(main, 19, 6 if swing(frame) == 1 else 7, PANTS, PANTS_DARK)
-        draw_leg(main, 25, 6 if swing(frame) == -1 else 7, PANTS, PANTS_DARK)
-        main.rect(18, 22, 12, 7, SHIRT)
-        main.rect(18, 22, 1, 7, SHIRT_LIGHT)
-        main.rect(18, 22, 10, 1, SHIRT_LIGHT)
-        main.rect(28, 22, 2, 7, SHIRT_DARK)
-        main.rect(18, 29, 12, 2, BELT)
+        left_lift, right_lift = swing(frame) == 1, swing(frame) == -1
+        cloak = cloak_layer(cloak_points(23, 44, 9, 14), (22, 26, 37, 41))
         if direction == "down":
-            main.rect(22, 22, 4, 1, SKIN)
-            main.rect(23, 23, 2, 1, SKIN_SHADE)
-            main.rect(23, 29, 2, 2, BUCKLE)
-        draw_arm(main, 14, 23 + swing(frame), True)
-        draw_arm(main, 31, 23 - swing(frame), False)
-        main.template(18, 10, HEADS[direction], HEAD_PALETTE)
+            layers.append((cloak, True))
+        layers.append((leg_layer(26, left_lift).over(leg_layer(33, right_lift)), True))
+        torso = layer(TORSO_FRONT, LINEN)
+        torso.over(arm_layer(21, 24 + swing(frame))).over(arm_layer(40, 24 - swing(frame)))
+        layers.append((torso, True))
+        if direction == "down":
+            tabard = layer(TABARD_FRONT, TABARD)
+            for x, y in ((31, 29), (32, 29), (30, 30), (33, 30), (30, 31), (33, 31), (31, 32), (32, 32)):
+                tabard.set(x, y, EMBLEM)
+            layers.append((tabard, True))
+            belt = Image(FRAME, FRAME)
+            belt.rect(25, 35, 14, 2, BELT_TONE)
+            belt.rect(31, 35, 2, 2, BUCKLE_TONE)
+            layers.append((belt, False))
+        else:
+            layers.append((cloak, True))
+        hood = layer(HOOD_FRONT, HOOD)
+        layers.append((hood, True))
+        covers.over(hood.outlined())
+        head = Image(FRAME, FRAME)
+        head.template(27, 11, HEADS[direction], HEAD_PALETTE)
+        layers.append((head, True))
     else:
-        near, far = ((20, 24), (18, 26), (26, 18))[frame]
-        draw_leg(main, far, 7, PANTS_DARK, PANTS_DARK, BOOTS_DARK)
-        draw_leg(main, near, 7, PANTS, PANTS_DARK)
-        main.rect(19, 22, 10, 7, SHIRT)
-        main.rect(19, 22, 1, 7, SHIRT_LIGHT)
-        main.rect(19, 22, 9, 1, SHIRT_LIGHT)
-        main.rect(27, 22, 2, 7, SHIRT_DARK)
-        main.rect(19, 29, 10, 2, BELT)
-        main.rect(19, 29, 2, 2, BUCKLE)
-        main.template(18, 10, HEADS["left"], HEAD_PALETTE)
-        draw_arm(arm, side_arm_x(frame), 23, True)
-    return main, arm
+        near, far = ((28, 31), (25, 34), (34, 25))[frame]
+        cloak = set(box(31, 22, 7, 2))
+        for y in range(24, 45):
+            cloak |= box(33, y, 6 + (y - 24) * 4 // 20, 1)
+        cloak = cloak_layer(cloak, (37, 40))
+        layers.append((cloak, True))
+        layers.append((leg_layer(far, False, True), True))
+        layers.append((leg_layer(near, False), True))
+        layers.append((layer(TORSO_SIDE, LINEN), True))
+        tabard = layer(TABARD_SIDE, TABARD)
+        tabard.set(28, 30, EMBLEM)
+        tabard.set(28, 31, EMBLEM)
+        layers.append((tabard, True))
+        belt = Image(FRAME, FRAME)
+        belt.rect(27, 35, 10, 2, BELT_TONE)
+        belt.rect(27, 35, 2, 2, BUCKLE_TONE)
+        layers.append((belt, False))
+        hood = layer(HOOD_SIDE, HOOD)
+        layers.append((hood, True))
+        covers.over(hood.outlined())
+        head = Image(FRAME, FRAME)
+        head.template(27, 11, HEADS["left"], HEAD_PALETTE)
+        layers.append((head, True))
+        arm = arm_layer(side_arm_x(frame), 24)
+        layers.append((arm, True))
+        covers.over(arm.outlined())
+    return layers, covers
 
 
-def arm_cover(direction, frame):
-    return body_groups(direction, frame)[1].outlined()
+def body_covers(direction, frame):
+    return body_layers(direction, frame)[1]
 
 
 def full_body(direction, frame):
-    main, arm = body_groups(direction, frame)
     image = Image(FRAME, FRAME)
-    for x, y in ellipse(24, 37.5, 9, 2.6):
+    for x, y in ellipse(32, 53.5, 11, 3):
         image.set(x, y, SHADOW)
-    return image.over(main.outlined()).over(arm.outlined())
+    for part, outlined in body_layers(direction, frame)[0]:
+        image.over(part.outlined() if outlined else part)
+    return image
 
 
-def split_body(want_shirt):
+def split_body(want_tint):
     def build(direction, frame):
         image = full_body(direction, frame)
         for y in range(FRAME):
             for x in range(FRAME):
-                if (image.pixels[y][x] in SHIRT_COLORS) != want_shirt:
+                if (image.pixels[y][x] in TINT_COLORS) != want_tint:
                     image.clear(x, y)
         return image
     return build
@@ -372,124 +477,295 @@ def marker(direction, frame):
     image = Image(FRAME, FRAME)
     for y in range(FRAME):
         for x in range(FRAME):
-            distance = ((x + 0.5 - 24) / 12.5) ** 2 + ((y + 0.5 - 37.5) / 4.6) ** 2
-            if 0.62 <= distance <= 1.0:
-                image.set(x, y, MARKER if y >= 37 else scale(MARKER, 0.8))
+            distance = ((x + 0.5 - 32) / 14.5) ** 2 + ((y + 0.5 - 53.5) / 5.2) ** 2
+            if 0.66 <= distance <= 1.0:
+                image.set(x, y, MARKER if y >= 53 else scale(MARKER, 0.78))
     return image
 
 
 # ---------------------------------------------------------------- equipment
 
-def armor_builder(kind):
+def tones(kind):
     main, light, accent = PALETTES[kind]
-    dark = scale(main, 0.72)
+    return (light, main, scale(main, 0.7)), accent
+
+
+def armor_builder(kind):
+    palette, accent = tones(kind)
     tunic = kind == "ash_tunic"
 
     def build(direction, frame):
-        image = Image(FRAME, FRAME)
-        if direction in ("down", "up"):
-            body = box(18, 22, 12, 11 if tunic else 9)
+        covers = body_covers(direction, frame)
+        if direction == "up":
             if tunic:
-                body |= box(17, 31, 14, 2)
-            bevel(image, body, main, light, dark)
-            if direction == "down":
-                if tunic:
-                    image.rect(18, 28, 12, 1, accent)
-                else:
-                    image.rect(23, 23, 2, 8, accent)
-                    image.set(23, 25, light)
-                    image.set(23, 28, light)
-            sleeves = Image(FRAME, FRAME)
+                return layer(box(24, 44, 16, 3), palette).outlined()
+            return layer(box(22, 22, 6, 5) | box(36, 22, 6, 5), palette).outlined()
+        side = direction == "left"
+        if tunic:
+            body = box(27, 24, 10, 18) | box(26, 41, 12, 3) if side else box(25, 24, 14, 18) | box(24, 41, 16, 3)
+        else:
+            body = box(27, 23, 10, 16) | box(28, 39, 8, 4) if side else (box(25, 23, 14, 16) | box(26, 39, 5, 4)
+                                                                       | box(33, 39, 5, 4))
+        image = layer(body, palette)
+        if tunic:
+            image.rect(26 if not side else 27, 36, 12 if not side else 10, 1, accent)
+        elif not side:
+            for y in range(27, 38, 3):
+                image.rect(31, y, 2, 1, accent)
+        image = image.outlined().cut(covers)
+        extra = Image(FRAME, FRAME)
+        if side:
+            arm_x = side_arm_x(frame)
             if tunic:
-                bevel(sleeves, box(14, 23 + swing(frame), 3, 3), main, light, dark)
-                bevel(sleeves, box(31, 23 - swing(frame), 3, 3), main, light, dark)
+                extra = layer(box(arm_x, 24, 3, 4), palette)
             else:
-                bevel(sleeves, box(13, 21, 5, 3), light, light, main)
-                bevel(sleeves, box(30, 21, 5, 3), light, light, main)
-            return image.outlined().over(sleeves.outlined())
-        body = box(19, 22, 10, 11 if tunic else 9)
-        if tunic:
-            body |= box(18, 31, 12, 2)
-        bevel(image, body, main, light, dark)
-        if tunic:
-            image.rect(19, 28, 10, 1, accent)
+                extra = layer(box(arm_x - 1, 22, 5, 5), palette)
+        elif tunic:
+            extra = layer(box(21, 24 + swing(frame), 3, 4), palette).over(layer(box(40, 24 - swing(frame), 3, 4), palette))
         else:
-            image.rect(20, 23, 1, 8, accent)
-        image = image.outlined().cut(arm_cover(direction, frame))
-        shoulder = Image(FRAME, FRAME)
-        arm_x = side_arm_x(frame)
-        if tunic:
-            bevel(shoulder, box(arm_x, 23, 3, 3), main, light, dark)
-        else:
-            bevel(shoulder, box(arm_x - 1, 21, 5, 3), light, light, main)
-        return image.over(shoulder.outlined())
+            extra = layer(box(21, 22, 6, 5), palette).over(layer(box(37, 22, 6, 5), palette))
+        return image.over(extra.outlined())
     return build
 
 
+CAP = [
+    ".....aa.....",
+    "...mmmmmm...",
+    "..mllmmmmd..",
+    ".mlmmmmmmdd.",
+    ".mmmmmmmmdd.",
+    ".mmmmmmmmdd.",
+    "llllllllllll",
+    ".dddddddddd.",
+]
+
+
 def helmet_builder(kind):
-    main, light, accent = PALETTES[kind]
-    dark = scale(main, 0.72)
+    palette, accent = tones(kind)
+    light, main, dark = palette
 
     def build(direction, frame):
         image = Image(FRAME, FRAME)
         if kind == "ember_cap":
-            image.template(17, 6, CAP, {"m": main, "l": light, "d": dark, "a": accent})
+            image.template(26, 7, CAP, {"m": main, "l": light, "d": dark, "a": accent})
             return image.outlined()
-        hood = box(20, 8, 8, 1) | box(18, 9, 12, 1) | box(17, 10, 14, 10) | box(17, 20, 3, 2) | box(28, 20, 3, 2)
+        hood = box(29, 9, 6, 1) | box(27, 10, 10, 1) | box(26, 11, 12, 1) | box(25, 12, 14, 11) | box(26, 23, 12, 2)
         if direction == "down":
-            hood -= box(20, 14, 8, 8)
+            hood -= box(28, 15, 8, 8)
         elif direction == "left":
-            hood -= box(17, 14, 8, 8)
+            hood -= box(25, 15, 7, 8)
+        shade(image, hood, palette)
         for x, y in hood:
-            if x >= 29:
-                image.set(x, y, dark)
-            elif y == min(row for column, row in hood if column == x):
+            if (x + y) % 2 == 0 and y % 2 == 1 and image.get(x, y) == main:
                 image.set(x, y, light)
-            elif (x + y) % 2 == 0 and y % 2 == 0:
-                image.set(x, y, light)
-            else:
-                image.set(x, y, main)
         return image.outlined()
     return build
 
 
 def held_builder(kind):
-    main, light, accent = PALETTES[kind]
-    dark = scale(main, 0.7)
+    palette, accent = tones(kind)
+    light, main, dark = palette
     hatchet = kind == "flint_hatchet"
 
     def build(direction, frame):
         image = Image(FRAME, FRAME)
         if direction in ("down", "up"):
-            top = 23 - swing(frame)
+            top = 24 - swing(frame)
             if hatchet:
-                image.rect(32, top - 5, 2, 15, light)
-                image.rect(33, top - 5, 1, 15, accent)
-                bevel(image, box(34, top - 6, 4, 6), main, scale(main, 1.2), dark)
+                image.rect(41, top - 2, 2, 20, PALETTES[kind][1])
+                image.rect(42, top - 2, 1, 20, accent)
+                shade(image, box(43, top - 2, 2, 4) | box(45, top - 4, 3, 8) | box(48, top - 3, 1, 6), palette)
             else:
-                image.rect(32, top - 9, 1, 15, main)
-                image.rect(33, top - 9, 1, 15, dark)
-                image.clear(33, top - 9)
-                image.rect(30, top + 6, 6, 1, light)
-                image.rect(32, top + 7, 2, 2, accent)
+                image.rect(41, top - 5, 1, 18, main)
+                image.rect(42, top - 5, 1, 18, dark)
+                image.clear(42, top - 5)
+                image.rect(38, top + 13, 8, 1, PALETTES[kind][1])
+                image.rect(41, top + 14, 2, 3, accent)
+                image.rect(41, top + 17, 2, 1, PALETTES[kind][1])
             return image.outlined()
         hand_x = side_arm_x(frame) + 1
         if hatchet:
-            handle = thick(line(hand_x, 30, hand_x - 9, 19), ((0, 0), (1, 0)))
-            for x, y in handle:
-                image.set(x, y, light)
-            bevel(image, box(hand_x - 11, 15, 5, 5) | box(hand_x - 12, 16, 1, 3), main, scale(main, 1.2), dark)
+            for x, y in thick(line(hand_x, 40, hand_x - 12, 25), ((0, 0), (1, 0))):
+                image.set(x, y, PALETTES[kind][1])
+            shade(image, box(hand_x - 14, 23, 3, 3) | box(hand_x - 17, 20, 3, 8) | box(hand_x - 18, 21, 1, 6), palette)
         else:
-            blade = line(hand_x - 1, 28, hand_x - 11, 18)
-            for x, y in blade:
+            for x, y in line(hand_x - 1, 37, hand_x - 15, 23):
                 image.set(x, y, main)
                 image.set(x + 1, y, dark)
-            for x, y in line(hand_x - 2, 30, hand_x + 1, 27):
-                image.set(x, y, light)
-            image.set(hand_x, 30, accent)
-            image.set(hand_x + 1, 31, accent)
+            for x, y in line(hand_x - 3, 39, hand_x + 1, 35):
+                image.set(x, y, PALETTES[kind][1])
+            image.set(hand_x, 40, accent)
+            image.set(hand_x + 1, 41, accent)
         return image.outlined()
     return build
+
+
+def shield_face(image, disc, palette, rim, boss):
+    shade(image, disc, palette)
+    xs = sorted({x for x, y in disc})
+    for x in xs[len(xs) // 3::len(xs) // 3][:2]:
+        for px, py in disc:
+            if px == x:
+                image.set(px, py, palette[2])
+    for x, y in disc:
+        if any((x + dx, y + dy) not in disc for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+            image.set(x, y, rim)
+    for x, y in boss:
+        image.set(x, y, scale(rim, 1.25) if (x + y) % 2 == 0 else rim)
+
+
+def shield_builder(kind):
+    palette, accent = tones(kind)
+
+    def build(direction, frame):
+        image = Image(FRAME, FRAME)
+        if direction in ("down", "up"):
+            top = 25 + swing(frame)
+            disc = ellipse(20, top + 7, 6.5, 7.5)
+            if direction == "down":
+                shield_face(image, disc, palette, accent, box(19, top + 6, 2, 2))
+            else:
+                shade(image, disc, (palette[1], palette[2], scale(palette[2], 0.8)))
+                image.rect(15, top + 6, 10, 2, LEATHER)
+            return image.outlined()
+        # Held on the far arm, seen edge-on in front of the chest and drawn behind the body.
+        edge = box(19, 26, 4, 13) - {(19, 26), (22, 26), (19, 38), (22, 38)}
+        shade(image, edge, palette)
+        for y in range(27, 38):
+            image.set(19, y, accent)
+        return image.outlined()
+    return build
+
+
+# ---------------------------------------------------------------- monsters
+# Greyscale bodies tinted per monster at runtime, plus untinted eye/detail sheets.
+# Same 64x64 frame layout and tile centre (32, 40) as characters; feet near y 53.
+
+MONSTER_TONES = grey(236, 186, 128)
+EYE = rgba("fff2b0")
+EYE_DARK = rgba("1a1612")
+
+
+def bob(frame):
+    return (0, -1, 1)[frame]
+
+
+def quadruped(direction, frame):
+    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
+    for x, y in ellipse(32, 53.5, 13, 3):
+        body.set(x, y, SHADOW)
+    shape = Image(FRAME, FRAME)
+    if direction in ("down", "up"):
+        legs = [(25, 45 + (1 if swing(frame) == 1 else 0)), (35, 45 + (1 if swing(frame) == -1 else 0))]
+        for x, y in legs:
+            shade(shape, box(x, y, 4, 8 - (y - 45)), MONSTER_TONES, False)
+        shade(shape, ellipse(32, 40, 10, 8), MONSTER_TONES)
+        if direction == "down":
+            shade(shape, ellipse(32, 36, 7, 6) | box(25, 29, 3, 4) | box(37, 29, 3, 4), MONSTER_TONES)
+            detail.rect(29, 35, 2, 2, EYE_DARK)
+            detail.rect(34, 35, 2, 2, EYE_DARK)
+            detail.set(29, 35, EYE)
+            detail.set(34, 35, EYE)
+            detail.rect(31, 40, 3, 1, EYE_DARK)
+        else:
+            shade(shape, box(31, 30, 3, 6), MONSTER_TONES, False)
+    else:
+        front, back = ((22, 38), (20, 40), (24, 36))[frame]
+        for x in (front, front + 5, back, back - 5):
+            shade(shape, box(x, 44, 4, 9), MONSTER_TONES, False)
+        shade(shape, ellipse(32, 40, 14, 7), MONSTER_TONES)
+        shade(shape, ellipse(20, 35, 7, 6) | box(17, 27, 3, 4) | box(21, 27, 3, 4), MONSTER_TONES)
+        shade(shape, box(45, 36, 5, 2), MONSTER_TONES, False)
+        detail.rect(17, 34, 2, 2, EYE_DARK)
+        detail.set(17, 34, EYE)
+        detail.rect(13, 38, 3, 1, EYE_DARK)
+    body.over(shape.outlined())
+    return body, detail
+
+
+def blob(direction, frame):
+    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
+    for x, y in ellipse(32, 53.5, 13, 3):
+        body.set(x, y, SHADOW)
+    squash = (0, 1, -1)[frame]
+    shape = Image(FRAME, FRAME)
+    shade(shape, {p for p in ellipse(32, 45 - squash, 13 + squash, 10 - squash) if p[1] <= 53}, MONSTER_TONES)
+    for x, y in ((24, 52), (38, 52)):
+        shade(shape, box(x, y - 2, 4, 3), MONSTER_TONES, False)
+    body.over(shape.outlined())
+    if direction != "up":
+        eyes = [(27, 39), (34, 39)] if direction == "down" else ([(23, 40)] if direction == "left" else [(39, 40)])
+        for x, y in eyes:
+            detail.rect(x, y - squash, 3, 3, EYE)
+            detail.set(x + 1, y + 1 - squash, EYE_DARK)
+        if direction == "down":
+            detail.rect(28, 45 - squash, 8, 1, EYE_DARK)
+    return body, detail
+
+
+def golem(direction, frame):
+    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
+    for x, y in ellipse(32, 53.5, 14, 3.5):
+        body.set(x, y, SHADOW)
+    shape = Image(FRAME, FRAME)
+    side = direction in ("left", "right")
+    lift = (0, 1, -1)[frame]
+    shade(shape, box(24, 44 - max(lift, 0), 6, 10) | box(34, 44 - max(-lift, 0), 6, 10), MONSTER_TONES, False)
+    shade(shape, box(21, 24, 22, 21) - {(21, 24), (42, 24)}, MONSTER_TONES)
+    shade(shape, box(26, 13, 12, 11), MONSTER_TONES)
+    if not side:
+        shade(shape, box(14, 25 + lift, 7, 17), MONSTER_TONES)
+        shade(shape, box(43, 25 - lift, 7, 17), MONSTER_TONES)
+    else:
+        shade(shape, box(28 + lift * 2, 26, 8, 17), MONSTER_TONES)
+    rng = random.Random(77)
+    for _ in range(18):
+        x, y = rng.randrange(22, 42), rng.randrange(25, 44)
+        if shape.get(x, y) == MONSTER_TONES[1]:
+            shape.set(x, y, MONSTER_TONES[2])
+    body.over(shape.outlined())
+    if direction == "down":
+        detail.rect(28, 17, 3, 2, EYE)
+        detail.rect(33, 17, 3, 2, EYE)
+    elif direction != "up":
+        detail.rect(27 if direction == "left" else 34, 17, 3, 2, EYE)
+    return body, detail
+
+
+def wraith(direction, frame):
+    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
+    for x, y in ellipse(32, 54, 9, 2.5):
+        body.set(x, y, SHADOW)
+    rise = bob(frame) - 2
+    shape = Image(FRAME, FRAME)
+    robe = set()
+    for y in range(14, 50):
+        half = 6 + (y - 14) * 7 // 36
+        robe |= box(32 - half, y + rise, half * 2, 1)
+    for x in range(24, 41, 4):
+        robe -= box(x + frame % 2, 47 + rise, 2, 3)
+    shade(shape, robe, MONSTER_TONES)
+    if direction != "up":
+        hood = box(27, 15 + rise, 10, 9) if direction == "down" else box(25 if direction == "left" else 29, 15 + rise, 10, 9)
+        for x, y in hood:
+            shape.set(x, y, (40, 40, 40, 255))
+    body.over(shape.outlined())
+    if direction == "down":
+        detail.rect(29, 19 + rise, 2, 2, EYE)
+        detail.rect(33, 19 + rise, 2, 2, EYE)
+    elif direction != "up":
+        detail.rect(27 if direction == "left" else 35, 19 + rise, 2, 2, EYE)
+    return body, detail
+
+
+def monster_sheet(builder, want_detail):
+    def build(direction, frame):
+        if direction == "right":
+            image = builder("left", frame)[1 if want_detail else 0]
+        else:
+            image = builder(direction, frame)[1 if want_detail else 0]
+        return image
+    return character_sheet(build)
 
 
 # ---------------------------------------------------------------- items
@@ -539,6 +815,38 @@ def item_icon(kind):
         for x, y in thick(line(8, 26, 20, 10), ((0, 0), (1, 0))):
             image.set(x, y, light)
         bevel(image, box(17, 5, 8, 8) | box(25, 6, 2, 6), main, scale(main, 1.2), dark)
+    elif kind == "oak_buckler":
+        shield_face(image, ellipse(16, 16, 11, 11), (light, main, dark), accent, box(15, 15, 3, 3))
+    elif kind in ("copper_band", "garnet_ring"):
+        gem = kind == "garnet_ring"
+        cy = 19 if gem else 17
+        band = ellipse(16, cy, 8, 7) - ellipse(16, cy, 5, 4)
+        shade(image, band, (light, main, dark), False)
+        if gem:
+            shade(image, ellipse(16, 11, 4, 4), (scale(accent, 1.6), accent, scale(accent, 0.65)), False)
+            image.rect(14, 9, 2, 1, (255, 235, 235, 255))
+    elif kind == "river_pendant":
+        for chain in (line(6, 5, 15, 17), line(26, 5, 17, 17)):
+            for index, (x, y) in enumerate(sorted(chain)):
+                image.set(x, y, light if index % 2 else main)
+        shade(image, ellipse(16, 22, 4.5, 5.5) | {(16, 16)}, (scale(accent, 1.5), accent, scale(accent, 0.6)), False)
+        image.set(15, 20, (230, 245, 255, 255))
+    elif kind == "gold_coins":
+        for cx, cy in ((11, 22), (20, 23), (15, 18), (9, 15), (21, 16), (16, 12)):
+            coin = ellipse(cx, cy, 4.5, 3)
+            for x, y in coin:
+                image.set(x, y, light if y < cy - 1 else main)
+            for x, y in coin:
+                if (x, y + 1) not in coin:
+                    image.set(x, y, dark)
+        image.set(14, 10, (255, 248, 210, 255))
+    elif kind == "hearth_charm":
+        for y in range(3, 10):
+            image.set(16, y, LEATHER)
+        shade(image, ellipse(16, 18, 8.5, 8.5), (light, main, dark))
+        flame = box(15, 13, 2, 9) | box(13, 17, 6, 4) | box(14, 15, 4, 2) | {(16, 12)}
+        for x, y in flame:
+            image.set(x, y, accent if y < 19 else scale(accent, 1.3))
     else:
         bevel(image, box(13, 15, 6, 10), accent, scale(accent, 1.1), scale(accent, 0.8))
         bevel(image, {p for p in ellipse(16, 15, 10, 8) if p[1] <= 15}, main, light, scale(main, 0.75))
@@ -632,6 +940,105 @@ def edge_set(kind):
     return [north, east, south, west]
 
 
+SAND = (rgba("c8b27a"), rgba("b59e68"), rgba("dcc896"), rgba("9c8656"))
+COBBLE = (rgba("85827b"), rgba("9d9a92"), rgba("6b6862"), rgba("4f4c47"))
+PLANK = (rgba("8a6a44"), rgba("a1805a"), rgba("6c5034"), rgba("3e2c1e"))
+LEAF = (rgba("6a9a4c"), rgba("4a733d"), rgba("2f4a2b"))
+PINE = (rgba("4f7d50"), rgba("35593c"), rgba("213a29"))
+BARK = (rgba("7a5a3c"), rgba("5c4230"), rgba("3e2c20"))
+
+
+def sand_tile(variant):
+    rng = random.Random(700 + variant)
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, SAND[0])
+    for _ in range(80):
+        image.set(rng.randrange(TILE), rng.randrange(TILE), SAND[rng.choice((1, 1, 2))])
+    for _ in range(3):
+        x, y = rng.randrange(2, 29), rng.randrange(2, 29)
+        image.rect(x, y, 2, 1, SAND[3])
+        image.set(x, y - 1, SAND[2])
+    return image
+
+
+def cobble_tile(variant):
+    rng = random.Random(800 + variant)
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, COBBLE[3])
+    for row in range(4):
+        shift = 4 if row % 2 else 0
+        for column in range(-1, 4):
+            x = column * 8 + shift + rng.randrange(0, 2)
+            stone = {(px, py) for px, py in box(x + 1, row * 8 + 1, 6, 6) if 0 <= px < TILE}
+            tone = rng.choice((1.0, 1.0, 0.92, 1.08))
+            bevel(image, stone, scale(COBBLE[0], tone), scale(COBBLE[1], tone), scale(COBBLE[2], tone))
+    return image
+
+
+def plank_tile(vertical, variant):
+    rng = random.Random(900 + variant + (10 if vertical else 0))
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, PLANK[3])
+    for board in range(4):
+        tone = rng.choice((1.0, 0.94, 1.06))
+        points = box(0, board * 8, TILE, 7)
+        bevel(image, points, scale(PLANK[0], tone), scale(PLANK[1], tone), scale(PLANK[2], tone))
+        seam = rng.randrange(6, 26)
+        for y in range(board * 8, board * 8 + 7):
+            image.set(seam, y, PLANK[3])
+        for nail in (2, 29):
+            image.set(nail, board * 8 + 3, PLANK[3])
+        for _ in range(6):
+            image.set(rng.randrange(TILE), board * 8 + rng.randrange(1, 6), scale(PLANK[0], 0.85 * tone))
+    return image.rotated() if vertical else image
+
+
+def tree(variant):
+    """64x96 cell; the trunk base sits on the tile centre at (32, 80)."""
+    rng = random.Random(1000 + variant)
+    image = Image(FRAME, 96)
+    for x, y in ellipse(32, 82, 15, 4):
+        image.set(x, y, SHADOW)
+    trunk = Image(FRAME, 96)
+    shade(trunk, box(29, 56, 6, 26) | box(27, 79, 10, 3), BARK, False)
+    image.over(trunk.outlined())
+    crown = Image(FRAME, 96)
+    if variant < 2:
+        points = set()
+        for cx, cy, rx, ry in ((32, 38, 20, 18), (20, 50, 13, 11), (44, 50, 13, 11), (32, 24, 13, 11),
+                               (25 + variant * 6, 32, 12, 10)):
+            points |= ellipse(cx + rng.randrange(-1, 2), cy, rx, ry)
+        shade(crown, points, LEAF)
+        for _ in range(40):
+            x, y = rng.choice(sorted(points))
+            if crown.get(x, y) == LEAF[1]:
+                crown.set(x, y, LEAF[0] if y < 40 else LEAF[2])
+    else:
+        points = set()
+        for tier, (top, half) in enumerate(((8, 7), (20, 12), (33, 16), (46, 20))):
+            for y in range(top, top + 16):
+                width = round(half * (y - top + 3) / 18)
+                points |= box(32 - width, y, width * 2, 1)
+        shade(crown, points, PINE)
+    image.over(crown.outlined())
+    return image
+
+
+def terrain_palette():
+    """One 32x32 tile per map terrain, used by the Godot map editor."""
+    tree_tile = grass_tile(0)
+    for x, y in ellipse(16, 15, 12, 11):
+        tree_tile.set(x, y, LEAF[1] if (x + y) % 5 else LEAF[0])
+    tree_tile.over(Image(TILE, TILE).outlined())
+    for x, y in ellipse(16, 15, 12, 11):
+        if any((x + dx, y + dy) not in ellipse(16, 15, 12, 11) for dx, dy in ((1, 0), (0, 1))):
+            tree_tile.set(x, y, LEAF[2])
+    wall_tile = wall(0).crop(0, 0, TILE, TILE)
+    tiles = {".": grass_tile(0), ",": dirt_tile(0), "~": water_tile(0), "#": wall_tile, "T": tree_tile,
+             ":": sand_tile(0), "=": cobble_tile(0), "b": plank_tile(False, 0)}
+    return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
+
+
 WALL_TOP = (rgba("7b8087"), rgba("9196a0"), rgba("62676f"), rgba("555a61"))
 WALL_SOUTH = (rgba("4e535c"), rgba("393d45"), rgba("5d626b"))
 WALL_EAST = (rgba("3c4048"), rgba("2d3037"), rgba("464a53"))
@@ -641,7 +1048,7 @@ HEIGHT = 16
 def wall(mask):
     open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
     rng = random.Random(600)
-    image = Image(FRAME, FRAME)
+    image = Image(WALL, WALL)
     if open_east:
         for y in range(FRAME):
             for x in range(32, 48):
@@ -703,18 +1110,28 @@ def main():
     root = Path(__file__).resolve().parent.parent / "assets" / "sprites"
     outputs = {
         "body.png": character_sheet(split_body(False)),
-        "shirt.png": character_sheet(split_body(True)),
+        "cloth.png": character_sheet(split_body(True)),
         "marker.png": character_sheet(marker),
         "items.png": sheet([item_icon(kind) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
         "tiles.png": sheet([grass_tile(v) for v in range(4)] + [dirt_tile(v) for v in range(4)]
-                           + [water_tile(f) for f in range(4)] + edge_set("dirt") + edge_set("shore"), 4, TILE),
-        "walls.png": sheet([wall(mask) for mask in range(16)], 16, FRAME),
+                           + [water_tile(f) for f in range(4)] + edge_set("dirt") + edge_set("shore")
+                           + [sand_tile(v) for v in range(4)] + [cobble_tile(v) for v in range(4)]
+                           + [plank_tile(False, 0), plank_tile(False, 1), plank_tile(True, 0), plank_tile(True, 1)],
+                           4, TILE),
+        "objects.png": sheet_row([tree(v) for v in range(3)]),
+        "terrain_palette.png": terrain_palette(),
+        "walls.png": sheet([wall(mask) for mask in range(16)], 16, WALL),
         "gear/ember_cap.png": character_sheet(helmet_builder("ember_cap")),
         "gear/iron_coif.png": character_sheet(helmet_builder("iron_coif")),
         "gear/moss_coat.png": character_sheet(armor_builder("moss_coat")),
         "gear/ash_tunic.png": character_sheet(armor_builder("ash_tunic")),
         "gear/copper_blade.png": character_sheet(held_builder("copper_blade")),
         "gear/flint_hatchet.png": character_sheet(held_builder("flint_hatchet")),
+        "gear/oak_buckler.png": character_sheet(shield_builder("oak_buckler")),
+        **{f"monsters/{name}.png": monster_sheet(builder, False)
+           for name, builder in (("quadruped", quadruped), ("blob", blob), ("golem", golem), ("wraith", wraith))},
+        **{f"monsters/{name}_detail.png": monster_sheet(builder, True)
+           for name, builder in (("quadruped", quadruped), ("blob", blob), ("golem", golem), ("wraith", wraith))},
     }
     for name, image in outputs.items():
         image.save(root / name)
@@ -725,10 +1142,10 @@ def main():
 
 def write_preview(outputs, path):
     """Dressed characters, items, tiles, and walls at 2x for reviewing the sheets."""
-    preview = Image(1536, 900)
+    preview = Image(2400, 1100)
     preview.rect(0, 0, preview.width, preview.height, rgba("20262e"))
     loadouts = (("ember_cap", "moss_coat", "copper_blade"), ("iron_coif", "ash_tunic", "flint_hatchet"), ())
-    tints = (rgba("c9714c"), rgba("648db0"), rgba("aa79ab"))
+    tints = (rgba("b06a48"), rgba("6a88a8"), rgba("8c6a8a"))
     for row, loadout in enumerate(loadouts):
         for index in range(12):
             x, y = (index % 3) * FRAME, (index // 3) * FRAME
@@ -741,16 +1158,16 @@ def write_preview(outputs, path):
             layers += [outputs["marker.png"], outputs["body.png"]]
             for layer in layers:
                 frame.over(layer.crop(x, y, FRAME, FRAME))
-            frame.over(outputs["shirt.png"].crop(x, y, FRAME, FRAME).tinted(tints[row]))
+            frame.over(outputs["cloth.png"].crop(x, y, FRAME, FRAME).tinted(tints[row]))
             for kind in loadout:
                 if kind not in held:
                     frame.over(outputs["gear/%s.png" % kind].crop(x, y, FRAME, FRAME))
             if held and index // 3 != 1:
                 frame.over(outputs["gear/%s.png" % held[0]].crop(x, y, FRAME, FRAME))
             preview.over(frame.scaled(2), index * 2 * FRAME + (index // 3) * 8, row * 2 * FRAME)
-    preview.over(outputs["items.png"].scaled(2), 0, 300)
-    preview.over(outputs["tiles.png"].scaled(2), 0, 380)
-    preview.over(outputs["walls.png"].scaled(2), 0, 780)
+    preview.over(outputs["items.png"].scaled(2), 0, 400)
+    preview.over(outputs["tiles.png"].scaled(2), 0, 480)
+    preview.over(outputs["walls.png"].scaled(2), 0, 880)
     preview.save(path)
     print(f"wrote preview {path}")
 

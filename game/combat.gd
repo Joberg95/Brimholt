@@ -1,0 +1,671 @@
+extends RefCounted
+## Server-authoritative, Tibia-style combat. Players lock a target and auto-attack every
+## Balance.ATTACK_SECONDS while in range (melee: the 8 surrounding tiles; ranged: clear line
+## of sight past walls and trees). Spells cost mana and use their own and their group's
+## cooldown. Monsters idle until a player comes near, chase within a leash, and respawn.
+## Experience is shared by damage dealt; dying costs DEATH_PENALTY of total experience.
+## tick() and the request functions return events for game/main.gd to replicate:
+##   {kind: "player"|"monster"|"monster_gone", id}, {kind: "hit", target, amount, style},
+##   {kind: "missile", from, to, color}, {kind: "area", cells, color}, {kind: "ground", cells},
+##   {kind: "message", id, text}.
+
+const World = preload("res://game/world.gd")
+const Balance = preload("res://game/balance.gd")
+const Monsters = preload("res://game/monsters.gd")
+const Spells = preload("res://game/spells.gd")
+
+const TICK_SECONDS: float = 0.1
+const REGEN_SECONDS: float = 2.0
+## Mana restored per 10 seconds, as a fraction of max mana.
+const MANA_REGEN_FRACTION: float = 0.08
+## Out of combat for this long, health and mana regenerate RESTING_MULTIPLIER times faster.
+const RESTING_SECONDS: float = 8.0
+const RESTING_MULTIPLIER: float = 3.0
+## Below this level, dying never drops items or gold, so new players cannot be stranded.
+const PROTECTION_LEVEL: int = 8
+## Players can lock targets within this many tiles.
+const TARGET_RANGE: int = 8
+const DEATH_PENALTY: float = 0.1
+## Tibia-style loss: the backpack and purse are always lost, each worn item has this chance,
+## and a red skull loses everything. Lost items land on the death tile and spill nearby.
+const EQUIPMENT_LOSS_CHANCE: float = 0.1
+const SPILL_RADIUS: int = 3
+## Skulls: attacking an unmarked player gives a white skull; three unjustified kills within a
+## day give a red skull. Attacking a skulled player, or someone who attacked you, is self-defence.
+const WHITE_SKULL_SECONDS: float = 900.0
+const RED_SKULL_SECONDS: float = 30.0 * 86400.0
+const AGGRESSION_SECONDS: float = 900.0
+const UNJUSTIFIED_WINDOW_SECONDS: float = 86400.0
+const RED_SKULL_KILLS: int = 3
+const CRITICAL_MULTIPLIER: float = 1.5
+const VOCATION_RANGE: Dictionary = {"knight": 1, "paladin": 6, "sorcerer": 5, "druid": 5}
+const MISSILE_COLORS: Dictionary = {"paladin": Color("#e8dcb0"), "sorcerer": Color("#ff9a5a"),
+	"druid": Color("#9ad8ff"), "monster": Color("#c8e070")}
+const STEPS: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
+
+var world: World
+var rng := RandomNumberGenerator.new()
+## [due time, spawn index] for monsters waiting to respawn.
+var respawns: Array = []
+var _next_id: int = -1
+var _last_tick: float = -INF
+
+
+func _init(owner: World, seed_value: int = 0) -> void:
+	world = owner
+	rng.seed = seed_value if seed_value != 0 else Time.get_ticks_usec()
+
+
+# ---------------------------------------------------------------- geometry
+
+static func distance(a: Vector2i, b: Vector2i) -> int:
+	return World.chebyshev(a, b)
+
+
+## Walls, trees, and void block projectiles and spells; water and creatures do not.
+static func line_of_sight(from: Vector2i, to: Vector2i) -> bool:
+	var steps: int = maxi(absi(to.x - from.x), absi(to.y - from.y))
+	for step: int in range(1, steps):
+		var cell := Vector2i(Vector2(from).lerp(Vector2(to), float(step) / steps).round())
+		if World.terrain(cell) in ["#", "T", " ", ""]:
+			return false
+	return true
+
+
+static func in_reach(from: Vector2i, to: Vector2i, reach: int) -> bool:
+	return distance(from, to) <= reach and (reach <= 1 or line_of_sight(from, to))
+
+
+## The cardinal step from a cell that best approaches goal, or ZERO. blocked(cell) -> bool.
+static func step_toward(from: Vector2i, goal: Vector2i, blocked: Callable) -> Vector2i:
+	var best := Vector2i.ZERO
+	var best_score: int = distance(from, goal) * 100 + absi(goal.x - from.x) + absi(goal.y - from.y)
+	for step: Vector2i in STEPS:
+		var next: Vector2i = from + step
+		if not World.walkable(next) or blocked.call(next):
+			continue
+		var score: int = distance(next, goal) * 100 + absi(goal.x - next.x) + absi(goal.y - next.y)
+		if score < best_score:
+			best = step
+			best_score = score
+	return best
+
+
+## The first step of a shortest path toward goal around walls, trees, and blocked tiles,
+## searching at most limit tiles; falls back to step_toward when no path is found. The goal
+## itself may be occupied (it is usually the creature being chased).
+static func path_step(from: Vector2i, goal: Vector2i, blocked: Callable, limit: int = 900) -> Vector2i:
+	if from == goal:
+		return Vector2i.ZERO
+	var previous: Dictionary = {from: from}
+	var queue: Array[Vector2i] = [from]
+	var head: int = 0
+	while head < queue.size() and queue.size() < limit:
+		var cell: Vector2i = queue[head]
+		head += 1
+		for step: Vector2i in STEPS:
+			var next: Vector2i = cell + step
+			if previous.has(next):
+				continue
+			if next == goal:
+				var back: Vector2i = cell
+				while previous[back] != from:
+					back = previous[back]
+				return (next if cell == from else back) - from
+			if not World.walkable(next) or blocked.call(next):
+				continue
+			previous[next] = cell
+			queue.append(next)
+	return step_toward(from, goal, blocked)
+
+
+static func facing_toward(from: Vector2i, to: Vector2i) -> Vector2i:
+	var offset: Vector2i = to - from
+	if offset == Vector2i.ZERO:
+		return Vector2i.DOWN
+	if absi(offset.x) > absi(offset.y):
+		return Vector2i(signi(offset.x), 0)
+	return Vector2i(0, signi(offset.y))
+
+
+# ---------------------------------------------------------------- creatures
+
+func exists(id: int) -> bool:
+	return world.players.has(id) if id > 0 else world.monsters.has(id)
+
+
+func creature(id: int) -> Dictionary:
+	return world.players[id] if id > 0 else world.monsters[id]
+
+
+func monster_def(id: int) -> Dictionary:
+	return Monsters.MONSTERS[world.monsters[id]["kind"]]
+
+
+func reach_of(id: int) -> int:
+	if id > 0:
+		return VOCATION_RANGE.get(world.players[id]["vocation"], 1)
+	return monster_def(id)["range"]
+
+
+func in_pvp_zone(id: int) -> bool:
+	return World.zone_at(creature(id)["cell"]).get("pvp", false)
+
+
+## Players fight monsters anywhere, and each other only when both stand in a PvP zone.
+func hostile(attacker: int, target: int) -> bool:
+	if attacker == target or not exists(attacker) or not exists(target):
+		return false
+	if attacker < 0 and target < 0:
+		return false
+	if attacker > 0 and target > 0:
+		return in_pvp_zone(attacker) and in_pvp_zone(target)
+	return true
+
+
+func export_monster(id: int, now: float) -> Dictionary:
+	var monster: Dictionary = world.monsters[id]
+	var remaining: float = maxf(0.0, monster["next_move"] - now)
+	return {
+		"id": id, "kind": monster["kind"], "level": monster["level"], "cell": monster["cell"],
+		"from": monster["from"] if remaining > 0.0 else monster["cell"],
+		"remaining": remaining, "duration": monster["step"], "facing": monster["facing"],
+		"health": monster["health"], "max_health": monster["max_health"],
+	}
+
+
+func monster_snapshot(now: float) -> Dictionary:
+	var result: Dictionary = {}
+	for id: int in world.monsters:
+		result[id] = export_monster(id, now)
+	return result
+
+
+# ---------------------------------------------------------------- spawning
+
+func populate(now: float) -> Array:
+	var events: Array = []
+	for index: int in World.MONSTER_SPAWNS.size():
+		for count: int in World.MONSTER_SPAWNS[index]["count"]:
+			_spawn_at_marker(index, now, events)
+	return events
+
+
+func _spawn_at_marker(index: int, now: float, events: Array) -> bool:
+	var spawn: Dictionary = World.MONSTER_SPAWNS[index]
+	if not Monsters.MONSTERS.has(spawn["monster"]):
+		return false
+	for attempt: int in 12:
+		var offset := Vector2i(rng.randi_range(-spawn["radius"], spawn["radius"]),
+			rng.randi_range(-spawn["radius"], spawn["radius"])) if attempt > 0 else Vector2i.ZERO
+		var cell: Vector2i = spawn["cell"] + offset
+		if World.walkable(cell) and not world.occupied(cell, now):
+			spawn_monster(spawn["monster"], spawn["level"], cell, now, index, events)
+			return true
+	return false
+
+
+## Creates a monster; spawn -1 means it does not respawn.
+func spawn_monster(kind: String, level: int, cell: Vector2i, now: float, spawn: int = -1, events: Array = []) -> int:
+	var definition: Dictionary = Monsters.MONSTERS[kind]
+	var id: int = _next_id
+	_next_id -= 1
+	var health: int = Balance.mob_health(level, definition["rank"])
+	world.monsters[id] = {
+		"id": id, "kind": kind, "level": clampi(level, 1, Balance.MAX_LEVEL), "spawn": spawn, "home": cell,
+		"cell": cell, "from": cell, "next_move": now, "step": definition["step"], "facing": Vector2i.DOWN,
+		"health": health, "max_health": health, "target": 0, "next_attack": now, "damage_by": {},
+	}
+	events.append({"kind": "monster", "id": id, "movement": false})
+	return id
+
+
+# ---------------------------------------------------------------- requests
+
+func set_target(id: int, target: Variant, now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player"}
+	var player: Dictionary = world.players[id]
+	if typeof(target) != TYPE_INT:
+		return {"ok": false, "reason": "Unknown target"}
+	if target == 0:
+		player["target"] = 0
+		return {"ok": true}
+	if not exists(target):
+		return {"ok": false, "reason": "Unknown target"}
+	if target > 0 and not hostile(id, target):
+		return {"ok": false, "reason": "You can only attack players inside a PvP zone"}
+	if not hostile(id, target):
+		return {"ok": false, "reason": "You cannot attack that"}
+	if distance(player["cell"], creature(target)["cell"]) > TARGET_RANGE:
+		return {"ok": false, "reason": "Your target is too far away"}
+	player["target"] = target
+	return {"ok": true}
+
+
+func cast(id: int, spell: Variant, now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	if typeof(spell) != TYPE_STRING or not Spells.SPELLS.has(spell):
+		return {"ok": false, "reason": "Unknown spell", "events": []}
+	var player: Dictionary = world.players[id]
+	var definition: Dictionary = Spells.SPELLS[spell]
+	if player["vocation"] not in definition["vocations"]:
+		return {"ok": false, "reason": "Your vocation cannot cast %s" % definition["name"], "events": []}
+	if player["level"] < definition["level"]:
+		return {"ok": false, "reason": "%s needs level %d" % [definition["name"], definition["level"]], "events": []}
+	if now < player["cooldowns"].get(spell, -INF) or now < player["groups"].get(definition["group"], -INF):
+		return {"ok": false, "reason": "You are exhausted", "events": []}
+	var limits: Dictionary = world.player_stats(id)
+	var cost: int = maxi(1, roundi(limits["mana"] * definition["mana"]))
+	if player["mana"] < cost:
+		return {"ok": false, "reason": "Not enough mana (%d needed)" % cost, "events": []}
+	var target: int = player["target"]
+	var needs_target: bool = definition["kind"] in ["target", "area_target"]
+	if needs_target and (target == 0 or not hostile(id, target)
+			or not in_reach(player["cell"], creature(target)["cell"], definition.get("range", 1))):
+		return {"ok": false, "reason": "You need a target in range", "events": []}
+	var events: Array = []
+	player["mana"] -= cost
+	player["cooldowns"][spell] = now + definition["cooldown"]
+	player["groups"][definition["group"]] = now + Spells.GROUP_SECONDS[definition["group"]]
+	match definition["kind"]:
+		"target":
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
+			_hit(id, target, definition["power"], now, events)
+		"area_self", "area_target":
+			var center: Vector2i = player["cell"] if definition["kind"] == "area_self" else creature(target)["cell"]
+			_area(center, definition["radius"], definition["color"], events)
+			for victim: int in _enemies_near(id, center, definition["radius"]):
+				_hit(id, victim, definition["power"], now, events)
+		"heal_self":
+			_heal(id, roundi(limits["health"] * definition["power"] * rng.randf_range(0.9, 1.1)), events)
+			_area(player["cell"], 0, definition["color"], events)
+		"heal_area":
+			var amount: int = maxi(1, roundi(limits["healing"] * definition["power"]))
+			_area(player["cell"], definition["radius"], definition["color"], events)
+			for friend: int in world.players:
+				if distance(world.players[friend]["cell"], player["cell"]) <= definition["radius"]:
+					_heal(friend, amount, events)
+	events.append({"kind": "player", "id": id})
+	return {"ok": true, "events": events}
+
+
+func _enemies_near(id: int, center: Vector2i, radius: int) -> Array[int]:
+	var result: Array[int] = []
+	for group: Dictionary in [world.monsters, world.players]:
+		for other: int in group:
+			if distance(group[other]["cell"], center) <= radius and hostile(id, other) \
+					and line_of_sight(center, group[other]["cell"]):
+				result.append(other)
+	return result
+
+
+# ---------------------------------------------------------------- damage and death
+
+func defense_of(id: int) -> int:
+	return world.player_stats(id)["defense"] if id > 0 else 0
+
+
+func attack_of(id: int) -> float:
+	if id > 0:
+		return world.player_stats(id)["attack"]
+	var monster: Dictionary = world.monsters[id]
+	return Balance.mob_damage(monster["level"], monster_def(id)["rank"])
+
+
+func _hit(attacker: int, target: int, power: float, now: float, events: Array) -> void:
+	var raw: float = attack_of(attacker) * power * rng.randf_range(0.85, 1.15)
+	var critical: bool = attacker > 0 and rng.randi_range(1, 100) <= world.player_stats(attacker)["critical"]
+	if critical:
+		raw *= CRITICAL_MULTIPLIER
+	var amount: int = maxi(1, Balance.damage_taken(roundi(raw), defense_of(target)))
+	_damage(attacker, target, amount, "critical" if critical else "damage", now, events)
+
+
+func _damage(attacker: int, target: int, amount: int, style: String, now: float, events: Array) -> void:
+	var victim: Dictionary = creature(target)
+	for id: int in [attacker, target]:
+		if id > 0 and world.players.has(id):
+			world.players[id]["last_combat"] = now
+	victim["health"] -= amount
+	events.append({"kind": "hit", "target": target, "amount": amount, "style": style})
+	if target < 0:
+		if attacker > 0:
+			victim["damage_by"][attacker] = victim["damage_by"].get(attacker, 0) + amount
+			if victim["target"] == 0:
+				victim["target"] = attacker
+		if victim["health"] <= 0:
+			_kill_monster(target, now, events)
+		else:
+			events.append({"kind": "monster", "id": target, "movement": false})
+	else:
+		if attacker > 0:
+			_register_aggression(attacker, target, now, events)
+		if victim["health"] <= 0:
+			_kill_player(target, now, events, attacker)
+		else:
+			events.append({"kind": "player", "id": target})
+
+
+## Self-defence: the target is skulled or attacked the attacker unprovoked within AGGRESSION_SECONDS.
+func justified(attacker: int, target: int, now: float) -> bool:
+	var victim: Dictionary = world.players[target]
+	return not victim["skull"].is_empty() or world.players[attacker]["aggressors"].get(target, -INF) > now
+
+
+func _register_aggression(attacker: int, target: int, now: float, events: Array) -> void:
+	var player: Dictionary = world.players[attacker]
+	if justified(attacker, target, now):
+		return
+	if player["skull"] != "red":
+		player["skull"] = "white"
+		player["skull_until"] = maxf(player["skull_until"], now + WHITE_SKULL_SECONDS)
+	# Only an unprovoked attack gives the victim the right to strike back.
+	world.players[target]["aggressors"][attacker] = now + AGGRESSION_SECONDS
+	events.append({"kind": "player", "id": attacker})
+
+
+func _heal(id: int, amount: int, events: Array) -> void:
+	var player: Dictionary = world.players[id]
+	var healed: int = mini(amount, world.player_stats(id)["health"] - player["health"])
+	player["health"] += healed
+	events.append({"kind": "hit", "target": id, "amount": healed, "style": "heal"})
+	events.append({"kind": "player", "id": id})
+
+
+func _missile(from: Vector2i, to: Vector2i, color: Color, events: Array) -> void:
+	if from != to:
+		events.append({"kind": "missile", "from": from, "to": to, "color": color})
+
+
+func _area(center: Vector2i, radius: int, color: Color, events: Array) -> void:
+	var cells: Array[Vector2i] = []
+	for dy: int in range(-radius, radius + 1):
+		for dx: int in range(-radius, radius + 1):
+			var cell: Vector2i = center + Vector2i(dx, dy)
+			if World.terrain(cell) not in ["#", " ", ""]:
+				cells.append(cell)
+	events.append({"kind": "area", "cells": cells, "color": color})
+
+
+func _kill_monster(id: int, now: float, events: Array) -> void:
+	var monster: Dictionary = world.monsters[id]
+	var definition: Dictionary = monster_def(id)
+	var experience: int = Balance.mob_experience(monster["level"], definition["rank"])
+	var total: int = 0
+	for attacker: int in monster["damage_by"]:
+		total += monster["damage_by"][attacker]
+	for attacker: int in monster["damage_by"]:
+		if world.players.has(attacker) and total > 0:
+			grant_experience(attacker, roundi(experience * float(monster["damage_by"][attacker]) / total), events)
+	_drop_loot(monster, events)
+	world.monsters.erase(id)
+	events.append({"kind": "monster_gone", "id": id})
+	for player: int in world.players:
+		if world.players[player]["target"] == id:
+			world.players[player]["target"] = 0
+			events.append({"kind": "player", "id": player})
+	if monster["spawn"] >= 0:
+		respawns.append([now + Monsters.RESPAWN_SECONDS, monster["spawn"]])
+
+
+## Gold piles scale with level; a monster drops nothing when its tile is already full.
+func _drop_loot(monster: Dictionary, events: Array) -> void:
+	var piles: int = monster["level"] / 10 + (1 if rng.randf() < 0.6 else 0)
+	if Monsters.MONSTERS[monster["kind"]]["rank"] != "normal":
+		piles += 3
+	var cell: Vector2i = monster["cell"]
+	var stack: Array = world.ground.get(cell, [])
+	var dropped: bool = false
+	for pile: int in piles:
+		if stack.size() >= World.GROUND_STACK_MAX:
+			break
+		stack.append("gold_coins")
+		dropped = true
+	if dropped:
+		world.ground[cell] = stack
+		events.append({"kind": "ground", "cells": [cell]})
+
+
+static func total_experience(level: int, progress: int) -> int:
+	var total: int = progress
+	for below: int in range(1, clampi(level, 1, Balance.MAX_LEVEL)):
+		total += Balance.experience_to_next(below)
+	return total
+
+
+## [level, progress within that level] for a total amount of experience.
+static func level_from_total(total: int) -> Array:
+	var level: int = 1
+	var left: int = maxi(total, 0)
+	while level < Balance.MAX_LEVEL and left >= Balance.experience_to_next(level):
+		left -= Balance.experience_to_next(level)
+		level += 1
+	return [level, left if level < Balance.MAX_LEVEL else 0]
+
+
+func grant_experience(id: int, amount: int, events: Array) -> void:
+	var player: Dictionary = world.players[id]
+	var before: int = player["level"]
+	var result: Array = level_from_total(total_experience(player["level"], player["experience"]) + maxi(amount, 0))
+	player["level"] = result[0]
+	player["experience"] = result[1]
+	events.append({"kind": "hit", "target": id, "amount": amount, "style": "experience"})
+	if player["level"] > before:
+		events.append({"kind": "message", "id": id, "text": "You advanced to level %d." % player["level"]})
+	events.append({"kind": "player", "id": id})
+
+
+func _kill_player(id: int, now: float, events: Array, killer: int = 0) -> void:
+	var player: Dictionary = world.players[id]
+	if killer > 0 and killer != id and world.players.has(killer) and not justified(killer, id, now):
+		var murderer: Dictionary = world.players[killer]
+		murderer["unjustified"] = murderer["unjustified"].filter(func(time: float) -> bool:
+			return now - time < UNJUSTIFIED_WINDOW_SECONDS)
+		murderer["unjustified"].append(now)
+		if murderer["unjustified"].size() >= RED_SKULL_KILLS:
+			murderer["skull"] = "red"
+			murderer["skull_until"] = now + RED_SKULL_SECONDS
+			events.append({"kind": "message", "id": killer, "text": "You have a red skull: you will lose everything if you die."})
+		else:
+			events.append({"kind": "message", "id": killer,
+				"text": "Unjustified kill (%d of %d before a red skull)." % [murderer["unjustified"].size(), RED_SKULL_KILLS]})
+		events.append({"kind": "player", "id": killer})
+	var lost_items: Array[String] = _drop_belongings(id, events)
+	var total: int = total_experience(player["level"], player["experience"])
+	var lost: int = roundi(total * DEATH_PENALTY)
+	var result: Array = level_from_total(total - lost)
+	player["level"] = result[0]
+	player["experience"] = result[1]
+	var home: Vector2i = World.SPAWNS[0]
+	for spawn: Vector2i in World.SPAWNS:
+		if not world.occupied(spawn, now, id):
+			home = spawn
+			break
+	player["cell"] = home
+	player["from"] = home
+	player["next_move"] = now
+	player["target"] = 0
+	var limits: Dictionary = world.player_stats(id)
+	player["health"] = limits["health"]
+	player["mana"] = limits["mana"]
+	for monster: int in world.monsters:
+		if world.monsters[monster]["target"] == id:
+			world.monsters[monster]["target"] = 0
+	for other: int in world.players:
+		if world.players[other]["target"] == id:
+			world.players[other]["target"] = 0
+			events.append({"kind": "player", "id": other})
+	player["aggressors"].clear()
+	var summary: String = "You are dead. You lost %d experience" % lost
+	if lost_items.is_empty():
+		summary += "; below level %d you keep your items and gold" % PROTECTION_LEVEL
+	elif lost_items.size() == 1:
+		summary += ", your backpack, and your gold"
+	else:
+		summary += ", your backpack, your gold, and %s" % ", ".join(lost_items.slice(1))
+	events.append({"kind": "message", "id": id, "text": summary + "."})
+	events.append({"kind": "player", "id": id})
+
+
+## Drops the backpack, purse gold, and unlucky (or, with a red skull, all) worn items around
+## the death tile. Returns ["backpack", worn item names...] or [] if nothing was carried.
+func _drop_belongings(id: int, events: Array) -> Array[String]:
+	var player: Dictionary = world.players[id]
+	if player["level"] < PROTECTION_LEVEL:
+		return []
+	var dropped: Array[String] = []
+	var lost_worn: Array[String] = []
+	for index: int in World.BACKPACK_SIZE:
+		if not player["backpack"][index].is_empty():
+			dropped.append(player["backpack"][index])
+			player["backpack"][index] = ""
+	for pile: int in player["gold"] / World.ITEMS["gold_coins"]["gold"]:
+		dropped.append("gold_coins")
+	player["gold"] = 0
+	for slot: String in World.SLOTS:
+		if player["equipment"].has(slot) and (player["skull"] == "red" or rng.randf() < EQUIPMENT_LOSS_CHANCE):
+			dropped.append(player["equipment"][slot])
+			lost_worn.append(World.ITEMS[player["equipment"][slot]]["name"])
+			player["equipment"].erase(slot)
+	var changed: Array[Vector2i] = []
+	var cells: Array[Vector2i] = [player["cell"]]
+	var seen: Dictionary = {player["cell"]: true}
+	var index: int = 0
+	while not dropped.is_empty() and index < cells.size():
+		var cell: Vector2i = cells[index]
+		index += 1
+		var stack: Array = world.ground.get(cell, [])
+		if World.walkable(cell):
+			while not dropped.is_empty() and stack.size() < World.GROUND_STACK_MAX:
+				stack.append(dropped.pop_back())
+			if not stack.is_empty():
+				world.ground[cell] = stack
+				changed.append(cell)
+		for step: Vector2i in STEPS:
+			var next: Vector2i = cell + step
+			if not seen.has(next) and distance(next, player["cell"]) <= SPILL_RADIUS and World.terrain(next) not in ["", " "]:
+				seen[next] = true
+				cells.append(next)
+	if not changed.is_empty():
+		events.append({"kind": "ground", "cells": changed})
+	world.clamp_vitals(id)
+	var result: Array[String] = ["backpack"]
+	result.append_array(lost_worn)
+	return result
+
+
+# ---------------------------------------------------------------- simulation
+
+func tick(now: float) -> Array:
+	var events: Array = []
+	if now - _last_tick < TICK_SECONDS:
+		return events
+	_last_tick = now
+	for id: int in world.players.keys():
+		if world.players.has(id):
+			_player_tick(id, now, events)
+	for id: int in world.monsters.keys():
+		if world.monsters.has(id):
+			_monster_tick(id, now, events)
+	for index: int in range(respawns.size() - 1, -1, -1):
+		if now >= respawns[index][0]:
+			var spawn: int = respawns[index][1]
+			respawns.remove_at(index)
+			if _player_near(World.MONSTER_SPAWNS[spawn]["cell"], 4) or not _spawn_at_marker(spawn, now, events):
+				respawns.append([now + 5.0, spawn])
+	return events
+
+
+func _player_tick(id: int, now: float, events: Array) -> void:
+	var player: Dictionary = world.players[id]
+	if not player["skull"].is_empty() and now >= player["skull_until"]:
+		player["skull"] = ""
+		events.append({"kind": "player", "id": id})
+	if now >= player["next_regen"]:
+		player["next_regen"] = now + REGEN_SECONDS
+		var limits: Dictionary = world.player_stats(id)
+		var before: Array = [player["health"], player["mana"]]
+		var rate: float = REGEN_SECONDS / 10.0 * (RESTING_MULTIPLIER if resting(id, now) else 1.0)
+		player["health"] = mini(limits["health"], player["health"] + maxi(1, roundi(limits["regen"] * rate)))
+		player["mana"] = mini(limits["mana"], player["mana"] + maxi(1, roundi(limits["mana"] * MANA_REGEN_FRACTION * rate)))
+		if [player["health"], player["mana"]] != before:
+			events.append({"kind": "player", "id": id})
+	var target: int = player["target"]
+	if target == 0:
+		return
+	if not hostile(id, target) or distance(player["cell"], creature(target)["cell"]) > TARGET_RANGE:
+		player["target"] = 0
+		events.append({"kind": "player", "id": id})
+		return
+	if now >= player["next_attack"] and in_reach(player["cell"], creature(target)["cell"], reach_of(id)):
+		player["next_attack"] = now + Balance.ATTACK_SECONDS
+		if reach_of(id) > 1:
+			_missile(player["cell"], creature(target)["cell"], MISSILE_COLORS.get(player["vocation"], Color.WHITE), events)
+		_hit(id, target, 1.0, now, events)
+
+
+func resting(id: int, now: float) -> bool:
+	return now - world.players[id].get("last_combat", -INF) >= RESTING_SECONDS
+
+
+func _player_near(cell: Vector2i, radius: int) -> bool:
+	for id: int in world.players:
+		if distance(world.players[id]["cell"], cell) <= radius:
+			return true
+	return false
+
+
+func _monster_tick(id: int, now: float, events: Array) -> void:
+	var monster: Dictionary = world.monsters[id]
+	var target: int = monster["target"]
+	if target != 0 and (not world.players.has(target)
+			or distance(world.players[target]["cell"], monster["home"]) > Monsters.LEASH
+			or distance(world.players[target]["cell"], monster["cell"]) > Monsters.AGGRO_RANGE * 2):
+		target = 0
+	if target == 0:
+		var nearest: int = Monsters.AGGRO_RANGE + 1
+		for player: int in world.players:
+			var cell: Vector2i = world.players[player]["cell"]
+			var gap: int = distance(cell, monster["cell"])
+			if gap < nearest and distance(cell, monster["home"]) <= Monsters.LEASH:
+				nearest = gap
+				target = player
+		if target != 0:
+			monster["next_attack"] = maxf(monster["next_attack"], now + 1.0)
+	monster["target"] = target
+	if target != 0:
+		var goal: Vector2i = world.players[target]["cell"]
+		if in_reach(monster["cell"], goal, reach_of(id)):
+			if now >= monster["next_attack"] and now >= monster["next_move"]:
+				monster["next_attack"] = now + Balance.ATTACK_SECONDS
+				var facing: Vector2i = facing_toward(monster["cell"], goal)
+				if facing != monster["facing"]:
+					monster["facing"] = facing
+					events.append({"kind": "monster", "id": id, "movement": false})
+				if reach_of(id) > 1:
+					_missile(monster["cell"], goal, MISSILE_COLORS["monster"], events)
+				_hit(id, target, 1.0, now, events)
+		elif now >= monster["next_move"]:
+			_monster_step(id, goal, now, events)
+	elif monster["cell"] != monster["home"] and now >= monster["next_move"]:
+		_monster_step(id, monster["home"], now, events)
+		if distance(monster["cell"], monster["home"]) <= 1:
+			monster["health"] = monster["max_health"]
+			monster["damage_by"].clear()
+
+
+func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
+	var monster: Dictionary = world.monsters[id]
+	var home: Vector2i = monster["home"]
+	var step: Vector2i = path_step(monster["cell"], goal, func(cell: Vector2i) -> bool:
+		return world.occupied(cell, now, id) or distance(cell, home) > Monsters.LEASH \
+			or World.zone_at(cell).is_empty() != World.zone_at(home).is_empty())
+	monster["next_move"] = now + monster["step"]
+	if step == Vector2i.ZERO:
+		return
+	monster["from"] = monster["cell"]
+	monster["cell"] += step
+	monster["facing"] = step
+	events.append({"kind": "monster", "id": id, "movement": true})

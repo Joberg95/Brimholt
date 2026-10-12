@@ -50,7 +50,7 @@ def main():
             args.godot, "--headless", "--path", str(root),
             "--script", "res://tests/peer_test.gd", "--",
             mode, f"--port={port}", f"--test-role={test_role(role)}",
-        ]
+        ] + (["--vocation=druid"] if role == "client" else [])
         process = subprocess.Popen(
             command, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1,
@@ -83,7 +83,7 @@ def main():
                     if args.host_loss:
                         print("PASS: host loss is reported and stale client state is cleared")
                     elif args.dedicated:
-                        print("PASS: dedicated ENet movement/equipment/inventory and disconnect cleanup")
+                        print("PASS: dedicated ENet movement/equipment/inventory, ferry travel, combat and disconnect cleanup")
                     else:
                         print("PASS: real ENet host/client/late-join movement, authority, "
                               "collision, cooldown, equip/unequip, inventory/ground sync and disconnect cleanup")

@@ -1,0 +1,29 @@
+[gd_resource type="TileSet" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/terrain_palette.png" id="1_3clg0"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_n2vx8"]
+texture = ExtResource("1_3clg0")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+0:0/0/custom_data_0 = "."
+1:0/0 = 0
+1:0/0/custom_data_0 = ","
+2:0/0 = 0
+2:0/0/custom_data_0 = "~"
+3:0/0 = 0
+3:0/0/custom_data_0 = "#"
+4:0/0 = 0
+4:0/0/custom_data_0 = "T"
+5:0/0 = 0
+5:0/0/custom_data_0 = ":"
+6:0/0 = 0
+6:0/0/custom_data_0 = "="
+7:0/0 = 0
+7:0/0/custom_data_0 = "b"
+
+[resource]
+tile_size = Vector2i(32, 32)
+custom_data_layer_0/name = "terrain"
+custom_data_layer_0/type = 4
+sources/0 = SubResource("TileSetAtlasSource_n2vx8")
