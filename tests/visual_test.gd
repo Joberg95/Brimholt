@@ -154,7 +154,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar key, world map, click-to-target combat")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -342,10 +342,15 @@ func _check_ferry_and_maps() -> bool:
 			and player["gold"] == gold - World.FERRYMEN["reedmere"]["routes"]["blackreed_isle"],
 			"Arriving on Blackreed Isle did not show the PvP zone banner"):
 		return false
-	player["next_item"] = 0.0
-	var helmet: String = player["equipment"].get("helmet", "")
+	var spells_only: bool = game.keybinds.bar.all(func(entry: String) -> bool:
+		return entry.is_empty() or entry.begins_with("spell:"))
+	if not _expect(spells_only and game.keybinds.bar.has("spell:light_heal"), "The action bar holds something other than spells"):
+		return false
+	game.keybinds.set_bar(0, "spell:light_heal")
+	var mana: int = player["mana"]
 	await _press("slot_1")
-	if not _expect(not helmet.is_empty() and not player["equipment"].has("helmet"), "Action bar key 1 did not toggle the helmet"):
+	if not _expect(player["cooldowns"].get("light_heal", 0.0) > game._now() and player["mana"] < mana,
+			"Action bar key 1 did not cast its spell"):
 		return false
 	await _press("world_map")
 	await process_frame

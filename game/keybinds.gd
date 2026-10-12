@@ -27,18 +27,13 @@ const DEFAULTS: Dictionary = {
 }
 ## Escape always closes menus and cannot be bound.
 const RESERVED: Array[Key] = [KEY_ESCAPE]
-## What the action bar can hold besides spells, which are stored as "spell:<id>".
-const BAR_ACTIONS: Dictionary = {
-	"": "Empty", "target_nearest": "Target nearest",
-	"toggle_helmet": "Toggle helmet", "toggle_armor": "Toggle armor",
-	"toggle_main_hand": "Toggle main hand", "toggle_off_hand": "Toggle off hand",
-	"pick_up": "Pick up", "world_map": "World map",
-}
-const DEFAULT_BAR: Array[String] = ["toggle_helmet", "toggle_armor", "toggle_main_hand", "toggle_off_hand", "", "", "", "", ""]
+## The action bar holds spells only, stored as "spell:<id>"; "" is an empty slot. Other
+## actions (target nearest, pick up, world map) have their own key bindings above.
+const DEFAULT_BAR: Array[String] = ["", "", "", "", "", "", "", "", ""]
 
 ## Action id -> [primary, secondary] physical keycodes.
 var keys: Dictionary = {}
-## Nine action-bar entries from BAR_ACTIONS.
+## Nine action-bar entries: "" or "spell:<id>".
 var bar: Array[String] = []
 var path: String = PATH
 
@@ -86,7 +81,7 @@ func bind(action: String, index: int, key: Key) -> bool:
 
 
 static func valid_bar_entry(entry: String) -> bool:
-	return BAR_ACTIONS.has(entry) or (entry.begins_with("spell:") and Spells.SPELLS.has(entry.trim_prefix("spell:")))
+	return entry.is_empty() or (entry.begins_with("spell:") and Spells.SPELLS.has(entry.trim_prefix("spell:")))
 
 
 func set_bar(slot: int, entry: String) -> bool:
@@ -129,12 +124,14 @@ func load_saved() -> void:
 		return
 	reset()
 	for action: String in DEFAULTS:
-		var saved: Variant = config.get_value("keys", action, null)
+		if not config.has_section_key("keys", action):
+			continue
+		var saved: Variant = config.get_value("keys", action)
 		if typeof(saved) == TYPE_ARRAY and saved.size() == 2:
 			for index: int in 2:
 				if typeof(saved[index]) == TYPE_INT and saved[index] not in RESERVED:
 					keys[action][index] = saved[index]
-	var saved_bar: Variant = config.get_value("bar", "slots", null)
+	var saved_bar: Variant = config.get_value("bar", "slots") if config.has_section_key("bar", "slots") else null
 	if typeof(saved_bar) == TYPE_ARRAY and saved_bar.size() == SLOTS:
 		for slot: int in SLOTS:
 			if typeof(saved_bar[slot]) == TYPE_STRING and valid_bar_entry(saved_bar[slot]):

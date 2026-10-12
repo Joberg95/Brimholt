@@ -19,6 +19,7 @@ var saw_voyage: bool = false
 var ferried: bool = false
 var sparring: int = 0
 var saw_hit: bool = false
+var saw_party: bool = false
 var finishing: bool = false
 
 
@@ -81,7 +82,7 @@ func _watch_ground(cell: Vector2i, kind: String) -> void:
 
 func _others_hide_backpacks() -> bool:
 	for id: int in game.actors:
-		if (id == game.self_id) != state(id).has("backpack"):
+		if (id == game.self_id) != state(id).has("backpack") or (id == game.self_id) != state(id).has("invites"):
 			return false
 	return true
 
@@ -217,11 +218,18 @@ func _client_tick(now: float) -> void:
 				if id != 1 and id != own and state(id)["equipment"].has("main_hand"):
 					late_id = id
 					game.equip_local("helmet")
+					game.party_local("invite", late_id)
 					advance()
 					break
 		13:
+			if game.actors.has(late_id) and state(own)["party"] == own and state(late_id)["party"] == own:
+				saw_party = true
 			if not state(own)["equipment"].has("helmet") and not game.actors.has(late_id):
-				if not state(1)["equipment"].has("armor"):
+				if not saw_party:
+					fail("Client never saw the late joiner accept its party invitation")
+				elif state(own)["party"] != 0 or not state(own)["invited"].is_empty():
+					fail("The party did not disband when its other member disconnected")
+				elif not state(1)["equipment"].has("armor"):
 					fail("Host equipment missing on client")
 				elif game.ground_view.has(Vector2i(8, 6)):
 					fail("Client did not see the late joiner pick up the dropped item")
@@ -270,7 +278,18 @@ func _late_tick(now: float) -> void:
 				game.move_local(Vector2i.DOWN)
 				advance()
 		3:
-			if state(game.self_id)["cell"] == late_spawn + Vector2i.DOWN and now - stage_since > 0.25:
+			if state(game.self_id)["cell"] == late_spawn + Vector2i.DOWN and now - stage_since > 0.25 \
+					and client_id in state(game.self_id)["invites"]:
+				if game.party_options(client_id) != ["join"]:
+					fail("The right-click menu does not offer to join an inviting player")
+					return
+				game.party_local("join", client_id)
+				advance()
+		4:
+			if state(game.self_id)["party"] == client_id and state(client_id)["party"] == client_id:
+				if game.party_options(client_id) != ["leave"] or game.party_options(1) != []:
+					fail("Party menu options are wrong for members and outsiders")
+					return
 				finish()
 
 

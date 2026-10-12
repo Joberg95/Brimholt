@@ -25,7 +25,10 @@ DIRECTIONS = ("down", "up", "left", "right")
 ITEM_ORDER = (
     "ember_cap", "moss_coat", "copper_blade", "iron_coif", "ash_tunic", "flint_hatchet", "glowcap",
     "oak_buckler", "copper_band", "garnet_ring", "river_pendant", "hearth_charm", "gold_coins",
+    "vole_tail", "toad_slime", "boar_tusk", "bandit_badge", "wolf_pelt", "lurker_eye", "waxed_bowstring", "golem_core", "wraith_ash", "hollow_sigil", "stalker_fang", "reedfang_scale", "bog_heart", "warden_crest",
 )
+# Monster materials: id -> icon shape.
+MATERIAL_SHAPES = {"vole_tail": "tail", "toad_slime": "vial", "boar_tusk": "fang", "bandit_badge": "badge", "wolf_pelt": "pelt", "lurker_eye": "orb", "waxed_bowstring": "coil", "golem_core": "crystal", "wraith_ash": "pile", "hollow_sigil": "badge", "stalker_fang": "fang", "reedfang_scale": "scale", "bog_heart": "orb", "warden_crest": "badge"}
 # Map editor palette order; must match TERRAINS in tools/make_map.gd.
 TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b")
 
@@ -57,6 +60,20 @@ PALETTES = {
     "river_pendant": (rgba("a4adb5"), rgba("dbe2e6"), rgba("3d78a8")),
     "hearth_charm": (rgba("c8b590"), rgba("e8dcbe"), rgba("c85a2c")),
     "gold_coins": (rgba("d6aa3c"), rgba("f2d37a"), rgba("9c7424")),
+    "vole_tail": (rgba("8a6a50"), rgba("b08e70"), rgba("5a4232")),
+    "toad_slime": (rgba("7fb050"), rgba("c8e8a0"), rgba("d8d4c8")),
+    "boar_tusk": (rgba("e6dcc0"), rgba("fff6e0"), rgba("9c8c70")),
+    "bandit_badge": (rgba("a0884a"), rgba("d8c080"), rgba("5a4a2a")),
+    "wolf_pelt": (rgba("8f959a"), rgba("c0c6ca"), rgba("5d6266")),
+    "lurker_eye": (rgba("5aa090"), rgba("e8f4e0"), rgba("1a2a28")),
+    "waxed_bowstring": (rgba("c8b078"), rgba("f0e0b0"), rgba("7a6438")),
+    "golem_core": (rgba("d09a40"), rgba("f8d890"), rgba("7a5420")),
+    "wraith_ash": (rgba("7a6e68"), rgba("b8aca4"), rgba("d0784e")),
+    "hollow_sigil": (rgba("4a4e58"), rgba("8a909c"), rgba("c04a3a")),
+    "stalker_fang": (rgba("c8d8b0"), rgba("f0f8e0"), rgba("6a8a5a")),
+    "reedfang_scale": (rgba("5d7346"), rgba("9ab070"), rgba("34442a")),
+    "bog_heart": (rgba("8a2a2a"), rgba("e07060"), rgba("3a1010")),
+    "warden_crest": (rgba("2c3b33"), rgba("d8b04a"), rgba("8ac0a0")),
 }
 LEATHER = rgba("5a4030")
 
@@ -770,6 +787,59 @@ def monster_sheet(builder, want_detail):
 
 # ---------------------------------------------------------------- items
 
+def material_icon(image, shape, palette, accent):
+    """Simple original icons for monster materials, shaded with shade()."""
+    light, main, dark = palette
+    if shape == "tail":
+        for index, (x, y) in enumerate(sorted(thick(line(7, 24, 22, 9), ((0, 0), (1, 0), (0, 1))))):
+            image.set(x, y, main if index % 5 else light)
+        shade(image, box(22, 7, 4, 4), palette, False)
+    elif shape == "vial":
+        shade(image, box(13, 8, 6, 4), (accent, accent, scale(accent, 0.8)), False)
+        shade(image, ellipse(16, 20, 7, 7) | box(14, 11, 4, 4), palette)
+        image.rect(12, 18, 3, 2, light)
+    elif shape == "fang":
+        points = set()
+        for y in range(6, 27):
+            half = max(1, round(4 - (y - 6) * 3 / 20))
+            offset = round((y - 6) ** 2 / 60)
+            points |= box(13 + offset - half, y, half * 2, 1)
+        shade(image, points, palette)
+    elif shape == "badge":
+        points = box(9, 7, 14, 10) | {(x, y) for x, y in ellipse(16, 17, 7, 9) if y >= 17}
+        shade(image, points, palette)
+        shade(image, ellipse(16, 15, 3, 3), (accent, accent, scale(accent, 0.7)), False)
+    elif shape == "pelt":
+        points = box(7, 9, 18, 14) | box(5, 7, 4, 4) | box(23, 7, 4, 4) | box(5, 21, 4, 4) | box(23, 21, 4, 4)
+        shade(image, points, palette)
+        for x in range(9, 24, 3):
+            image.rect(x, 12, 1, 8, dark)
+    elif shape == "orb":
+        shade(image, ellipse(16, 16, 9, 9), palette)
+        shade(image, ellipse(16, 16, 4, 4), (accent, accent, accent), False)
+        image.rect(12, 11, 2, 2, (255, 255, 255, 255))
+    elif shape == "coil":
+        for radius in (9, 6, 3):
+            ring = ellipse(16, 16, radius, radius) - ellipse(16, 16, radius - 1.5, radius - 1.5)
+            for x, y in ring:
+                image.set(x, y, main if (x + y) % 3 else light)
+    elif shape == "crystal":
+        points = set()
+        for y in range(5, 28):
+            half = round(8 * (1 - abs(y - 16) / 11))
+            points |= box(16 - half, y, half * 2, 1)
+        shade(image, points, palette)
+        image.rect(15, 8, 2, 16, light)
+    elif shape == "pile":
+        shade(image, {p for p in ellipse(16, 24, 11, 8) if p[1] <= 24}, palette)
+        for x, y in ((12, 19), (19, 18), (16, 21)):
+            image.rect(x, y, 2, 1, accent)
+    else:  # scale
+        shade(image, {p for p in ellipse(16, 15, 9, 11) if p[1] >= 6}, palette)
+        for y in range(9, 24, 4):
+            image.rect(11, y, 10, 1, dark)
+
+
 def item_icon(kind):
     main, light, accent = PALETTES[kind]
     dark = scale(main, 0.7)
@@ -831,6 +901,8 @@ def item_icon(kind):
                 image.set(x, y, light if index % 2 else main)
         shade(image, ellipse(16, 22, 4.5, 5.5) | {(16, 16)}, (scale(accent, 1.5), accent, scale(accent, 0.6)), False)
         image.set(15, 20, (230, 245, 255, 255))
+    elif kind in MATERIAL_SHAPES:
+        material_icon(image, MATERIAL_SHAPES[kind], (light, main, dark), accent)
     elif kind == "gold_coins":
         for cx, cy in ((11, 22), (20, 23), (15, 18), (9, 15), (21, 16), (16, 12)):
             coin = ellipse(cx, cy, 4.5, 3)

@@ -108,6 +108,19 @@ func _center_of(view: Dictionary) -> Vector2:
 	return (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 
 
+## "leader"/"member" for your party, "invited" for an open invitation either way, else "".
+func _party_mark(id: int, state: Dictionary) -> String:
+	if not game.actors.has(game.self_id):
+		return ""
+	var mine: Dictionary = game.actors[game.self_id]["state"]
+	var party: int = mine.get("party", 0)
+	if party != 0 and state.get("party", 0) == party:
+		return "leader" if id == party else "member"
+	if id in mine.get("invites", []) or id in mine.get("invited", []):
+		return "invited"
+	return ""
+
+
 ## Target square, nameplates, missiles, and floating numbers, drawn above the world.
 func _draw_overlays(area: Rect2i, time: float) -> void:
 	var target: int = game.own_target()
@@ -132,7 +145,8 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 			var state: Dictionary = actor["state"]
 			var title: String = "%s %d" % [Balance.VOCATIONS.get(state.get("vocation", ""), {"name": "Player"})["name"],
 				state.get("level", 1)]
-			SpriteArt.draw_nameplate(self, center, title, state["health"], state["max_health"], 1.0, state.get("skull", ""))
+			SpriteArt.draw_nameplate(self, center, title, state["health"], state["max_health"], 1.0, state.get("skull", ""),
+				Color.TRANSPARENT, _party_mark(id, state))
 	var font: Font = ThemeDB.fallback_font
 	for effect: Dictionary in game.effects:
 		var age: float = time - effect["born"]

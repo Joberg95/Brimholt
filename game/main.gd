@@ -11,6 +11,8 @@ const MESSAGE_SECONDS: float = 4.0
 const ControlsMenu = preload("res://game/controls_menu.gd")
 const BAR_SLOT: float = 44.0
 const NPC_SERVICES: Dictionary = {"travel": "Travel", "buy": "Buy", "quests": "Quests"}
+const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
+	"join": "Join party", "leave": "Leave party"}
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = 2.0
 const VIEW_TILES: Vector2i = Vector2i(15, 11)
@@ -84,6 +86,8 @@ var _bar_menu_slot: int = -1
 var _controls: PanelContainer
 var _npc_menu: PopupMenu
 var _npc_menu_target: String = ""
+var _player_menu: PopupMenu
+var _player_menu_target: int = 0
 var _zone_label: Label
 var _zone_name: String = ""
 var _vitals: Control
@@ -219,28 +223,24 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if action.begins_with("slot_"):
 		use_bar_slot(int(action.trim_prefix("slot_")) - 1)
 	elif not action.is_empty():
-		_run_bar_action(action)
+		_run_action(action)
 
 
-## Runs the action-bar entry in a slot (0-8).
+## Casts the spell in an action-bar slot (0-8).
 func use_bar_slot(slot: int) -> void:
-	if slot >= 0 and slot < Keybinds.SLOTS:
-		_run_bar_action(keybinds.bar[slot])
+	if slot >= 0 and slot < Keybinds.SLOTS and keybinds.bar[slot].begins_with("spell:") and connected:
+		cast_local(keybinds.bar[slot].trim_prefix("spell:"))
 
 
-func _run_bar_action(entry: String) -> void:
-	if entry == "world_map":
+func _run_action(action: String) -> void:
+	if action == "world_map":
 		_world_map.visible = not _world_map.visible
 	elif not connected:
 		return
-	elif entry == "pick_up":
+	elif action == "pick_up":
 		pick_up_local()
-	elif entry == "target_nearest":
+	elif action == "target_nearest":
 		target_nearest()
-	elif entry.begins_with("spell:"):
-		cast_local(entry.trim_prefix("spell:"))
-	elif entry.begins_with("toggle_"):
-		equip_local(entry.trim_prefix("toggle_"))
 
 
 func _reset_session() -> void:
@@ -367,10 +367,13 @@ func _peer_left(id: int) -> void:
 	_closing_peers.erase(id)
 	_request_windows.erase(id)
 	if world.players.has(id):
+		var events: Array = []
+		combat.leave_party(id, events)
 		world.remove_player(id)
 		actors.erase(id)
 		if not _leaving:
 			actor_left.rpc(id)
+			_handle_events(events)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -441,6 +444,16 @@ func move_local(direction: Vector2i) -> void:
 		_handle_move(1, direction)
 	else:
 		request_move.rpc_id(1, direction)
+
+
+## Party actions: "invite", "revoke", "join" (with the inviting leader), or "leave" (other = 0).
+func party_local(action: String, other: int) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_party(1, action, other)
+	else:
+		request_party.rpc_id(1, action, other)
 
 
 func equip_local(slot: String) -> void:
@@ -558,6 +571,21 @@ func request_target(target: Variant) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	if _valid_sender(sender):
 		_handle_target(sender, target)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_party(action: Variant, other: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_party(sender, action, other)
+
+
+func _handle_party(id: int, action: Variant, other: Variant) -> void:
+	var result: Dictionary = combat.party_action(id, action, other, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -698,7 +726,7 @@ func _fill_spell_slots(vocation: String) -> void:
 	for spell: String in own:
 		if "spell:" + spell in keybinds.bar:
 			continue
-		for slot: int in range(4, Keybinds.SLOTS) + range(0, 4):
+		for slot: int in Keybinds.SLOTS:
 			if keybinds.bar[slot].is_empty():
 				keybinds.bar[slot] = "spell:" + spell
 				break
@@ -933,6 +961,11 @@ func _build_ui() -> void:
 	_npc_menu = PopupMenu.new()
 	_npc_menu.id_pressed.connect(_npc_service_chosen)
 	add_child(_npc_menu)
+	_player_menu = PopupMenu.new()
+	_player_menu.id_pressed.connect(func(index: int) -> void:
+		var action: String = _player_menu.get_item_metadata(_player_menu.get_item_index(index))
+		party_local(action, 0 if action == "leave" else _player_menu_target))
+	add_child(_player_menu)
 	_controls = ControlsMenu.new()
 	_controls.visible = false
 	_controls.setup(keybinds, func() -> void: _controls.hide())
@@ -1193,6 +1226,50 @@ func open_npc_menu(npc: String, at: Vector2i) -> void:
 	_npc_menu.popup(Rect2i(at, Vector2i.ZERO))
 
 
+func _is_self_at(cell: Vector2i) -> bool:
+	if not actors.has(self_id):
+		return false
+	var at: Vector2i = Vector2i(actors[self_id]["visual"].round())
+	return cell == at or cell == at + Vector2i.DOWN
+
+
+## Party options for a player you right-click (yourself: leave). Returns false when there are none.
+func party_options(person: int) -> Array[String]:
+	var options: Array[String] = []
+	if not actors.has(self_id) or not actors.has(person):
+		return options
+	var mine: Dictionary = actors[self_id]["state"]
+	var theirs: Dictionary = actors[person]["state"]
+	var my_party: int = mine.get("party", 0)
+	if person == self_id:
+		if my_party != 0:
+			options.append("leave")
+		return options
+	if person in mine.get("invites", []) and my_party == 0:
+		options.append("join")
+	elif theirs.get("party", 0) == 0 and (my_party == 0 or my_party == self_id):
+		options.append("revoke" if person in mine.get("invited", []) else "invite")
+	if my_party != 0 and theirs.get("party", 0) == my_party:
+		options.append("leave")
+	return options
+
+
+func open_player_menu(person: int, at: Vector2i) -> bool:
+	var options: Array[String] = party_options(person)
+	if options.is_empty():
+		return false
+	var state: Dictionary = actors[person]["state"]
+	_player_menu.clear()
+	_player_menu.add_separator("You" if person == self_id else "%s %d" % [
+		Balance.VOCATIONS.get(state.get("vocation", ""), {"name": "Player"})["name"], state.get("level", 1)])
+	for index: int in options.size():
+		_player_menu.add_item(PARTY_LABELS[options[index]], index)
+		_player_menu.set_item_metadata(_player_menu.get_item_index(index), options[index])
+	_player_menu_target = person
+	_player_menu.popup(Rect2i(at, Vector2i.ZERO))
+	return true
+
+
 func _npc_service_chosen(id: int) -> void:
 	var service: Variant = _npc_menu.get_item_metadata(_npc_menu.get_item_index(id))
 	if service == "travel":
@@ -1266,11 +1343,11 @@ func _build_action_bar(layer: CanvasLayer) -> void:
 	add_child(_bar_menu)
 
 
-## Lists the general bar actions and the spells of your vocation, with their level.
+## Lists the spells of your vocation, with their level, and an option to clear the slot.
 func _open_bar_menu(slot: int, at: Vector2i) -> void:
 	_bar_menu_slot = slot
 	_bar_menu.clear()
-	var entries: Array = Keybinds.BAR_ACTIONS.keys()
+	var entries: Array[String] = []
 	if actors.has(self_id):
 		_bar_menu.add_separator("Spells")
 		var level: int = actors[self_id]["state"].get("level", 1)
@@ -1280,10 +1357,10 @@ func _open_bar_menu(slot: int, at: Vector2i) -> void:
 			_bar_menu.add_item("%s%s" % [definition["name"], "" if level >= definition["level"]
 				else "  (level %d)" % definition["level"]], entries.size() - 1)
 			_bar_menu.set_item_metadata(_bar_menu.get_item_index(entries.size() - 1), "spell:" + spell)
-		_bar_menu.add_separator("Other")
-	for index: int in Keybinds.BAR_ACTIONS.size():
-		_bar_menu.add_item(Keybinds.BAR_ACTIONS[entries[index]], index)
-		_bar_menu.set_item_metadata(_bar_menu.get_item_index(index), entries[index])
+		_bar_menu.add_separator()
+	entries.append("")
+	_bar_menu.add_item("Clear slot", entries.size() - 1)
+	_bar_menu.set_item_metadata(_bar_menu.get_item_index(entries.size() - 1), "")
 	_bar_menu.popup(Rect2i(at, Vector2i.ZERO))
 
 
@@ -1294,18 +1371,8 @@ func _draw_bar_slot(button: Control, slot: int) -> void:
 	var entry: String = keybinds.bar[slot]
 	var center: Vector2 = button.size / 2.0
 	var font: Font = ThemeDB.fallback_font
-	if entry.begins_with("toggle_") and actors.has(self_id):
-		var equipment_slot: String = entry.trim_prefix("toggle_")
-		var worn: String = actors[self_id]["state"]["equipment"].get(equipment_slot, "")
-		if not worn.is_empty():
-			SpriteArt.draw_item(button, center, worn)
-		else:
-			SpriteArt.draw_slot_hint(button, center, equipment_slot)
-	elif entry.begins_with("spell:") and Spells.SPELLS.has(entry.trim_prefix("spell:")):
+	if entry.begins_with("spell:") and Spells.SPELLS.has(entry.trim_prefix("spell:")):
 		_draw_spell_slot(button, entry.trim_prefix("spell:"))
-	elif not entry.is_empty():
-		var text: String = Keybinds.BAR_ACTIONS[entry]
-		button.draw_string(font, Vector2(2, center.y + 4), text, HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 4, 9)
 	var key: String = Keybinds.key_name(keybinds.keys["slot_%d" % (slot + 1)][0])
 	button.draw_string_outline(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color.BLACK)
 	button.draw_string(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#f2e6c4"))
@@ -1457,6 +1524,10 @@ func _map_input(event: InputEvent) -> void:
 			open_npc_menu(npc, Vector2i(VIEW_ORIGIN + event.position))
 			return
 		var creature: int = _creature_at(cell)
+		if event.button_index == MOUSE_BUTTON_RIGHT and connected:
+			var person: int = creature if creature > 0 else (self_id if _is_self_at(cell) else 0)
+			if person > 0 and open_player_menu(person, Vector2i(VIEW_ORIGIN + event.position)):
+				return
 		if event.button_index == MOUSE_BUTTON_LEFT and creature != 0:
 			target_local(0 if creature == own_target() else creature)
 			return

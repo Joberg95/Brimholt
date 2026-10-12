@@ -247,7 +247,11 @@ func track_events() -> void:
 		if phase not in ["duel", "recover"] and deaths == 1:
 			flags["corpse"] = previous_cell
 			flags["after_gear"] = phase
-			_enter("recover")
+			if game.last_action_message.contains("keep your items"):
+				report("ok", "beginner protection: nothing to recover, carrying on from town")
+				_enter("gear")
+			else:
+				_enter("recover")
 	elif not game.last_action_message.begins_with("You are dead"):
 		flags["death_seen"] = false
 	if game.last_action_message.begins_with("You advanced") and not flags.get("level_shot_%d" % me()["level"], false):
@@ -294,8 +298,21 @@ func _process(delta: float) -> bool:
 func _join() -> void:
 	if partner() == 0:
 		return
-	report("ok", "joined as %s with %d gold; partner is a %s" % [me()["vocation"], me()["gold"], partner_state()["vocation"]])
-	shot("joined", "Joined Cinder Crossing as a %s" % me()["vocation"].capitalize())
+	if not flags.get("joined_reported", false):
+		flags["joined_reported"] = true
+		report("ok", "joined as %s with %d gold; partner is a %s" % [me()["vocation"], me()["gold"], partner_state()["vocation"]])
+		shot("joined", "Joined Cinder Crossing as a %s" % me()["vocation"].capitalize())
+	# The Knight invites, the Sorcerer accepts through the same options as the right-click menu.
+	if me().get("party", 0) == 0:
+		if role == "knight" and not partner() in me().get("invited", []) and throttle(1.0):
+			game.party_local("invite", partner())
+		elif role == "sorcerer" and "join" in game.party_options(partner()) and throttle(0.5):
+			game.party_local("join", partner())
+		if now() - phase_since < 20.0:
+			return
+		report("fail", "could not form a party")
+	else:
+		report("ok", "formed a party (leader: %s)" % ("me" if me()["party"] == game.self_id else "partner"))
 	_enter("gear")
 
 
@@ -332,11 +349,21 @@ func _hunt() -> void:
 	var sorcerer_level: int = me()["level"] if role == "sorcerer" else partner_state().get("level", 1)
 	var elapsed: float = now() - phase_since
 	if sorcerer_level >= HUNT_LEVEL or elapsed > HUNT_SECONDS:
+		# Finish the current fight first: walking off drags the pack along to the port.
+		if (game.own_target() != 0 or nearest_monster(3) != 0) and elapsed < HUNT_SECONDS + 30.0:
+			fight(true, 3)
+			return
 		if sorcerer_level < HUNT_LEVEL:
 			report("finding", "the Sorcerer did not reach level %d in %.0f s of hunting (%d kills, %d/%d experience)"
 				% [HUNT_LEVEL, elapsed, kills, me()["experience"], Balance.experience_to_next(me()["level"])])
 		report("ok", "hunt over: %d kills, level %d, %d experience, %d gold, %d deaths" % [kills, me()["level"],
 			me()["experience"], me()["gold"], deaths])
+		var materials: Array = me()["backpack"].filter(func(kind: String) -> bool: return World.ITEMS.get(kind, {}).has("value"))
+		report("info", "carrying %d monster materials: %s" % [materials.size(), ", ".join(materials)])
+		if role == "knight":
+			var gap: int = partner_state().get("level", 1) - me()["level"]
+			report("ok" if absi(gap) <= 1 else "finding",
+				"party sharing kept the tanking Knight within %d level(s) of the Sorcerer" % absi(gap))
 		game.target_local(0)
 		avoid_monsters(true)
 		_enter("to_port")
@@ -348,14 +375,22 @@ func _hunt() -> void:
 			shot("fighting", "Fighting: locked target, spells, floating damage")
 		fight()
 		return
+	var room: bool = me()["backpack"].has("")
 	for cell: Vector2i in game.ground_view:
-		if "gold_coins" in game.ground_view[cell] and Combat.distance(cell, me()["cell"]) <= 8:
+		var stack: Array = game.ground_view[cell]
+		var top: String = stack[-1] if not stack.is_empty() else ""
+		# Gold is worth a detour; materials only when close, so looting does not pull into other spawns.
+		var reach: int = 8 if top == "gold_coins" else (3 if room and World.ITEMS.get(top, {}).has("value") else -1)
+		if Combat.distance(cell, me()["cell"]) <= reach:
 			if walk_to(cell, 1) and throttle(0.3):
 				var gold: int = me()["gold"]
 				game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
-				if not flags.get("loot_reported", false):
+				if top == "gold_coins" and not flags.get("loot_reported", false):
 					flags["loot_reported"] = true
 					report("ok", "picked up dropped gold (purse was %d)" % gold)
+				elif top != "gold_coins" and not flags.get("material_reported", false):
+					flags["material_reported"] = true
+					report("ok", "picked up a monster material from a loot table: %s" % World.ITEMS[top]["name"])
 			return
 	if now() - quiet_since > 2.0 and walk_to(hunt_spots[spot_index], 3):
 		spot_index = (spot_index + 1) % hunt_spots.size()
@@ -423,6 +458,11 @@ func _sail_isle() -> void:
 func _duel() -> void:
 	var other: int = partner()
 	var them: Dictionary = partner_state()
+	# Party members cannot fight each other, so the Knight leaves before the duel.
+	if me().get("party", 0) != 0:
+		if role == "knight" and throttle(1.0):
+			game.party_local("leave", 0)
+		return
 	# The duel clock starts once both have arrived on the island.
 	if not flags.get("both_here", false):
 		if not them.is_empty() and World.zone_at(them["cell"]).get("pvp", false):
@@ -544,7 +584,10 @@ func _recover() -> void:
 		fight(true, 2)
 		return
 	for cell: Vector2i in game.ground_view:
-		if Combat.distance(cell, corpse) <= Combat.SPILL_RADIUS:
+		var stack: Array = game.ground_view[cell]
+		# Own belongings are gold and gear; monster materials from earlier kills stay behind.
+		if Combat.distance(cell, corpse) <= Combat.SPILL_RADIUS and not stack.is_empty() \
+				and not World.ITEMS.get(stack[-1], {}).has("value"):
 			if walk_to(cell, 1) and throttle(0.3):
 				game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 			return

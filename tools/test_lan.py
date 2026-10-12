@@ -86,7 +86,7 @@ def main():
                         print("PASS: dedicated ENet movement/equipment/inventory, ferry travel, combat and disconnect cleanup")
                     else:
                         print("PASS: real ENet host/client/late-join movement, authority, "
-                              "collision, cooldown, equip/unequip, inventory/ground sync and disconnect cleanup")
+                              "collision, cooldown, equip/unequip, inventory/ground sync, party invite/join and disconnect cleanup")
                     return
                 continue
             output[role].append(line)

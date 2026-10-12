@@ -51,6 +51,21 @@ const ITEMS: Dictionary = {
 	"hearth_charm": {"name": "Hearth charm", "slot": "charm", "stats": {"health": 10, "regen": 2, "attack": 1}},
 	"glowcap": {"name": "Glowcap", "slot": "", "stats": {}},
 	"gold_coins": {"name": "Gold coins", "slot": "", "stats": {}, "gold": 25},
+	# Monster materials: loot that shops will buy for "value" gold.
+	"vole_tail": {"name": "Vole tail", "slot": "", "stats": {}, "value": 2},
+	"toad_slime": {"name": "Toad slime", "slot": "", "stats": {}, "value": 3},
+	"boar_tusk": {"name": "Boar tusk", "slot": "", "stats": {}, "value": 6},
+	"bandit_badge": {"name": "Bandit badge", "slot": "", "stats": {}, "value": 9},
+	"wolf_pelt": {"name": "Wolf pelt", "slot": "", "stats": {}, "value": 14},
+	"lurker_eye": {"name": "Lurker eye", "slot": "", "stats": {}, "value": 20},
+	"waxed_bowstring": {"name": "Waxed bowstring", "slot": "", "stats": {}, "value": 26},
+	"golem_core": {"name": "Golem core", "slot": "", "stats": {}, "value": 35},
+	"wraith_ash": {"name": "Wraith ash", "slot": "", "stats": {}, "value": 45},
+	"hollow_sigil": {"name": "Hollow sigil", "slot": "", "stats": {}, "value": 60},
+	"stalker_fang": {"name": "Stalker fang", "slot": "", "stats": {}, "value": 80},
+	"reedfang_scale": {"name": "Reedfang scale", "slot": "", "stats": {}, "value": 90},
+	"bog_heart": {"name": "Bog heart", "slot": "", "stats": {}, "value": 110},
+	"warden_crest": {"name": "Warden crest", "slot": "", "stats": {}, "value": 200},
 }
 const START_KIT: Array[String] = ["ember_cap", "moss_coat", "copper_blade", "oak_buckler", "copper_band"]
 const BACKPACK_SIZE: int = 8
@@ -237,6 +252,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"level": 1, "experience": 0, "vocation": vocation, "gold": START_GOLD, "next_travel": now,
 				"target": 0, "next_attack": now, "next_regen": now, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
+				"party": 0, "invited": {}, "active_at": -INF,
 			}
 			var limits: Dictionary = stats(1, {}, vocation)
 			players[id]["health"] = limits["health"]
@@ -259,8 +275,15 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		"remaining": remaining, "facing": player["facing"],
 		"equipment": player["equipment"].duplicate(), "level": player["level"], "vocation": player["vocation"],
 		"health": player["health"], "max_health": player_stats(id)["health"], "skull": player["skull"],
+		"party": player["party"],
 	}
 	if include_private:
+		var invites: Array[int] = []
+		for leader: int in players:
+			if players[leader]["invited"].has(id):
+				invites.append(leader)
+		state["invites"] = invites
+		state["invited"] = player["invited"].keys()
 		state["unjustified"] = player["unjustified"].size()
 		state["mana"] = player["mana"]
 		state["max_mana"] = player_stats(id)["mana"]

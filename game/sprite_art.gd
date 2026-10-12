@@ -45,6 +45,7 @@ const FEET: Vector2 = Vector2(0, 13.5)
 const ITEM_ORDER: Array[String] = [
 	"ember_cap", "moss_coat", "copper_blade", "iron_coif", "ash_tunic", "flint_hatchet", "glowcap",
 	"oak_buckler", "copper_band", "garnet_ring", "river_pendant", "hearth_charm", "gold_coins",
+	"vole_tail", "toad_slime", "boar_tusk", "bandit_badge", "wolf_pelt", "lurker_eye", "waxed_bowstring", "golem_core", "wraith_ash", "hollow_sigil", "stalker_fang", "reedfang_scale", "bog_heart", "warden_crest",
 ]
 ## Slots drawn on the character. Rings, necklaces, and charms are too small to show when worn.
 const VISIBLE_SLOTS: Array[String] = ["helmet", "armor", "main_hand", "off_hand"]
@@ -216,7 +217,7 @@ static func draw_monster(canvas: CanvasItem, center: Vector2, state: Dictionary,
 
 ## Tibia-style name and health bar above a creature; the bar turns yellow, then red.
 static func draw_nameplate(canvas: CanvasItem, center: Vector2, text: String, health: int, max_health: int,
-		height: float = 1.0, skull: String = "", name_color: Color = Color.TRANSPARENT) -> void:
+		height: float = 1.0, skull: String = "", name_color: Color = Color.TRANSPARENT, party: String = "") -> void:
 	var font: Font = ThemeDB.fallback_font
 	var top: float = center.y - 30.0 - 12.0 * (height - 1.0)
 	var fraction: float = clampf(float(health) / maxf(1.0, max_health), 0.0, 1.0)
@@ -229,6 +230,19 @@ static func draw_nameplate(canvas: CanvasItem, center: Vector2, text: String, he
 	canvas.draw_rect(Rect2(center.x - 12, top, 24.0 * fraction, 2), color)
 	if not skull.is_empty():
 		draw_skull(canvas, Vector2(center.x + 18, top), skull)
+	if not party.is_empty():
+		draw_party_mark(canvas, Vector2(center.x - 18, top), party)
+
+
+## Party shield beside the nameplate: blue for your party, gold-rimmed for its leader and
+## outlined for a pending invitation.
+static func draw_party_mark(canvas: CanvasItem, at: Vector2, party: String) -> void:
+	var shield := PackedVector2Array([at + Vector2(-4, -4), at + Vector2(4, -4), at + Vector2(4, 1),
+		at + Vector2(0, 5), at + Vector2(-4, 1)])
+	var fill: Color = Color("#3a7ad0") if party != "invited" else Color(0.23, 0.48, 0.82, 0.25)
+	canvas.draw_colored_polygon(shield, fill)
+	shield.append(shield[0])
+	canvas.draw_polyline(shield, Color("#e8c050") if party == "leader" else OUTLINE, 1.0)
 
 
 ## Name colour for a monster compared with your level: white is fair, yellow is tough,

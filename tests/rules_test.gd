@@ -36,6 +36,7 @@ func _run() -> void:
 	_keybind_checks()
 	_combat_checks()
 	_death_and_skull_checks()
+	_party_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -585,7 +586,7 @@ func _keybind_checks() -> void:
 	check(binds.action_for(KEY_1) == "slot_1" and binds.action_for(KEY_9) == "slot_9", "action bar defaults to 1-9")
 	check(binds.action_for(KEY_W) == "move_up" and binds.action_for(KEY_UP) == "move_up", "movement has two default keys")
 	check(binds.action_for(KEY_NONE) == "" and binds.action_for(KEY_F12) == "", "unbound keys do nothing")
-	check(binds.bar[0] == "toggle_helmet" and binds.bar[8] == "", "bar starts with the gear toggles")
+	check(binds.bar == Keybinds.DEFAULT_BAR and binds.bar.count("") == Keybinds.SLOTS, "the bar starts empty (spells fill it)")
 	check(binds.bind("slot_1", 0, KEY_Q) and binds.action_for(KEY_Q) == "slot_1" and binds.action_for(KEY_1) == "",
 		"rebinding replaces the old key")
 	check(binds.bind("slot_2", 1, KEY_Q) and binds.action_for(KEY_Q) == "slot_2" and binds.keys["slot_1"][0] == KEY_NONE,
@@ -593,8 +594,12 @@ func _keybind_checks() -> void:
 	check(not binds.bind("slot_3", 0, KEY_ESCAPE) and binds.action_for(KEY_3) == "slot_3", "Escape cannot be bound")
 	check(not binds.bind("no_such_action", 0, KEY_P) and not binds.bind("slot_3", 2, KEY_P), "invalid bindings rejected")
 	check(binds.bind("slot_3", 0, KEY_NONE) and binds.action_for(KEY_3) == "", "a binding can be cleared")
-	check(binds.set_bar(4, "pick_up") and not binds.set_bar(9, "pick_up") and not binds.set_bar(0, "fireball"),
-		"bar slots accept known actions only")
+	check(binds.set_bar(4, "spell:" + Spells.SPELLS.keys()[0]) and not binds.set_bar(9, "")
+		and not binds.set_bar(0, "fireball") and not binds.set_bar(0, "spell:fireball"),
+		"bar slots accept known spells only")
+	for item_entry: String in ["pick_up", "target_nearest", "world_map", "toggle_helmet", "item:ember_cap", "ember_cap"]:
+		check(not binds.set_bar(1, item_entry), "the action bar rejects non-spell entry %s" % item_entry)
+	check(binds.set_bar(1, "") and binds.bar[1] == "", "a bar slot can be cleared")
 	check(binds.save() == OK, "bindings save")
 	var loaded := Keybinds.new(path)
 	loaded.load_saved()
@@ -611,6 +616,132 @@ func _keybind_checks() -> void:
 		"malformed saved values fall back to defaults")
 	check(tampered.action_for(KEY_P) == "slot_2" and tampered.keys["slot_3"][0] == KEY_NONE, "duplicate saved keys are dropped")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func _experience_from(events: Array) -> Dictionary:
+	var gained: Dictionary = {}
+	for event: Dictionary in events:
+		if event["kind"] == "hit" and event["style"] == "experience":
+			gained[event["target"]] = gained.get(event["target"], 0) + event["amount"]
+	return gained
+
+
+## Kills a fresh monster next to `cell`; `damage` maps player -> damage dealt (the first deals the blow).
+func _party_kill(world: World, combat: Combat, cell: Vector2i, damage: Dictionary, now: float) -> Dictionary:
+	var monster: int = combat.spawn_monster("road_bandit", 10, cell, now)
+	world.monsters[monster]["damage_by"] = damage.duplicate()
+	world.monsters[monster]["health"] = 1
+	var events: Array = []
+	var killer: int = damage.keys()[0]
+	world.monsters[monster]["damage_by"][killer] -= 1
+	combat._damage(killer, monster, 1, "damage", now, events)
+	return _experience_from(events)
+
+
+func _party_checks() -> void:
+	var world := World.new()
+	var combat := Combat.new(world, 21)
+	var vocations: Array[String] = ["knight", "paladin", "sorcerer", "druid", "knight"]
+	var cells: Array[Vector2i] = []
+	var origin: Vector2i = World.SPAWNS[0]
+	for radius: int in range(0, 6):
+		for dy: int in range(-radius, radius + 1):
+			for dx: int in range(-radius, radius + 1):
+				var cell: Vector2i = origin + Vector2i(dx, dy)
+				if World.walkable(cell) and not cells.has(cell):
+					cells.append(cell)
+	for id: int in range(1, 6):
+		check(world.add_player(id, 0.0, vocations[id - 1]), "party test player joins")
+		_place(world, id, cells[id])
+	var p: Dictionary = world.players
+	# Validation.
+	check(not combat.party_action(1, "join", 2, 1.0)["ok"], "joining needs an invitation")
+	check(not combat.party_action(1, "invite", 1, 1.0)["ok"] and not combat.party_action(1, "invite", 99, 1.0)["ok"],
+		"you cannot invite yourself or unknown players")
+	check(not combat.party_action(1, "hug", 2, 1.0)["ok"] and not combat.party_action(1, "invite", "2", 1.0)["ok"]
+		and not combat.party_action(1, 7, 2, 1.0)["ok"], "malformed party requests are rejected")
+	check(not combat.party_action(1, "leave", 0, 1.0)["ok"], "leaving needs a party")
+	check(not combat.party_action(2, "revoke", 1, 1.0)["ok"], "you can only withdraw your own invitations")
+	# Invite and join.
+	var invite: Dictionary = combat.party_action(1, "invite", 2, 1.0)
+	check(invite["ok"] and p[1]["party"] == 0 and world.export_player(2, 1.0, true)["invites"] == [1]
+		and world.export_player(1, 1.0, true)["invited"] == [2], "an invitation is private and creates no party yet")
+	check(not world.export_player(2, 1.0).has("invites") and world.export_player(2, 1.0)["party"] == 0,
+		"others see only party membership")
+	var told: bool = false
+	for event: Dictionary in invite["events"]:
+		told = told or (event["kind"] == "message" and event["id"] == 2)
+	check(told, "the invited player is told how to join")
+	check(combat.party_action(2, "join", 1, 2.0)["ok"] and p[1]["party"] == 1 and p[2]["party"] == 1
+		and p[1]["invited"].is_empty(), "accepting an invitation forms the party under the inviter")
+	check(world.export_player(2, 2.0)["party"] == 1, "party membership is public")
+	check(not combat.party_action(2, "invite", 3, 2.0)["ok"], "only the leader invites")
+	check(combat.party_action(1, "invite", 3, 2.0)["ok"] and combat.party_action(1, "revoke", 3, 2.0)["ok"]
+		and not combat.party_action(3, "join", 1, 2.0)["ok"], "a withdrawn invitation cannot be accepted")
+	combat.party_action(1, "invite", 3, 3.0)
+	combat.party_action(1, "invite", 4, 3.0)
+	check(combat.party_action(3, "join", 1, 3.0)["ok"] and combat.party_action(4, "join", 1, 3.0)["ok"]
+		and combat.party_members(1) == [1, 2, 3, 4], "the leader can grow the party")
+	check(not combat.party_action(5, "invite", 2, 3.0)["ok"], "members of another party cannot be invited")
+	# Party members are never hostile, even in a PvP zone.
+	check(not combat.hostile(1, 2) and not combat.set_target(1, 2, 3.0)["ok"], "party members cannot attack each other")
+	check(combat.same_party(3, 4) and not combat.same_party(1, 5), "party membership is shared")
+	# Shared experience: every active nearby member gets an even share with the vocation bonus.
+	var now: float = 10.0
+	for id: int in range(1, 6):
+		p[id]["active_at"] = now
+	var experience: int = Balance.mob_experience(10)
+	var gained: Dictionary = _party_kill(world, combat, cells[1], {1: 100}, now)
+	var each: int = roundi(experience * Combat.SHARE_BONUS[4] / 4.0)
+	check(gained.get(1, 0) == each and gained.get(2, 0) == each and gained.get(3, 0) == each and gained.get(4, 0) == each
+		and not gained.has(5), "a party of four vocations shares a kill evenly with the full bonus")
+	check(Combat.SHARE_BONUS[4] > Combat.SHARE_BONUS[2] and Combat.SHARE_BONUS[2] > Combat.SHARE_BONUS[1],
+		"more distinct vocations earn a larger party bonus")
+	gained = _party_kill(world, combat, cells[1], {2: 50, 5: 50}, now)
+	check(gained.get(5, 0) == roundi(experience * 0.5) and gained.get(1, 0) == roundi(experience * 0.5 * Combat.SHARE_BONUS[4] / 4.0),
+		"a party pools only its own members' damage; outsiders keep theirs")
+	# A tanking knight who only took hits still counts as active.
+	for id: int in range(1, 5):
+		p[id]["active_at"] = -INF
+	combat._damage(-1, 1, 1, "damage", now, [])
+	p[2]["active_at"] = now
+	gained = _party_kill(world, combat, cells[1], {2: 100}, now)
+	each = roundi(experience * Combat.SHARE_BONUS[2] / 2.0)
+	check(gained.get(1, 0) == each and gained.get(2, 0) == each and not gained.has(3) and not gained.has(4),
+		"only members active recently share; being hit counts as active")
+	check(combat.cast(3, "light_heal", now)["ok"] and p[3]["active_at"] == now, "casting (healing too) counts as active")
+	p[4]["active_at"] = now
+	_place(world, 4, cells[1] + Vector2i(Combat.SHARE_RANGE + 1, 0))
+	check(not combat.sharing_members(1, cells[1], now).has(4), "members far from the kill do not share")
+	_place(world, 4, cells[4])
+	p[3]["level"] = 30
+	gained = _party_kill(world, combat, cells[1], {1: 25, 2: 75}, now)
+	check(combat.sharing_members(1, cells[1], now).is_empty() and gained.get(1, 0) == roundi(experience * 0.25)
+		and gained.get(2, 0) == roundi(experience * 0.75) and not gained.has(3),
+		"a level gap beyond two thirds stops sharing; members keep their own damage share")
+	p[3]["level"] = 1
+	for id: int in range(1, 5):
+		p[id]["level"] = 1
+		p[id]["experience"] = 0
+	check(combat.sharing_members(1, cells[1], now).size() == 4, "sharing resumes once levels are close")
+	# Leaving passes leadership to the lowest id and disbands a party of one.
+	combat.party_action(1, "invite", 5, now)
+	check(combat.party_action(1, "leave", 0, now)["ok"] and p[1]["party"] == 0 and p[2]["party"] == 2
+		and p[3]["party"] == 2 and p[4]["party"] == 2 and world.export_player(5, now, true)["invites"].is_empty(),
+		"when the leader leaves, the next member leads and old invitations lapse")
+	check(combat.party_action(2, "invite", 1, now)["ok"], "the new leader can invite")
+	var events: Array = []
+	combat.leave_party(4, events)
+	combat.leave_party(3, events)
+	check(p[2]["party"] == 0 and p[3]["party"] == 0 and world.export_player(1, now, true)["invites"].is_empty(),
+		"a party of one disbands and its invitations lapse")
+	# Disconnects withdraw invitations both ways.
+	combat.party_action(1, "invite", 2, now)
+	combat.party_action(3, "invite", 1, now)
+	combat.leave_party(1, [])
+	world.remove_player(1)
+	check(world.export_player(2, now, true)["invites"].is_empty() and p[3]["invited"].is_empty(),
+		"leaving the game withdraws invitations to and from the player")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:
@@ -762,6 +893,49 @@ func _combat_checks() -> void:
 		"experience is shared by damage dealt")
 	check(world.players[2]["level"] > 1, "enough experience levels a player up")
 	check(world.ground.get(Vector2i(9, 10), []).count("gold_coins") >= 1, "high-level monsters drop gold")
+	# Loot tables.
+	for kind: String in Monsters.MONSTERS:
+		check(Monsters.LOOT.has(kind), "%s has a loot table" % kind)
+		for entry: Array in Monsters.LOOT.get(kind, []):
+			check(World.ITEMS.has(entry[0]) and entry[0] != "gold_coins", "%s loot %s is a catalog item" % [kind, entry[0]])
+			check(float(entry[1]) > 0.0 and float(entry[1]) <= 1.0, "%s loot %s has a chance in (0, 1]" % [kind, entry[0]])
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind]["slot"].is_empty() and kind not in ["gold_coins", "glowcap"]:
+			check(int(World.ITEMS[kind].get("value", 0)) > 0, "material %s has a shop value" % kind)
+			check(SpriteArt.ITEM_ORDER.has(kind), "material %s has an icon" % kind)
+	var loot_a := Combat.new(World.new(), 77)
+	var loot_b := Combat.new(World.new(), 77)
+	var same: bool = true
+	for roll: int in 50:
+		same = same and loot_a.roll_loot("road_bandit", 12) == loot_b.roll_loot("road_bandit", 12)
+	check(same, "loot rolls are deterministic for a seed")
+	var tally: Dictionary = {}
+	var loot_rolls := Combat.new(World.new(), 3)
+	for roll: int in 4000:
+		for kind: String in loot_rolls.roll_loot("field_vole", 1):
+			tally[kind] = tally.get(kind, 0) + 1
+	check(tally.get("vole_tail", 0) > 1800 and tally.get("vole_tail", 0) < 2200, "common materials drop at their table chance")
+	check(tally.get("copper_band", 0) > 15 and tally.get("copper_band", 0) < 70, "rare equipment drops about 1% of the time")
+	check(tally.get("gold_coins", 0) > 2200 and tally.get("gold_coins", 0) < 2600, "low monsters drop a gold pile about 60% of the time")
+	var warden_gold: int = loot_rolls.roll_loot("blackreed_warden", 50).count("gold_coins")
+	check(warden_gold >= 8 and warden_gold <= 9, "elites add gold piles on top of the level scale")
+	# Loot spills around a crowded corpse within the stack limit and never onto walls.
+	var crowd := World.new()
+	var crowd_combat := Combat.new(crowd, 9)
+	var corpse := Vector2i(9, 10)
+	crowd.ground[corpse] = ["glowcap", "glowcap", "glowcap", "glowcap", "glowcap", "glowcap"]
+	var many: Array[String] = []
+	for count: int in 10:
+		many.append("wolf_pelt")
+	var spilled: Array[Vector2i] = crowd_combat.spill(corpse, many)
+	var placed: int = 0
+	var tidy: bool = many.is_empty() and not spilled.has(corpse)
+	for cell: Vector2i in spilled:
+		placed += crowd.ground[cell].count("wolf_pelt")
+		tidy = tidy and World.walkable(cell) and Combat.distance(cell, corpse) <= Combat.SPILL_RADIUS \
+			and crowd.ground[cell].size() <= World.GROUND_STACK_MAX
+	check(tidy and placed == 10 and crowd.ground[corpse].size() == World.GROUND_STACK_MAX,
+		"loot spills past a full corpse tile onto nearby walkable tiles")
 	# Respawn from markers.
 	if not World.MONSTER_SPAWNS.is_empty():
 		var any: int = map_world.monsters.keys()[0]

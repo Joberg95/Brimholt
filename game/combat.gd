@@ -3,7 +3,8 @@ extends RefCounted
 ## Balance.ATTACK_SECONDS while in range (melee: the 8 surrounding tiles; ranged: clear line
 ## of sight past walls and trees). Spells cost mana and use their own and their group's
 ## cooldown. Monsters idle until a player comes near, chase within a leash, and respawn.
-## Experience is shared by damage dealt; dying costs DEATH_PENALTY of total experience.
+## Experience is split by damage dealt (pooled within a sharing party); dying costs DEATH_PENALTY of
+## total experience.
 ## tick() and the request functions return events for game/main.gd to replicate:
 ##   {kind: "player"|"monster"|"monster_gone", id}, {kind: "hit", target, amount, style},
 ##   {kind: "missile", from, to, color}, {kind: "area", cells, color}, {kind: "ground", cells},
@@ -41,6 +42,14 @@ const CRITICAL_MULTIPLIER: float = 1.5
 const VOCATION_RANGE: Dictionary = {"knight": 1, "paladin": 6, "sorcerer": 5, "druid": 5}
 const MISSILE_COLORS: Dictionary = {"paladin": Color("#e8dcb0"), "sorcerer": Color("#ff9a5a"),
 	"druid": Color("#9ad8ff"), "monster": Color("#c8e070")}
+## Parties (Tibia-style shared experience): members within SHARE_RANGE of a kill who fought,
+## healed, or were hit within SHARE_ACTIVE_SECONDS split the party's experience evenly when the
+## lowest level is at least SHARE_LEVEL_RATIO of the highest. More vocations earn a bonus.
+const SHARE_RANGE: int = 20
+const SHARE_ACTIVE_SECONDS: float = 120.0
+const SHARE_LEVEL_RATIO: float = 2.0 / 3.0
+const SHARE_BONUS: Array[float] = [1.0, 1.2, 1.3, 1.6, 2.0]
+const PARTY_ACTIONS: Array[String] = ["invite", "revoke", "join", "leave"]
 const STEPS: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
 var world: World
@@ -159,6 +168,8 @@ func hostile(attacker: int, target: int) -> bool:
 	if attacker < 0 and target < 0:
 		return false
 	if attacker > 0 and target > 0:
+		if same_party(attacker, target):
+			return false
 		return in_pvp_zone(attacker) and in_pvp_zone(target)
 	return true
 
@@ -266,6 +277,7 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 			or not in_reach(player["cell"], creature(target)["cell"], definition.get("range", 1))):
 		return {"ok": false, "reason": "You need a target in range", "events": []}
 	var events: Array = []
+	player["active_at"] = now
 	player["mana"] -= cost
 	player["cooldowns"][spell] = now + definition["cooldown"]
 	player["groups"][definition["group"]] = now + Spells.GROUP_SECONDS[definition["group"]]
@@ -328,6 +340,7 @@ func _damage(attacker: int, target: int, amount: int, style: String, now: float,
 	for id: int in [attacker, target]:
 		if id > 0 and world.players.has(id):
 			world.players[id]["last_combat"] = now
+			world.players[id]["active_at"] = now
 	victim["health"] -= amount
 	events.append({"kind": "hit", "target": target, "amount": amount, "style": style})
 	if target < 0:
@@ -393,12 +406,7 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 	var monster: Dictionary = world.monsters[id]
 	var definition: Dictionary = monster_def(id)
 	var experience: int = Balance.mob_experience(monster["level"], definition["rank"])
-	var total: int = 0
-	for attacker: int in monster["damage_by"]:
-		total += monster["damage_by"][attacker]
-	for attacker: int in monster["damage_by"]:
-		if world.players.has(attacker) and total > 0:
-			grant_experience(attacker, roundi(experience * float(monster["damage_by"][attacker]) / total), events)
+	_award_experience(experience, monster["damage_by"], monster["cell"], now, events)
 	_drop_loot(monster, events)
 	world.monsters.erase(id)
 	events.append({"kind": "monster_gone", "id": id})
@@ -410,22 +418,205 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 		respawns.append([now + Monsters.RESPAWN_SECONDS, monster["spawn"]])
 
 
-## Gold piles scale with level; a monster drops nothing when its tile is already full.
-func _drop_loot(monster: Dictionary, events: Array) -> void:
-	var piles: int = monster["level"] / 10 + (1 if rng.randf() < 0.6 else 0)
-	if Monsters.MONSTERS[monster["kind"]]["rank"] != "normal":
+## Splits a kill's experience by damage dealt; a sharing party pools its members' portions
+## and divides the pool (with the vocation bonus) evenly among its active members nearby.
+func _award_experience(experience: int, damage_by: Dictionary, cell: Vector2i, now: float, events: Array) -> void:
+	var total: int = 0
+	for attacker: int in damage_by:
+		total += damage_by[attacker]
+	if total <= 0:
+		return
+	var pools: Dictionary = {}
+	for attacker: int in damage_by:
+		if not world.players.has(attacker):
+			continue
+		var portion: float = experience * float(damage_by[attacker]) / total
+		var leader: int = world.players[attacker]["party"]
+		if leader != 0 and sharing_members(leader, cell, now).has(attacker):
+			pools[leader] = pools.get(leader, 0.0) + portion
+		else:
+			grant_experience(attacker, roundi(portion), events)
+	for leader: int in pools:
+		var members: Array[int] = sharing_members(leader, cell, now)
+		var each: int = roundi(pools[leader] * share_bonus(members) / members.size())
+		for member: int in members:
+			grant_experience(member, each, events)
+
+
+# ---------------------------------------------------------------- parties
+
+func same_party(first: int, second: int) -> bool:
+	return world.players.has(first) and world.players.has(second) and world.players[first]["party"] != 0 \
+		and world.players[first]["party"] == world.players[second]["party"]
+
+
+func party_members(leader: int) -> Array[int]:
+	var members: Array[int] = []
+	if leader == 0:
+		return members
+	for id: int in world.players:
+		if world.players[id]["party"] == leader:
+			members.append(id)
+	members.sort()
+	return members
+
+
+## Members who share a kill at `cell`: nearby and recently active, at least two of them, and
+## within the level ratio. An empty result means every member keeps their own damage share.
+func sharing_members(leader: int, cell: Vector2i, now: float) -> Array[int]:
+	var members: Array[int] = []
+	var lowest: int = Balance.MAX_LEVEL
+	var highest: int = 1
+	for id: int in party_members(leader):
+		var player: Dictionary = world.players[id]
+		if distance(player["cell"], cell) <= SHARE_RANGE and now - player["active_at"] <= SHARE_ACTIVE_SECONDS:
+			members.append(id)
+			lowest = mini(lowest, player["level"])
+			highest = maxi(highest, player["level"])
+	if members.size() < 2 or lowest < ceili(highest * SHARE_LEVEL_RATIO):
+		members.clear()
+	return members
+
+
+func share_bonus(members: Array[int]) -> float:
+	var vocations: Dictionary = {}
+	for id: int in members:
+		vocations[world.players[id]["vocation"]] = true
+	return SHARE_BONUS[mini(vocations.size(), SHARE_BONUS.size() - 1)]
+
+
+func describe(id: int) -> String:
+	var player: Dictionary = world.players[id]
+	return "%s %d" % [Balance.VOCATIONS[player["vocation"]]["name"], player["level"]]
+
+
+## invite/revoke (by a leader or a player without a party), join (an inviting leader), and leave.
+func party_action(id: int, action: Variant, other: Variant, now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	if typeof(action) != TYPE_STRING or action not in PARTY_ACTIONS or typeof(other) != TYPE_INT:
+		return {"ok": false, "reason": "Unknown party action", "events": []}
+	var player: Dictionary = world.players[id]
+	var events: Array = []
+	if action == "leave":
+		if player["party"] == 0:
+			return {"ok": false, "reason": "You are not in a party", "events": []}
+		leave_party(id, events)
+		return {"ok": true, "events": events}
+	if other == id or not world.players.has(other):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	var friend: Dictionary = world.players[other]
+	match action:
+		"invite":
+			if player["party"] != 0 and player["party"] != id:
+				return {"ok": false, "reason": "Only the party leader can invite", "events": []}
+			if friend["party"] != 0:
+				return {"ok": false, "reason": "%s is already in a party" % describe(other), "events": []}
+			if party_members(id).size() >= World.MAX_PLAYERS:
+				return {"ok": false, "reason": "Your party is full", "events": []}
+			player["invited"][other] = true
+			events.append({"kind": "message", "id": id, "text": "You invited %s to your party." % describe(other)})
+			events.append({"kind": "message", "id": other,
+				"text": "%s invites you to a party. Right-click them to join." % describe(id)})
+		"revoke":
+			if not player["invited"].has(other):
+				return {"ok": false, "reason": "You have not invited %s" % describe(other), "events": []}
+			player["invited"].erase(other)
+			events.append({"kind": "message", "id": other, "text": "%s withdrew the party invitation." % describe(id)})
+		"join":
+			if not friend["invited"].has(id) or (friend["party"] != 0 and friend["party"] != other):
+				return {"ok": false, "reason": "%s has not invited you" % describe(other), "events": []}
+			if player["party"] != 0:
+				return {"ok": false, "reason": "Leave your party first", "events": []}
+			friend["invited"].erase(id)
+			player["invited"].clear()
+			friend["party"] = other
+			player["party"] = other
+			for member: int in party_members(other):
+				for partner: int in party_members(other):
+					if world.players[member]["target"] == partner:
+						world.players[member]["target"] = 0
+				events.append({"kind": "message", "id": member, "text":
+					"You joined %s's party." % describe(other) if member == id
+					else "%s joined the party." % describe(id)})
+	events.append({"kind": "player", "id": id})
+	events.append({"kind": "player", "id": other})
+	return {"ok": true, "events": events}
+
+
+## Removes a player from their party (also on disconnect), passing leadership to the lowest id
+## and disbanding a party of one. Invitations sent by or to the player are withdrawn.
+func leave_party(id: int, events: Array) -> void:
+	var player: Dictionary = world.players[id]
+	var leader: int = player["party"]
+	player["invited"].clear()
+	for other: int in world.players:
+		if world.players[other]["invited"].erase(id):
+			events.append({"kind": "player", "id": other})
+	if leader == 0:
+		return
+	player["party"] = 0
+	events.append({"kind": "player", "id": id})
+	events.append({"kind": "message", "id": id, "text": "You left the party."})
+	var rest: Array[int] = party_members(leader)
+	var successor: int = 0 if rest.size() < 2 else (leader if rest.has(leader) else rest[0])
+	for member: int in rest:
+		world.players[member]["party"] = successor
+		if successor == 0:
+			world.players[member]["invited"].clear()
+		events.append({"kind": "player", "id": member})
+		var note: String = "%s left the party." % describe(id)
+		if successor == 0:
+			note += " The party has disbanded."
+		elif successor != leader:
+			note += " %s now leads." % ("You" if member == successor else describe(successor))
+		events.append({"kind": "message", "id": member, "text": note})
+
+
+## Rolls the monster's loot table plus level-scaled gold piles. Returns the dropped item ids.
+func roll_loot(kind: String, level: int) -> Array[String]:
+	var loot: Array[String] = []
+	for entry: Array in Monsters.LOOT.get(kind, []):
+		if rng.randf() < float(entry[1]):
+			loot.append(entry[0])
+	var piles: int = level / 10 + (1 if rng.randf() < 0.6 else 0)
+	if Monsters.MONSTERS[kind]["rank"] != "normal":
 		piles += 3
-	var cell: Vector2i = monster["cell"]
-	var stack: Array = world.ground.get(cell, [])
-	var dropped: bool = false
 	for pile: int in piles:
-		if stack.size() >= World.GROUND_STACK_MAX:
-			break
-		stack.append("gold_coins")
-		dropped = true
-	if dropped:
-		world.ground[cell] = stack
-		events.append({"kind": "ground", "cells": [cell]})
+		loot.append("gold_coins")
+	return loot
+
+
+func _drop_loot(monster: Dictionary, events: Array) -> void:
+	var loot: Array[String] = roll_loot(monster["kind"], monster["level"])
+	loot.reverse()  # spill() places from the back: items before gold, nearest tiles first
+	var changed: Array[Vector2i] = spill(monster["cell"], loot)
+	if not changed.is_empty():
+		events.append({"kind": "ground", "cells": changed})
+
+
+## Places items on walkable tiles within SPILL_RADIUS of origin, nearest first, up to
+## GROUND_STACK_MAX per tile. Consumes `items` from the back; anything left did not fit.
+func spill(origin: Vector2i, items: Array[String]) -> Array[Vector2i]:
+	var changed: Array[Vector2i] = []
+	var cells: Array[Vector2i] = [origin]
+	var seen: Dictionary = {origin: true}
+	var index: int = 0
+	while not items.is_empty() and index < cells.size():
+		var cell: Vector2i = cells[index]
+		index += 1
+		var stack: Array = world.ground.get(cell, [])
+		if World.walkable(cell) and stack.size() < World.GROUND_STACK_MAX:
+			while not items.is_empty() and stack.size() < World.GROUND_STACK_MAX:
+				stack.append(items.pop_back())
+			world.ground[cell] = stack
+			changed.append(cell)
+		for step: Vector2i in STEPS:
+			var next: Vector2i = cell + step
+			if not seen.has(next) and distance(next, origin) <= SPILL_RADIUS and World.terrain(next) not in ["", " "]:
+				seen[next] = true
+				cells.append(next)
+	return changed
 
 
 static func total_experience(level: int, progress: int) -> int:
@@ -529,25 +720,7 @@ func _drop_belongings(id: int, events: Array) -> Array[String]:
 			dropped.append(player["equipment"][slot])
 			lost_worn.append(World.ITEMS[player["equipment"][slot]]["name"])
 			player["equipment"].erase(slot)
-	var changed: Array[Vector2i] = []
-	var cells: Array[Vector2i] = [player["cell"]]
-	var seen: Dictionary = {player["cell"]: true}
-	var index: int = 0
-	while not dropped.is_empty() and index < cells.size():
-		var cell: Vector2i = cells[index]
-		index += 1
-		var stack: Array = world.ground.get(cell, [])
-		if World.walkable(cell):
-			while not dropped.is_empty() and stack.size() < World.GROUND_STACK_MAX:
-				stack.append(dropped.pop_back())
-			if not stack.is_empty():
-				world.ground[cell] = stack
-				changed.append(cell)
-		for step: Vector2i in STEPS:
-			var next: Vector2i = cell + step
-			if not seen.has(next) and distance(next, player["cell"]) <= SPILL_RADIUS and World.terrain(next) not in ["", " "]:
-				seen[next] = true
-				cells.append(next)
+	var changed: Array[Vector2i] = spill(player["cell"], dropped)
 	if not changed.is_empty():
 		events.append({"kind": "ground", "cells": changed})
 	world.clamp_vitals(id)

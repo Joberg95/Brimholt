@@ -5,7 +5,7 @@ description: Use when implementing or changing visible equipped items, the backp
 
 # Visible equipment and inventory
 
-1. Keep the inventory flat: equipment slots, one fixed-size backpack, and ground stacks. Do not add nested containers, loot economies, or trading without a user-selected milestone.
+1. Keep the inventory flat: equipment slots, one fixed-size backpack, and ground stacks. Do not add nested containers or trading without a user-selected milestone. Monster drops come from `Monsters.LOOT`; new materials need a catalog entry with a `value`, an `ITEM_ORDER` slot, and an icon.
 2. Define item metadata (name, slot type or none, stats) in the shared catalog; equipment slots map to slot types through `World.SLOT_TYPES` (both ring slots take "ring") and must be checked with `World.fits`. Only helmet, armor, main hand, and off hand are drawn on the character (`SpriteArt.VISIBLE_SLOTS`) and visual identity (palette/icon) in the art module. Items are catalog kinds chosen by the server; clients name locations, never item kinds or contents.
 3. Store equipment, backpacks, and ground items in authoritative state. Route every change through `World.move_item` (or `toggle_equipment`, which uses it) so host and remote input share validation: strict location shapes, reach, slot type, capacity, stack limit, and cooldown.
 4. Render gear as original sprite-sheet layers over the base character, using the shared 64x64 frame layout (stand/step A/step B by down/up/left/right, tile centre at (32, 40)). Order: hand item behind when facing up, body, tinted cloth, armour, helmet, hand item in front otherwise.

@@ -35,6 +35,25 @@ const MONSTERS: Dictionary = {
 		"rank": "elite", "range": 1, "step": 0.4,
 		"gear": {"helmet": "iron_coif", "armor": "moss_coat", "main_hand": "flint_hatchet", "off_hand": "oak_buckler"}},
 }
+## Loot tables: each [item, chance] entry rolls independently when the monster dies. Gold is
+## added on top by Combat (piles scale with level). Materials sell to shops (World "value");
+## equipment entries are rare finds. Add new rows here; Combat validates nothing else.
+const LOOT: Dictionary = {
+	"field_vole": [["vole_tail", 0.5], ["glowcap", 0.08], ["copper_band", 0.01]],
+	"marsh_toad": [["toad_slime", 0.45], ["glowcap", 0.1], ["river_pendant", 0.01]],
+	"thornback_boar": [["boar_tusk", 0.4], ["ash_tunic", 0.02]],
+	"road_bandit": [["bandit_badge", 0.35], ["iron_coif", 0.04], ["copper_blade", 0.03], ["garnet_ring", 0.01]],
+	"grey_wolf": [["wolf_pelt", 0.35], ["hearth_charm", 0.01]],
+	"bog_lurker": [["lurker_eye", 0.3], ["glowcap", 0.15], ["river_pendant", 0.02]],
+	"outlaw_archer": [["waxed_bowstring", 0.3], ["ember_cap", 0.04], ["moss_coat", 0.03]],
+	"stone_golem": [["golem_core", 0.25], ["oak_buckler", 0.03]],
+	"cinder_wraith": [["wraith_ash", 0.3], ["hearth_charm", 0.02]],
+	"hollow_knight": [["hollow_sigil", 0.25], ["iron_coif", 0.04], ["flint_hatchet", 0.03], ["oak_buckler", 0.03]],
+	"mire_stalker": [["stalker_fang", 0.25], ["garnet_ring", 0.02]],
+	"reedfang": [["reedfang_scale", 0.25], ["copper_band", 0.02]],
+	"bog_hulk": [["bog_heart", 0.2], ["ash_tunic", 0.03], ["river_pendant", 0.02]],
+	"blackreed_warden": [["warden_crest", 0.5], ["flint_hatchet", 0.08], ["garnet_ring", 0.06], ["hearth_charm", 0.05]],
+}
 ## Monsters notice players within this many tiles and never chase beyond LEASH from home.
 const AGGRO_RANGE: int = 6
 const LEASH: int = 12

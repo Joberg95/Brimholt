@@ -55,7 +55,7 @@ These are the default keys; every key can be changed (see below).
 | WASD / arrows | Move one cardinal tile; hold to repeat |
 | Left-click a creature | Lock it as your target (click again to release) |
 | Space | Target the nearest monster |
-| 1–9 | Use action bar slot 1–9 (gear toggles in 1–4, your vocation's spells after them) |
+| 1–9 | Cast the spell in action bar slot 1–9 (filled with your vocation's spells) |
 | Drag an item | Move it between backpack slots, equipment slots, and nearby tiles |
 | Right-click item | Equip from the backpack, or unequip into the backpack |
 | Right-click tile / G | Pick up the top item on a tile (G: your tile, else the one you face) |
@@ -72,9 +72,9 @@ character; the minimap in the side panel follows you.
 ### Action bar and key bindings
 
 The nine-slot action bar sits at the bottom of the game window, with each slot's key in its
-corner. Right-click a slot to choose what it does: a gear toggle (helmet, armor, main hand,
-off hand), pick up, world map, or empty. Spells will be added to this list once combat
-exists. Click **Controls** in the top bar to rebind any action: click a key button, then
+corner. The bar holds spells only: right-click a slot to pick one of your vocation's spells
+or clear it. Change gear on the equipment panel; targeting, pick up, and the world map have
+their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
 position, so WASD stays under your hand on any keyboard layout. Bindings and bar contents
@@ -102,9 +102,38 @@ Blackreed Isle holds levels 40–50. Spawns sit in small clearings at least 7 st
 roads, so travel between towns stays safe. Early monsters hit softer (half damage at level
 1, full at level 11), and a monster's name shows its level in white (fair), yellow (tough),
 or red (5+ levels above you). Experience is shared by damage dealt; level 2 takes about 4
-kills. Monsters drop gold coins on their tile. Health and mana regenerate every 2 seconds,
+kills. Monsters drop loot from their own table (see below), spilling onto nearby tiles when
+the corpse tile is full. Health and mana regenerate every 2 seconds,
 three times faster after 8 seconds out of combat. Players can only attack each other while both stand in a PvP zone (Blackreed
 Isle); leaving it drops the target.
+
+### Parties and shared experience
+
+Right-click another player to **Invite to party**; they right-click you to **Join party**
+(or you **Withdraw invitation**). Right-click yourself or a member to **Leave party**. Only
+the leader invites; when the leader leaves, the member who joined the game first leads, and
+a party of one disbands. Disconnecting leaves the party. Nameplates show a blue shield for
+members (gold rim for the leader) and a faint shield for open invitations. Party members
+cannot attack each other, even on Blackreed Isle.
+
+Like Tibia's shared experience, the party pools its members' share of each kill and splits
+it evenly among members who are within 20 tiles of the kill and fought, cast a spell
+(healing too), or were hit in the last 2 minutes. So a Knight who tanks while a Sorcerer
+deals the damage levels just as fast. Sharing needs at least two such members whose lowest
+level is at least two thirds of the highest (otherwise everyone keeps their own damage
+share). Distinct vocations among them multiply the pool: ×1.2 for one, ×1.3 for two, ×1.6
+for three, and ×2 for all four.
+
+### Loot
+
+Each monster has a loot table in `game/monsters.gd` (`Monsters.LOOT`): every `[item,
+chance]` row rolls independently, then gold piles are added (one per 10 levels plus a 60%
+chance of one more; elites +3). Rows are a material unique to the monster (vole tails, toad
+slime, boar tusks, bandit badges, wolf pelts, ... warden crests; 20–50% chance) and
+occasional equipment (1–8%). Materials have a shop `value` in `World.ITEMS` for the
+upcoming shops. Add a monster's row to `LOOT`, and a new material to `World.ITEMS`,
+`SpriteArt.ITEM_ORDER`, and `tools/make_sprites.py` (icon shape and palette). Loot is not
+reserved for the killer yet.
 
 ### Death and skulls
 
@@ -238,7 +267,7 @@ items when both fit; a worn item displaced from the ground goes back to that til
 Equipped items are visible to everyone; backpack contents are sent only to their
 owner. Late joiners receive ground items in the snapshot. Items carried by a
 player who leaves disappear with them; ground items remain until the host stops.
-The backpack is flat: there are no nested containers, loot tables, or trading.
+The backpack is flat: there are no nested containers or trading.
 
 ## Stats and balance
 
@@ -305,7 +334,11 @@ bindings (defaults 1–9, rebinding moves conflicting keys, Escape is reserved, 
 and malformed or duplicate saved values), and combat: catalogs and spawns, line of sight
 and reach, target validation (malformed, unknown, self, too far, PvP only in PvP zones),
 the two-second attack boundary and damage range, monster aggro, chasing onto free tiles
-only, leashing home and healing, experience shared by damage and level ups, gold loot,
+only, leashing home and healing, experience shared by damage and level ups, loot tables
+(every monster has one, catalog items with icons and shop values, seeded determinism,
+drop rates, elite gold, spilling past a full corpse tile), parties (invites, joining,
+leadership hand-over, disbanding, no friendly fire, shared experience with the vocation
+bonus, activity, range and level-ratio rules, disconnect clean-up),
 respawn delays, the 10% death penalty and town respawn, spells (vocation, level, target,
 mana, cooldowns and groups, heal caps, area hits, mass heal radius), regeneration, item
 loss (backpack and purse always, worn items about 10%, everything with a red skull, spill
@@ -314,7 +347,9 @@ unjustified kills, the third giving a red skull, the 24-hour window, expiry). Th
 runs a real playing host, client, and late joiner over loopback, checking
 authority, cooldowns, collision, equipment updates, rejected item moves, a drop
 seen in the late-join ground snapshot and then picked up by the late joiner,
-backpack privacy, snapshots, and disconnect cleanup. `--dedicated` checks a server
+a party invitation accepted through the right-click options (private invitations, public
+membership) and disbanded when the member disconnects, backpack privacy, snapshots, and
+disconnect cleanup. `--dedicated` checks a server
 without a playing character and a moving, equipping, dropping, picking-up, and
 ring-equipping client, checks the replicated level and backpack privacy, and sails the
 client from Cinder Landing to Mossford after rejected out-of-range, unknown-route, and
@@ -341,8 +376,8 @@ and each equipment panel slot after removing gear, four facings, ground item and
 raised oblique wall pixels matching their sprite texels, the camera staying centred and gliding with the
 character, an interpolated movement midpoint/endpoint, a tree sprite in depth order,
 sailing through the real right-click menu and route list (Cinder Landing to Mossford,
-then Reedmere to Blackreed Isle), the island's PvP banner, toggling the helmet with the
-action bar's slot 1 key, and opening and closing the world map with its bound key.
+then Reedmere to Blackreed Isle), the island's PvP banner, casting the spell in action
+bar slot 1 with its key (the bar holds spells only), and opening and closing the world map with its bound key.
 Key presses use the player's current bindings. Finally it spawns two monsters, locks one
 with a real left-click, and checks the red target square and a landed hit. The map's own
 monsters are removed at the start so the pixel checks stay deterministic. It also uses simulated mouse
@@ -352,13 +387,16 @@ to the map's drop handler.
 Its 20-second timeout stays active through the assertions.
 
 The playthrough starts a real dedicated server and two bot clients (`tests/playthrough.gd`),
-a Knight and a Sorcerer, that play the game through the same calls as the UI: they equip
-the start kit, walk out of town with pathfinding, hunt the nearest monsters with spells and
-healing, pick up gold, walk to Cinder Landing and sail to Mossford, walk to Reedmere
-(routing around monster spawns), and sail to Blackreed Isle. There the Knight attacks the
+a Knight and a Sorcerer, that play the game through the same calls as the UI: they form
+a party, equip the start kit, walk out of town with pathfinding, hunt the nearest monsters
+with spells and healing (checking that party sharing keeps the Knight level with the
+Sorcerer), pick up gold and nearby monster materials, finish their fight, walk to Cinder Landing and sail to Mossford, walk to Reedmere
+(routing around monster spawns), and sail to Blackreed Isle. There the Knight leaves the
+party and attacks the
 Sorcerer (white skull), the Sorcerer fights back (no skull), and the Knight kills him
 (unjustified kill), then loots the dropped items while the Sorcerer checks his empty
-backpack and purse in town. A bot that dies earlier walks back to recover its belongings.
+backpack and purse in town. A bot that dies earlier walks back to recover its belongings (or, under beginner
+protection, carries on).
 The report lists each step as ok, fail, or finding (gameplay observations such as slow
 levelling) with screenshots. Bots render offscreen in two borderless 64×64 windows in the
 top-left corner. macOS may still give them keyboard focus, so test and bot windows
@@ -369,7 +407,7 @@ LAN play remains unverified** and still needs network/firewall checks.
 
 ## Scope and reference licensing
 
-Blessings, yellow and black skulls, monster loot beyond gold, the final raid boss, nested containers, trading, shops, quests, procedural caves, floors, NPCs other
+Blessings, yellow and black skulls, loot protection, the final raid boss, nested containers, trading, shops, quests, procedural caves, floors, NPCs other
 than the menu-driven ferrymen, persistence, and authentication are outside this prototype. Vocations and stats exist but are not yet
 used in play.
 

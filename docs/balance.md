@@ -83,7 +83,7 @@ constant at every level.
 - **Spells** – damage is attack × spell power; mana costs are a share of max mana.
 
 Leveling needs `4 + 3 × (level − 1)` same-level normal kills per level, so level 2 takes
-about 4 kills and the whole climb to 50 about 3,700. Experience from a kill is shared by damage dealt. Dying costs 10% of total
+about 4 kills and the whole climb to 50 about 3,700. Experience from a kill is shared by damage dealt; a sharing party pools it and splits it evenly with a ×1.2–×2 vocation bonus (README, Parties). Dying costs 10% of total
 experience, which can lose levels; below level 8, players keep their items and gold.
 
 ## Early game
