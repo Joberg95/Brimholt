@@ -672,8 +672,20 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 					text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], player["backpack"].size()]
 		_:
 			return {"ok": false, "reason": "Unknown task request", "events": []}
+	if action == "complete":
+		text += next_task_hint(player, npc)
 	events.append({"kind": "message", "id": id, "text": text})
 	return {"ok": true, "events": events}
+
+
+## " Next: ..." pointing to the task World.next_task suggests, when another giver offers it.
+static func next_task_hint(player: Dictionary, current_giver: String) -> String:
+	var next: String = World.next_task(player)
+	if next.is_empty() or Quests.TASKS[next]["giver"] == current_giver:
+		return ""
+	var giver: Dictionary = World.QUEST_GIVERS[Quests.TASKS[next]["giver"]]
+	var band: Vector2i = World.task_levels(next)
+	return " Next: %s in %s has work for levels %d-%d." % [giver["name"], giver["place"], band.x, band.y]
 
 
 func _credit_tasks(kind: String, credited: Array[int], events: Array) -> void:

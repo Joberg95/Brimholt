@@ -12,11 +12,12 @@ game/
     combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
     economy.gd           Vendors (stock, buying, selling) and the banker (gold accounts)
     instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
+    lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
     items.json           Item catalog (also read by the sprite generator)
     items.gd             Loads items.json; derives tier and relic stats and vendor prices
-    quests.gd            Town and dungeon tasks, their givers and rewards, relic keepers
+    quests.gd            Town, hub, and dungeon tasks, their givers and rewards, relic keepers, trainers
     dungeons.gd          Instanced dungeon layouts, copies, levels, and monsters
     biomes.gd            Climate regions (the desert: no rain, cactus scrub)
     regions.gd           Named overworld regions (anchors and descriptions; levels derived)
@@ -35,6 +36,7 @@ game/
     quest_list.gd        Quest list in the game window: active tasks, givers, progress
     spell_book.gd        Spell book (B): your vocation's spells explained (Spells.info), drag to the bar
     character_window.gd  Character window (C): stats explained, experience, and status
+    lexicon_window.gd    Lexicon (K): searchable monster list with drop tables
     micro_menu.gd        Buttons right of the action bar for the character, book, quests, map, controls
     spell_rune.gd        A spell rune: drawing, coloured tooltip, drag and drop (bar and book)
     item_slot.gd         An item slot whose hover tooltip shows the rarity colour

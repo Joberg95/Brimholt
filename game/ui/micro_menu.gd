@@ -1,6 +1,6 @@
 extends Node
 ## The micro menu right of the action bar: small drawn buttons that open the character window,
-## spell book, quest list, world map, and Controls menu, the same as their keys. Each button's
+## spell book, quest list, lexicon, world map, and Controls menu, the same as their keys. Each button's
 ## tooltip names it and its key, and an open panel's button is framed in gold.
 
 const ItemSlot = preload("res://game/ui/item_slot.gd")
@@ -15,6 +15,7 @@ const ENTRIES: Array = [
 	["character", "Character", "Your stats explained, experience, party, skull, and town rest"],
 	["spell_book", "Spell book", "Every spell of your vocation; drag one onto the action bar"],
 	["quest_list", "Quests", "Show or hide the quest list"],
+	["lexicon", "Lexicon", "Every monster: where it lives, its levels, and what it drops"],
 	["world_map", "World map", "Towns, ferries, dungeons, and PvP zones"],
 	["controls", "Controls", "Rebind keys"],
 ]
@@ -85,6 +86,13 @@ func _draw_button(button: Control, action: String) -> void:
 			button.draw_rect(Rect2(10, 30, 20, 4), Color("#c8b07a"))
 			for y: int in [15, 19, 23, 27]:
 				button.draw_rect(Rect2(14, y, 12 if y != 27 else 7, 1), Color("#6a5a3a"))
+		"lexicon":
+			button.draw_rect(Rect2(9, 10, 22, 21), Color("#3a5a4a"))
+			button.draw_rect(Rect2(9, 10, 3, 21), Color("#24382e"))
+			button.draw_rect(Rect2(29, 12, 2, 17), Color("#efe6cf"))
+			button.draw_circle(Vector2(20, 18), 4.5, Color("#c8ccd0"))
+			button.draw_circle(Vector2(20, 18), 2.5, Color("#3a5a4a"))
+			button.draw_line(Vector2(23, 21), Vector2(27, 26), Color("#c8ccd0"), 2.0)
 		"world_map":
 			var folds: Array[Color] = [Color("#6a8a4a"), Color("#4a6a8a"), Color("#6a8a4a")]
 			for fold: int in 3:

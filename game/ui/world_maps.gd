@@ -1,11 +1,20 @@
 extends Node
-## The minimap under the stat sheet and the full world map over the game window (toggled
-## by its key, closed by a click), drawn from one terrain texture with PvP zones tinted red.
+## The minimap under the stat sheet and the full world map over the game window, drawn from
+## one terrain texture with PvP zones tinted red. The world map opens centred on you at
+## OPEN_ZOOM pixels per tile; the mouse wheel (or + and −) zooms around the cursor, dragging
+## pans, and its key, Esc, or Close closes it. Quest givers show their "!"/"?" marks.
 
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const MINIMAP_SCALE: float = 2.0
+## World map zoom in pixels per tile: it opens at OPEN_ZOOM; each wheel step multiplies by
+## ZOOM_STEP, between the whole map fitting the window and MAX_ZOOM.
+const OPEN_ZOOM: float = 3.0
+const MAX_ZOOM: float = 10.0
+const ZOOM_STEP: float = 1.25
+## Space above the map for the help line and buttons.
+const HEADER: float = 34.0
 ## Region names on the world map: muted parchment, under the brighter town and zone labels.
 const REGION_TINT: Color = Color("#d8c89a")
 const PVP_TINT: Color = Color("#c43c32")
@@ -23,6 +32,10 @@ var game: Node
 var minimap: Control
 var world_map: Control
 var _texture: ImageTexture
+## Pixels per tile, and the tile at the centre of the map area.
+var zoom: float = OPEN_ZOOM
+var center: Vector2 = Vector2.ZERO
+var _dragging: bool = false
 
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
@@ -67,12 +80,91 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	world_map = Control.new()
 	world_map.position = Layout.VIEW_ORIGIN
 	world_map.size = Layout.VIEW_SIZE
+	world_map.clip_contents = true
 	world_map.visible = false
 	world_map.draw.connect(_draw_world_map)
-	world_map.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed:
-			world_map.hide())
+	world_map.gui_input.connect(_world_map_input)
+	world_map.visibility_changed.connect(func() -> void:
+		if world_map.visible:
+			zoom = maxf(OPEN_ZOOM, _fit_zoom())
+			# Underground (dungeon copies lie outside the overworld) it opens on the whole map's centre.
+			var here: Vector2 = game.camera_focus() / World.TILE_SIZE
+			center = here if World.OVERWORLD.has_point(Vector2i(here)) else Vector2(World.OVERWORLD.size) / 2.0
+			_clamp_view())
 	layer.add_child(world_map)
+	var buttons := HBoxContainer.new()
+	buttons.position = Vector2(Layout.VIEW_SIZE.x - 150, 4)
+	world_map.add_child(buttons)
+	for entry: Array in [["−", func() -> void: zoom_by(1.0 / ZOOM_STEP, _map_area().get_center())],
+			["+", func() -> void: zoom_by(ZOOM_STEP, _map_area().get_center())], ["Close", world_map.hide]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.focus_mode = Control.FOCUS_NONE
+		button.custom_minimum_size = Vector2(32, 0)
+		button.pressed.connect(entry[1])
+		buttons.add_child(button)
+
+
+## The part of the world map window that shows the map (below the header).
+func _map_area() -> Rect2:
+	return Rect2(Vector2(0, HEADER), Layout.VIEW_SIZE - Vector2(0, HEADER))
+
+
+## The zoom at which the whole overworld fits the map area.
+func _fit_zoom() -> float:
+	var area: Vector2 = _map_area().size
+	return minf(area.x / World.OVERWORLD.size.x, area.y / World.OVERWORLD.size.y)
+
+
+## Where a tile (fractional) appears on the world map window at the current zoom and pan.
+func map_point(tile: Vector2) -> Vector2:
+	return _map_area().get_center() + (tile - center) * zoom
+
+
+## Zooms by `factor`, keeping the tile under `at` (a world map position) where it is.
+func zoom_by(factor: float, at: Vector2) -> void:
+	var under: Vector2 = center + (at - _map_area().get_center()) / zoom
+	zoom = clampf(zoom * factor, _fit_zoom(), MAX_ZOOM)
+	center = under - (at - _map_area().get_center()) / zoom
+	_clamp_view()
+	world_map.queue_redraw()
+
+
+## Keeps the map on screen: centred when it is smaller than the window, else edge to edge.
+func _clamp_view() -> void:
+	var half: Vector2 = _map_area().size / 2.0 / zoom
+	var size := Vector2(World.OVERWORLD.size)
+	for axis: int in 2:
+		if half[axis] * 2.0 >= size[axis]:
+			center[axis] = size[axis] / 2.0
+		else:
+			center[axis] = clampf(center[axis], half[axis], size[axis] - half[axis])
+
+
+func _world_map_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		match event.button_index:
+			MOUSE_BUTTON_WHEEL_UP:
+				if event.pressed:
+					zoom_by(ZOOM_STEP, event.position)
+			MOUSE_BUTTON_WHEEL_DOWN:
+				if event.pressed:
+					zoom_by(1.0 / ZOOM_STEP, event.position)
+			MOUSE_BUTTON_LEFT:
+				_dragging = event.pressed
+				world_map.mouse_default_cursor_shape = Control.CURSOR_DRAG if _dragging else Control.CURSOR_ARROW
+		world_map.accept_event()
+	elif event is InputEventMouseMotion and _dragging:
+		center -= event.relative / zoom
+		_clamp_view()
+		world_map.queue_redraw()
+		world_map.accept_event()
+	elif event is InputEventMagnifyGesture:
+		zoom_by(event.factor, event.position)
+	elif event is InputEventPanGesture:
+		center += event.delta * 8.0 / zoom
+		_clamp_view()
+		world_map.queue_redraw()
 
 
 func redraw() -> void:
@@ -141,14 +233,13 @@ func _draw_world_map() -> void:
 	var view_size: Vector2 = Layout.VIEW_SIZE
 	# The overworld only: dungeon copies right of it are reached by stairways.
 	var map_size := Vector2(World.OVERWORLD.size)
-	# Whole pixels per tile when the map fits; otherwise shrink it.
-	var fit: float = minf(view_size.x / map_size.x, (view_size.y - 32.0) / map_size.y)
-	var scale: float = floorf(fit) if fit >= 1.0 else fit
-	var origin: Vector2 = ((view_size - map_size * scale) / 2.0).floor() + Vector2(0, 12)
+	var scale: float = zoom
+	var origin: Vector2 = map_point(Vector2.ZERO).round()
 	world_map.draw_rect(Rect2(Vector2.ZERO, view_size), Color(0.03, 0.04, 0.05))
-	var shown := Rect2(origin, map_size * scale)
-	world_map.draw_texture_rect_region(_texture, shown, Rect2(Vector2.ZERO, map_size))
+	var shown := Rect2(origin, map_size * scale).intersection(_map_area())
+	world_map.draw_texture_rect_region(_texture, Rect2(origin, map_size * scale), Rect2(Vector2.ZERO, map_size))
 	_draw_markers(world_map, origin, scale, shown)
+	_draw_quest_marks(origin, scale, shown)
 	var font: Font = ThemeDB.fallback_font
 	var labels: Array = [[World.WORLD_NAME, Vector2(World.SPAWNS[0]) + Vector2(4, -3)]]
 	for id: String in World.FERRYMEN:
@@ -192,5 +283,22 @@ func _draw_world_map() -> void:
 				break
 		taken.append(_draw_label(font, at, title[0], title[3], title[2], shift, true))
 		taken.append(_draw_label(font, at + Vector2(0, 13), levels[0], levels[3], levels[2], shift, true))
-	world_map.draw_string(font, Vector2(12, 22), "World map: gold = you, cyan = ferrymen, green = towns, orange = dungeons, red = PvP. Click to close.",
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
+	world_map.draw_rect(Rect2(Vector2.ZERO, Vector2(view_size.x, HEADER)), Color(0.03, 0.04, 0.05))
+	world_map.draw_string(font, Vector2(12, 22), "Gold = you, cyan = ferrymen, green = towns, orange = dungeons, red = PvP, ! = quests."
+		+ "  Drag to move, wheel to zoom.", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
+
+
+## Gold "!" and "?" over quest givers that have something for you (World.quest_mark).
+func _draw_quest_marks(origin: Vector2, scale: float, area: Rect2) -> void:
+	if not game.actors.has(game.self_id):
+		return
+	var state: Dictionary = game.actors[game.self_id]["state"]
+	var font: Font = ThemeDB.fallback_font
+	for id: String in World.QUEST_GIVERS:
+		var mark: String = World.quest_mark(id, state)
+		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		if mark.is_empty() or not area.has_point(at):
+			continue
+		var corner: Vector2 = at + Vector2(-4, -5)
+		world_map.draw_string_outline(font, corner, mark, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
+		world_map.draw_string(font, corner, mark, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#ffd84a"))

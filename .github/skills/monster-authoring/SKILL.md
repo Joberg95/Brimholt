@@ -129,5 +129,9 @@ numbers. If every monster is off, adjust the `Balance` constants and regenerate
 - If the look is new, run `make test-visual` and look at the capture.
 - If the monster lives near the starting town, run
   `python3 tools/testing/playtest.py --godot godot`.
+- The Lexicon (`game/core/lexicon.gd`) lists the monster, its places, and its drops on its
+  own. If the monster opens a level band with no task, give the nearest town's hub giver a
+  task for it in `Quests.TASKS` (place the giver with `tools/generators/towns.gd`); the rules
+  check requires a fitting task at every level.
 - Document the monster where players meet it: `docs/gameplay.md` (zones, dungeons, hunting
   weapons), and `docs/art.md` for a new look.

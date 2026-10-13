@@ -24,6 +24,29 @@ const TASKS: Dictionary = {
 		"reward": "pack", "intro": "Outlaw archers ambush every caravan on the road to Ashford."},
 	"hollow_purge": {"title": "Hollow purge", "giver": "marshal_venn", "monster": "hollow_knight", "count": 30,
 		"reward": "pack", "intro": "Hollow knights march on Emberfall from the wastes."},
+	# Quest hubs: a giver in the town nearest each band of overworld monsters, so there is always
+	# a next stop (World.next_task). "level" is the band's typical level, for the reward.
+	"highway_robbers": {"title": "Highway robbers", "giver": "harbourmaster_ilse", "monster": "road_bandit", "count": 20,
+		"level": 9, "reward": "experience", "share": 0.5,
+		"intro": "Bandits rob every cart between the landing and Greywood. Twenty fewer would do."},
+	"wolf_winter": {"title": "Wolves at the woodline", "giver": "harbourmaster_ilse", "monster": "grey_wolf", "count": 20,
+		"level": 12, "reward": "experience", "share": 0.5,
+		"intro": "Grey wolves come down from Greywood and Westwind for our nets and goats."},
+	"lurker_drain": {"title": "Drain the bog pools", "giver": "fenwarden_ostrel", "monster": "bog_lurker", "count": 25,
+		"level": 16, "reward": "experience", "share": 0.5,
+		"intro": "Bog lurkers spit at the reed cutters in Thornfield and Lurkmoor. Clear them out."},
+	"golem_breakers": {"title": "Golem breakers", "giver": "quartermaster_rhosyn", "monster": "stone_golem", "count": 25,
+		"level": 26, "reward": "experience", "share": 0.5,
+		"intro": "The hills around the desert stand up and walk. Break twenty-five stone golems."},
+	"wraith_quench": {"title": "Quench the wraiths", "giver": "quartermaster_rhosyn", "monster": "cinder_wraith", "count": 25,
+		"level": 30, "reward": "experience", "share": 0.5,
+		"intro": "Cinder wraiths drift over the waste and the fells, setting the scrub alight."},
+	"stalker_hunt": {"title": "Stalkers in the fen", "giver": "huntmaster_corvel", "monster": "mire_stalker", "count": 25,
+		"level": 40, "reward": "experience", "share": 0.5,
+		"intro": "Mire stalkers took three of my hunters in Mirewood Fen. Take twenty-five of them."},
+	"fen_beasts": {"title": "Beasts of the drowned wood", "giver": "huntmaster_corvel", "monster": "reedfang",
+		"also": ["bog_hulk"], "target": "fen beasts", "count": 25, "level": 45, "reward": "experience", "share": 0.5,
+		"intro": "Reedfangs and bog hulks rule the deep fen and Gloamwood. Thin them before they reach Emberfall."},
 	# Dungeon tasks: a hunt through the copies, and the dungeon's champion.
 	"cellar_vermin": {"title": "Vermin in the cellar", "giver": "cellarmaster_pell", "monster": "giant_rat",
 		"also": ["sewer_rat"], "target": "cellar rats", "count": 25, "reward": "experience", "share": 0.5,
@@ -123,7 +146,7 @@ static func dungeon_of(task: String) -> String:
 
 
 ## {experience, gold} for an "experience" task: `share` of the experience and expected gold of
-## its kills at their dungeon level; {} for pack tasks.
+## its kills at their dungeon level (or the task's "level" for overworld monsters); {} for pack tasks.
 static func reward(task: String) -> Dictionary:
 	var definition: Dictionary = TASKS[task]
 	if definition["reward"] != "experience":

@@ -27,6 +27,8 @@ CAPTURES = (
     ("visual-spellbook.png", "Spell book (B): each spell's rune, unlock level, effect, damage or healing, mana, and cooldown"),
     ("visual-character.png", "Character window (C) from the micro menu right of the action bar: stats explained and status"),
     ("visual-trainer.png", "Training hall: Ranger Tamsin offers the Paladin vocation to an Adventurer who passed the trial"),
+    ("visual-lexicon.png", "Lexicon (K) searched for silk: the spiders, where they live, and their drop chances"),
+    ("visual-quest-marks.png", "Cinder Landing at level 12: Harbourmaster Ilse's ! and the quest list's next stop"),
     ("visual-quests.png", "Quest list: a task in progress and one ready to turn in, with giver and town"),
     ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
     ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),

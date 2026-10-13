@@ -146,7 +146,7 @@ func _run() -> void:
 	game._apply_ground(TEST_ITEM_CELL, ["iron_coif"])
 	await process_frame
 	await RenderingServer.frame_post_draw
-	if not _expect(_centred(Vector2(5, 6)), "Camera is not centred on the local character"):
+	if not _expect(_centred(Vector2(5, 6)), "Camera is not centred on the local character (at %s, visual %s, focus %s)" % [game.world.players[1]["cell"], game.actors[1]["visual"], game.camera_focus()]):
 		return
 	var image: Image = screen.get_texture().get_image()
 	if image == null or image.is_empty():
@@ -238,6 +238,8 @@ func _run() -> void:
 		return
 	if not await _check_training_hall():
 		return
+	if not await _check_lexicon_and_marks():
+		return
 	if not await _check_waystone():
 		return
 	if not await _check_town_services():
@@ -258,7 +260,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -667,15 +669,43 @@ func _check_ferry_and_maps() -> bool:
 	await RenderingServer.frame_post_draw
 	var world_map: Image = screen.get_texture().get_image()
 	world_map.save_png("res://.tools/visual-map.png")
-	var map_size := Vector2(World.OVERWORLD.size)
-	var fit: float = minf(game.VIEW_SIZE.x / map_size.x, (game.VIEW_SIZE.y - 32.0) / map_size.y)
-	var scale: float = floorf(fit) if fit >= 1.0 else fit
-	var origin: Vector2 = ((game.VIEW_SIZE - map_size * scale) / 2.0).floor() + Vector2(0, 12)
-	# A tile a little inside the south-east border (forest), sampled at its scaled centre.
-	var corner: Vector2i = World.OVERWORLD.end - Vector2i(2, 2)
-	var pixel: Vector2 = game.VIEW_ORIGIN + origin + (Vector2(corner) + Vector2(0.5, 0.5)) * scale
-	if not _expect(game._world_map.visible and world_map.get_pixelv(Vector2i(pixel)).is_equal_approx(
-			game.MAP_COLORS[World.terrain(corner)]), "The world map key did not open the world map"):
+	# It opens zoomed in on you: your own tile's terrain sits at the map's centre.
+	var maps: Node = game.maps
+	var here: Vector2i = game.world.players[1]["cell"]
+	var probe: Vector2i = here + Vector2i(3, 2)
+	var pixel: Vector2 = game.VIEW_ORIGIN + maps.map_point(Vector2(probe) + Vector2(0.5, 0.5))
+	if not _expect(game._world_map.visible and maps.zoom >= maps.OPEN_ZOOM and world_map.get_pixelv(Vector2i(pixel)).is_equal_approx(
+			maps._texture.get_image().get_pixelv(probe)), "The world map key did not open the world map zoomed in on you (zoom %s)" % maps.zoom):
+		return false
+	# Wheel in around a point (it stays under the cursor), drag (the map follows the mouse), then
+	# wheel out until the whole map fits, where it can no longer pan.
+	var middle: Vector2 = game._world_map.size / 2.0
+	var wheel_in := InputEventMouseButton.new()
+	wheel_in.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel_in.pressed = true
+	wheel_in.position = middle + Vector2(100, 50)
+	var under: Vector2 = maps.center + (wheel_in.position - maps._map_area().get_center()) / maps.zoom
+	game._world_map.gui_input.emit(wheel_in)
+	var kept: bool = maps.map_point(under).distance_to(wheel_in.position) < 1.0 and maps.zoom > maps.OPEN_ZOOM
+	var before: Vector2 = maps.center
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	game._world_map.gui_input.emit(press)
+	var motion := InputEventMouseMotion.new()
+	motion.relative = Vector2(-40, -30)
+	game._world_map.gui_input.emit(motion)
+	press.pressed = false
+	game._world_map.gui_input.emit(press)
+	var dragged: bool = maps.center.distance_to(before + Vector2(40, 30) / maps.zoom) < 0.01 and game._world_map.visible
+	for step: int in 12:
+		var wheel := InputEventMouseButton.new()
+		wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+		wheel.pressed = true
+		wheel.position = middle
+		game._world_map.gui_input.emit(wheel)
+	var whole: bool = is_equal_approx(maps.zoom, maps._fit_zoom())
+	if not _expect(whole and kept and dragged, "World map zoom (whole %s, kept %s) or drag (%s) is wrong" % [whole, kept, dragged]):
 		return false
 	await _press("world_map")
 	if not _expect(not game._world_map.visible, "M did not close the world map"):
@@ -709,7 +739,8 @@ func _sail(from: String, to: String) -> bool:
 	await process_frame
 	return _expect(pressed and not game._travel_panel.visible and player["gold"] == gold - World.FERRYMEN[from]["routes"][to]
 		and World.chebyshev(player["cell"], World.FERRYMEN[to]["cell"]) <= World.TALK_RANGE,
-		"The ferry did not sail from %s to %s" % [from, to])
+		"The ferry did not sail from %s to %s (pressed %s, panel %s, gold %d of %d, at %s, feedback %s)" % [from, to, pressed,
+			game._travel_panel.visible, player["gold"], gold, player["cell"], game.last_action_message])
 
 
 ## Spawns two monsters beside the player, locks one with a real left-click, and checks the
@@ -1154,6 +1185,54 @@ func _check_training_hall() -> bool:
 	game._publish_actor(1)
 	await create_timer(0.5).timeout
 	return _expect(chosen, "Choosing a vocation at the trainer did not make the Adventurer a Paladin")
+
+
+## The lexicon (K) searched for "silk" lists the spiders with their drops; a level-12 player
+## at Cinder Landing sees Harbourmaster Ilse's "!" and the quest list's next stop.
+func _check_lexicon_and_marks() -> bool:
+	await _press("lexicon")
+	var book: Control = game.lexicon
+	book.search.text = "silk"
+	book.search.text_changed.emit("silk")
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-lexicon.png")
+	var names: Array = []
+	for index: int in book.list.item_count:
+		names.append(book.list.get_item_text(index).get_slice("   ", 0))
+	var text: PackedStringArray = []
+	_texts(book, text)
+	if not _expect(book.visible and names.has("Cave spider") and names.has("Venom weaver") and not names.has("Field vole")
+			and "\n".join(text).contains("Spider silk") and "\n".join(text).contains("Silkhollow (dungeon)"),
+			"The lexicon search for silk did not find the spiders and their drops (%s)" % [names]):
+		return false
+	await _press("lexicon")
+	var player: Dictionary = game.world.players[1]
+	var saved: Dictionary = {"cell": player["cell"], "level": player["level"], "tasks": player["tasks"].duplicate(),
+		"done": player["done_tasks"].duplicate()}
+	var ilse: Dictionary = World.QUEST_GIVERS["harbourmaster_ilse"]
+	player["level"] = 12
+	player["tasks"] = {}
+	player["done_tasks"] = {}
+	player["cell"] = ilse["cell"] + Vector2i(0, 2)
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-quest-marks.png")
+	var listed: PackedStringArray = []
+	_texts(game.quest_list, listed)
+	var marked: String = World.quest_mark("harbourmaster_ilse", game.actors[1]["state"])
+	player["level"] = saved["level"]
+	player["tasks"] = saved["tasks"]
+	player["done_tasks"] = saved["done"]
+	player["cell"] = saved["cell"]
+	player["from"] = saved["cell"]
+	game._publish_actor(1)
+	await create_timer(0.5).timeout
+	return _expect(marked == "!" and "\n".join(listed).contains("Next: Wolves at the woodline"),
+		"Harbourmaster Ilse shows no quest mark, or the quest list no next stop (%s)" % [listed])
 
 
 func _texts(node: Node, into: PackedStringArray) -> void:

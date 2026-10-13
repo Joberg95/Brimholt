@@ -191,12 +191,12 @@ func _draw() -> void:
 		elif tile == "npc":
 			var npc: Dictionary = World.npc(World.NPC_CELLS[cell])
 			var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
-			var keeper: bool = "quests" in npc["services"]
+			var keeper: bool = "quests" in npc["services"] or "vocation" in npc["services"]
 			var look: Array = TOWNSFOLK_LOOKS.get(npc.get("role", ""),
 				[QUEST_GIVER_GEAR, QUEST_GIVER_TINT] if keeper else [FERRYMAN_GEAR, SpriteArt.NPC_TINT])
 			SpriteArt.draw_actor(self, center, {"id": 0, "facing": npc["facing"], "equipment": look[0]}, false, 0.0, look[1])
 			if not covered(cell):
-				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME])
+				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME, World.NPC_CELLS[cell]])
 		for id: int in occupants.get(cell, []):
 			if id > 0:
 				_draw_actor(id)

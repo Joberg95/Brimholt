@@ -31,6 +31,11 @@ const QUEST_GIVERS: Array = [
 	["sexton_wren", "Sexton Wren", "Ashford", Vector2i(189, 127), Vector2i.RIGHT],
 	["foreman_dagny", "Foreman Dagny", "Highmoor", Vector2i(337, 75), Vector2i.RIGHT],
 	["trapper_maud", "Trapper Maud", "Thornfield Wilds", Vector2i(85, 165), Vector2i.LEFT],
+	# Quest hubs: one giver per hunting band, on the plaza of the town nearest its monsters.
+	["harbourmaster_ilse", "Harbourmaster Ilse", "Cinder Landing", Vector2i(33, 48), Vector2i.UP],
+	["fenwarden_ostrel", "Fenwarden Ostrel", "Reedmere", Vector2i(146, 196), Vector2i.UP],
+	["quartermaster_rhosyn", "Quartermaster Rhosyn", "Dunmere", Vector2i(192, 271), Vector2i.RIGHT],
+	["huntmaster_corvel", "Huntmaster Corvel", "Emberfall", Vector2i(286, 200), Vector2i.RIGHT],
 	# Cinder Crossing's training hall (its old bank house): the trial master by the door, and
 	# one vocation trainer in each corner (Quests.TRAINERS).
 	["trial_master", "Master Hesk", "Cinder Crossing", Vector2i(21, 12), Vector2i.DOWN],

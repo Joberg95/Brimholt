@@ -6,6 +6,7 @@ const Balance = preload("res://game/data/balance.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const Lexicon = preload("res://game/core/lexicon.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Items = preload("res://game/data/items.gd")
 const Economy = preload("res://game/core/economy.gd")
@@ -150,6 +151,7 @@ func _run() -> void:
 	_slot_and_stat_checks()
 	_balance_checks()
 	_adventurer_checks()
+	_quest_hub_and_lexicon_checks()
 	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
 
@@ -227,6 +229,75 @@ func _adventurer_checks() -> void:
 	check(adventurer["level"] > Balance.ADVENTURER_MAX_LEVEL, "with a vocation you level past the cap")
 	check(CharacterStore.saved_vocation({"vocation": Balance.ADVENTURER}) == Balance.ADVENTURER
 		and CharacterStore.saved_vocation({"vocation": "pirate"}).is_empty(), "saves keep Adventurers and refuse unknown vocations")
+
+
+## Quest hubs leave no level without a task, givers mark what they have for you, turning in
+## points to the next stop, and the lexicon reports the drop tables the server rolls.
+func _quest_hub_and_lexicon_checks() -> void:
+	for task: String in Quests.TASKS:
+		var band: Vector2i = World.task_levels(task)
+		var definition: Dictionary = Quests.TASKS[task]
+		check(band.x >= 1 and band.y >= band.x and World.QUEST_GIVERS.has(definition["giver"]), "%s has placed monsters and a giver" % task)
+		if definition.has("level"):
+			check(definition["level"] >= band.x and definition["level"] <= band.y, "%s pays for a level its monsters have" % task)
+	for level: int in range(1, Balance.MAX_LEVEL + 1):
+		var state: Dictionary = {"level": level, "vocation": "knight" if level > Balance.ADVENTURER_MAX_LEVEL else Balance.ADVENTURER,
+			"tasks": {}, "done_tasks": []}
+		check(not World.next_task(state).is_empty(), "a task fits at every level (%d)" % level)
+	check(World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": []}) == "wolf_winter"
+		and World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": ["wolf_winter"]}) == "highway_robbers",
+		"the suggestion moves to the best remaining fit")
+	check(World.next_task({"level": 3, "vocation": "knight", "tasks": {}, "done_tasks": []}) != Quests.TRIAL_TASK
+		and World.task_open(Quests.TRIAL_TASK, {"vocation": Balance.ADVENTURER, "tasks": {}, "done_tasks": []}),
+		"only Adventurers are pointed to the trial")
+	var hub: Dictionary = {"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": [], "trophies": {}}
+	check(World.quest_mark("harbourmaster_ilse", hub) == "!" and World.quest_mark("huntmaster_corvel", hub) == ""
+		and World.quest_mark("trainer_knight", hub) == "" and World.quest_mark("relic_keeper", hub) == "",
+		"givers mark only what fits you")
+	hub["tasks"] = {"wolf_winter": 20}
+	check(World.quest_mark("harbourmaster_ilse", hub) == "?", "a finished task marks its giver ?")
+	hub["tasks"] = {}
+	hub["done_tasks"] = ["wolf_winter", "highway_robbers"]
+	hub["trophies"] = {"morvain": 1}
+	check(World.quest_mark("harbourmaster_ilse", hub) == "" and World.quest_mark("relic_keeper", hub) == "?",
+		"a done giver loses its mark; a trophy marks its relic keeper")
+	check(World.quest_mark("trainer_druid", {"level": 5, "vocation": Balance.ADVENTURER, "done_tasks": [Quests.TRIAL_TASK]}) == "!",
+		"trainers mark a qualified Adventurer")
+	var world := World.new()
+	var combat := Combat.new(world, 3)
+	world.monsters.clear()
+	world.add_player(1, 0.0, "knight")
+	var player: Dictionary = world.players[1]
+	player["level"] = 10
+	_place(world, 1, World.QUEST_GIVERS["harbourmaster_ilse"]["cell"] + World.QUEST_GIVERS["harbourmaster_ilse"]["facing"])
+	combat.task_action(1, "harbourmaster_ilse", "highway_robbers", "accept", 1.0)
+	player["tasks"]["highway_robbers"] = 20
+	var turned: Dictionary = combat.task_action(1, "harbourmaster_ilse", "highway_robbers", "complete", 2.0)
+	var texts: Array = turned["events"].filter(func(event: Dictionary) -> bool: return event["kind"] == "message") \
+		.map(func(event: Dictionary) -> String: return event["text"])
+	check(turned["ok"] and texts.size() == 1 and not texts[0].contains("Next:"), "a giver with more work for you does not send you away")
+	player["done_tasks"]["wolf_winter"] = true
+	player["done_tasks"].erase("highway_robbers")
+	player["level"] = 14
+	player["tasks"]["highway_robbers"] = 20
+	turned = combat.task_action(1, "harbourmaster_ilse", "highway_robbers", "complete", 3.0)
+	texts = turned["events"].filter(func(event: Dictionary) -> bool: return event["kind"] == "message").map(
+		func(event: Dictionary) -> String: return event["text"])
+	check(texts.any(func(text: String) -> bool: return text.contains("Next: Fenwarden Ostrel in Reedmere")),
+		"turning in a hub's last task names the next giver (%s)" % [texts])
+	# Lexicon.
+	var kinds: Array = Lexicon.entries().map(func(found: Dictionary) -> String: return found["kind"])
+	check(kinds.size() == Monsters.MONSTERS.size() and Monsters.MONSTERS.keys().all(func(kind: String) -> bool: return kind in kinds),
+		"the lexicon lists every monster once")
+	for found: Dictionary in Lexicon.entries():
+		check(found["drops"] == Monsters.LOOT[found["kind"]] and not found["places"].is_empty() and found["levels"].x >= 1
+			and found["gear"] == Combat.GEAR_DROP_CHANCE[found["rank"]], "%s's lexicon entry matches its loot and spawns" % found["kind"])
+	var spider: Dictionary = Lexicon.entry("cave_spider")
+	check(spider["places"] == ["Silkhollow (dungeon)"] and spider["tasks"] == ["silk_harvest"] and Lexicon.matches(spider, "SILK")
+		and Lexicon.matches(spider, "spider silk") and not Lexicon.matches(spider, "golem"), "lexicon search finds names, places, and drops")
+	var vole: Dictionary = Lexicon.entry("field_vole")
+	check(vole["gold"] == roundi(0.6 * World.ITEMS["gold_coins"]["gold"]) and vole["places"] == ["Cinder Meadows"],
+		"the lexicon's gold matches the expected coin piles")
 
 
 func _inventory_checks() -> void:

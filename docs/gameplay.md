@@ -16,7 +16,7 @@ Drag a spell's rune from the book onto the action bar to put it there. Before yo
 shows the Adventurer's spells.
 
 The **micro menu** right of the action bar has a button for each panel: Character (C), Spell
-book (B), Quests (L), World map (M), and Controls. A gold frame marks the panels that are
+book (B), Quests (L), Lexicon (K), World map (M), and Controls. A gold frame marks the panels that are
 open; hover a button for its key. The **character window** explains every stat (your base
 value, what your gear adds, and what the stat does, such as how much your defense cuts
 damage), shows experience to the next level, and your status: gold and bank, party, skull,
@@ -203,6 +203,31 @@ boars, levels 5–7), **Captain Ardo** in Ashford (25 outlaw archers, levels 19�
 kill of that monster that earns you experience (your own or your party's shared kills) counts;
 progress shows in the message line and in the quest dialog. Turn it in to the giver.
 
+**Quest hubs** fill the levels between: one giver in the town nearest each band of overworld
+monsters, paying experience and gold.
+
+| Giver | Town | Tasks | Monster levels |
+| --- | --- | --- | --- |
+| Harbourmaster Ilse | Cinder Landing | 20 road bandits; 20 grey wolves | 8–10; 11–14 |
+| Fenwarden Ostrel | Reedmere | 25 bog lurkers | 15–18 |
+| Quartermaster Rhosyn | Dunmere | 25 stone golems; 25 cinder wraiths | 24–28; 29–32 |
+| Huntmaster Corvel | Emberfall | 25 mire stalkers; 25 fen beasts (reedfangs, bog hulks) | 36–44; 40–48 |
+
+**Where to go next:** a gold **!** over a quest giver means they have a task that suits your
+level (or, over a trainer, that you may choose a vocation); a **?** means you can turn
+something in (or bring a relic keeper a trophy). The same marks appear on the world map. The
+quest list always ends with **Next**: the open task that fits your level best (monsters up
+to 2 levels above you and not more than 5 below), with its giver, town, and monster levels;
+and when you turn in a giver's last task that suits you, they name the next giver to visit.
+Every level from 1 to 50 has a task that fits.
+
+**The Lexicon** (K, or the magnifier in the micro menu) lists every monster from the lowest
+level up, coloured by rank: where it lives (regions, zones, and dungeons), its levels, the
+tasks it counts toward, and its drop table: each material and hunting weapon with its chance
+and what a vendor pays, the gold it usually drops, its chance of tier gear, and a final
+boss's relics. Search by monster, place, or item: "silk" finds the spiders, "Greywood" the
+monsters that live there. Hover a drop for its tooltip.
+
 **Dungeon tasks** are given by the stairway down into each dungeon: **Cellarmaster Pell** in
 Cinder Crossing (25 cellar rats, then the Rat King), **Sexton Wren** inside Ashford's crypt
 house (30 risen dead, then Abbot Morrow), and **Foreman Dagny** inside Highmoor's mine house
@@ -230,7 +255,8 @@ Smoulder Fells, the Sunscar Dunes (the desert), the Hollow March, Lastlight Down
 Emberwaste, the Mirewood Fen, and the Gloamwood (levels 34–45). The line under the minimap
 shows where you are and the monster levels there, coloured white, yellow, or red by how they
 compare to your level (hover it for a description); crossing into a new region is announced.
-The world map (M) labels every region with its levels. A region's levels come from the
+The world map (M) opens zoomed in on you; scroll (or + and −) to zoom around the cursor down
+to the whole map, drag to move it, and close it with M, Esc, or Close. It labels every region with its levels. A region's levels come from the
 monsters placed in it, so they stay correct when spawns move.
 
 The sky follows a 40-minute day and night and changing weather: clear, overcast, rain, and

@@ -81,7 +81,12 @@ static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 const MAX_PLAYERS: int = 12
 const PORT: int = 1234
-const PROTOCOL: int = 10
+const PROTOCOL: int = 11
+## Tasks are suggested (and marked "!") up to this many levels above you, and until you are
+## this many levels past their monsters.
+const NEXT_TASK_AHEAD: int = 2
+const NEXT_TASK_BEHIND: int = 5
+static var _task_levels: Dictionary = {}
 const START_GOLD: int = 100
 ## Players must stand within this many tiles (in any direction) of a ferryman to sail.
 const TALK_RANGE: int = 2
@@ -915,6 +920,73 @@ static func receiving_slot(slots: Array, kind: String, count: int) -> int:
 
 
 ## Wears a pack in the bag slot (replacing any smaller one) and grows the backpack to fit.
+## The level band (x..y) of the monsters a task counts: its dungeon's band, or their overworld
+## spawn levels. Computed once per task from the map.
+static func task_levels(task: String) -> Vector2i:
+	if _task_levels.has(task):
+		return _task_levels[task]
+	var dungeon: String = Quests.dungeon_of(task)
+	var band := Vector2i(Balance.MAX_LEVEL, 0)
+	if not dungeon.is_empty():
+		band = Vector2i(Dungeons.DUNGEONS[dungeon]["min_level"], Dungeons.DUNGEONS[dungeon]["max_level"])
+	else:
+		for spawn: Dictionary in MONSTER_SPAWNS:
+			if Quests.counts(task, spawn["monster"]):
+				band = Vector2i(mini(band.x, spawn["level"]), maxi(band.y, spawn["level"]))
+	if band.y == 0:
+		band = Vector2i.ZERO
+	_task_levels[task] = band
+	return band
+
+
+## Whether a character (a player record, or a client's exported state) may still accept `task`:
+## not done, not on it, its giver placed, and the trial only for Adventurers.
+static func task_open(task: String, state: Dictionary) -> bool:
+	if task in state.get("done_tasks", []) or state.get("tasks", {}).has(task) or not QUEST_GIVERS.has(Quests.TASKS[task]["giver"]):
+		return false
+	return task != Quests.TRIAL_TASK or state.get("vocation", "") == Balance.ADVENTURER
+
+
+## Whether a task suits a character's level: its monsters are at most NEXT_TASK_AHEAD levels
+## above, and not long outgrown.
+static func task_fits(task: String, level: int) -> bool:
+	var band: Vector2i = task_levels(task)
+	return band.x <= level + NEXT_TASK_AHEAD and band.y >= level - NEXT_TASK_BEHIND
+
+
+## The task to suggest next: the open task that fits with the highest monster levels, so the
+## suggestion moves on as you level; "" when none fits.
+static func next_task(state: Dictionary) -> String:
+	var best: String = ""
+	var level: int = state.get("level", 1)
+	for task: String in Quests.TASKS:
+		if task_open(task, state) and task_fits(task, level) \
+				and (best.is_empty() or task_levels(task).x > task_levels(best).x):
+			best = task
+	return best
+
+
+## The mark over an NPC for a character: "?" when they can turn something in (a finished task,
+## a boss trophy for a relic keeper), "!" when they offer something for you now (a task that
+## fits, or a vocation to a qualified Adventurer), else "".
+static func quest_mark(npc_id: String, state: Dictionary) -> String:
+	var giver: Dictionary = QUEST_GIVERS.get(npc_id, {})
+	if giver.is_empty():
+		return ""
+	if Quests.TRAINERS.has(npc_id):
+		var ready: bool = state.get("vocation", "") == Balance.ADVENTURER and Quests.TRIAL_TASK in state.get("done_tasks", []) \
+			and state.get("level", 1) >= Balance.CHOOSE_LEVEL
+		return "!" if ready else ""
+	if not giver["boss"].is_empty():
+		return "?" if state.get("trophies", {}).get(giver["boss"], 0) > 0 else ""
+	var offer: bool = false
+	for task: String in giver["tasks"]:
+		if state.get("tasks", {}).get(task, -1) >= Quests.TASKS[task]["count"]:
+			return "?"
+		offer = offer or (task_open(task, state) and task_levels(task).x <= state.get("level", 1) + NEXT_TASK_AHEAD)
+	return "!" if offer else ""
+
+
 ## An Adventurer who passed the trial and reached Balance.CHOOSE_LEVEL takes up the vocation
 ## taught by `trainer`, for good, and receives its tier-1 weapon and off-hand (the ones
 ## not already carried). Returns {ok, events} or {ok: false, reason}.

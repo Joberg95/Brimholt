@@ -24,6 +24,7 @@ const QuestList = preload("res://game/ui/quest_list.gd")
 const SpellBook = preload("res://game/ui/spell_book.gd")
 const CharacterWindow = preload("res://game/ui/character_window.gd")
 const MicroMenu = preload("res://game/ui/micro_menu.gd")
+const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -99,6 +100,7 @@ var quest_list: QuestList
 var spell_book: SpellBook
 var character_window: CharacterWindow
 var micro_menu: MicroMenu
+var lexicon: LexiconWindow
 var inventory: InventoryPanel
 var maps: WorldMaps
 var action_bar: ActionBar
@@ -234,7 +236,7 @@ func _process(delta: float) -> void:
 			actor["visual"] = actor["start"].lerp(Vector2(actor["state"]["cell"]), weight)
 	var clock: float = Time.get_ticks_msec() / 1000.0
 	effects = effects.filter(func(effect: Dictionary) -> bool: return clock - effect["born"] < 1.1)
-	if connected and self_id != 0 and not _address.has_focus() and not _controls.visible \
+	if connected and self_id != 0 and not typing() and not _controls.visible \
 			and _move_pending_since < 0.0 and now >= _next_move_attempt:
 		var direction: Vector2i = _input_direction()
 		if direction == Vector2i.ZERO:
@@ -265,17 +267,18 @@ func _input_direction() -> Vector2i:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.is_pressed() or event.is_echo() or _address.has_focus():
+	if not event is InputEventKey or not event.is_pressed() or event.is_echo() or (typing() and not _escape(event)):
 		return
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
 		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
-				and not character_window.visible and own_target() != 0:
+				and not character_window.visible and not lexicon.visible and own_target() != 0:
 			target_local(0)
 		_world_map.hide()
 		_close_travel()
 		_controls.hide()
 		spell_book.hide()
 		character_window.hide()
+		lexicon.hide()
 		return
 	var key: Key = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	var action: String = keybinds.action_for(key)
@@ -283,6 +286,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		use_bar_slot(int(action.trim_prefix("slot_")) - 1)
 	elif not action.is_empty():
 		_run_action(action)
+
+
+## Whether a text field (the address, the lexicon search) has the keyboard: game keys wait.
+func typing() -> bool:
+	return get_viewport().gui_get_focus_owner() is LineEdit
+
+
+static func _escape(event: InputEventKey) -> bool:
+	return event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE
 
 
 ## Opens or closes a panel from the micro menu: a Keybinds action, or "controls".
@@ -298,6 +310,8 @@ func panel_open(action: String) -> bool:
 	match action:
 		"character":
 			return character_window.visible
+		"lexicon":
+			return lexicon.visible
 		"spell_book":
 			return spell_book.visible
 		"quest_list":
@@ -324,6 +338,8 @@ func _run_action(action: String) -> void:
 		spell_book.toggle()
 	elif action == "character":
 		character_window.toggle()
+	elif action == "lexicon":
+		lexicon.toggle()
 	elif not connected:
 		return
 	elif action == "pick_up":
@@ -1365,13 +1381,16 @@ func _build_ui() -> void:
 	character_window = CharacterWindow.new()
 	character_window.game = self
 	layer.add_child(character_window)
+	lexicon = LexiconWindow.new()
+	lexicon.game = self
+	layer.add_child(lexicon)
 	micro_menu = MicroMenu.new()
 	add_child(micro_menu)
 	micro_menu.build(self, layer)
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
-	# list, location line, spell book, character window, world map, dialog panel, and Controls menu.
+	# list, location line, spell book, character window, lexicon, world map, dialog panel, and Controls menu.
 	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, character_window,
-			maps.world_map, dialogs.panel, hud.controls]:
+			lexicon, maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_controls = hud.controls

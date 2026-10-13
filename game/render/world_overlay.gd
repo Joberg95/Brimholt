@@ -18,14 +18,25 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 
 
+const QUEST_MARK: Color = Color("#ffd84a")
+
+
 func _draw() -> void:
 	_draw_overlays(view.visible_cells(), Time.get_ticks_msec() / 1000.0)
 	var font: Font = ThemeDB.fallback_font
+	var own: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var time: float = Time.get_ticks_msec() / 1000.0
 	for entry: Array in view.npc_names:
 		var width: float = font.get_string_size(entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
 		var at: Vector2 = entry[0] + Vector2(-width / 2.0, -SpriteArt.FRAME_ANCHOR.y + 10)
 		draw_string_outline(font, at, entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, SpriteArt.OUTLINE)
 		draw_string(font, at, entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, entry[2])
+		# "!" a quest giver has something for you, "?" you can turn something in; it bobs gently.
+		var mark: String = World.quest_mark(entry[3], own) if entry.size() > 3 and not own.is_empty() else ""
+		if not mark.is_empty():
+			var top: Vector2 = entry[0] + Vector2(-3, -SpriteArt.FRAME_ANCHOR.y + 1 + sin(time * 3.0) * 1.5)
+			draw_string_outline(font, top, mark, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 4, SpriteArt.OUTLINE)
+			draw_string(font, top, mark, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, QUEST_MARK)
 
 
 func _center_of(state_view: Dictionary) -> Vector2:

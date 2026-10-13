@@ -91,7 +91,8 @@ These are the default keys; every key can be changed (see below).
 | Right-click a person | Open their menu (ferrymen: **Travel**; vendors: **Trade**; bankers: **Bank**; quest givers: **Quests**) |
 | Q / E | Drink a health / mana potion |
 | Right-click / click a bar slot | Choose its spell / cast it |
-| M | Open or close the world map |
+| M | Open or close the world map (drag to move, mouse wheel to zoom) |
+| K | Open or close the Lexicon (monsters, where they live, and their drops) |
 | L | Show or hide the quest list (your tasks, their givers, and your progress) |
 | Esc | Close menus, or release your target (cannot be rebound) |
 | Leave / close window | Disconnect; leaving the host ends the session |

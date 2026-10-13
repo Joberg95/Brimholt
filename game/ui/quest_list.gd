@@ -1,7 +1,8 @@
 extends PanelContainer
 ## The quest list in the top-left of the game window: each task you are on, its giver and town,
-## and your progress (or a reminder to turn it in). Rebuilt only when your tasks change; hidden
-## when you have none or when toggled off with the quest list key (Keybinds "quest_list").
+## and your progress (or a reminder to turn it in), then where to go next (World.next_task).
+## Rebuilt only when your tasks or level change; hidden when there is nothing to show or when
+## toggled off with the quest list key (Keybinds "quest_list").
 
 const World = preload("res://game/core/world.gd")
 const Quests = preload("res://game/data/quests.gd")
@@ -11,6 +12,7 @@ const TITLE: Color = Color("#ffcf6a")
 const GIVER: Color = Color("#a7b0b8")
 const PROGRESS: Color = Color("#e8e4da")
 const DONE: Color = Color("#9fe07a")
+const NEXT: Color = Color("#8fd0ff")
 
 var game: Node
 ## Toggled by the quest list key; the list still hides itself when there is nothing to show.
@@ -41,13 +43,14 @@ func _init() -> void:
 func refresh() -> void:
 	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
 	var tasks: Dictionary = state.get("tasks", {})
-	var key: String = "%s|%s" % [shown, tasks]
+	var next: String = World.next_task(state) if not state.is_empty() else ""
+	var key: String = "%s|%s|%s" % [shown, tasks, next]
 	if key == _key:
 		return
 	_key = key
 	for child: Node in _list.get_children():
 		child.queue_free()
-	visible = shown and not tasks.is_empty()
+	visible = shown and (not tasks.is_empty() or not next.is_empty())
 	if not visible:
 		size = Vector2.ZERO
 		return
@@ -68,6 +71,12 @@ func refresh() -> void:
 			_line("  Slay %s" % Quests.target_name(task), 11, PROGRESS)
 		else:
 			_line("  %d/%d %s" % [done, definition["count"], Quests.target_name(task)], 11, PROGRESS)
+	if not next.is_empty():
+		var giver: Dictionary = World.QUEST_GIVERS[Quests.TASKS[next]["giver"]]
+		var band: Vector2i = World.task_levels(next)
+		_line("Next: %s" % Quests.TASKS[next]["title"], 12, NEXT)
+		_line("  %s, %s" % [giver["name"], giver["place"]], 10, GIVER)
+		_line("  Monsters level %d-%d" % [band.x, band.y], 10, GIVER)
 	size = Vector2(WIDTH, 0)
 
 
