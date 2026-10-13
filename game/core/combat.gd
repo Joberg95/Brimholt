@@ -326,7 +326,7 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	var player: Dictionary = world.players[id]
 	var definition: Dictionary = Spells.SPELLS[spell]
 	if not Spells.allows(spell, player["vocation"]):
-		return {"ok": false, "reason": "Your vocation cannot cast %s" % definition["name"], "events": []}
+		return {"ok": false, "reason": "Your class cannot cast %s" % definition["name"], "events": []}
 	if player["level"] < definition["level"]:
 		return {"ok": false, "reason": "%s needs level %d" % [definition["name"], definition["level"]], "events": []}
 	if now < player["cooldowns"].get(spell, -INF) or now < player["groups"].get(definition["group"], -INF):
@@ -969,7 +969,7 @@ func grant_experience(id: int, amount: int, events: Array) -> void:
 		var full: int = Balance.experience_to_next(Balance.ADVENTURER_MAX_LEVEL) - 1
 		if player["level"] < Balance.ADVENTURER_MAX_LEVEL or player["experience"] < full:
 			events.append({"kind": "message", "id": id, "text":
-				"You cannot grow past level %d without a vocation. Choose one at a trainer in Cinder Crossing." % Balance.ADVENTURER_MAX_LEVEL})
+				"You cannot grow past level %d without a class. Choose one at a trainer in Cinder Crossing." % Balance.ADVENTURER_MAX_LEVEL})
 		result = [Balance.ADVENTURER_MAX_LEVEL, full]
 	player["level"] = result[0]
 	player["experience"] = result[1]

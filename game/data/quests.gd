@@ -17,7 +17,7 @@ const TASKS: Dictionary = {
 	# choose a vocation at a trainer. "level" sets the reward for monsters outside dungeons.
 	"adventurers_trial": {"title": "The adventurer's trial", "giver": "trial_master", "monster": "thornback_boar",
 		"count": 8, "level": 6, "reward": "experience", "share": 0.5,
-		"intro": "Every vocation began as an adventurer. Hunt eight thornback boars in Greywood,\nand the trainers in the hall behind me will teach you."},
+		"intro": "Every hero began as an adventurer. Hunt eight thornback boars in Greywood,\nand the trainers in the hall behind me will teach you."},
 	"boar_cull": {"title": "Boar cull", "giver": "warden_brask", "monster": "thornback_boar", "count": 15,
 		"reward": "pack", "intro": "Thornback boars are tearing up the fields beyond the town walls."},
 	"outlaw_bounty": {"title": "Outlaw bounty", "giver": "captain_ardo", "monster": "outlaw_archer", "count": 25,
@@ -83,8 +83,8 @@ const TRIAL_TASK: String = "adventurers_trial"
 ## Vocation trainers in Cinder Crossing's training hall: quest giver -> the vocation they teach,
 ## with what they say about it.
 const TRAINERS: Dictionary = {
-	"trainer_knight": ["knight", "Knights stand in front: the most health and armour, blades, axes, and maces, and Challenge to pull monsters off friends."],
-	"trainer_paladin": ["paladin", "Paladins shoot from six tiles with bows and crossbows, heal themselves, and hit hard all the way to level 50."],
+	"trainer_knight": ["knight", "Warriors stand in front: the most health and armour, blades, axes, and maces, and Challenge to pull monsters off friends."],
+	"trainer_paladin": ["paladin", "Hunters shoot from six tiles with bows and crossbows, heal themselves, and hit hard all the way to level 50."],
 	"trainer_sorcerer": ["sorcerer", "Sorcerers burn everything from five tiles with wands: the most damage and mana, but little health."],
 	"trainer_druid": ["druid", "Druids keep everyone alive with healing that reaches the whole party, and freeze enemies with rods."],
 }

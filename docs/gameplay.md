@@ -5,13 +5,13 @@ How Brimholt plays: key bindings, combat, parties, loot, death, the world, inven
 ## Action bar and key bindings
 
 The nine-slot action bar sits at the bottom of the game window, with each slot's key in its
-corner. The bar holds spells only: right-click a slot to pick one of your vocation's spells
+corner. The bar holds spells only: right-click a slot to pick one of your class's spells
 or clear it, or drag a slot onto another to swap them. Hover a slot to see what its spell
 does: its unlock level, effect, damage or healing for your current level and gear (damage is
 before the target's armour), mana cost, and cooldown.
 
 The **spell book** (B, or "Open spell book" in a slot's right-click menu) lists every spell of
-your vocation by unlock level with the same details; locked spells say the level they need.
+your class by unlock level with the same details; locked spells say the level they need.
 Drag a spell's rune from the book onto the action bar to put it there. Before you join, it
 shows the Adventurer's spells.
 
@@ -31,18 +31,18 @@ are saved per computer in Godot's user data folder (`user://keybinds.cfg`).
 
 Combat follows Tibia's model. Left-click a monster (or Space for the nearest) to lock it
 with a red square; you then attack automatically every **2 seconds** while it is in reach.
-Knights fight in melee (any of the 8 surrounding tiles); Paladins (6 tiles), Sorcerers, and
+Warriors fight in melee (any of the 8 surrounding tiles); Hunters (6 tiles), Sorcerers, and
 Druids (5 tiles) attack at range, which needs a clear line of sight: walls and trees block
 it, water does not. If your target is out of reach and you are not steering, you walk
 toward it. Spells sit on the action bar; each costs mana, has its own cooldown, and starts
-a shared cooldown for its group (attack 2 s, healing 1 s). Every vocation has Light heal, and each
+a shared cooldown for its group (attack 2 s, healing 1 s). Every class has Light heal, and each
 unlocks stronger spells as it levels, so its damage keeps growing (spell damage is your attack
 times the spell's power):
 
-| Vocation | Spells (unlock level) |
+| Class | Spells (unlock level) |
 | --- | --- |
-| Knight | Brutal blow (1), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
-| Paladin | Piercing shot (1), Holy mend (8), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
+| Warrior | Brutal blow (1), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
+| Hunter | Piercing shot (1), Holy mend (8), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
 | Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
 | Druid | Frost bolt (1), Mend (1), Mass mend (10, heals everyone within 3 tiles), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
 
@@ -89,10 +89,10 @@ cannot attack each other, even on Blackreed Isle.
 
 Like Tibia's shared experience, the party pools its members' share of each kill and splits
 it evenly among members who are within 20 tiles of the kill and dealt damage, were hit,
-or healed another player in the last 2 minutes (casting at full health does not count). So a Knight who tanks while a Sorcerer
+or healed another player in the last 2 minutes (casting at full health does not count). So a Warrior who tanks while a Sorcerer
 deals the damage levels just as fast. Sharing needs at least two such members whose lowest
 level is at least two thirds of the highest (otherwise everyone keeps their own damage
-share). Distinct vocations among them multiply the pool: ×1.2 for one, ×1.3 for two, ×1.6
+share). Distinct classes among them multiply the pool: ×1.2 for one, ×1.3 for two, ×1.6
 for three, and ×2 for all four.
 
 ## Loot
@@ -109,7 +109,7 @@ needs a row in `game/data/items.json` and a loot row; `make sprites` draws its i
 ### Hunting weapons
 
 Fifteen additional weapons are **source-specific drops**, not shop stock or additions to the
-generic tier pool. Existing equipment remains available. They use the same tier/vocation
+generic tier pool. Existing equipment remains available. They use the same tier/class
 attack budget as the regular weapon at that level: these are visual alternatives to collect,
 not extra damage types or a new combat system. They can be equipped, sold, stored and saved
 normally; none is a glowing or bound relic. Tooltips name their hunting sources.
@@ -117,23 +117,23 @@ normally; none is a glowing or bound relic. Tooltips name their hunting sources.
 Each chance below is an independent roll per kill, in addition to normal materials, gold and
 generic gear. A monster must be at least the weapon's required level for that roll to award it.
 
-| Weapon | Level | Vocation | Source and chance |
+| Weapon | Level | Class | Source and chance |
 | --- | ---: | --- | --- |
-| Quarry handhammer | 1 | Knight | Giant rat 2%; Rat King 12% |
-| Watchman's shortsword | 5 | Knight | Road bandit 3.5% |
-| Burrow falchion | 5 | Knight | Rat King 18% |
-| Poacher's flatbow | 10 | Paladin | Grey wolf 2.5% |
+| Quarry handhammer | 1 | Warrior | Giant rat 2%; Rat King 12% |
+| Watchman's shortsword | 5 | Warrior | Road bandit 3.5% |
+| Burrow falchion | 5 | Warrior | Rat King 18% |
+| Poacher's flatbow | 10 | Hunter | Grey wolf 2.5% |
 | Alder crook | 10 | Druid | Bog lurker 3.5% |
-| Ashford arming sword | 15 | Knight | Crypt skeleton 3.5% |
-| Reedsteel sabre | 20 | Knight | Outlaw archer 2.5% |
-| Ridgewind recurve | 20 | Paladin | Outlaw archer 4% |
+| Ashford arming sword | 15 | Warrior | Crypt skeleton 3.5% |
+| Reedsteel sabre | 20 | Warrior | Outlaw archer 2.5% |
+| Ridgewind recurve | 20 | Hunter | Outlaw archer 4% |
 | Reliquary focus | 20 | Sorcerer | Abbot Morrow 12% |
-| Stonebreak pickhammer | 25 | Knight | Stone golem 3.5% |
-| Mourning estoc | 25 | Knight | Abbot Morrow 12% |
+| Stonebreak pickhammer | 25 | Warrior | Stone golem 3.5% |
+| Mourning estoc | 25 | Warrior | Abbot Morrow 12% |
 | Cinder spindle | 30 | Sorcerer | Cinder wraith 3.5% |
 | Duskroot branch | 35 | Druid | Mire stalker 3.5% |
-| Forgemaw arbalest | 40 | Paladin | Forgemaw 14% |
-| Sanctum warhammer | 45 | Knight | Obsidian golem 5.5% |
+| Forgemaw arbalest | 40 | Hunter | Forgemaw 14% |
+| Sanctum warhammer | 45 | Warrior | Obsidian golem 5.5% |
 
 ## Death and skulls
 
@@ -158,11 +158,11 @@ top-left of the game window.
 
 ## Player bots (host only)
 
-The host's top bar has a **Bots** button. Pick a vocation, a level (1–50), and a stance, then
+The host's top bar has a **Bots** button. Pick a class, a level (1–50), and a stance, then
 **Add a bot beside me**. Bots are real players on the host: they take player slots (twelve in
 all), wear the best regular gear of their level (with accessories from level 20), carry 50
 health and 50 mana potions, and play through the server's own rules, so PvP zones, skulls,
-death penalties, and loot drops all apply. Their nameplates read "Bot Knight 40" and so on.
+death penalties, and loot drops all apply. Their nameplates read "Bot Warrior 40" and so on.
 They fight like the fight simulator's careful player: their strongest ready attack spell
 while above 30% health, healing spells below 55%, a health potion below 35%, and a mana potion
 below 25% mana; ranged bots step back from anything beside them.
@@ -201,7 +201,7 @@ a wall. Town buildings have roofs that hide whoever is inside; the roof of the b
 stand in fades away while you are there.
 
 **Vendors** sell health and mana potions (20 gold each, in ones or tens) and levelling gear:
-the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your vocation, and
+the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your class, and
 torches for dark caves.
 Gear costs about 40 × level^1.05 gold (weapons a quarter more): 40–50 gold at tier 1,
 215–270 at tier 5, and 450–560 at tier 10. Better gear comes from monsters and quests. Vendors
@@ -242,7 +242,7 @@ monsters, paying experience and gold.
 | Huntmaster Corvel | Emberfall | 25 mire stalkers; 25 fen beasts (reedfangs, bog hulks) | 36–44; 40–48 |
 
 **Where to go next:** a gold **!** over a quest giver means they have a task that suits your
-level (or, over a trainer, that you may choose a vocation); a **?** means you can turn
+level (or, over a trainer, that you may choose a class); a **?** means you can turn
 something in (or bring a relic keeper a trophy). The same marks appear on the world map. The
 quest list always ends with **Next**: the open task that fits your level best (monsters up
 to 2 levels above you and not more than 5 below), with its giver, town, and monster levels;
@@ -338,7 +338,7 @@ and leaves you in town.
 | Silkhollow | Thornfield Wilds, a cave mouth west of the lake | 15–20 | cave spiders, venom weavers (spit from 3 tiles) | The Silk Matron |
 
 **Silkhollow is pitch dark**: your lantern lights only an arm's length, so you will not see a
-spider until it bites. Hold a **Torch** (15 gold at any vendor, any vocation, no stats) in your
+spider until it bites. Hold a **Torch** (15 gold at any vendor, any class, no stats) in your
 off hand for a wide, flickering light that everyone nearby sees by. That means going without
 your shield or spellbook: the spiders come singly or in pairs (weavers alone), so the camps
 stay fair without one (`make fight-sim MONSTER=cave_spider OFF_HAND=torch`). Entering without
@@ -354,16 +354,16 @@ the copy is close to the overworld on the host's map.
 The right-hand panel shows a Tibia-style paperdoll with ten slots (necklace, helmet, pack /
 main hand, armor, off hand / ring, cape, ring / charm), a backpack of 8 slots (up to 20 with
 a pack from a town task), and your stat sheet. Adventurers start with an Ember cap, Moss
-coat, Copper blade, and Oak buckler in the backpack. Choosing a vocation adds its tier-1
-weapon and off-hand if you lack them: a Willow shortbow (Paladin), a Kindling wand and
-Tattered primer (Sorcerer), or a Sapling rod and Tattered primer (Druid). Tier-5 gear for every vocation lies around Cinder Crossing. Rings
+coat, Copper blade, and Oak buckler in the backpack. Choosing a class adds its tier-1
+weapon and off-hand if you lack them: a Willow shortbow (Hunter), a Kindling wand and
+Tattered primer (Sorcerer), or a Sapling rod and Tattered primer (Druid). Tier-5 gear for every class lies around Cinder Crossing. Rings
 fit either ring slot; right-clicking a ring fills an empty ring slot first. Helmets, capes,
 armor, and both hands are drawn on the character (a cape appears only when equipped);
 rings, amulets, and charms are too small to show. Items can be dropped on any walkable
 tile, stacking up to six per tile, and the top item is picked up. Ground tiles must be
 your own tile or one of the eight around you.
 
-Peer 1 validates every item move: location shape, reach, slot type, level and vocation,
+Peer 1 validates every item move: location shape, reach, slot type, level and class,
 free space, stack limit, and a 150 ms item cooldown. Dragging onto an occupied slot swaps
 items when both fit; a worn item displaced from the ground goes back to that tile.
 Equipped items are visible to everyone; backpack contents are sent only to their
@@ -391,10 +391,10 @@ cannot use yet is tinted red in its slot.
 Equipment comes in ten tiers, every five levels (1, 5, 10 … 45), each in its own material
 and colour: copper, iron, bronze, steel, silverleaf, cobalt, embersteel, duskiron,
 starforged, and wyrmglass. Every tier has a helmet and armor for everyone, a weapon per
-vocation (Knights: swords, axes, and maces; Paladins: bows and crossbows; Sorcerers: wands;
-Druids: rods), and an off-hand (shields for Knights and Paladins, spellbooks for Sorcerers
+class (Warriors: swords, axes, and maces; Hunters: bows and crossbows; Sorcerers: wands;
+Druids: rods), and an off-hand (shields for Warriors and Hunters, spellbooks for Sorcerers
 and Druids). **Amulets, capes, charms, and rings start at tier 20.** An item needs its tier
-level and, for weapons and off-hands, your vocation: the server refuses to equip it
+level and, for weapons and off-hands, your class: the server refuses to equip it
 otherwise, and worn items you no longer qualify for (after losing levels) give no stats.
 Tooltips show the tier, level, and who can use an item; a coloured bar under each slot
 shows its tier, red when you cannot use it yet. Stats come from the balance curves
@@ -430,8 +430,8 @@ Bosses fight like raid bosses. When one engages, everyone within 20 tiles is war
 damage. Every 4 seconds it **pulses** dark energy at every player within 8 tiles, ignoring
 defense; across a ten-player raid that adds up to about 2.2 Druids' healing per second.
 Each of its hits **wounds** its target, so every next hit on that player lands 25% harder
-until 12 seconds pass without one: two Knights must take turns, the second pulling the boss
-with **Challenge** (Knight spell from level 20: monsters within 2 tiles turn on the caster).
+until 12 seconds pass without one: two Warriors must take turns, the second pulling the boss
+with **Challenge** (Warrior spell from level 20: monsters within 2 tiles turn on the caster).
 If the raid leaves, the boss walks home, heals, and forgets the fight. Its nameplate shows
 ENRAGED once it enrages.
 
@@ -441,9 +441,9 @@ who healed any of them. Standing nearby, or casting at full health, earns nothin
 of the world (gold names): **Ysolde** keeps Morvain's relics, **Brannoc the Forgemaster**
 Kharzul's, **Liraen of the Thorn** Sylvaine's, and **Oswin the Ashen** Vaelith's. Right-click
 the keeper, choose **Quests**, and trade a trophy for any one of that boss's relics: Morvain gives
-Knight and shared armor, Kharzul a Paladin bow, Sorcerer wand, amulet, and charm, and
+Warrior and shared armor, Kharzul a Hunter bow, Sorcerer wand, amulet, and charm, and
 Sylvaine a Druid rod, spellbook, cape, and ring. Vaelith's trophies buy the strongest
-relics: a void weapon for each vocation (Voidrend, Eclipse bow, Starless wand, Nightbloom
+relics: a void weapon for each class (Voidrend, Eclipse bow, Starless wand, Nightbloom
 rod) or the Sovereign's mantle. Trophies stack, so kill a boss again for
 another relic. Relics are level 50, beat the best tiered gear, glow in their boss's colour
 with drifting sparks, and are **bound**: they cannot be dropped and are never lost on death,
@@ -451,33 +451,33 @@ even with a red skull.
 
 ## Stats and balance
 
-Every new character starts as an **Adventurer**: no vocation yet, middling health and
-mana, only Light heal, and the tier-1 gear of every vocation to try (an Adventurer with a
+Every new character starts as an **Adventurer**: no class yet, middling health and
+mana, only Light heal, and the tier-1 gear of every class to try (an Adventurer with a
 bow shoots from six tiles, with a wand or rod from five). Adventurers stop at level 8.
 **Master Hesk**, outside Cinder Crossing's training hall in the south-east corner, gives
 **The adventurer's trial**: hunt eight thornback boars in Greywood. Once you have passed it and
-reached level 5, right-click a trainer in the hall and choose **Vocation**: Sir Garrow
-(Knight), Ranger Tamsin (Paladin), Magister Vell (Sorcerer), or Elder Fenna (Druid). Each
-explains the vocation and its spells; **Become a ...** is permanent, restores your health
-and mana, and hands you the vocation's tier-1 weapon and off-hand that you lack. Your
+reached level 5, right-click a trainer in the hall and choose **Class**: Sir Garrow
+(Warrior), Ranger Tamsin (Hunter), Magister Vell (Sorcerer), or Elder Fenna (Druid). Each
+explains the class and its spells; **Become a ...** is permanent, restores your health
+and mana, and hands you the class's tier-1 weapon and off-hand that you lack. Your
 spells fill the action bar at once.
 
-The four follow the classic roles: **Knight** (tank: most health, base defense), **Paladin**
+The four follow the classic roles: **Warrior** (tank: most health, base defense), **Hunter**
 (ranged damage, light healing), **Sorcerer** (burst damage, frail), and **Druid** (healer,
-frail). The host checks every choice; clients never pick their own vocation. Characters
-saved before trainers existed keep their vocation. Test hosts started with
+frail). The host checks every choice; clients never pick their own class. Characters
+saved before trainers existed keep their class. Test hosts started with
 `--allow-start-vocation` let new characters begin with `--vocation=knight` (and so on);
-without it, `--vocation` is ignored. Everyone sees each player's vocation and level.
+without it, `--vocation` is ignored. Everyone sees each player's class and level.
 
 Each item has stats (health, mana, attack, defense, critical chance, regeneration,
-healing) that add to your vocation's base stats for your level; the stat sheet shows the
+healing) that add to your class's base stats for your level; the stat sheet shows the
 totals and the gear bonus. Charms, rings, and necklaces give passive stats only. Stats are
-computed with the same shared function on every peer from server-authoritative vocation,
+computed with the same shared function on every peer from server-authoritative class,
 level, and equipment.
 
 `game/data/balance.gd` defines the level 1-50 curves, all derived from a **350,000-health
-final boss** that needs a raid of **at least ten level-50 players with every vocation**:
+final boss** that needs a raid of **at least ten level-50 players with every class**:
 an enrage timer demands damage, raid-wide pressure demands healers, and wound stacks
-demand two tanks. See [`balance.md`](balance.md) for the anchors, vocation
+demand two tanks. See [`balance.md`](balance.md) for the anchors, class
 profiles, raid checks, and full level table.
 Combat uses these stats and curves directly.

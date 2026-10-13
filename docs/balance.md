@@ -1,6 +1,6 @@
 # Brimholt balance sheet
 
-Curves for levels 1-50 and four vocations, used by combat (`game/core/combat.gd`), monsters
+Curves for levels 1-50 and four classes, used by combat (`game/core/combat.gd`), monsters
 (`game/data/monsters.gd`), spells (`game/data/spells.gd`), and items. `game/data/balance.gd` is the one source.
 Regenerate the tables after changing a constant:
 
@@ -13,10 +13,10 @@ godot --headless --path . --script res://tools/generators/balance_table.gd
 | Anchor | Value |
 | --- | --- |
 | Final boss health | **350,000** |
-| Smallest intended raid | **10 level-50 players**: 2 Knights, 3 Paladins, 3 Sorcerers, 2 Druids |
+| Smallest intended raid | **10 level-50 players**: 2 Warriors, 3 Hunters, 3 Sorcerers, 2 Druids |
 | Intended fight | 240 s; the boss **enrages and wipes the raid at 255 s** |
 | Healing pressure | raid-wide damage needing 2.2 Druids' worth of healing per second |
-| Tank swaps | boss hits stack a wound, so at least **2 Knights** must alternate |
+| Tank swaps | boss hits stack a wound, so at least **2 Warriors** must alternate |
 
 Each requirement removes a different shortcut: the enrage timer requires damage, the
 healing pressure requires healers, and the wound stacks require two tanks. With only about
@@ -24,22 +24,22 @@ healing pressure requires healers, and the wound stacks require two tanks. With 
 rules test checks every group of nine or fewer players exhaustively: none can win. Larger
 or differently mixed groups can (see below).
 
-## Vocations
+## Classes
 
-The four vocations follow the classic tank / ranged / burst caster / healer split. They
-multiply the reference (Paladin) curves:
+The four classes follow the classic tank / ranged / burst caster / healer split. They
+multiply the reference (Hunter) curves:
 
-| Vocation | Health | Mana | Damage | Healing | Base defense |
+| Class | Health | Mana | Damage | Healing | Base defense |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Knight | ×1.5 | ×0.5 | ×0.6 | 0 | 20 |
-| Paladin | ×1.0 | ×1.0 | ×1.0 | ×0.1 | 5 |
+| Warrior | ×1.5 | ×0.5 | ×0.6 | 0 | 20 |
+| Hunter | ×1.0 | ×1.0 | ×1.0 | ×0.1 | 5 |
 | Sorcerer | ×0.6 | ×1.6 | ×1.3 | 0 | 0 |
 | Druid | ×0.6 | ×1.6 | ×0.4 | ×1.0 | 0 |
 
-| Vocation | Role | HP 1 / 50 | Mana 1 / 50 | Attack 1 / 50 | Healing/s 1 / 50 | Base def |
+| Class | Role | HP 1 / 50 | Mana 1 / 50 | Attack 1 / 50 | Healing/s 1 / 50 | Base def |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Knight | Tank | 225 / 14,747 | 30 / 1,966 | 2 / 147 | 0 / 0 | 20 |
-| Paladin | Ranged damage, light healing | 150 / 9,831 | 60 / 3,933 | 4 / 246 | 1 / 39 | 5 |
+| Warrior | Tank | 225 / 14,747 | 30 / 1,966 | 2 / 147 | 0 / 0 | 20 |
+| Hunter | Ranged damage, light healing | 150 / 9,831 | 60 / 3,933 | 4 / 246 | 1 / 39 | 5 |
 | Sorcerer | Burst damage | 90 / 5,899 | 96 / 6,292 | 5 / 320 | 0 / 0 | 0 |
 | Druid | Healer | 90 / 5,899 | 96 / 6,292 | 2 / 98 | 6 / 393 | 0 |
 
@@ -47,23 +47,23 @@ multiply the reference (Paladin) curves:
 
 | Level-50 group | Players | Boss down in | Healing (need 2.2) | Tanks | Result |
 | --- | ---: | ---: | ---: | ---: | --- |
-| 2 Knight, 3 Paladin, 3 Sorcerer, 2 Druid | 10 | 240 s | 2.3 | 2 | wins |
-| 1 Knight, 3 Paladin, 3 Sorcerer, 2 Druid | 9 | 257 s | 2.3 | 1 | loses: not enough damage before the 255 s enrage, needs 2 tanks to swap |
-| 2 Knight, 2 Paladin, 3 Sorcerer, 2 Druid | 9 | 270 s | 2.2 | 2 | loses: not enough damage before the 255 s enrage |
-| 2 Knight, 3 Paladin, 2 Sorcerer, 2 Druid | 9 | 281 s | 2.3 | 2 | loses: not enough damage before the 255 s enrage |
-| 2 Knight, 3 Paladin, 3 Sorcerer, 1 Druid | 9 | 251 s | 1.3 | 2 | loses: not enough healing |
-| 2 Knight, 2 Paladin, 4 Sorcerer, 2 Druid | 10 | 232 s | 2.2 | 2 | wins |
-| 2 Knight, 4 Paladin, 4 Sorcerer, 2 Druid | 12 | 191 s | 2.4 | 2 | wins |
-| 1 Knight, 1 Paladin, 1 Sorcerer, 1 Druid | 4 | 647 s | 1.1 | 1 | loses: not enough damage before the 255 s enrage, not enough healing, needs 2 tanks to swap |
+| 2 Warrior, 3 Hunter, 3 Sorcerer, 2 Druid | 10 | 240 s | 2.3 | 2 | wins |
+| 1 Warrior, 3 Hunter, 3 Sorcerer, 2 Druid | 9 | 257 s | 2.3 | 1 | loses: not enough damage before the 255 s enrage, needs 2 tanks to swap |
+| 2 Warrior, 2 Hunter, 3 Sorcerer, 2 Druid | 9 | 270 s | 2.2 | 2 | loses: not enough damage before the 255 s enrage |
+| 2 Warrior, 3 Hunter, 2 Sorcerer, 2 Druid | 9 | 281 s | 2.3 | 2 | loses: not enough damage before the 255 s enrage |
+| 2 Warrior, 3 Hunter, 3 Sorcerer, 1 Druid | 9 | 251 s | 1.3 | 2 | loses: not enough healing |
+| 2 Warrior, 2 Hunter, 4 Sorcerer, 2 Druid | 10 | 232 s | 2.2 | 2 | wins |
+| 2 Warrior, 4 Hunter, 4 Sorcerer, 2 Druid | 12 | 191 s | 2.4 | 2 | wins |
+| 1 Warrior, 1 Hunter, 1 Sorcerer, 1 Druid | 4 | 647 s | 1.1 | 1 | loses: not enough damage before the 255 s enrage, not enough healing, needs 2 tanks to swap |
 
 ## Derivation
 
 Players and monsters attack every **2 seconds**, as in Tibia. The intended raid deals 8.9
 reference players' worth of damage (2×0.6 + 3×1.0 + 3×1.3 + 2×0.4). Killing 350,000 health
-in 240 s means one geared Paladin-equivalent deals about **164 damage per second** at
+in 240 s means one geared Hunter-equivalent deals about **164 damage per second** at
 level 50, or **328 per hit**. Six such hits kill a level-50 normal mob, so it has **1,966**
 health and the boss equals 178 normal mobs. A single growth factor (**×1.089 per level**)
-connects level 1 (30-health mobs, 150-health Paladins) to level 50 and scales mob health,
+connects level 1 (30-health mobs, 150-health Hunters) to level 50 and scales mob health,
 mob damage, player health, mana, attack, and healing together, so hit counts stay
 constant at every level.
 
@@ -79,11 +79,11 @@ constant at every level.
 - **Defense** – damage taken is `raw × 100 / (100 + defense)`: 100 defense halves it.
 - **Regen** – health per 10 s; base 4% of max health. Mana regenerates 8% of max per 10 s.
   Both triple when you have been out of combat for 8 s.
-- **Healing** – health per second a vocation can restore to others.
+- **Healing** – health per second a class can restore to others.
 - **Spells** – damage is attack × spell power; mana costs are a share of max mana.
 
 Leveling needs `4 + 3 × (level − 1)` same-level normal kills per level, so level 2 takes
-about 4 kills and the whole climb to 50 about 3,700. Experience from a kill is shared by damage dealt; a sharing party pools it and splits it evenly with a ×1.2–×2 vocation bonus ([gameplay](gameplay.md#parties-and-shared-experience)). Dying costs 10% of total
+about 4 kills and the whole climb to 50 about 3,700. Experience from a kill is shared by damage dealt; a sharing party pools it and splits it evenly with a ×1.2–×2 class bonus ([gameplay](gameplay.md#parties-and-shared-experience)). Dying costs 10% of total
 experience, which can lose levels; below level 8, players keep their items and gold.
 
 ## Monster pace, leash, and fights you cannot dodge
@@ -100,13 +100,13 @@ potions. A same-level normal monster hits for 1/18 of a geared player's base hea
 2 seconds (`HITS_TO_FALL`).
 
 `make fight-sim MONSTER=<id> LEVELS=... COUNT=...` runs the real combat rules for each
-vocation in its tier's vendor gear, auto-attacking only and with spells and potions. Normal
+class in its tier's vendor gear, auto-attacking only and with spells and potions. Normal
 monsters at the player's level currently give:
 
 | Fight | Auto-attacks only | Spells and potions |
 | --- | --- | --- |
 | One monster | 3–27% health lost; nobody dies | 3–27% lost, 0–3 potions |
-| A camp of three | Knights end at 5–60% health; Paladins die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–6 potions (Druids about 4–6, mostly mana); higher-level spells clear camps faster (a level 45 Sorcerer in about 6 s, a Paladin in about 8 s) |
+| A camp of three | Warriors end at 5–60% health; Hunters die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–6 potions (Druids about 4–6, mostly mana); higher-level spells clear camps faster (a level 45 Sorcerer in about 6 s, a Hunter in about 8 s) |
 | Level 1 against a level 40 | Dead within 2 seconds | Dead |
 
 ## PvP
@@ -126,17 +126,17 @@ duels with spells and potions (levels 20, 30, 45; duelists start adjacent):
 
 | Matchup | Winner and time |
 | --- | --- |
-| Paladin vs Sorcerer | Paladin, 13–17 s |
-| Paladin vs Knight | Paladin, 49–57 s |
-| Paladin vs Druid | Paladin, 20–25 s |
-| Knight vs Sorcerer | Knight, 21–25 s |
-| Knight vs Druid | Knight, 25–29 s |
+| Hunter vs Sorcerer | Hunter, 13–17 s |
+| Hunter vs Warrior | Hunter, 49–57 s |
+| Hunter vs Druid | Hunter, 20–25 s |
+| Warrior vs Sorcerer | Warrior, 21–25 s |
+| Warrior vs Druid | Warrior, 25–29 s |
 | Sorcerer vs Druid | Sorcerer, 8–11 s |
-| Knight and Druid mirrors | 42–85 s |
-| Paladin mirror (level 30) | 61 s |
+| Warrior and Druid mirrors | 42–85 s |
+| Hunter mirror (level 30) | 61 s |
 | Sorcerer mirror (level 30) | 6 s: glass cannons |
 
-Paladins are the strongest duelists; druids, as healers, lose one-on-one.
+Hunters are the strongest duelists; druids, as healers, lose one-on-one.
 
 ## Early game
 
@@ -151,7 +151,7 @@ Ten tiers every five levels; accessories from tier 20; relics at level 50 from b
 `game/data/items.gd` derives every item's stats from the curves above, so gear follows any
 balance change:
 
-- **Weapons** add the vocation's share of `gear_attack_budget(tier + 2)`, the attack that
+- **Weapons** add the class's share of `gear_attack_budget(tier + 2)`, the attack that
   lifts a player from base to geared hits (about six per same-level kill), with a floor that
   rises one point per tier so early tiers still upgrade.
 - **Defense** of a full set (helmet 22%, armor 42%, shield 36%) rises from 14 at tier 1 to
@@ -169,7 +169,7 @@ the killed monster's level. Names and looks vary, not attack timing, range or da
 
 Regenerate with `make gear-table`:
 
-| Tier | Helmet | Armor | Shield (Knight, Paladin) | Spellbook (Sorcerer, Druid) |
+| Tier | Helmet | Armor | Shield (Warrior, Hunter) | Spellbook (Sorcerer, Druid) |
 | ---: | --- | --- | --- | --- |
 | 1 | Ember cap (3 def) | Moss coat (6 def, 2 regen) | Oak buckler (5 def) | Tattered primer (2 def, 6 mana) |
 | 5 | Iron coif (4 def) | Ash tunic (8 def, 2 regen) | Hide targe (7 def) | Apprentice grimoire (2 def, 8 mana) |
@@ -181,7 +181,7 @@ Regenerate with `make gear-table`:
 | 35 | Duskiron visor (13 def) | Duskiron plate (24 def, 27 regen) | Duskiron bulwark (21 def) | Dusk grimoire (7 def, 109 mana) |
 | 40 | Starforged helm (14 def) | Starforged plate (27 def, 42 regen) | Starforged bulwark (23 def) | Star atlas (8 def, 168 mana) |
 | 45 | Wyrmglass greathelm (15 def) | Wyrmglass plate (29 def, 64 regen) | Wyrmglass ward (25 def) | Wyrmglass codex (8 def, 257 mana) |
-| Tier | Knight | Paladin | Sorcerer | Druid |
+| Tier | Warrior | Hunter | Sorcerer | Druid |
 | ---: | --- | --- | --- | --- |
 | 1 | Copper blade (2 atk) | Willow shortbow (2 atk) | Kindling wand (2 atk) | Sapling rod (2 atk) |
 | 5 | Flint hatchet (3 atk) | Yew hunting bow (3 atk) | Spark wand (3 atk) | Thornwood rod (3 atk) |
@@ -208,7 +208,7 @@ Regenerate with `make gear-table`:
 | Kharzul the Cinder Colossus | Cinderheart bow (94 atk); Cinderheart wand (123 atk); Molten heart (679 hp); Cinderheart charm (227 regen, 113 heal) |
 | Sylvaine the Hollow Bloom | Bloomheart rod (38 atk); Verdant codex (10 def, 452 mana); Hollowbloom cape (7 def, 271 mana); Bloomsoul ring (339 hp, 136 mana) |
 
-## Level table (reference vocation: Paladin)
+## Level table (reference class: Hunter)
 
 Champions are dungeon mini-bosses: 10x a normal monster's health, 1.8x its hits, and 25x its experience.
 
@@ -264,21 +264,21 @@ Champions are dungeon mini-bosses: 10x a normal monster's health, 1.8x its hits,
 | 48 | 8,288 | 207 | 276 | 1,658 | 6,631 | 16,577 | 295,069 | 460 | 691 | 829 | 1,151 | 829 | 20,721 | 120,205 |
 | 49 | 9,027 | 226 | 301 | 1,805 | 7,222 | 18,054 | 321,363 | 502 | 752 | 903 | 1,254 | 903 | 22,568 | 133,644 |
 | 50 | 9,831 | 246 | 328 | 1,966 | 7,865 | 19,663 | 350,000 | 546 | 819 | 983 | 1,365 | 983 | 24,579 | max |
-| Vocation | Role | HP 1 / 50 | Mana 1 / 50 | Attack 1 / 50 | Healing/s 1 / 50 | Base def |
+| Class | Role | HP 1 / 50 | Mana 1 / 50 | Attack 1 / 50 | Healing/s 1 / 50 | Base def |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Knight | Tank | 225 / 14,747 | 30 / 1,966 | 2 / 147 | 0 / 0 | 20 |
-| Paladin | Ranged damage, light healing | 150 / 9,831 | 60 / 3,933 | 4 / 246 | 1 / 39 | 5 |
+| Warrior | Tank | 225 / 14,747 | 30 / 1,966 | 2 / 147 | 0 / 0 | 20 |
+| Hunter | Ranged damage, light healing | 150 / 9,831 | 60 / 3,933 | 4 / 246 | 1 / 39 | 5 |
 | Sorcerer | Burst damage | 90 / 5,899 | 96 / 6,292 | 5 / 320 | 0 / 0 | 0 |
 | Druid | Healer | 90 / 5,899 | 96 / 6,292 | 2 / 98 | 6 / 393 | 0 |
 | Level-50 group | Players | Boss down in | Healing (need 2.2) | Tanks | Result |
 | --- | ---: | ---: | ---: | ---: | --- |
-| 2 Knight, 3 Paladin, 3 Sorcerer, 2 Druid | 10 | 240 s | 2.3 | 2 | wins |
-| 1 Knight, 3 Paladin, 3 Sorcerer, 2 Druid | 9 | 257 s | 2.3 | 1 | loses: not enough damage before the 255 s enrage, needs 2 tanks to swap |
-| 2 Knight, 2 Paladin, 3 Sorcerer, 2 Druid | 9 | 270 s | 2.2 | 2 | loses: not enough damage before the 255 s enrage |
-| 2 Knight, 3 Paladin, 2 Sorcerer, 2 Druid | 9 | 281 s | 2.3 | 2 | loses: not enough damage before the 255 s enrage |
-| 2 Knight, 3 Paladin, 3 Sorcerer, 1 Druid | 9 | 251 s | 1.3 | 2 | loses: not enough healing |
-| 2 Knight, 2 Paladin, 4 Sorcerer, 2 Druid | 10 | 232 s | 2.2 | 2 | wins |
-| 2 Knight, 4 Paladin, 4 Sorcerer, 2 Druid | 12 | 191 s | 2.4 | 2 | wins |
-| 1 Knight, 1 Paladin, 1 Sorcerer, 1 Druid | 4 | 647 s | 1.1 | 1 | loses: not enough damage before the 255 s enrage, not enough healing, needs 2 tanks to swap |
+| 2 Warrior, 3 Hunter, 3 Sorcerer, 2 Druid | 10 | 240 s | 2.3 | 2 | wins |
+| 1 Warrior, 3 Hunter, 3 Sorcerer, 2 Druid | 9 | 257 s | 2.3 | 1 | loses: not enough damage before the 255 s enrage, needs 2 tanks to swap |
+| 2 Warrior, 2 Hunter, 3 Sorcerer, 2 Druid | 9 | 270 s | 2.2 | 2 | loses: not enough damage before the 255 s enrage |
+| 2 Warrior, 3 Hunter, 2 Sorcerer, 2 Druid | 9 | 281 s | 2.3 | 2 | loses: not enough damage before the 255 s enrage |
+| 2 Warrior, 3 Hunter, 3 Sorcerer, 1 Druid | 9 | 251 s | 1.3 | 2 | loses: not enough healing |
+| 2 Warrior, 2 Hunter, 4 Sorcerer, 2 Druid | 10 | 232 s | 2.2 | 2 | wins |
+| 2 Warrior, 4 Hunter, 4 Sorcerer, 2 Druid | 12 | 191 s | 2.4 | 2 | wins |
+| 1 Warrior, 1 Hunter, 1 Sorcerer, 1 Druid | 4 | 647 s | 1.1 | 1 | loses: not enough damage before the 255 s enrage, not enough healing, needs 2 tanks to swap |
 
 Growth per level: 1.0891. Boss = 178 normal mobs. Reference DPS at level 50: 163.9. Normal kills from 1 to 50: 3,724.

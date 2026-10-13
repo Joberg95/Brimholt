@@ -363,7 +363,7 @@ func _hunt() -> void:
 		if role == "knight":
 			var gap: int = partner_state().get("level", 1) - me()["level"]
 			report("ok" if absi(gap) <= 1 else "finding",
-				"party sharing kept the tanking Knight within %d level(s) of the Sorcerer" % absi(gap))
+				"party sharing kept the tanking Warrior within %d level(s) of the Sorcerer" % absi(gap))
 		game.target_local(0)
 		avoid_monsters(true)
 		_enter("to_port")
@@ -531,13 +531,13 @@ func _duel() -> void:
 					if me()["backpack"].count("") < World.BACKPACK_SIZE or flags.get("picked", 0) >= 6:
 						flags["loot_done"] = true
 						report("ok", "looted the fallen Sorcerer's dropped items: %s" % ", ".join(me()["backpack"].filter(func(k: String) -> bool: return not k.is_empty())))
-						shot("looting", "Knight with a white skull looting the Sorcerer's dropped items")
+						shot("looting", "Warrior with a white skull looting the Sorcerer's dropped items")
 					return
 			if flags.get("picked", 0) > 0:
 				flags["loot_done"] = true
 				report("ok", "looted everything the Sorcerer dropped (%d pickups); gold now %d, backpack %s" % [flags["picked"],
 					me()["gold"], ", ".join(me()["backpack"].filter(func(k: String) -> bool: return not k.is_empty()))])
-				shot("looting", "Knight with a white skull after looting the Sorcerer's dropped items")
+				shot("looting", "Warrior with a white skull after looting the Sorcerer's dropped items")
 				return
 			if elapsed > 90.0:
 				var nearby: Array = game.ground_view.keys().filter(func(cell: Vector2i) -> bool:
@@ -568,8 +568,8 @@ func _duel() -> void:
 		flags["worn_before"] = me()["equipment"].size()
 		if them.get("skull", "") == "white" and not flags.get("skull_seen", false):
 			flags["skull_seen"] = true
-			report("ok", "the Knight shows a white skull")
-			shot("white-skull", "The attacking Knight wears a white skull")
+			report("ok", "the Warrior shows a white skull")
+			shot("white-skull", "The attacking Warrior wears a white skull")
 		if flags.get("skull_seen", false) and not flags.get("defended", false):
 			if game.own_target() != partner():
 				if throttle(0.5):

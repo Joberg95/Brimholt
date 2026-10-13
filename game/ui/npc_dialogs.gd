@@ -12,7 +12,7 @@ const Spells = preload("res://game/data/spells.gd")
 const Economy = preload("res://game/core/economy.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Layout = preload("res://game/ui/layout.gd")
-const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests", "vocation": "Vocation"}
+const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests", "vocation": "Class"}
 const DEPOT_COLUMNS: int = 8
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
 	"join": "Join party", "leave": "Leave party"}
@@ -276,7 +276,7 @@ func open_vocation(npc: String) -> void:
 	_wrapped("Role: %s. Health ×%s, mana ×%s, damage ×%s.\nSpells: %s." % [profile["role"], Spells.number(profile["health"]),
 		Spells.number(profile["mana"]), Spells.number(profile["damage"]), ", ".join(spells)], Color("#a7b0b8"))
 	if state.get("vocation", "") != Balance.ADVENTURER:
-		_label("You are already a %s; a vocation is for life." % Balance.profile_of(state.get("vocation", ""))["name"], Color("#a7b0b8"))
+		_label("You are already a %s; a class is for life." % Balance.profile_of(state.get("vocation", ""))["name"], Color("#a7b0b8"))
 		_farewell()
 		_show(npc, "vocation")
 		return

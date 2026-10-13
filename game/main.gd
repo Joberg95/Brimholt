@@ -149,7 +149,7 @@ func _ready() -> void:
 		if arg.begins_with("--vocation="):
 			var choice: String = arg.trim_prefix("--vocation=")
 			if not Balance.is_vocation(choice):
-				_fail("Vocation must be one of: %s, %s." % [", ".join(Balance.VOCATIONS.keys()), Balance.ADVENTURER])
+				_fail("Class must be one of: %s, %s." % [", ".join(Balance.VOCATIONS.keys()), Balance.ADVENTURER])
 				get_tree().quit(1)
 				return
 			start_vocation = choice
@@ -613,7 +613,7 @@ func hello(map_signature: Variant, vocation: Variant, token: Variant) -> void:
 		_reject_connection(sender, "World/protocol mismatch. Use the same project files as the host.")
 		return
 	if not Balance.is_vocation(vocation):
-		_reject_connection(sender, "Unknown vocation.")
+		_reject_connection(sender, "Unknown class.")
 		return
 	var refused: String = _admit(sender, token if typeof(token) == TYPE_STRING else "", vocation)
 	if not refused.is_empty():

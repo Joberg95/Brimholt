@@ -95,7 +95,7 @@ order is the icon order in `items.png`. `look` picks the drawing: helmets `cap`,
 `charm`, `ring`. Tiers share fitting colours, but item construction should not be reduced
 to a colour swap: bows retain timber limbs and books leather covers with page edges. Run
 `python3 tools/generators/make_sprites.py --preview .tools/gear-preview.png` for a sheet
-of every tier worn by each vocation.
+of every tier worn by each class.
 
 Each cape sheet uses a visibility mask built from the character rig, with its own palette,
 hem and clasp. Removing the equipped cape removes the whole layer; it does not reveal a

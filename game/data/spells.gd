@@ -119,8 +119,8 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 	if stats.has("mana"):
 		cost = "Mana %d (%d%% of your max)" % [maxi(1, roundi(float(stats["mana"]) * spell["mana"])), roundi(spell["mana"] * 100.0)]
 	var vocations: Array = spell["vocations"]
-	var who: String = "Every vocation" if vocations.size() == Balance.VOCATIONS.size() \
-		else ", ".join(vocations.map(_capitalized))
+	var who: String = "Every class" if vocations.size() == Balance.VOCATIONS.size() \
+		else ", ".join(vocations.map(_class_name))
 	return {
 		"name": spell["name"], "unlocked": level >= spell["level"],
 		"requirement": "%s · level %d" % [who, spell["level"]] if level >= spell["level"]
@@ -147,5 +147,5 @@ static func number(value: float) -> String:
 	return ("%.2f" % value).rstrip("0").rstrip(".")
 
 
-static func _capitalized(text: Variant) -> String:
-	return String(text).capitalize()
+static func _class_name(vocation: Variant) -> String:
+	return Balance.profile_of(String(vocation))["name"]

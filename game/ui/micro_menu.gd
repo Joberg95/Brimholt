@@ -13,7 +13,7 @@ const ACCENT: Color = Color("#ffcf6a")
 ## [action, title, what it shows]; actions are Keybinds actions, except "controls" (no key).
 const ENTRIES: Array = [
 	["character", "Character", "Your stats explained, experience, party, skull, and town rest"],
-	["spell_book", "Spell book", "Every spell of your vocation; drag one onto the action bar"],
+	["spell_book", "Spell book", "Every spell of your class; drag one onto the action bar"],
 	["quest_list", "Quests", "Show or hide the quest list"],
 	["lexicon", "Lexicon", "Every monster: where it lives, its levels, and what it drops"],
 	["world_map", "World map", "Towns, ferries, dungeons, and PvP zones"],

@@ -110,7 +110,7 @@ func _build_stat_sheet(layer: CanvasLayer) -> void:
 	layer.add_child(grid)
 	for stat: String in ["vocation", "level", "experience", "gold"] + Array(Balance.STATS):
 		var stat_label := Label.new()
-		stat_label.text = {"vocation": "Vocation", "level": "Level", "experience": "Experience", "gold": "Gold"}.get(stat,
+		stat_label.text = {"vocation": "Class", "level": "Level", "experience": "Experience", "gold": "Gold"}.get(stat,
 			STAT_LABELS.get(stat, stat))
 		stat_label.modulate = Color("#a7b0b8")
 		stat_label.add_theme_font_size_override("font_size", 13)

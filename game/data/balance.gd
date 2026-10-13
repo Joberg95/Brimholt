@@ -39,11 +39,12 @@ const BASE_CRITICAL: int = 5
 const REGEN_FRACTION: float = 0.04
 ## Health a full healer (healing 1.0) restores per second, as a fraction of paladin health.
 const HEAL_FRACTION: float = 0.04
-## Vocation multipliers on the reference (paladin) curves, plus flat base defense.
+## Class multipliers on the reference (Hunter, id "paladin") curves, plus flat base defense. Players see
+## "class" and these names; the ids (knight = Warrior, paladin = Hunter) stay for saves and data.
 const VOCATIONS: Dictionary = {
-	"knight": {"name": "Knight", "role": "Tank", "health": 1.5, "mana": 0.5, "damage": 0.6,
+	"knight": {"name": "Warrior", "role": "Tank", "health": 1.5, "mana": 0.5, "damage": 0.6,
 		"healing": 0.0, "defense": 20},
-	"paladin": {"name": "Paladin", "role": "Ranged damage, light healing", "health": 1.0, "mana": 1.0,
+	"paladin": {"name": "Hunter", "role": "Ranged damage, light healing", "health": 1.0, "mana": 1.0,
 		"damage": 1.0, "healing": 0.1, "defense": 5},
 	"sorcerer": {"name": "Sorcerer", "role": "Burst damage", "health": 0.6, "mana": 1.6, "damage": 1.3,
 		"healing": 0.0, "defense": 0},
@@ -57,7 +58,7 @@ const DEFAULT_VOCATION: String = "paladin"
 ## spells every vocation shares.
 const ADVENTURER: String = "adventurer"
 const ADVENTURER_PROFILE: Dictionary = {"name": "Adventurer",
-	"role": "No vocation yet: pass the trial, then choose one at a trainer in Cinder Crossing", "health": 1.0,
+	"role": "No class yet: pass the trial, then choose one at a trainer in Cinder Crossing", "health": 1.0,
 	"mana": 0.8, "damage": 0.8, "healing": 0.0, "defense": 5}
 const CHOOSE_LEVEL: int = 5
 const ADVENTURER_MAX_LEVEL: int = 8

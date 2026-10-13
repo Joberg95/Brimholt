@@ -6,6 +6,7 @@ extends PanelContainer
 ## change.
 
 const World = preload("res://game/core/world.gd")
+const Balance = preload("res://game/data/balance.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const SpellRune = preload("res://game/ui/spell_rune.gd")
@@ -77,7 +78,7 @@ func refresh() -> void:
 	if key == _key:
 		return
 	_key = key
-	_title.text = "Spell book — %s, level %d" % [vocation.capitalize(), level]
+	_title.text = "Spell book — %s, level %d" % [Balance.profile_of(vocation)["name"], level]
 	_hint.text = "Drag a rune onto the action bar to use it. %s closes the book." % \
 		Keybinds.key_name(game.keybinds.keys["spell_book"][0])
 	for child: Node in _list.get_children():

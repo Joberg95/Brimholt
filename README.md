@@ -61,7 +61,7 @@ items and monsters reset when the host stops.
   Use `--save-dir=PATH` for another folder or `--no-save` to play without saving.
 - **Who you are:** each computer has a secret identity token in the same user data folder
   (`identity.cfg`). Joining sends it to the host, which keeps only its hash and loads the
-  matching character. New characters start as Adventurers and choose a vocation in the game. Keep `identity.cfg`
+  matching character. New characters start as Adventurers and choose a class in the game. Keep `identity.cfg`
   private; copy it to play your characters from another computer. To run two players on one
   computer, give one `--profile=NAME` (its own `identity-NAME.cfg`). One identity can be in a
   world only once.
@@ -81,8 +81,8 @@ These are the default keys; every key can be changed (see below).
 | WASD / arrows | Move one cardinal tile; hold to repeat |
 | Left-click a creature | Lock it as your target (click again to release) |
 | Space | Target the nearest monster |
-| 1–9 | Cast the spell in action bar slot 1–9 (filled with your vocation's spells); hover a slot to see what it does |
-| B | Open or close the spell book (every spell of your vocation; drag one onto the action bar) |
+| 1–9 | Cast the spell in action bar slot 1–9 (filled with your class's spells); hover a slot to see what it does |
+| B | Open or close the spell book (every spell of your class; drag one onto the action bar) |
 | C | Open or close the character window (stats explained, experience, party, skull, town rest) |
 | Drag an item | Move it between backpack slots, equipment slots, and nearby tiles |
 | Right-click item | Equip from the backpack, unequip into it, drink a potion, or (bank open) deposit it |

@@ -10,8 +10,8 @@ Run these through `make` (see `make help`) or directly. Every check uses Godot 4
 | `make test-lan` | `tools/testing/test_lan.py`: five real ENet scenarios | ~1 min |
 | `make test` | Lint, unit, and LAN | ~1 min |
 | `make test-visual` | `tools/testing/test_visual.py`: offscreen graphical checks, `.tools/visual-report.html` | ~30 s |
-| `make fight-sim` | `tools/testing/fight_sim.gd`: one monster (`MONSTER=`, `LEVELS=`, `COUNT=`) against each vocation, auto-attacks vs spells and potions | ~10 s |
-| `make duel-sim` | `tools/testing/duel_sim.gd`: same-level PvP duels per vocation pair with spells and potions (`LEVELS=`) | ~30 s |
+| `make fight-sim` | `tools/testing/fight_sim.gd`: one monster (`MONSTER=`, `LEVELS=`, `COUNT=`) against each class, auto-attacks vs spells and potions | ~10 s |
+| `make duel-sim` | `tools/testing/duel_sim.gd`: same-level PvP duels per class pair with spells and potions (`LEVELS=`) | ~30 s |
 | `make soak` | `tests/integration/soak_test.gd`: busy hosted session, fails on growth (memory, objects, nodes, pools) | ~1 min |
 | `make check` | Import, lint, unit, LAN, visual, and soak | ~3 min |
 | `make playtest` | `tools/testing/playtest.py`: two-bot playthrough, `.tools/playtest/report.html` | ~5 min |
@@ -81,16 +81,16 @@ the two-second attack boundary and damage range, monster aggro, chasing onto fre
 only, leashing home and healing, experience shared by damage and level ups, loot tables
 (every monster has one, catalog items with icons and shop values, seeded determinism,
 drop rates, elite gold, spilling past a full corpse tile), parties (invites, joining,
-leadership hand-over, disbanding, no friendly fire, shared experience with the vocation
+leadership hand-over, disbanding, no friendly fire, shared experience with the class
 bonus, activity, range and level-ratio rules, disconnect clean-up),
-respawn delays, the 10% death penalty and town respawn, spells (vocation, level, target,
+respawn delays, the 10% death penalty and town respawn, spells (class, level, target,
 mana, cooldowns and groups, heal caps, area hits, mass heal radius), regeneration, item
 loss (backpack and purse always, worn items about 10%, everything with a red skull, spill
 within the stack limit), and skulls (white for unprovoked attacks, self-defence, renewal,
 unjustified kills, the third giving a red skull, the 24-hour window, expiry), gear tiers
-(every tier has one helmet, armor, weapon, and off-hand per vocation; accessories only
+(every tier has one helmet, armor, weapon, and off-hand per class; accessories only
 from tier 20; each tier beats the one below; tier weapons keep about six hits per kill;
-level and vocation requirements, including swaps and the equip key; start kits; tier
+level and class requirements, including swaps and the equip key; start kits; tier
 drops), and relics (twelve, bound, glow sheets, each the reward of exactly one boss quest
 and better than tier 45; boss health, lairs, slow respawns; trophies for attackers and
 nearby active helpers only; one relic keeper per boss in Reedmere, claiming with range, the
@@ -116,7 +116,7 @@ monster counting, experience and gold rewards, one giver per task), regions (eve
 tile located, level ranges covering their monsters, the desert, towns, PvP, and dungeons),
 blocked camps (queued at start, filled once there is room), town rest (only in towns, much
 faster, ends when full or on leaving, a 3-minute cooldown visible to the owner),
-spell progression (every vocation unlocks three or more spells from level 15 including a
+spell progression (every class unlocks three or more spells from level 15 including a
 stronger strike, listed by level, fitting the bar), PvP (player hits scaled by `PVP_DAMAGE`,
 PvP combat starting for both players, reduced and fading healing, recovery after combat, and
 monster fights never counting), the monster catalog contract (ids, names, ranks, looks, sizes,
@@ -193,7 +193,7 @@ five-column sheets, the wind-up then strike timing, and that a swing turns only 
 `visual-swing.png` shows a sword strike, and the frames before, during, and after must differ.
 `visual-tooltip.png` shows an item tooltip whose name and frame carry the rarity colour. Each must differ from
 the empty-hand render. Unit tests check all old and new weapon icon bounds and colours,
-unique hunting silhouettes, tier-derived stats, equip/unequip and vocation/level rejection,
+unique hunting silhouettes, tier-derived stats, equip/unequip and class/level rejection,
 save eligibility, exclusion from shop stock and generic rolls, real source spawns, seeded
 drop frequencies, and below-tier loot rejection. The dedicated ENet scenario equips and
 unequips an Alder crook granted by its server fixture.
@@ -242,13 +242,13 @@ Its 20-second timeout stays active through the assertions.
 ## Playthrough
 
 The playthrough starts a real dedicated server and two bot clients (`tests/integration/playthrough.gd`),
-a Knight and a Sorcerer, that play the game through the same calls as the UI: they form
+a Warrior and a Sorcerer, that play the game through the same calls as the UI: they form
 a party, equip the start kit, walk out of town with pathfinding, hunt the nearest monsters
-with spells and healing (checking that party sharing keeps the Knight level with the
+with spells and healing (checking that party sharing keeps the Warrior level with the
 Sorcerer), pick up gold and nearby monster materials, finish their fight, walk to the Cinder Crossing waystone and travel through it to Reedmere, walk to its pier
-(routing around monster spawns), and sail to Blackreed Isle. There the Knight leaves the
+(routing around monster spawns), and sail to Blackreed Isle. There the Warrior leaves the
 party and attacks the
-Sorcerer (white skull), the Sorcerer fights back (no skull), and the Knight kills him
+Sorcerer (white skull), the Sorcerer fights back (no skull), and the Warrior kills him
 (unjustified kill), then loots the dropped items while the Sorcerer checks his empty
 backpack and purse in town. A bot that dies earlier walks back to recover its belongings (or, under beginner
 protection, carries on).

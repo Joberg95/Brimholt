@@ -200,7 +200,7 @@ func _adventurer_checks() -> void:
 	combat.grant_experience(1, Combat.total_experience(20, 0), events)
 	check(adventurer["level"] == Balance.ADVENTURER_MAX_LEVEL
 		and adventurer["experience"] == Balance.experience_to_next(Balance.ADVENTURER_MAX_LEVEL) - 1
-		and events.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("without a vocation")),
+		and events.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("without a class")),
 		"Adventurers stop at level %d and are told why" % Balance.ADVENTURER_MAX_LEVEL)
 	events.clear()
 	combat.grant_experience(1, 100, events)
@@ -1299,12 +1299,12 @@ func _gear_tier_checks() -> void:
 		"levels map to tiers")
 	_relic_checks(by_key)
 	# Requirements, on the server.
-	check(World.requirement_error("willow_shortbow", 50, "knight") == "Only Paladins can use the Willow shortbow",
-		"weapons are vocation-bound")
+	check(World.requirement_error("willow_shortbow", 50, "knight") == "Only Hunters can use the Willow shortbow",
+		"weapons are class-bound")
 	check(World.requirement_error("kindling_wand", 1, "sorcerer").is_empty() \
 		and World.requirement_error("tattered_primer", 1, "druid").is_empty(), "casters use wands, rods, and spellbooks")
-	check(World.requirement_error("oak_buckler", 1, "sorcerer") == "Only Knights and Paladins can use the Oak buckler",
-		"shields are for Knights and Paladins")
+	check(World.requirement_error("oak_buckler", 1, "sorcerer") == "Only Warriors and Hunters can use the Oak buckler",
+		"shields are for Warriors and Hunters")
 	check(World.requirement_error("bronze_helm", 9, "knight") == "The Bronze helm requires level 10"
 		and World.requirement_error("bronze_helm", 10, "knight").is_empty(), "the level requirement boundary")
 	var world := World.new()
@@ -1313,8 +1313,8 @@ func _gear_tier_checks() -> void:
 	knight["backpack"][4] = "willow_shortbow"
 	knight["backpack"][5] = "bronze_mace"
 	var refused: Dictionary = world.move_item(1, {"type": "backpack", "index": 4}, {"type": "equipment", "slot": "main_hand"}, 1.0)
-	check(not refused["ok"] and refused["reason"].begins_with("Only Paladins") and knight["backpack"][4] == "willow_shortbow",
-		"a Knight cannot equip a bow")
+	check(not refused["ok"] and refused["reason"].begins_with("Only Hunters") and knight["backpack"][4] == "willow_shortbow",
+		"a Warrior cannot equip a bow")
 	check(world.toggle_equipment(1, "main_hand", 2.0)["ok"] and knight["equipment"]["main_hand"] == "copper_blade",
 		"the equip key picks a usable weapon")
 	check(world.move_item(1, {"type": "backpack", "index": 5}, {"type": "equipment", "slot": "main_hand"}, 3.0)["reason"]
@@ -3173,7 +3173,7 @@ func _combat_checks() -> void:
 	paladin["mana"] = world.player_stats(1)["mana"]
 	check(combat.cast(1, 5, time)["reason"] == "Unknown spell" and combat.cast(1, "fireball", time)["reason"] == "Unknown spell",
 		"unknown spells rejected")
-	check(combat.cast(1, "ember_bolt", time)["reason"].begins_with("Your vocation"), "vocation spells only")
+	check(combat.cast(1, "ember_bolt", time)["reason"].begins_with("Your class"), "class spells only")
 	check(combat.cast(1, "holy_mend", time)["reason"] == "Holy mend needs level 8", "spell level requirement")
 	check(combat.cast(1, "piercing_shot", time)["reason"] == "You need a target in range", "attack spells need a target")
 	var dummy: int = combat.spawn_monster("stone_golem", 1, Vector2i(9, 6), time)

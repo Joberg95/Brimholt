@@ -29,7 +29,7 @@ func setup(game_node: Node, address: LineEdit) -> void:
 	box.add_child(title)
 	var intro := Label.new()
 	intro.text = "Host a game for your friends, or join one on your network.\nNew characters start as adventurers in Cinder" \
-		+ " Crossing,\npass a trial, and choose a vocation from its trainers.\nThe host saves yours, so you return as you left."
+		+ " Crossing,\npass a trial, and choose a class from its trainers.\nThe host saves yours, so you return as you left."
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	intro.modulate = Color("#a7b0b8")
 	box.add_child(intro)

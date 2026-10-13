@@ -133,7 +133,7 @@ func _write(state: Dictionary, rest_left: int) -> void:
 		"regen": "Health regained every 10 s; %s× after %d s out of combat, %d× resting in town." % [
 			Spells.number(Combat.RESTING_MULTIPLIER), int(Combat.RESTING_SECONDS), Combat.TOWN_REST_MULTIPLIER],
 		"healing": "Strength of heals you cast on others (Mass mend, Wild growth)." if stats["healing"] > 0
-			else "Only healers (Druids, and a little for Paladins) heal others.",
+			else "Only healers (Druids, and a little for Hunters) heal others.",
 	}
 	for stat: String in Balance.STATS:
 		var text: String = str(stats[stat])

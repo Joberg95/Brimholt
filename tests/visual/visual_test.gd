@@ -1163,17 +1163,17 @@ func _check_training_hall() -> bool:
 	player["from"] = front
 	game._publish_actor(1)
 	await create_timer(0.8).timeout
-	if not await _open_service("trainer_paladin", "Vocation"):
+	if not await _open_service("trainer_paladin", "Class"):
 		return false
 	await process_frame
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-trainer.png")
 	var become: Button = null
 	for button: Node in game._travel_list.find_children("*", "Button", true, false):
-		if button.text == "Become a Paladin":
+		if button.text == "Become a Hunter":
 			become = button
 	if not _expect(become != null and not become.disabled and game.dialogs.mode == "vocation",
-			"The paladin trainer offers no vocation to a qualified Adventurer"):
+			"The Hunter trainer offers no class to a qualified Adventurer"):
 		return false
 	become.pressed.emit()
 	await create_timer(0.3).timeout
@@ -1186,7 +1186,7 @@ func _check_training_hall() -> bool:
 	player["from"] = saved["cell"]
 	game._publish_actor(1)
 	await create_timer(0.5).timeout
-	return _expect(chosen, "Choosing a vocation at the trainer did not make the Adventurer a Paladin")
+	return _expect(chosen, "Choosing a class at the trainer did not make the Adventurer a Hunter")
 
 
 ## The lexicon (K) searched for "silk" lists the spiders with their drops; a level-12 player
@@ -1255,7 +1255,7 @@ func _check_bots() -> bool:
 	var text: PackedStringArray = []
 	_texts(panel, text)
 	var shown: bool = ids.size() == 1 and game.actors.has(ids[0]) and game.actors[ids[0]]["state"].get("bot", false) \
-		and "\n".join(text).contains("Bot Knight 30") and Combat.distance(game.world.players[ids[0]]["cell"], game.world.players[1]["cell"]) <= 2
+		and "\n".join(text).contains("Bot Warrior 30") and Combat.distance(game.world.players[ids[0]]["cell"], game.world.players[1]["cell"]) <= 2
 	game.remove_bot(ids[0] if not ids.is_empty() else 0)
 	panel.hide()
 	await process_frame

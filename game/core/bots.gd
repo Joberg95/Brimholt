@@ -88,7 +88,7 @@ static func gear(level: int, vocation: String) -> Dictionary:
 ## Adds a bot beside `near`. Returns {ok, id, reason}.
 func add(vocation: String, level: int, stance: String, near: Vector2i, now: float) -> Dictionary:
 	if not Balance.VOCATIONS.has(vocation) or stance not in STANCES:
-		return {"ok": false, "reason": "Unknown vocation or stance"}
+		return {"ok": false, "reason": "Unknown class or stance"}
 	var id: int = FIRST_ID
 	while world.players.has(id):
 		id += 1

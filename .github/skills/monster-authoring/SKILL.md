@@ -111,12 +111,12 @@ make fight-sim MONSTER=ash_hound LEVELS=40 PLAYER_LEVEL=1     # an under-levelle
 make fight-sim MONSTER=cave_spider LEVELS=16 OFF_HAND=torch   # a dark dungeon: torch, no shield or book
 ```
 
-The simulator fights each vocation in its tier's vendor gear, first with auto-attacks only,
+The simulator fights each class in its tier's vendor gear, first with auto-attacks only,
 then with spells and potions. A normal monster at the player's level should land near the
 current bands in `docs/balance.md`:
 - One monster costs at most about a third of a player's health with auto-attacks alone.
 - A camp of three kills sorcerers and druids that only auto-attack.
-- Every vocation wins that camp with spells and potions, ending above about 40% health and
+- Every class wins that camp with spells and potions, ending above about 40% health and
   using roughly 0–8 potions.
 
 If a new monster falls outside the bands, change its rank, range or camp size, not its
