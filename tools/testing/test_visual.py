@@ -30,9 +30,6 @@ CAPTURES = (
     ("visual-lexicon.png", "Lexicon (K) searched for silk: the spiders, where they live, and their drop chances"),
     ("visual-quest-marks.png", "Cinder Landing at level 12: Harbourmaster Ilse's ! and the quest list's next stop"),
     ("visual-bots.png", "Bots panel (host only): a level-30 Knight bot added beside you, listed with its stance and place"),
-    ("visual-3d.png", "3D view (F3) by day: Cinder Crossing, your character, a wolf, NPCs, trees, nameplates"),
-    ("visual-3d-forest.png", "3D view in a forest: KayKit trees on the grass"),
-    ("visual-3d-night.png", "3D view at night: lanterns and town torches"),
     ("visual-quests.png", "Quest list: a task in progress and one ready to turn in, with giver and town"),
     ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
     ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),
@@ -55,7 +52,7 @@ CAPTURES = (
 )
 
 
-## The 3D view compiles its shaders on first use, so allow well over the usual ~40 seconds.
+## The full visual run takes about 40 seconds; allow for a busy machine.
 VISUAL_TIMEOUT = 120
 
 

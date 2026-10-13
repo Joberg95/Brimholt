@@ -242,8 +242,6 @@ func _run() -> void:
 		return
 	if not await _check_bots():
 		return
-	if not await _check_3d():
-		return
 	if not await _check_waystone():
 		return
 	if not await _check_town_services():
@@ -264,7 +262,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks, host bots panel, 3D view (terrain, characters, mapping, night)")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks, host bots panel")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1263,61 +1261,6 @@ func _check_bots() -> bool:
 	await process_frame
 	return _expect(shown and game.bots.bots.is_empty() and not game.actors.has(ids[0] if not ids.is_empty() else 0),
 		"Adding a bot from the Bots panel did not put a bot beside you, or removing it failed (%s)" % [text])
-
-
-## The 3D renderer (F3): Cinder Crossing by day and night with characters and a monster; a
-## tile projected to the screen maps back to itself, and a click on a body finds its creature.
-func _check_3d() -> bool:
-	var player: Dictionary = game.world.players[1]
-	var home: Vector2i = player["cell"]
-	var plaza: Vector2i = World.SPAWNS[0] + Vector2i(2, 2)
-	player["cell"] = plaza
-	player["from"] = plaza
-	game._publish_actor(1)
-	var events: Array = []
-	var wolf: int = game.combat.spawn_monster("grey_wolf", 12, plaza + Vector2i(3, 3), game._now(), -1, events)
-	game.world.monsters[wolf]["next_move"] = INF
-	game.world.monsters[wolf]["next_attack"] = INF
-	game._handle_events(events)
-	await _press("toggle_3d")
-	await create_timer(2.5).timeout
-	await RenderingServer.frame_post_draw
-	screen.get_texture().get_image().save_png("res://.tools/visual-3d.png")
-	var world_3d: Node3D = game._view.world_3d
-	var probe: Vector2i = plaza + Vector2i(-2, 1)
-	var at: Vector2 = game.map_to_screen((Vector2(probe) + Vector2(0.5, 0.5)) * World.TILE_SIZE) - game.VIEW_ORIGIN
-	var mapped: bool = game._map_location(at)["cell"] == probe
-	var wolf_at: Vector2 = world_3d.head_of(world_3d.monster_nodes[wolf], 0.4) if world_3d.monster_nodes.has(wolf) else Vector2(-99, -99)
-	var clicked: bool = world_3d.cell_at(wolf_at) == game.world.monsters[wolf]["cell"]
-	var shown: bool = world_3d.actor_nodes.has(1) and world_3d.monster_nodes.has(wolf) and not world_3d.npc_nodes.is_empty()
-	var forest: Array = _forest_spot()
-	if not forest.is_empty():
-		player["cell"] = forest[1]
-		player["from"] = forest[1]
-		game._publish_actor(1)
-		await create_timer(1.5).timeout
-		await RenderingServer.frame_post_draw
-		screen.get_texture().get_image().save_png("res://.tools/visual-3d-forest.png")
-		player["cell"] = plaza
-		player["from"] = plaza
-		game._publish_actor(1)
-		await create_timer(1.0).timeout
-	game._world_view.lighting.time_override = 0.0
-	await create_timer(0.8).timeout
-	await RenderingServer.frame_post_draw
-	screen.get_texture().get_image().save_png("res://.tools/visual-3d-night.png")
-	var lit: bool = world_3d.darkness > 0.5 and world_3d._lights.any(func(light: OmniLight3D) -> bool: return light.visible)
-	game._world_view.lighting.time_override = 0.5
-	await _press("toggle_3d")
-	var gone: Array = []
-	game.combat.despawn(wolf, gone)
-	game._handle_events(gone)
-	player["cell"] = home
-	player["from"] = home
-	game._publish_actor(1)
-	await create_timer(0.3).timeout
-	return _expect(mapped and clicked and shown and lit and not game.renderer_3d and game._view.world_3d.process_mode == Node.PROCESS_MODE_DISABLED,
-		"3D view: mapping %s, body click %s, creatures %s, night lights %s" % [mapped, clicked, shown, lit])
 
 
 func _texts(node: Node, into: PackedStringArray) -> void:

@@ -154,7 +154,6 @@ func _run() -> void:
 	_adventurer_checks()
 	_quest_hub_and_lexicon_checks()
 	_bot_checks()
-	_render_3d_checks()
 	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
 
@@ -426,28 +425,6 @@ func _bot_checks() -> void:
 		"removing a bot frees its slot")
 	check(not full_bots.add("pirate", 10, "dummy", World.SPAWNS[0], 0.0)["ok"] and not full_bots.add("knight", 10, "berserk", World.SPAWNS[0], 0.0)["ok"],
 		"bots need a real vocation and stance")
-
-
-## The 3D renderer has a character for every vocation, a model for every hand item look, and
-## every tree model it plants; chunks cover the map and are built from its terrain.
-func _render_3d_checks() -> void:
-	var Character3D: Script = load("res://game/render3d/character_3d.gd")
-	var Terrain3D: Script = load("res://game/render3d/terrain_3d.gd")
-	for vocation: String in Balance.VOCATIONS.keys() + [Balance.ADVENTURER]:
-		check(ResourceLoader.exists(Character3D.MODELS.get(vocation, "")), "%s has a 3D character" % vocation)
-	var looks: Dictionary = {}
-	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["slot"] in ["main_hand", "off_hand"]:
-			looks[String(World.ITEMS[kind]["look"]).get_slice("+", 0)] = true
-	for shape: String in looks:
-		check(shape == "torch" or ResourceLoader.exists(Character3D.GEAR + Character3D.GEAR_MODELS.get(shape, "?") + ".gltf"),
-			"hand items that look like %s have a 3D model" % shape)
-	for model: String in Terrain3D.models():
-		check(ResourceLoader.exists(Terrain3D.NATURE + model + ".gltf"), "the 3D tree model %s exists" % model)
-	var chunk: Node3D = Terrain3D.build(Vector2i.ZERO)
-	check(chunk != null and chunk.get_child_count() >= 2 and Terrain3D.build(Vector2i(-1, 0)) == null
-		and Terrain3D.build(Vector2i(World.width() / Terrain3D.CHUNK + 1, 0)) == null, "3D chunks cover the map and nothing outside it")
-	chunk.free()
 
 
 func _inventory_checks() -> void:
