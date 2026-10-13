@@ -12,13 +12,13 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const SLOT_STEP: float = 36.0
-## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/cape/ring,
-## and the charm below.
+## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/legs/ring,
+## and cape/boots/charm.
 const PAPERDOLL: Dictionary = {
 	"necklace": Vector2(0, 0), "helmet": Vector2(1, 0), "bag": Vector2(2, 0),
 	"main_hand": Vector2(0, 1), "armor": Vector2(1, 1), "off_hand": Vector2(2, 1),
-	"ring_1": Vector2(0, 2), "cape": Vector2(1, 2), "ring_2": Vector2(2, 2),
-	"charm": Vector2(1, 3),
+	"ring_1": Vector2(0, 2), "legs": Vector2(1, 2), "ring_2": Vector2(2, 2),
+	"cape": Vector2(0, 3), "boots": Vector2(1, 3), "charm": Vector2(2, 3),
 }
 const BACKPACK_COLUMNS: int = 5
 const LOCKED_TOOLTIP: String = "Locked: finish a town hunting task for a bigger pack"

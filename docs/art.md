@@ -44,13 +44,15 @@ filtering:
 | `terrain_palette.png` | 32×32 map-editor palette, one tile per terrain |
 
 A character is drawn as: main-hand item behind when facing up, side-facing shield behind,
-body, tinted `cloth.png`, equipped cape, armour, helmet, front-facing shield, then the
+body, legs, boots, tinted `cloth.png`, equipped cape, armour, helmet, front-facing shield, then the
 main-hand item when not facing up. In the back view the cape goes **over** the armour.
 Base body/cloth have neither cape fill nor cape outlines baked into them.
 Gear sheets leave holes where the hood or near arm must stay visible, so each item
 needs only one sheet rather than one per combination.
 
-The generator applies `compact_humanoid` to every body, cloth and worn-item frame using
+The rig is slim, after classic 32-pixel outfits: a 10-pixel head, a 12-pixel torso, 2-pixel
+arms hanging at x 24–25 and 38–39, and 3-pixel legs (`leg_parts` is shared by the body and by
+worn legs and boots so they line up). The generator applies `compact_humanoid` to every body, cloth and worn-item frame using
 the same integer pixel mapping (80% authored height, feet anchored at frame y=53).
 This is baked into the PNGs, not a runtime stretch. It keeps grips, masks, capes and
 walk poses registered without altering the 64×64 frame or gameplay collision footprint.
@@ -66,6 +68,34 @@ layout, then reimport (open the editor or run `make import`). Running
 add `--preview .tools/sprite-preview.png` for a 2× review sheet. A new item needs a
 catalog entry in `game/data/items.json`, an icon, and (if visibly equippable) a gear sheet loaded by
 `game/render/sprite_art.gd`; the rules check verifies these exist.
+
+## Painted outfits
+
+The named class sets can be shown as painted full figures instead of generated layers.
+`art/outfits/` holds the source paintings (`class_sets.png` was generated and supplied by the
+project owner as the gear design reference) and `manifest.json`, which lists each outfit: the
+source file, the `figures` region and the facings in it (`order`), the `layout`, and optionally
+an `icons` region whose icons (left to right) replace the generated icons of `icon_items`.
+`make outfits` runs `tools/generators/import_outfits.gd`, which separates each figure from its
+background, scales the outfit with one factor (the first figure becomes `figure_height`, 40
+pixels), adds a dark outline, and writes `assets/sprites/outfits/<id>.png` (the same 64×64
+pose/facing layout, feet at y=53) and `assets/sprites/icons/<item>.png` (32×32).
+
+- `"layout": "strip"`: one standing figure per facing. Steps bob a pixel and attacks lean toward
+  the facing. This is what the current sheet provides.
+- `"layout": "grid"`: one row per facing (in `order`), five poses per row: stand, step A,
+  step B, attack wind-up, strike. A missing left or right row is mirrored from the other.
+
+An armor row's `"outfit"` names the sheet: wearing that armor draws the outfit instead of the
+body, cloth, legs, boots, cape, armor, and helmet layers; weapons and shields are still drawn
+at the usual hands. Pieces of the set worn with other armor use their generated layers.
+
+**Requesting new outfit art.** One PNG per set, transparent or a flat single-colour
+background, nothing else in the picture (no text, frames, shadows, or ground). Four rows
+(facing the viewer, facing away, facing left, facing right) by five columns (standing, left
+foot forward, right foot forward, weapon raised, weapon swung down), all at the same scale with
+feet on one baseline per row, in the set's style, empty-handed (the game draws weapons and
+shields). Add the set to `manifest.json` with `"layout": "grid"` and run `make outfits`.
 
 ## Items and gear
 
@@ -90,11 +120,13 @@ Every item is a row in `game/data/items.json`, read by both the game and the gen
 `id`, `name`, `slot`, `level`, optional `vocations`, `look`, and `colors` (main, light,
 accent), plus `glow` for relics and `gold` or `value` for coins and materials. The row
 order is the icon order in `items.png`. `look` picks the drawing: helmets `cap`, `coif`,
-`helm`, `kettle`, `greathelm`, `hood`, `hat`, `circlet`, `cowl`, `bearhood`, `staghelm`
-(decorate with `+plume`, `+crest`, `+horns`, `+feather`, `+stars`, `+flames`, `+leaves`,
-`+antlers`); armor `coat`, `tunic`, `leather`, `robe`, `mail`, `scale`, `brigandine`, `plate`
-(decorate with `+fur`, `+pelt`, `+spikes`, `+flames`, `+leaves`, `+runes`); helmets and
-armor also carry an `armor` type (`plate`, `mail`, `leather`, `cloth`) whose shapes should
+`helm`, `kettle`, `greathelm`, `hood`, `hat`, `ranger`, `circlet`, `cowl`, `bearhood`, `staghelm`
+(decorate with `+plume`, `+crest`, `+horns`, `+spikes`, `+feather`, `+wings`, `+stars`, `+flames`,
+`+leaves`, `+flowers`, `+fur`, `+antlers`); armor `coat`, `tunic`, `leather`, `robe`, `mail`, `scale`, `brigandine`, `plate`
+(decorate with `+fur`, `+pelt`, `+spikes`, `+trim`, `+flames`, `+leaves`, `+flowers`, `+runes`);
+legs `legplates`, `chausses`, `breeches`, `leggings` and boots `sabatons`, `striders`, `boots`,
+`slippers` (decorate with `+trim`, `+spikes`, `+fur`, `+leaves`, `+flames`, `+runes`); helmets,
+armor, legs, and boots also carry an `armor` type (`plate`, `mail`, `leather`, `cloth`) whose shapes should
 read at a glance: plate is brute steel, mail bear fur over rings, leather antler and leaf,
 cloth a warlock's flame-hemmed robe; weapons `sword`, `greatsword`, `axe`, `mace`, `hammer`, `bow`, `crossbow`,
 `wand`, `rod`; off-hands `buckler`, `heater`, `tower`, `book`, `torch` (held up, flame swaying with the walk); and `cape`, `amulet`,

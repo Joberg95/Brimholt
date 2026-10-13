@@ -60,7 +60,7 @@ func _gear(level: int, vocation: String) -> Dictionary:
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
 		if item["level"] == tier and not item.get("loot_only", false) and not item.has("glow") \
-				and item["slot"] in ["helmet", "armor", "main_hand", "off_hand"] \
+				and item["slot"] in ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"] \
 				and World.requirement_error(kind, Balance.MAX_LEVEL, vocation).is_empty() and not gear.has(item["slot"]):
 			gear[item["slot"]] = kind
 	if not off_hand.is_empty():

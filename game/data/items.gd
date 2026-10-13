@@ -1,8 +1,8 @@
 extends RefCounted
 ## Item catalog: definitions from items.json, stats derived from Balance by tier and slot.
 ## Equipment comes in tiers every TIER_STEP levels; accessories (amulets, capes, charms,
-## rings) start at ACCESSORY_LEVEL. Weapons and off-hands belong to classes; helmets and armor
-## have an "armor" type (plate, mail, leather, cloth) that only its class wears (Balance.ARMOR_OF).
+## rings) start at ACCESSORY_LEVEL. Weapons and off-hands belong to classes; helmets, armor, legs,
+## and boots have an "armor" type (plate, mail, leather, cloth) that only its class wears (Balance.ARMOR_OF).
 
 const Balance = preload("res://game/data/balance.gd")
 const PATH: String = "res://game/data/items.json"
@@ -13,11 +13,12 @@ const ACCESSORY_SLOTS: Array[String] = ["necklace", "cape", "charm", "ring"]
 ## (one step past the last tier) and multiplied by RELIC_BONUS.
 const RELIC_LEVEL: int = 50
 const RELIC_BONUS: float = 1.15
-## Defense of a full tier set (helmet, armor, shield) rises linearly from SET_DEFENSE_LOW at
+## Defense of a full tier set (helmet, armor, legs, boots, shield) rises linearly from SET_DEFENSE_LOW at
 ## level 1 to SET_DEFENSE_HIGH at the last tier; each piece takes a share.
 const SET_DEFENSE_LOW: float = 14.0
 const SET_DEFENSE_HIGH: float = 70.0
-const DEFENSE_SHARE: Dictionary = {"helmet": 0.22, "armor": 0.42, "shield": 0.36, "book": 0.12, "cape": 0.08}
+const DEFENSE_SHARE: Dictionary = {"helmet": 0.15, "armor": 0.30, "legs": 0.15, "boots": 0.10, "shield": 0.30, "book": 0.06,
+	"cape": 0.08}
 ## Weapons are tuned to the attack budget a little into their tier (Balance.gear_attack_budget),
 ## so each tier is an upgrade that slowly falls behind until the next one.
 const WEAPON_LEVEL_OFFSET: int = 2
@@ -44,7 +45,7 @@ const RARITIES: Array = [
 ]
 
 
-## id -> {name, slot, level, vocations, look, colors, stats, [gold], [value], [price], [sell],
+## id -> {name, slot, level, vocations, look, colors, stats, [armor], [outfit], [gold], [value], [price], [sell],
 ## [drink], [bound], [slots], [loot_only]} in file order. "price" is the tier valuation,
 ## "sell" what vendors pay; loot_only items are never vendor stock or generic gear rolls.
 static func load_catalog() -> Dictionary:
@@ -62,6 +63,8 @@ static func load_catalog() -> Dictionary:
 		item["vocations"] = vocations
 		if entry.has("armor"):
 			item["armor"] = String(entry["armor"])
+		if entry.has("outfit"):
+			item["outfit"] = String(entry["outfit"])
 		if bool(entry.get("loot_only", false)):
 			item["loot_only"] = true
 		for key: String in ["gold", "value", "price", "slots"]:
@@ -134,6 +137,8 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 			return {"defense": _defense(level, "helmet")}
 		"armor":
 			return {"defense": _defense(level, "armor"), "regen": maxi(1, roundi(reference_health(level) * ARMOR_REGEN))}
+		"legs", "boots":
+			return {"defense": _defense(level, item["slot"])}
 		"off_hand":
 			if item["look"] == "book":
 				return {"defense": _defense(level, "book"), "mana": maxi(5, roundi(reference_mana(level) * BOOK_MANA))}

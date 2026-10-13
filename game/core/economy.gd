@@ -6,10 +6,10 @@ extends RefCounted
 
 const World = preload("res://game/core/world.gd")
 
-## Vendors stock every potion and the helmet, armor, weapon, and off-hand of each tier up to
+## Vendors stock every potion and the helmet, armor, legs, boots, weapon, and off-hand of each tier up to
 ## MAX_TIER: gear for levelling a new character. Better gear comes from monsters and quests.
 const MAX_TIER: int = 10
-const GEAR_SLOTS: Array[String] = ["helmet", "armor", "main_hand", "off_hand"]
+const GEAR_SLOTS: Array[String] = ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]
 ## Most of one stackable a single purchase may buy (one backpack stack).
 const BUY_MAX: int = 100
 

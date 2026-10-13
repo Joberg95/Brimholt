@@ -139,7 +139,7 @@ static func saved_vocation(data: Dictionary) -> String:
 ## Before armor types every class shared the same helmets and armor: swap each piece of
 ## another type (worn, carried, or in the depot) for the same slot and tier of the player's own.
 static func _migrate_armor(player: Dictionary) -> void:
-	for slot: String in ["helmet", "armor"]:
+	for slot: String in ["helmet", "armor", "legs", "boots"]:
 		if player["equipment"].has(slot):
 			player["equipment"][slot] = World.armor_counterpart(player["equipment"][slot], player["vocation"])
 	for container: String in ["backpack", "depot"]:

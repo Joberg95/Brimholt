@@ -12,13 +12,16 @@ const SHORT: Dictionary = {"health": "hp", "mana": "mana", "attack": "atk", "def
 
 func _initialize() -> void:
 	var lines: PackedStringArray = []
-	# Helmet and armor of each armor type (Balance.ARMOR_OF), then the off-hands.
+	# Helmet, armor, legs, and boots of each armor type (Balance.ARMOR_OF), then the off-hands.
 	var wearers: Array = Balance.ARMOR_OF.keys()
 	_table(lines, "Tier", wearers.map(func(vocation: String) -> String:
 		return "%s (%s)" % [String(Balance.ARMOR_OF[vocation]).capitalize(), Balance.VOCATIONS[vocation]["name"]]),
 		func(level: int, column: int) -> String:
 			var type: String = Balance.ARMOR_OF[wearers[column]]
-			return "%s<br>%s" % [_cell(_find_armor("helmet", level, type)), _cell(_find_armor("armor", level, type))])
+			var pieces: PackedStringArray = []
+			for slot: String in ["helmet", "armor", "legs", "boots"]:
+				pieces.append(_cell(_find_armor(slot, level, type)))
+			return "<br>".join(pieces))
 	lines.append("")
 	_table(lines, "Tier", ["Shield (%s, %s)" % [_class("knight"), _class("paladin")], "Spellbook (%s, %s)" % [_class("sorcerer"), _class("druid")]],
 		func(level: int, column: int) -> String:

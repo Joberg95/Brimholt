@@ -67,14 +67,15 @@ game/
     overworld.tscn       The world, painted in Godot's TileMap editor
     terrain.tres         Editor tile set (terrain custom data)
     markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster markers
-assets/sprites/          Original generated sprite sheets (+ Godot .import files)
+assets/sprites/          Original generated sprite sheets, imported painted outfits/ and icons/ (+ Godot .import files)
+art/outfits/             Painted outfit sources and manifest.json (imported by make outfits)
 assets/third_party/      CC0 textures with their licenses (CREDITS.md)
 tests/
   unit/                  Deterministic rule checks (no networking, no rendering)
   integration/           Real ENet peers and the two-bot playthrough
   visual/                Offscreen rendering checks
 tools/
-  generators/            make_sprites.py, make_map.gd, endgame_zone.gd, dungeons.gd, desert.gd, towns.gd, balance_table.gd, gear_table.gd
+  generators/            make_sprites.py, import_outfits.gd, make_map.gd, endgame_zone.gd, dungeons.gd, desert.gd, towns.gd, balance_table.gd, gear_table.gd
   testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd
 docs/                    Gameplay, world editing, art, balance, testing, this file
 .tools/                  Ignored: test reports, captures, downloads

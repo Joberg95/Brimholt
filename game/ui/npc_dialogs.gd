@@ -253,7 +253,9 @@ func _farewell(text: String = "Farewell") -> void:
 	_button(text, true, close)
 
 
-static func icon(kind: String) -> AtlasTexture:
+static func icon(kind: String) -> Texture2D:
+	if SpriteArt.ICONS.has(kind):
+		return SpriteArt.ICONS[kind]
 	var texture := AtlasTexture.new()
 	texture.atlas = SpriteArt.ITEM_ICONS
 	texture.region = SpriteArt.item_region(kind)

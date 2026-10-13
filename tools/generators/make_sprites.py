@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOG = json.loads((ROOT / "game" / "data" / "items.json").read_text())["items"]
 ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
-VISIBLE_SLOTS = ("helmet", "cape", "armor", "main_hand", "off_hand")
+VISIBLE_SLOTS = ("helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
 TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K")
 
@@ -293,15 +293,15 @@ def swing(frame):
 
 
 def side_arm_x(frame):
-    return (30, 33, 27, 31, 29)[frame]
+    return (31, 34, 28, 31, 30)[frame]
 
 
 # The weapon hand: the screen-right arm facing down or up, the near arm facing left. Walking it
 # hangs at the side; attacking it rises (wind-up) and then swings out (strike).
-WEAPON_SHOULDER = {"down": (41, 25), "up": (41, 25)}
+WEAPON_SHOULDER = {"down": (39, 25), "up": (39, 25)}
 ATTACK_HANDS = {
-    WIND_UP: {"down": (45, 17), "up": (45, 17), "left": (27, 20)},
-    STRIKE: {"down": (35, 36), "up": (37, 15), "left": (21, 31)},
+    WIND_UP: {"down": (43, 17), "up": (43, 17), "left": (28, 20)},
+    STRIKE: {"down": (35, 36), "up": (37, 15), "left": (22, 31)},
 }
 
 
@@ -313,22 +313,22 @@ def weapon_hand(direction, frame):
     if frame in ATTACK_HANDS:
         return ATTACK_HANDS[frame][direction]
     if direction in ("down", "up"):
-        return (41, 39 - swing(frame))
+        return (39, 39 - swing(frame))
     return (side_arm_x(frame) + 1, 39)
 
 
 def reaching_arm(shoulder, hand):
-    """An arm from shoulder to hand at any angle: a 3-pixel sleeve to the elbow, a 2-pixel
-    forearm, a cuff, and a 3x3 fist centred on the hand."""
+    """An arm from shoulder to hand at any angle: a 2-pixel sleeve and forearm, a cuff, and a
+    2x2 fist on the hand."""
     sx, sy = shoulder
     hx, hy = hand
     ex, ey = round(sx + (hx - sx) * 0.55), round(sy + (hy - sy) * 0.55)
-    sleeve = thick(line(sx, sy, ex, ey), box(-1, -1, 3, 3))
-    fore = thick(line(ex, ey, hx, hy), box(0, 0, 2, 2)) - box(hx - 1, hy - 1, 3, 3)
+    sleeve = thick(line(sx, sy, ex, ey), box(-1, 0, 2, 2))
+    fore = thick(line(ex, ey, hx, hy), box(-1, 0, 2, 2)) - box(hx - 1, hy - 1, 2, 2)
     image = layer(sleeve | fore, LINEN, False)
     cx, cy = round(hx - (hx - sx) * 0.2), round(hy - (hy - sy) * 0.2)
     image.set(cx, cy, LINEN[2])
-    image.over(layer(box(hx - 1, hy - 1, 3, 3), SKIN_TONES, False))
+    image.over(layer(box(hx - 1, hy - 1, 2, 2), SKIN_TONES, False))
     return image
 
 
@@ -446,49 +446,74 @@ def cloak_layer(points, folds):
     return image
 
 
-def front_legs(left_lift, right_lift):
-    """Front/back view: trousers joined at the hip, split into two legs with a visible gap.
-    A lifted leg bends: its boot rises three pixels and tucks one pixel inward."""
-    image = layer(box(26, 37, 12, 4), TROUSERS)
-    for x, lifted, inward in ((26, left_lift, 1), (34, right_lift, -1)):
-        bottom = 50 if lifted else 53
-        shift = inward if lifted else 0
-        leg = box(x, 40, 4, 6) | box(x + shift, 46, 4, bottom - 49)
-        image.over(layer(leg, TROUSERS))
-        image.over(layer(box(x + shift - (1 if x < 32 else 0), bottom - 3, 5, 4), BOOT_TONES, False))
-    return image
+def leg_parts(direction, frame):
+    """The hip block (front and back views only) and [(leg, boot, far)] per leg, far leg first.
+
+    Shared by the body and by worn legs and boots so every layer lines up. Front/back: two
+    3-pixel legs with a gap; a lifted leg bends, its boot rising three pixels and tucking one
+    pixel inward. Side (facing left): legs slant from the hip by a stride (negative is forward)
+    and the boot's toe points forward."""
+    if direction in ("down", "up"):
+        hips = box(27, 37, 10, 4)
+        parts = []
+        for x, lifted, inward in ((28, swing(frame) == 1, 1), (33, swing(frame) == -1, -1)):
+            bottom = 50 if lifted else 53
+            shift = inward if lifted else 0
+            leg = box(x, 40, 3, 6) | box(x + shift, 46, 3, bottom - 49)
+            boot = box(x + shift - (1 if x < 32 else 0), bottom - 3, 4, 4)
+            parts.append((leg, boot, False))
+        return hips, parts
+    near, far = ((0, 1), (-4, 4), (4, -4), (0, 1), (-3, 2))[frame]
+    parts = []
+    for hip_x, stride, is_far in ((31, far, True), (30, near, False)):
+        leg = set()
+        for y in range(37, 50):
+            leg |= box(hip_x + round(stride * (y - 37) / 16), y, 3, 1)
+        foot_x = hip_x + stride
+        parts.append((leg, box(foot_x, 50, 3, 3) | box(foot_x - 2, 52, 2, 1), is_far))
+    return set(), parts
 
 
-def side_leg(hip_x, stride, far):
-    """Side view (facing left): a leg slanting from the hip by `stride` pixels at the foot
-    (negative is forward), with a boot whose toe points forward."""
-    tones = TROUSERS_FAR if far else TROUSERS
-    image = Image(FRAME, FRAME)
-    points = set()
-    for y in range(37, 50):
-        x = hip_x + round(stride * (y - 37) / 16)
-        points |= box(x, y, 4, 1)
-    shade(image, points, tones, False)
-    foot_x = hip_x + stride
-    boot = box(foot_x, 50, 4, 3) | box(foot_x - 2, 52, 2, 1)
-    shade(image, boot, BOOT_TONES, False)
-    return image
+def boot_shaft(leg, boot, rows):
+    """The lowest `rows` rows of a leg above its boot, for tall boots."""
+    top = min(y for _, y in boot)
+    return {(x, y) for x, y in leg if top - rows <= y < top}
+
+
+def leg_layers(direction, frame):
+    """The bare legs: trousers and plain boots (one layer front/back, one per leg sideways)."""
+    hips, parts = leg_parts(direction, frame)
+    if direction in ("down", "up"):
+        image = layer(hips, TROUSERS)
+        for leg, boot, _ in parts:
+            image.over(layer(leg, TROUSERS))
+            image.over(layer(boot, BOOT_TONES, False))
+        return [image]
+    images = []
+    for leg, boot, far in parts:
+        image = Image(FRAME, FRAME)
+        shade(image, leg, TROUSERS_FAR if far else TROUSERS, False)
+        shade(image, boot, BOOT_TONES, False)
+        images.append(image)
+    return images
 
 
 def arm_layer(x, top):
-    sleeve = box(x, top + 1, 3, 8) | box(x + 1, top + 9, 2, 5)
-    image = layer(sleeve, LINEN, False)
-    image.rect(x, top + 13, 3, 1, LINEN[2])
-    image.over(layer(box(x, top + 14, 3, 3), SKIN_TONES, False))
+    """A hanging 2-pixel arm: sleeve, cuff, and hand."""
+    image = layer(box(x, top + 1, 2, 13), LINEN, False)
+    image.rect(x, top + 13, 2, 1, LINEN[2])
+    image.over(layer(box(x, top + 14, 2, 3), SKIN_TONES, False))
     return image
 
 
-TORSO_FRONT = box(24, 23, 16, 4) - {(24, 23), (39, 23)} | box(25, 27, 14, 6) | box(26, 33, 12, 4)
-TORSO_SIDE = box(27, 23, 10, 14) - {(27, 23), (36, 23)}
-HOOD_FRONT = box(28, 21, 8, 1) | box(26, 22, 12, 1) | box(25, 23, 14, 2) | box(26, 25, 12, 1)
-HOOD_SIDE = box(29, 21, 8, 1) | box(28, 22, 10, 3)
-TABARD_FRONT = box(28, 25, 8, 16) | box(29, 41, 6, 1) | box(30, 42, 4, 1)
-TABARD_SIDE = box(27, 25, 3, 16) | box(27, 41, 2, 1)
+# Front arms hang at x 24-25 and 38-39 beside a 12-pixel torso.
+ARM_X = (24, 38)
+TORSO_FRONT = box(26, 23, 12, 4) - {(26, 23), (37, 23)} | box(27, 27, 10, 10)
+TORSO_SIDE = box(28, 23, 8, 14) - {(28, 23), (35, 23)}
+HOOD_FRONT = box(29, 21, 6, 1) | box(27, 22, 10, 1) | box(26, 23, 12, 2) | box(27, 25, 10, 1)
+HOOD_SIDE = box(29, 21, 7, 1) | box(28, 22, 9, 3)
+TABARD_FRONT = box(29, 25, 6, 16) | box(30, 41, 4, 1)
+TABARD_SIDE = box(28, 25, 3, 16) | box(28, 41, 2, 1)
 
 
 def body_layers(direction, frame, with_cloak=False):
@@ -496,16 +521,15 @@ def body_layers(direction, frame, with_cloak=False):
     layers = []
     covers = Image(FRAME, FRAME)
     if direction in ("down", "up"):
-        left_lift, right_lift = swing(frame) == 1, swing(frame) == -1
-        cloak = cloak_layer(cloak_points(23, 43, 9, 11), (25, 28, 35, 38))
+        cloak = cloak_layer(cloak_points(23, 43, 7, 9), (27, 29, 34, 36))
         if direction == "down" and with_cloak:
             layers.append((cloak, True))
-        layers.append((front_legs(left_lift, right_lift), True))
+        layers.append((leg_layers(direction, frame)[0], True))
         torso = layer(TORSO_FRONT, LINEN)
-        torso.over(arm_layer(21, 24 + swing(frame)))
+        torso.over(arm_layer(ARM_X[0], 24 + swing(frame)))
         attacking = frame in ATTACK_HANDS
         if not attacking:
-            torso.over(arm_layer(40, 24 - swing(frame)))
+            torso.over(arm_layer(ARM_X[1], 24 - swing(frame)))
         elif direction == "up":
             torso.over(reaching_arm(weapon_shoulder(direction, frame), weapon_hand(direction, frame)))
         layers.append((torso, True))
@@ -515,7 +539,7 @@ def body_layers(direction, frame, with_cloak=False):
                 tabard.set(x, y, EMBLEM)
             layers.append((tabard, True))
             belt = Image(FRAME, FRAME)
-            belt.rect(25, 35, 14, 2, BELT_TONE)
+            belt.rect(27, 35, 10, 2, BELT_TONE)
             belt.rect(31, 35, 2, 2, BUCKLE_TONE)
             layers.append((belt, False))
             if attacking:
@@ -531,24 +555,22 @@ def body_layers(direction, frame, with_cloak=False):
         head.template(27, 11, HEADS[direction], HEAD_PALETTE)
         layers.append((head, True))
     else:
-        # Stand: legs together; steps: the near and far leg scissor forward and back.
-        near, far = ((0, 1), (-4, 4), (4, -4), (0, 1), (-3, 2))[frame]
-        cloak = set(box(31, 22, 7, 2))
+        cloak = set(box(32, 22, 6, 2))
         for y in range(24, 45):
-            cloak |= box(33, y, 5 + (y - 24) * 3 // 20, 1)
-        cloak = cloak_layer(cloak, (37, 40))
+            cloak |= box(34, y, 4 + (y - 24) * 3 // 20, 1)
+        cloak = cloak_layer(cloak, (36, 38))
         if with_cloak:
             layers.append((cloak, True))
-        layers.append((side_leg(31, far, True), True))
-        layers.append((side_leg(30, near, False), True))
+        for leg in leg_layers(direction, frame):
+            layers.append((leg, True))
         layers.append((layer(TORSO_SIDE, LINEN), True))
         tabard = layer(TABARD_SIDE, TABARD)
-        tabard.set(28, 30, EMBLEM)
-        tabard.set(28, 31, EMBLEM)
+        tabard.set(29, 30, EMBLEM)
+        tabard.set(29, 31, EMBLEM)
         layers.append((tabard, True))
         belt = Image(FRAME, FRAME)
-        belt.rect(27, 35, 10, 2, BELT_TONE)
-        belt.rect(27, 35, 2, 2, BUCKLE_TONE)
+        belt.rect(28, 35, 8, 2, BELT_TONE)
+        belt.rect(28, 35, 2, 2, BUCKLE_TONE)
         layers.append((belt, False))
         hood = layer(HOOD_SIDE, HOOD)
         layers.append((hood, True))
@@ -571,7 +593,7 @@ def body_covers(direction, frame):
 
 def full_body(direction, frame, with_cloak=False):
     image = Image(FRAME, FRAME)
-    for x, y in ellipse(32, 53.5, 11, 3):
+    for x, y in ellipse(32, 53.5, 9, 3):
         image.set(x, y, SHADOW)
     for part, outlined in body_layers(direction, frame, with_cloak)[0]:
         image.over(part.outlined() if outlined else part)
@@ -639,96 +661,131 @@ def armor_surface(image, points, shape, palette):
             image.set(x, y, blend(main, rgba("b6afa0"), 0.5))
 
 
+def collar(image, points, extras, accent):
+    """Fur, pelt, leaf, or flower trim along a neckline (shared by armor and robes)."""
+    if "fur" in extras:
+        for x, y in points:
+            image.set(x, y, FUR[0] if (x * 3 + y) % 4 else FUR[1])
+    if "pelt" in extras:
+        for x, y in points:
+            image.set(x, y, BEAR_FUR[(x * 5 + y * 3) % 3])
+    xs = sorted({x for x, _ in points})
+    top = min(y for _, y in points)
+    if "leaves" in extras:
+        for x in xs[::4]:
+            shade(image, ellipse(x + 1, top + 1, 1.8, 1.4), LEAF_TONES, False)
+    if "flowers" in extras:
+        for x in xs[1::4]:
+            image.set(x, top, scale(accent, 1.2))
+            image.set(x + 1, top + 1, accent)
+            image.set(x, top + 1, rgba("ffe08a"))
+
+
 def armor_builder(kind):
     palette, accent = tones(kind)
     light, main, dark = palette
     shape, extras = look(kind)
     tunic = shape in ("tunic", "leather")
+    gold = (scale(accent, 1.2), accent, scale(accent, 0.7))
 
     def build(direction, frame):
         covers = body_covers(direction, frame)
         if shape == "robe":
             return robe(direction, frame, covers)
-        pauldron = shape == "plate"
         side = direction == "left"
+        front = direction == "down"
+        left, width = (28, 8) if side else (27, 10)
+        shoulders = box(28, 23, 8, 4) if side else box(26, 23, 12, 4)
         if tunic:
-            body = box(27, 24, 10, 18) | box(26, 41, 12, 3) if side else box(25, 24, 14, 18) | box(24, 41, 16, 3)
+            body = shoulders | box(left, 27, width, 14) | (box(27, 40, 10, 3) if side else box(26, 40, 12, 3))
+        elif side:
+            body = shoulders | box(28, 27, 8, 12) | box(29, 39, 6, 4)
         else:
-            body = box(27, 23, 10, 16) | box(28, 39, 8, 4) if side else (box(25, 23, 14, 16) | box(26, 39, 5, 4)
-                                                                       | box(33, 39, 5, 4))
+            body = shoulders | box(27, 27, 10, 12) | box(27, 39, 4, 4) | box(33, 39, 4, 4)
+        body -= {(min(x for x, _ in shoulders), 23), (max(x for x, _ in shoulders), 23)}
         image = layer(body, palette)
+        belt_y = 36 if tunic else 35
         if shape == "leather":
-            image.rect(26 if not side else 27, 36, 12 if not side else 10, 2, LEATHER)
-            image.rect(31 if not side else 30, 36, 2, 2, accent)
-            if not side and direction != "up":
+            image.rect(left, belt_y, width, 2, LEATHER)
+            image.rect(29 if side else 31, belt_y, 2, 2, accent)
+            if front:
                 for y in range(25, 35, 2):
-                    image.set(29, y, dark)
-                    image.set(34, y, dark)
-            if "fur" in extras:
-                for x, y in box(24 if not side else 26, 22, 16 if not side else 12, 3):
-                    image.set(x, y, FUR[0] if (x * 3 + y) % 4 else FUR[1])
-            if "leaves" in extras:
-                for x in ((26, 30, 34, 38) if not side else (28, 33)):
-                    shade(image, ellipse(x, 23, 1.8, 1.4), LEAF_TONES, False)
+                    image.set(31, y, dark)
+                    image.set(32, y + 1, dark)
+                for x, y in line(27, 24, 30, 33) | line(36, 24, 33, 33):
+                    image.set(x, y, LEATHER)
+            for x, y in body:
+                if y >= 41:
+                    image.set(x, y, LEATHER if (x + y) % 2 else dark)
         elif tunic:
-            image.rect(26 if not side else 27, 36, 12 if not side else 10, 1, accent)
+            image.rect(left, belt_y, width, 1, accent)
         elif shape == "mail":
             for x, y in body:
                 if (x + y // 2) % 3 == 0 and y % 2 == 1 and image.get(x, y) == main:
                     image.set(x, y, scale(main, 1.12))
-            image.rect(25 if not side else 27, 35, 14 if not side else 10, 1, LEATHER)
+            image.rect(left, belt_y, width, 1, LEATHER)
         elif shape in ("scale", "brigandine"):
             armor_surface(image, body, shape, palette)
-            image.rect(27 if side else 25, 35, 10 if side else 14, 1, LEATHER)
-            if shape == "brigandine":
+            image.rect(left, belt_y, width, 1, LEATHER)
+            if shape == "brigandine" and not side:
                 image.rect(31, 25, 1, 10, dark)
         elif shape == "plate":
-            if "spikes" in extras:
+            if "spikes" in extras and direction != "up":
                 for x, y in body:
-                    if y in (26, 30) and (x % 4 == 1) and direction != "up":
-                        image.set(x, y, scale(accent, 1.2))
-            for y in (28, 31, 34):
-                for x, row in body:
-                    if row == y:
-                        image.set(x, y, dark)
-            if not side and direction != "up":
+                    if y in (27, 31) and x % 3 == 1:
+                        image.set(x, y, BONE[0])
+            for x, y in body:
+                if y in (29, 32, 35):
+                    image.set(x, y, dark)
+            if front:
                 image.rect(31, 25, 2, 2, accent)
-            else:
-                image.rect(27, 23, 3, 3, accent)
-        elif not side and direction != "up":
+            elif side:
+                image.rect(28, 25, 2, 2, accent)
+        elif front:
             for y in range(27, 38, 3):
                 image.set(31, y, dark)
+        if "trim" in extras:
+            for x, y in body:
+                if y == 23 or (front and x in (31, 32) and 27 <= y <= 38) or y == max(row for _, row in body):
+                    image.set(x, y, gold[1] if (x + y) % 3 else gold[0])
         if direction == "up":
             image.rect(31, 27, 1, 8, dark)
-        if "pelt" in extras:
-            mantle = box(24 if not side else 26, 22, 16 if not side else 12, 4)
-            for x, y in mantle:
-                image.set(x, y, BEAR_FUR[(x * 5 + y * 3) % 3])
+        collar(image, box(28, 22, 9, 3) if side else box(26, 22, 12, 3), extras, accent)
         image = image.outlined().cut(covers)
+        # Sleeves and shoulders over the arms.
         extra = Image(FRAME, FRAME)
+        pauldron = shape == "plate"
         if side:
             arm_x = side_arm_x(frame)
-            if tunic:
-                extra = layer(box(arm_x, 24, 3, 4), palette)
+            if pauldron:
+                extra = layer(ellipse(arm_x + 1, 24.5, 2.6, 2.4), palette)
             else:
-                extra = layer(ellipse(arm_x + 1, 24, 3.5, 3) if pauldron else ellipse(arm_x + 1, 24, 2.5, 2.5), palette)
-        elif tunic:
-            extra = layer(box(21, 24 + swing(frame), 3, 4), palette).over(layer(box(40, 24 - swing(frame), 3, 4), palette))
-        elif pauldron:
-            extra = layer(ellipse(23, 24, 3.5, 3), palette).over(layer(ellipse(41, 24, 3.5, 3), palette))
-            if "spikes" in extras:
-                spikes = {(22, 20), (22, 21), (21, 21), (42, 20), (42, 21), (43, 21), (24, 21), (40, 21)}
-                extra.over(layer(spikes, BONE, False))
+                extra = layer(box(arm_x, 24, 2, 4 if tunic else 6), palette)
         else:
-            extra = layer(box(21, 22, 6, 5), palette).over(layer(box(37, 22, 6, 5), palette))
+            reach = frame in ATTACK_HANDS
+            for x, lift in ((ARM_X[0], swing(frame)), (ARM_X[1], -swing(frame))):
+                short = reach and x == ARM_X[1]
+                if pauldron:
+                    extra.over(layer(ellipse(x + 1, 24.5, 2.6, 2.4), palette))
+                else:
+                    extra.over(layer(box(x, 24 + lift, 2, 2 if short else (4 if tunic else 6)), palette))
+            if pauldron and "spikes" in extras:
+                extra.over(layer({(24, 21), (24, 22), (23, 22), (39, 21), (39, 22), (40, 22)}, BONE, False))
+            if pauldron and "trim" in extras:
+                for x in (23, 24, 25, 26, 37, 38, 39, 40):
+                    if extra.get(x, 23) is not None:
+                        extra.set(x, 23, gold[0])
+            if pauldron and "fur" in extras:
+                for x, y in box(22, 22, 6, 2) | box(36, 22, 6, 2):
+                    extra.set(x, y, FUR[(x + y) % 2])
         return image.over(extra.outlined())
 
     def robe(direction, frame, covers):
         side = direction == "left"
-        body = set()
-        for y in range(23, 50):
-            spread = (y - 23) // 6
-            body |= box(27 - spread // 2, y, 10 + spread, 1) if side else box(25 - spread, y, 14 + spread * 2, 1)
+        body = box(28, 23, 8, 4) if side else box(26, 23, 12, 4)
+        for y in range(27, 50):
+            spread = (y - 23) // 7
+            body |= box(28 - spread // 2, y, 8 + spread, 1) if side else box(27 - spread, y, 10 + spread * 2, 1)
         image = layer(body, palette)
         if "flames" in extras:
             for x, y in body:
@@ -738,17 +795,125 @@ def armor_builder(kind):
             for x, y in body:
                 if y >= 47:
                     image.set(x, y, accent if (x + y) % 3 else scale(accent, 0.7))
-            if not side and direction != "up":
+            if direction == "down":
                 image.rect(31, 24, 2, 23, accent)
-        image.rect(25 if not side else 27, 34, 14 if not side else 10, 1, scale(dark, 0.85))
+        elif direction == "down":
+            image.rect(31, 27, 1, 20, scale(dark, 0.9))
+        image.rect(28 if side else 27, 34, 8 if side else 10, 1, scale(dark, 0.8) if "runes" in extras else accent)
         if direction == "up":
             image.rect(31, 27, 1, 18, dark)
+        collar(image, box(28, 22, 9, 3) if side else box(26, 22, 12, 3), extras, accent)
         image = image.outlined().cut(covers)
         if side:
-            sleeve = layer(box(side_arm_x(frame) - 1, 24, 5, 7), palette)
+            sleeve = layer(box(side_arm_x(frame) - 1, 24, 4, 7), palette)
         else:
-            sleeve = layer(box(20, 24 + swing(frame), 5, 7), palette).over(layer(box(39, 24 - swing(frame), 5, 7), palette))
+            sleeve = layer(box(ARM_X[0] - 1, 24 + swing(frame), 3, 7), palette)
+            sleeve.over(layer(box(ARM_X[1], 24 - swing(frame), 3, 3 if frame in ATTACK_HANDS else 7), palette))
         return image.over(sleeve.outlined())
+    return build
+
+
+def legs_builder(kind):
+    """Worn legs over the trousers (not the boots): plate legs with knee cops, mail, leather
+    breeches with a seam, or cloth leggings; decorations add trim, spikes, leaves, or flames."""
+    palette, accent = tones(kind)
+    light, main, dark = palette
+    shape, extras = look(kind)
+
+    def paint(image, points, tones_, outer_x):
+        shade(image, points, tones_, shape != "legplates")
+        t_light, t_main, t_dark = tones_
+        top = min(y for _, y in points)
+        for x, y in points:
+            if shape == "legplates" and y in (42, 48):
+                image.set(x, y, t_dark)
+            elif shape == "legplates" and y == 45:
+                image.set(x, y, t_light)
+            elif shape == "chausses" and (x + y // 2) % 3 == 0 and y % 2 == 1:
+                image.set(x, y, scale(t_main, 1.12))
+            if "trim" in extras and x == outer_x and y > top + 1:
+                image.set(x, y, accent)
+            if "runes" in extras and x == outer_x and y % 3 == 0:
+                image.set(x, y, scale(accent, 1.2))
+            if "flames" in extras and y >= 47 - (x * 7) % 3:
+                image.set(x, y, FLAME_TONES[(y + x) % 3])
+            if "spikes" in extras and y == 45 and x == outer_x:
+                image.set(x, y, BONE[0])
+        if "leaves" in extras:
+            xs = sorted({x for x, y in points if y == top})
+            shade(image, ellipse(xs[0] + 1, top + 1, 1.6, 1.3), LEAF_TONES, False)
+
+    def build(direction, frame):
+        covers = body_covers(direction, frame)
+        hips, parts = leg_parts(direction, frame)
+        boots = set().union(*(boot for _, boot, _ in parts))
+        if direction in ("down", "up"):
+            image = layer(hips, palette)
+            if shape == "legplates":
+                image.rect(27, 38, 10, 1, dark)
+            elif shape == "breeches":
+                image.rect(27, 37, 10, 1, LEATHER)
+            for (leg, _, _), outer in zip(parts, (min(x for x, _ in parts[0][0]), max(x for x, _ in parts[1][0]))):
+                paint(image, leg - boots, palette, outer)
+            return image.outlined().cut(covers)
+        result = Image(FRAME, FRAME)
+        for leg, _, far in parts:
+            image = Image(FRAME, FRAME)
+            paint(image, leg - boots, tuple(scale(c, 0.8) for c in palette) if far else palette, None)
+            result.over(image.outlined())
+        return result.cut(covers)
+    return build
+
+
+def boots_builder(kind):
+    """Worn boots over the bare feet: plate sabatons, mail striders and leather boots with
+    shafts up the shin, or low cloth slippers with a curled toe."""
+    palette, accent = tones(kind)
+    light, main, dark = palette
+    shape, extras = look(kind)
+    rows = {"sabatons": 3, "striders": 4, "boots": 3, "slippers": 0}[shape]
+
+    def build(direction, frame):
+        covers = body_covers(direction, frame)
+        _, parts = leg_parts(direction, frame)
+        result = Image(FRAME, FRAME)
+        for leg, boot, far in parts:
+            tones_ = tuple(scale(c, 0.8) for c in palette) if far else palette
+            shaft = boot_shaft(leg, boot, rows)
+            points = boot | shaft
+            image = Image(FRAME, FRAME)
+            shade(image, points, tones_, False)
+            top = min(y for _, y in points)
+            if shape == "sabatons":
+                for x, y in points:
+                    if y % 2 == 0 and y > top:
+                        image.set(x, y, tones_[2])
+            if shape == "boots":
+                for x, y in points:
+                    if y == top:
+                        image.set(x, y, tones_[0])
+            if shape == "slippers":
+                toe = min(points) if direction == "left" else None
+                if toe:
+                    image.set(toe[0] - 1, toe[1] - 1, accent)
+            if "trim" in extras:
+                for x, y in points:
+                    if y == top:
+                        image.set(x, y, accent)
+            if "fur" in extras:
+                for x, y in points:
+                    if y <= top + 1:
+                        image.set(x, y, FUR[(x + y) % 2])
+            if "flames" in extras:
+                for x, y in points:
+                    if y == top:
+                        image.set(x, y, FLAME_TONES[x % 3])
+            if "leaves" in extras:
+                image.set(min(x for x, _ in points), top, LEAF_TONES[0])
+            if "spikes" in extras:
+                image.set(max(x for x, _ in points) + (0 if direction == "left" else 1), top + 1, BONE[0])
+            result.over(image.outlined())
+        return result.cut(covers)
     return build
 
 
@@ -806,9 +971,13 @@ def helmet_builder(kind):
             for x, y in hood:
                 if (x + y) % 2 == 0 and y % 2 == 1 and image.get(x, y) == main:
                     image.set(x, y, light)
+            if "wings" in extras:
+                wing = box(23, 12, 2, 3) | box(22, 10, 2, 3) | box(21, 8, 2, 3) | box(20, 7, 1, 2)
+                wings = wing | mirror_x(wing) if not side else {(x + 13, y) for x, y in wing}
+                shade(image, wings, (rgba("ffffff"), accent, scale(accent, 0.75)), False)
             return image.outlined()
         if shape == "hood":
-            hood = box(31, 6, 3, 2) | box(29, 8, 6, 1) | box(27, 9, 10, 1) | box(26, 10, 12, 2) | box(25, 12, 14, 10) | box(24, 22, 16, 3)
+            hood = box(31, 6, 3, 2) | box(29, 8, 6, 1) | box(27, 9, 10, 1) | box(26, 10, 12, 2) | box(25, 12, 14, 10) | box(25, 22, 14, 3)
             if direction == "up":
                 hood |= box(30, 25, 4, 2)
             elif side:
@@ -819,12 +988,29 @@ def helmet_builder(kind):
             for x, y in hood:
                 if y >= 22 and (x + y) % 3 == 0:
                     image.set(x, y, dark)
+            if "fur" in extras and direction != "up":
+                face = box(25, 13, 6, 9) if side else box(28, 13, 8, 9)
+                for x, y in hood:
+                    if any((x + dx, y + dy) in face for dx in (-1, 0, 1) for dy in (-1, 0, 1)) or y >= 23:
+                        image.set(x, y, FUR[(x + y) % 2])
+            if "antlers" in extras:
+                tines = antler("leaves" not in extras)
+                shade(image, tines | mirror_x(tines) if not side else {(x + 9, y) for x, y in tines}, BONE, False)
+            if "leaves" in extras:
+                for x in ((26, 37) if not side else (33,)):
+                    shade(image, ellipse(x, 10, 1.8, 1.6), LEAF_TONES, False)
+            if "flowers" in extras:
+                for x, y in (((27, 11), (31, 8), (36, 10)) if not side else ((31, 8), (35, 10))):
+                    image.set(x, y, scale(accent, 1.2))
+                    image.set(x + 1, y, accent)
+                    image.set(x, y + 1, accent)
+                    image.set(x + 1, y + 1, rgba("ffe08a"))
             if "feather" in extras:
                 quill = line(37, 13, 41, 4) if not side else line(34, 12, 39, 3)
                 shade(image, thick(quill, ((0, 0), (1, 0))), (scale(accent, 1.2), accent, scale(accent, 0.7)), False)
             return image.outlined()
         if shape in ("bearhood", "cowl"):
-            hood = box(29, 8, 6, 1) | box(27, 9, 10, 1) | box(26, 10, 12, 2) | box(25, 12, 14, 10) | box(24, 22, 16, 3)
+            hood = box(29, 8, 6, 1) | box(27, 9, 10, 1) | box(26, 10, 12, 2) | box(25, 12, 14, 10) | box(25, 22, 14, 3)
             face = box(25, 13, 6, 9) if side else box(28, 13, 8, 9)
             tones = BEAR_FUR if shape == "bearhood" else palette
             shade(image, hood - face if direction != "up" else hood, tones)
@@ -833,7 +1019,7 @@ def helmet_builder(kind):
                 for x, y in face:
                     image.set(x, y, rgba("1a1418"))
                 for x in ((26, 29) if side else (30, 34)):
-                    image.set(x, 17, EYE_GLOW)
+                    image.set(x, 17, scale(accent, 1.25))
             if shape == "bearhood":
                 ears = ellipse(26, 9, 2, 2) | ellipse(38, 9, 2, 2) if not side else ellipse(30, 8, 2, 2)
                 shade(image, ears, BEAR_FUR, False)
@@ -850,6 +1036,16 @@ def helmet_builder(kind):
             shade(image, antler(True) | mirror_x(antler(True)) if not side else {(x + 9, y) for x, y in antler(True)}, BONE, False)
             for x in ((25, 38) if not side else (31,)):
                 shade(image, ellipse(x, 12, 1.6, 2.0), LEAF_TONES, False)
+            return image.outlined()
+        if shape == "ranger":
+            crown = box(29, 7, 6, 1) | box(28, 8, 8, 1) | box(27, 9, 10, 4)
+            brim = box(24, 13, 16, 1) | box(25, 14, 14, 1) if not side else box(22, 13, 14, 1) | box(23, 14, 6, 1)
+            shade(image, crown, palette)
+            shade(image, brim, palette, False)
+            image.rect(27, 12, 10, 1, LEATHER)
+            if "feather" in extras:
+                quill = line(36, 12, 40, 3) if not side else line(33, 11, 38, 2)
+                shade(image, thick(quill, ((0, 0), (1, 0))), (scale(accent, 1.1), accent, scale(accent, 0.75)), False)
             return image.outlined()
         if shape == "hat":
             cone = set()
@@ -912,6 +1108,9 @@ def helmet_builder(kind):
         if "crest" in extras:
             crest = box(29, 5, 10, 3) if side else box(30, 4, 4, 5)
             shade(image, crest, (scale(accent, 1.25), accent, scale(accent, 0.7)), False)
+        if "spikes" in extras:
+            for x in ((28, 31, 32, 35) if not side else (27, 30, 33)):
+                shade(image, box(x, 5 + (x % 3 == 1), 1, 3), (rgba("ffffff"), accent, scale(accent, 0.7)), False)
         if "horns" in extras:
             horn = {(24, 11), (23, 10), (22, 9), (22, 8), (21, 7), (21, 6)}
             horn = thick(horn, ((0, 0), (1, 0)))
@@ -1177,9 +1376,9 @@ def held_torch(direction, frame):
     """A burning torch held up in the off hand; the flame sways with the walk."""
     image = Image(FRAME, FRAME)
     if direction in ("down", "up"):
-        x, top = 18, 24 + swing(frame)
+        x, top = 21, 24 + swing(frame)
     else:
-        x, top = 20, 23 + swing(frame)
+        x, top = 21, 23 + swing(frame)
     image.rect(x, top + 4, 2, 10, WOOD[1])
     image.rect(x, top + 4, 1, 10, WOOD[0])
     image.rect(x - 1, top + 3, 4, 2, rgba("3a2a1c"))
@@ -1201,41 +1400,41 @@ def shield_builder(kind):
         if direction in ("down", "up"):
             top = 25 + swing(frame)
             if shape == "book":
-                cover = box(15, top + 6, 8, 10)
+                cover = box(19, top + 8, 6, 8)
                 shade(image, cover, palette, False)
                 if direction == "down":
-                    image.rect(22, top + 7, 1, 8, rgba("efe6cf"))
-                    image.rect(17, top + 9, 3, 3, accent)
+                    image.rect(24, top + 9, 1, 6, rgba("efe6cf"))
+                    image.rect(21, top + 10, 2, 3, accent)
                 else:
-                    image.rect(15, top + 6, 2, 10, dark)
+                    image.rect(19, top + 8, 2, 8, dark)
                 return image.outlined()
             if shape == "buckler":
-                disc = ellipse(20, top + 7, 6.5, 7.5)
+                disc = ellipse(22, top + 8, 5, 6)
             elif shape == "heater":
-                disc = heater_points(14, top, 13, 16)
+                disc = heater_points(17, top + 1, 11, 14)
             else:
-                disc = box(13, top - 3, 14, 20)
+                disc = box(17, top - 1, 11, 17)
             if direction == "down":
                 if shape == "buckler":
-                    shield_face(image, disc, palette, accent, box(19, top + 6, 2, 2))
+                    shield_face(image, disc, palette, accent, box(21, top + 7, 2, 2))
                 else:
-                    plate_face(image, disc, palette, accent, box(19, top + 2, 3, 6) | box(17, top + 4, 7, 2))
+                    plate_face(image, disc, palette, accent, box(22, top + 3, 1, 7) | box(19, top + 5, 7, 1))
             else:
                 shade(image, disc, (palette[1], palette[2], scale(palette[2], 0.8)))
-                image.rect(15, top + 6, 10, 2, LEATHER)
+                image.rect(18, top + 7, 9, 2, LEATHER)
             return image.outlined()
         # Held on the far arm, seen edge-on in front of the chest and drawn behind the body.
         if shape == "book":
-            edge = box(19, 30, 3, 9)
+            edge = box(20, 30, 3, 9)
             shade(image, edge, palette, False)
-            image.rect(19, 31, 1, 7, rgba("efe6cf"))
+            image.rect(20, 31, 1, 7, rgba("efe6cf"))
             return image.outlined()
-        height = {"buckler": 13, "heater": 16, "tower": 21}[shape]
+        height = {"buckler": 11, "heater": 14, "tower": 17}[shape]
         top = 26 - (height - 13) // 2
-        edge = box(19, top, 4, height) - {(19, top), (22, top), (19, top + height - 1), (22, top + height - 1)}
+        edge = box(20, top, 4, height) - {(20, top), (23, top), (20, top + height - 1), (23, top + height - 1)}
         shade(image, edge, palette)
         for y in range(top + 1, top + height - 1):
-            image.set(19, y, accent)
+            image.set(20, y, accent)
         return image.outlined()
     return build
 
@@ -1305,7 +1504,8 @@ def framewise(sheet_image, cell_width, cell_height, transform):
     return result
 
 
-GEAR_BUILDERS = {"helmet": helmet_builder, "armor": armor_builder, "main_hand": held_builder,
+GEAR_BUILDERS = {"helmet": helmet_builder, "armor": armor_builder, "legs": legs_builder, "boots": boots_builder,
+                 "main_hand": held_builder,
                  "off_hand": shield_builder, "cape": cape_builder}
 
 
@@ -1588,6 +1788,9 @@ def item_icon(kind):
         for x, y in hood:
             if (x + y) % 2 == 0 and y % 2 == 1 and image.get(x, y) == main:
                 image.set(x, y, scale(main, 1.1))
+        if "wings" in extras:
+            wing = box(5, 10, 2, 5) | box(3, 7, 2, 5) | box(1, 5, 2, 4)
+            shade(image, wing | {(31 - x, y) for x, y in wing}, (rgba("ffffff"), accent, scale(accent, 0.75)), False)
     elif shape in ("helm", "kettle", "greathelm"):
         dome = {p for p in ellipse(16, 17, 9, 9) if p[1] <= 17}
         if shape == "greathelm":
@@ -1607,12 +1810,29 @@ def item_icon(kind):
             shade(image, box(15, 1, 3, 7) | box(18, 3, 2, 5), gem, False)
         if "crest" in extras:
             shade(image, box(14, 3, 4, 5), gem, False)
+        if "spikes" in extras:
+            for x in (10, 14, 18, 22):
+                shade(image, box(x, 3 + (x % 8 == 2), 1, 4), (rgba("ffffff"), accent, scale(accent, 0.7)), False)
         if "horns" in extras:
             for x, y in thick({(6, 9), (5, 7), (4, 5), (4, 3)} | {(25, 9), (26, 7), (27, 5), (27, 3)}, ((0, 0), (1, 0))):
                 image.set(x, y, BONE[0])
     elif shape == "hood":
         hood = (ellipse(16, 15, 9, 10) | box(13, 3, 6, 4)) - ellipse(16, 18, 5, 6)
         shade(image, {p for p in hood if p[1] <= 25}, (light, main, dark))
+        if "fur" in extras:
+            for x, y in ellipse(16, 18, 6.5, 7.5) - ellipse(16, 18, 5, 6):
+                if y <= 25:
+                    image.set(x, y, FUR[(x + y) % 2])
+        if "antlers" in extras:
+            for x, y in thick({(8, 9), (6, 6), (5, 3), (7, 4), (3, 6), (24, 9), (26, 6), (27, 3), (25, 4), (29, 6)}, ((0, 0), (1, 0))):
+                image.set(x, y, BONE[0])
+        if "leaves" in extras:
+            for x, y in ((9, 10), (23, 10)):
+                shade(image, ellipse(x, y, 2, 2.4), LEAF_TONES, False)
+        if "flowers" in extras:
+            for x, y in ((10, 9), (16, 5), (22, 9)):
+                shade(image, box(x, y, 2, 2), gem, False)
+                image.set(x + 1, y + 1, rgba("ffe08a"))
         if "feather" in extras:
             shade(image, thick(line(23, 13, 28, 3), ((0, 0), (1, 0))), gem, False)
     elif shape in ("bearhood", "cowl"):
@@ -1626,8 +1846,8 @@ def item_icon(kind):
             for x, y in ellipse(16, 18, 5, 6):
                 if y <= 25:
                     image.set(x, y, rgba("1a1418"))
-            image.set(14, 18, EYE_GLOW)
-            image.set(18, 18, EYE_GLOW)
+            image.set(14, 18, scale(accent, 1.25))
+            image.set(18, 18, scale(accent, 1.25))
         if "horns" in extras:
             for x, y in thick({(7, 8), (5, 6), (4, 4), (5, 2), (25, 8), (27, 6), (28, 4), (27, 2)}, ((0, 0), (1, 0))):
                 image.set(x, y, BONE[0])
@@ -1684,6 +1904,13 @@ def item_icon(kind):
         if "pelt" in extras:
             for x, y in box(8, 8, 16, 4):
                 image.set(x, y, BEAR_FUR[(x * 5 + y * 3) % 3])
+        if "fur" in extras and shape != "leather":
+            for x, y in box(8, 8, 16, 3):
+                image.set(x, y, FUR[0] if (x * 3 + y) % 4 else FUR[1])
+        if "flowers" in extras:
+            for x in (10, 16, 22):
+                shade(image, box(x - 1, 8, 2, 2), gem, False)
+                image.set(x, 9, rgba("ffe08a"))
         if shape == "leather":
             image.rect(11, 18, 10, 2, LEATHER)
             image.rect(15, 18, 2, 2, accent)
@@ -1721,10 +1948,78 @@ def item_icon(kind):
                 image.rect(11, y, 10, 1, dark)
             image.rect(15, 12, 1, 4, light)
             image.set(17, 12, accent)
+            if "trim" in extras:
+                image.rect(15, 11, 2, 13, accent)
+                image.rect(11, 23, 10, 1, accent)
         for x in range(14, 18):
             for y in range(9, 11):
                 if shape != "plate":
                     image.clear(x, y)
+    elif shape in ("legplates", "chausses", "breeches", "leggings"):
+        waist = box(9, 5, 14, 4)
+        legs = [box(9, 9, 6, 19) - {(9, 27)}, box(17, 9, 6, 19) - {(22, 27)}]
+        shade(image, waist | legs[0] | legs[1] | box(15, 9, 2, 3), (light, main, dark))
+        for x, y in waist | legs[0] | legs[1]:
+            if shape == "legplates" and y in (13, 21, 25):
+                image.set(x, y, dark)
+            elif shape == "legplates" and y in (17, 18) and x not in (9, 14, 17, 22):
+                image.set(x, y, light)
+            elif shape == "chausses" and (x + y // 2) % 3 == 0 and y % 2 == 1:
+                image.set(x, y, scale(main, 1.12))
+        image.rect(9, 7, 14, 1, LEATHER if shape != "legplates" else dark)
+        if shape == "breeches":
+            image.rect(12, 10, 1, 17, dark)
+            image.rect(19, 10, 1, 17, dark)
+        for x in (9, 22):
+            for y in range(10, 27):
+                if "trim" in extras:
+                    image.set(x, y, accent)
+                if "runes" in extras and y % 3 == 0:
+                    image.set(x, y, scale(accent, 1.2))
+        if "flames" in extras:
+            for x, y in legs[0] | legs[1]:
+                if y >= 24 - (x * 7) % 3:
+                    image.set(x, y, FLAME_TONES[(x + y) % 3])
+        if "spikes" in extras:
+            for x in (11, 12, 19, 20):
+                image.set(x, 16, BONE[0])
+        if "leaves" in extras:
+            for x in (10, 21):
+                shade(image, ellipse(x, 6, 2, 1.6), LEAF_TONES, False)
+    elif shape in ("sabatons", "striders", "boots", "slippers"):
+        shaft = {"sabatons": 9, "striders": 12, "boots": 10, "slippers": 0}[shape]
+        for x0 in (4, 17):
+            boot = box(x0 + 3, 24 - shaft, 6, shaft) | box(x0, 24, 9, 4) - {(x0, 24)}
+            shade(image, boot, (light, main, dark))
+            top = 24 - shaft
+            if shape == "sabatons":
+                for y in range(top + 1, 28, 2):
+                    for x in range(x0, x0 + 9):
+                        if (x, y) in boot:
+                            image.set(x, y, dark)
+            if shape == "slippers":
+                image.set(x0 - 1, 23, accent)
+                image.rect(x0 + 2, 24, 6, 1, accent if "trim" in extras else light)
+            for x in range(x0 + 3, x0 + 9):
+                if "trim" in extras and shaft:
+                    image.set(x, top, accent)
+                if "fur" in extras:
+                    image.set(x, top, FUR[0])
+                    image.set(x, top + 1, FUR[x % 2])
+                if "flames" in extras:
+                    image.set(x, top, FLAME_TONES[x % 3])
+            if "spikes" in extras:
+                image.set(x0 + 9, top + 2, BONE[0])
+            if "leaves" in extras:
+                shade(image, ellipse(x0 + 3, top + 1, 1.8, 1.6), LEAF_TONES, False)
+    elif shape == "ranger":
+        crown = ellipse(16, 15, 7, 7)
+        crown = {p for p in crown if p[1] <= 16}
+        shade(image, crown, (light, main, dark))
+        bevel(image, box(4, 17, 24, 2) | box(6, 19, 20, 1), main, light, dark)
+        image.rect(9, 15, 14, 2, LEATHER)
+        if "feather" in extras:
+            shade(image, thick(line(21, 15, 28, 3), ((0, 0), (1, 0))), gem, False)
     elif shape == "buckler":
         shield_face(image, ellipse(16, 17, 8.5, 9), (light, main, dark), accent, box(15, 16, 2, 2))
     elif shape == "heater":
@@ -2873,6 +3168,9 @@ def dressed(outputs, equipment, direction, column, tint):
     if shield and direction in ("left", "right"):
         put(f"gear/{shield}.png")
     put("body.png")
+    for slot in ("legs", "boots"):
+        if equipment.get(slot):
+            put(f"gear/{equipment[slot]}.png")
     put("cloth.png", tint)
     if equipment.get("cape") and direction != "up":
         put(f"gear/{equipment['cape']}.png")
@@ -2887,6 +3185,9 @@ def dressed(outputs, equipment, direction, column, tint):
     if held and direction != "up":
         put(f"gear/{held}.png")
     return frame
+
+
+ARMOR_OF = {"knight": "plate", "paladin": "mail", "druid": "leather", "sorcerer": "cloth"}
 
 
 def write_preview(outputs, path):
@@ -2906,7 +3207,7 @@ def write_preview(outputs, path):
             for kind, item in ITEMS.items():
                 slot = item.get("slot")
                 if slot in VISIBLE_SLOTS and item["level"] == tier and vocation in item.get("vocations", [vocation]) \
-                        and not item.get("loot_only"):
+                        and item.get("armor", ARMOR_OF[vocation]) == ARMOR_OF[vocation] and not item.get("loot_only"):
                     equipment[slot] = kind
             preview.over(dressed(outputs, equipment, direction, 0, tint).scaled(2), column * 2 * FRAME, row * 2 * FRAME)
     for index in range(len(ITEM_ORDER)):

@@ -71,9 +71,14 @@ static var TILE_REGIONS: Array[Rect2] = _tile_regions()
 static var ITEM_ORDER: Array[String] = _item_order()
 ## Slots drawn on the character (no cape is drawn when its slot is empty). Rings, necklaces, and charms
 ## are too small to show when worn.
-const VISIBLE_SLOTS: Array[String] = ["helmet", "cape", "armor", "main_hand", "off_hand"]
+const VISIBLE_SLOTS: Array[String] = ["helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand"]
 ## One sheet per visible item: assets/sprites/gear/<id>.png.
 static var GEAR: Dictionary = _gear_sheets()
+## Painted full-figure outfits by armor kind (imported from art/outfits by
+## tools/generators/import_outfits.gd): worn armor with an outfit replaces the body, helmet, armor,
+## legs, boots, and cape layers; weapons and shields are still drawn. Painted item icons (assets/sprites/icons/<id>.png) replace generated ones.
+static var OUTFITS: Dictionary = _outfit_sheets()
+static var ICONS: Dictionary = _icon_overrides()
 ## Relics glow: white halo sheets (gear/<id>_glow.png, items_glow.png, monsters/<look>_glow.png)
 ## drawn additively in the item's "glow" colour by game/render/glow_layer.gd.
 static var GEAR_GLOW: Dictionary = _gear_sheets("_glow")
@@ -120,6 +125,24 @@ static func _gear_sheets(suffix: String = "") -> Dictionary:
 		if VISIBLE_SLOTS.has(World.ITEMS[kind]["slot"]) and (suffix.is_empty() or World.ITEMS[kind].has("glow")):
 			sheets[kind] = load("res://assets/sprites/gear/%s%s.png" % [kind, suffix])
 	return sheets
+
+
+static func _outfit_sheets() -> Dictionary:
+	var sheets: Dictionary = {}
+	for kind: String in World.ITEMS:
+		var path: String = "res://assets/sprites/outfits/%s.png" % World.ITEMS[kind].get("outfit", "")
+		if World.ITEMS[kind].has("outfit") and ResourceLoader.exists(path):
+			sheets[kind] = load(path)
+	return sheets
+
+
+static func _icon_overrides() -> Dictionary:
+	var icons: Dictionary = {}
+	for kind: String in World.ITEMS:
+		var path: String = "res://assets/sprites/icons/%s.png" % kind
+		if ResourceLoader.exists(path):
+			icons[kind] = load(path)
+	return icons
 
 
 static func tile_at(cell: Vector2i) -> String:
@@ -356,10 +379,20 @@ static func draw_actor(canvas: CanvasItem, center: Vector2, state: Dictionary, l
 		canvas.draw_texture_rect_region(held, dest, source)
 	if shield != null and facing.x != 0:
 		canvas.draw_texture_rect_region(shield, dest, source)
+	var cape: Texture2D = GEAR.get(equipment.get("cape", ""), null)
+	var outfit: Texture2D = OUTFITS.get(equipment.get("armor", ""), null)
+	if outfit != null:
+		# Painted outfits include their own cloak, so a worn cape is not drawn over them.
+		canvas.draw_texture_rect_region(outfit, dest, source)
+		_draw_hands(canvas, dest, source, facing, held, shield)
+		return
 	var cloth: Color = tint if tint.a > 0.0 else COLORS[int(state["id"]) % COLORS.size()]
 	canvas.draw_texture_rect_region(BODY, dest, source)
+	for slot: String in ["legs", "boots"]:
+		var worn: Texture2D = GEAR.get(equipment.get(slot, ""), null)
+		if worn != null:
+			canvas.draw_texture_rect_region(worn, dest, source)
 	canvas.draw_texture_rect_region(CLOTH, dest, source, cloth)
-	var cape: Texture2D = GEAR.get(equipment.get("cape", ""), null)
 	if cape != null and facing != Vector2i.UP:
 		canvas.draw_texture_rect_region(cape, dest, source)
 	var armor: Texture2D = GEAR.get(equipment.get("armor", ""), null)
@@ -370,6 +403,12 @@ static func draw_actor(canvas: CanvasItem, center: Vector2, state: Dictionary, l
 	var helmet: Texture2D = GEAR.get(equipment.get("helmet", ""), null)
 	if helmet != null:
 		canvas.draw_texture_rect_region(helmet, dest, source)
+	_draw_hands(canvas, dest, source, facing, held, shield)
+
+
+## Front-held shields and weapons (weapons held behind when facing up are drawn first).
+static func _draw_hands(canvas: CanvasItem, dest: Rect2, source: Rect2, facing: Vector2i, held: Texture2D,
+		shield: Texture2D) -> void:
 	if shield != null and facing.x == 0:
 		canvas.draw_texture_rect_region(shield, dest, source)
 	if held != null and facing != Vector2i.UP:
@@ -382,8 +421,11 @@ static func item_region(kind: String) -> Rect2:
 
 ## Draws an item icon centred on a 32-pixel slot or ground tile.
 static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: Color = Color.WHITE) -> void:
-	canvas.draw_texture_rect_region(ITEM_ICONS, Rect2(center - Vector2.ONE * TILE / 2.0, Vector2.ONE * TILE),
-		item_region(kind), tint)
+	var dest := Rect2(center - Vector2.ONE * TILE / 2.0, Vector2.ONE * TILE)
+	if ICONS.has(kind):
+		canvas.draw_texture_rect(ICONS[kind], dest, false, tint)
+		return
+	canvas.draw_texture_rect_region(ITEM_ICONS, dest, item_region(kind), tint)
 
 
 ## A stack count in the bottom-right corner (right-aligned at `corner`).

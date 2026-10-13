@@ -184,7 +184,7 @@ func _adventurer_checks() -> void:
 	world.monsters.clear()
 	check(world.add_player(1, 0.0, Balance.ADVENTURER) and not world.add_player(2, 0.0, "pirate"), "Adventurer is a starting vocation")
 	var adventurer: Dictionary = world.players[1]
-	check(adventurer["backpack"].slice(0, 4) == World.START_KITS[Balance.ADVENTURER]
+	check(adventurer["backpack"].slice(0, 6) == World.START_KITS[Balance.ADVENTURER]
 		and world.player_stats(1)["health"] == Balance.base_stats(1, Balance.ADVENTURER)["health"], "Adventurers start with a kit and their own profile")
 	check(World.requirement_error("willow_shortbow", 1, Balance.ADVENTURER).is_empty()
 		and World.requirement_error("kindling_wand", 1, Balance.ADVENTURER).is_empty()
@@ -227,6 +227,10 @@ func _adventurer_checks() -> void:
 	check(chosen["ok"] and adventurer["vocation"] == "paladin" and adventurer["backpack"].count("willow_shortbow") == 1
 		and adventurer["backpack"].count("oak_buckler") == 1 and adventurer["health"] == world.player_stats(1)["health"],
 		"a trainer makes you their vocation and hands you only the starting gear you lack")
+	check(not adventurer["backpack"].has("ember_cap") and not adventurer["backpack"].has("copper_blade")
+		and adventurer["backpack"].has("ringmail_coif") and adventurer["backpack"].has("ringmail_striders")
+		and adventurer["backpack"].count("") == World.BACKPACK_SIZE - World.start_kit("paladin").size(),
+		"the trainer trades the starter pieces the class cannot use for its own, so a full starter pack fits")
 	check(not world.choose_vocation(1, trainers["knight"], 2.0)["ok"], "a vocation is permanent")
 	combat.grant_experience(1, Combat.total_experience(12, 0), [])
 	check(adventurer["level"] > Balance.ADVENTURER_MAX_LEVEL, "with a vocation you level past the cap")
@@ -446,7 +450,7 @@ func _armor_type_checks() -> void:
 			var item: Dictionary = World.ITEMS[kind]
 			if item.get("armor", "") == type and not item.get("loot_only", false):
 				tiers["%s/%d" % [item["slot"], item["level"]]] = true
-		check(tiers.size() == Items.TIER_LEVELS.size() * 2, "%s has a helmet and armor of every tier" % type)
+		check(tiers.size() == Items.TIER_LEVELS.size() * 4, "%s has a helmet, armor, legs, and boots of every tier" % type)
 	# Trainers hand over the class's armor; old saves swap shared pieces for the player's own type.
 	var world := World.new()
 	world.add_player(1, 0.0, Balance.ADVENTURER)
@@ -492,8 +496,9 @@ func _inventory_checks() -> void:
 	check(backpack.slice(0, kit.size()) == kit and backpack.count("") == World.BACKPACK_SIZE - kit.size(),
 		"start kit in backpack")
 	# The scenario below was written for a three-item backpack; keep that layout.
+	var layout: Array = ["dented_iron_helm", "rusted_breastplate", "copper_blade"]
 	for index: int in World.BACKPACK_SIZE:
-		backpack[index] = kit[index] if index < 3 else ""
+		backpack[index] = layout[index] if index < layout.size() else ""
 	check(not bag.export_player(1, 0.0).has("backpack"), "backpack is private by default")
 	check(bag.export_player(1, 0.0, true)["backpack"] == backpack, "owner export includes backpack")
 	check(not bag.snapshot(0.0, 2)[1].has("backpack"), "snapshot hides other players' backpacks")
@@ -655,7 +660,7 @@ func _stacking_checks() -> void:
 func _sprite_checks() -> void:
 	check(World.ITEMS["bronze_scale_coat"]["look"] == "scale" and World.ITEMS["steel_hauberk"]["look"] == "mail",
 		"scale armour and chainmail use distinct construction")
-	check(World.ITEMS["cobalt_brigandine"]["look"] == "brigandine"
+	check(World.ITEMS["steel_cuirass"]["look"] == "brigandine"
 		and World.ITEMS["cobalt_warhammer"]["look"] == "hammer" and World.ITEMS["starforged_maul"]["look"] == "hammer",
 		"brigandine and hammers have dedicated icon and worn shapes")
 	# Five poses (stand, two steps, attack wind-up, strike) by four facings.
@@ -726,8 +731,8 @@ func _sprite_checks() -> void:
 
 
 func _slot_and_stat_checks() -> void:
-	check(World.SLOTS.size() == 10 and World.SLOT_TYPES.size() == 10 and "cape" in World.SLOTS and "bag" in World.SLOTS,
-		"ten equipment slots with a cape and a pack")
+	check(World.SLOTS.size() == 12 and World.SLOT_TYPES.size() == 12 and "cape" in World.SLOTS and "bag" in World.SLOTS
+		and "legs" in World.SLOTS and "boots" in World.SLOTS, "twelve equipment slots with legs, boots, a cape, and a pack")
 	for slot: String in World.SLOTS:
 		check(World.SLOT_TYPES.has(slot), "every slot has a type")
 		var fitting: bool = false
@@ -757,14 +762,14 @@ func _slot_and_stat_checks() -> void:
 	check(world.export_player(1, 0.0)["level"] == 1 and not world.export_player(1, 0.0).has("experience"),
 		"level is public, experience is private")
 	check(world.export_player(1, 0.0, true)["experience"] == 0, "owner sees experience")
-	backpack[4] = "cobalt_ring"
-	backpack[5] = "garnet_ring"
-	check(world.move_item(1, {"type": "backpack", "index": 5}, {"type": "equipment", "slot": "ring_1"}, 0.5)["reason"]
+	backpack[6] = "cobalt_ring"
+	backpack[7] = "garnet_ring"
+	check(world.move_item(1, {"type": "backpack", "index": 7}, {"type": "equipment", "slot": "ring_1"}, 0.5)["reason"]
 		== "The Garnet ring requires level 20", "accessories need their tier level")
 	player["level"] = 25
-	check(world.move_item(1, {"type": "backpack", "index": 4}, {"type": "equipment", "slot": "ring_2"}, 1.0)["ok"],
+	check(world.move_item(1, {"type": "backpack", "index": 6}, {"type": "equipment", "slot": "ring_2"}, 1.0)["ok"],
 		"equip ring 2")
-	check(world.move_item(1, {"type": "backpack", "index": 5}, {"type": "equipment", "slot": "ring_1"}, 2.0)["ok"],
+	check(world.move_item(1, {"type": "backpack", "index": 7}, {"type": "equipment", "slot": "ring_1"}, 2.0)["ok"],
 		"equip ring 1")
 	check(world.move_item(1, {"type": "equipment", "slot": "ring_1"}, {"type": "equipment", "slot": "ring_2"}, 3.0)["ok"],
 		"swap rings between ring slots")
@@ -1354,16 +1359,16 @@ func _gear_tier_checks() -> void:
 	var world := World.new()
 	world.add_player(1, 0.0, "knight")
 	var knight: Dictionary = world.players[1]
-	knight["backpack"][4] = "willow_shortbow"
-	knight["backpack"][5] = "bronze_mace"
-	var refused: Dictionary = world.move_item(1, {"type": "backpack", "index": 4}, {"type": "equipment", "slot": "main_hand"}, 1.0)
-	check(not refused["ok"] and refused["reason"].begins_with("Only Hunters") and knight["backpack"][4] == "willow_shortbow",
+	knight["backpack"][6] = "willow_shortbow"
+	knight["backpack"][7] = "bronze_mace"
+	var refused: Dictionary = world.move_item(1, {"type": "backpack", "index": 6}, {"type": "equipment", "slot": "main_hand"}, 1.0)
+	check(not refused["ok"] and refused["reason"].begins_with("Only Hunters") and knight["backpack"][6] == "willow_shortbow",
 		"a Warrior cannot equip a bow")
 	check(world.toggle_equipment(1, "main_hand", 2.0)["ok"] and knight["equipment"]["main_hand"] == "copper_blade",
 		"the equip key picks a usable weapon")
-	check(world.move_item(1, {"type": "backpack", "index": 5}, {"type": "equipment", "slot": "main_hand"}, 3.0)["reason"]
+	check(world.move_item(1, {"type": "backpack", "index": 7}, {"type": "equipment", "slot": "main_hand"}, 3.0)["reason"]
 		== "The Bronze mace requires level 10", "a low-level Knight cannot equip a tier-10 mace")
-	check(world.move_item(1, {"type": "equipment", "slot": "main_hand"}, {"type": "backpack", "index": 5}, 4.0)["reason"]
+	check(world.move_item(1, {"type": "equipment", "slot": "main_hand"}, {"type": "backpack", "index": 7}, 4.0)["reason"]
 		== "The Bronze mace requires level 10" and knight["equipment"]["main_hand"] == "copper_blade",
 		"swapping cannot sneak an unusable item into a slot")
 	# Tier drops.
@@ -1683,7 +1688,7 @@ func _endgame_zone_checks() -> void:
 	for event: Dictionary in events:
 		if event["kind"] == "message" and event["id"] == 1:
 			message = event["text"]
-	check(message.contains("Warlord's spiked plate") and message.contains("your backpack"), "the death message lists everything lost")
+	check(message.contains("Obsidian bulwark plate") and message.contains("your backpack"), "the death message lists everything lost")
 
 
 ## Trophy credit on a boss kill, claiming at the Relic keeper, and bound relics.

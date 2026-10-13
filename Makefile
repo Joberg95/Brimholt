@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim playtest check \
-	sprites map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -89,6 +89,10 @@ bot-tree: ## Save the player bots' LimboAI behavior tree to game/data/bot_behavi
 
 sprites: ## Regenerate the original sprite sheets in assets/sprites
 	$(PYTHON) tools/generators/make_sprites.py
+
+outfits: ## Import painted outfits and icons from art/outfits (manifest.json) into assets/sprites
+	$(GODOT) --headless --path . --script res://tools/generators/import_outfits.gd
+	$(GODOT) --headless --path . --import
 
 map: ## Generate the overworld draft (refuses to overwrite an edited map)
 	$(GODOT) --headless --path . --script res://tools/generators/make_map.gd

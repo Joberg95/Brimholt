@@ -134,7 +134,7 @@ func _run() -> void:
 		game.world.players[id]["next_item"] = 0.0
 		# Capes are later-stage gear: level 20+, one tier per actor.
 		game.world.players[id]["level"] = 20 + 5 * (id - 1)
-		game.world.players[id]["backpack"][5] = CAPES[id - 1]
+		game.world.players[id]["backpack"][6] = CAPES[id - 1]
 		for slot: String in SpriteArt.VISIBLE_SLOTS:
 			var toggled: Dictionary = game.world.toggle_equipment(id, slot, float(id) + SpriteArt.VISIBLE_SLOTS.find(slot))
 			if not toggled["ok"]:

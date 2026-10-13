@@ -93,21 +93,23 @@ const TALK_RANGE: int = 2
 const TRAVEL_SECONDS: float = 1.0
 ## Equipment slots in paperdoll order. Each accepts items of one slot type; both rings take "ring".
 ## The bag slot holds a bound pack from a town task; packs are only ever replaced by a bigger one.
-const SLOTS: Array[String] = ["necklace", "helmet", "cape", "main_hand", "armor", "off_hand", "ring_1", "charm", "ring_2", "bag"]
+const SLOTS: Array[String] = ["necklace", "helmet", "cape", "main_hand", "armor", "off_hand", "ring_1", "legs", "ring_2", "boots",
+	"charm", "bag"]
 const SLOT_TYPES: Dictionary = {
 	"necklace": "necklace", "helmet": "helmet", "cape": "cape", "charm": "charm", "main_hand": "main_hand",
-	"armor": "armor", "off_hand": "off_hand", "ring_1": "ring", "ring_2": "ring", "bag": "bag",
+	"armor": "armor", "legs": "legs", "boots": "boots", "off_hand": "off_hand", "ring_1": "ring", "ring_2": "ring", "bag": "bag",
 }
 ## Item catalog from game/data/items.json (see game/data/items.gd): stats add to
 ## Balance.base_stats(level) when the wearer meets the item's level and vocation.
 static var ITEMS: Dictionary = Items.load_catalog()
-## Starting gear by class: tier-1 helmet and armor of its armor type, weapon, and off-hand, in the backpack.
+## Starting gear by class: the tier-1 helmet, armor, legs, and boots of its armor type, weapon, and
+## off-hand, in the backpack.
 const START_KITS: Dictionary = {
-	"knight": ["dented_iron_helm", "rusted_breastplate", "copper_blade", "oak_buckler"],
-	"paladin": ["ringmail_coif", "ringmail_shirt", "willow_shortbow", "oak_buckler"],
-	"sorcerer": ["linen_hat", "linen_robe", "kindling_wand", "tattered_primer"],
-	"druid": ["ember_cap", "moss_coat", "sapling_rod", "tattered_primer"],
-	"adventurer": ["ember_cap", "moss_coat", "copper_blade", "oak_buckler"],
+	"knight": ["dented_iron_helm", "rusted_breastplate", "rusted_legplates", "rusted_sabatons", "copper_blade", "oak_buckler"],
+	"paladin": ["ringmail_coif", "ringmail_shirt", "ringmail_chausses", "ringmail_striders", "willow_shortbow", "oak_buckler"],
+	"sorcerer": ["linen_hat", "linen_robe", "linen_leggings", "linen_slippers", "kindling_wand", "tattered_primer"],
+	"druid": ["ember_cap", "moss_coat", "moss_breeches", "moss_boots", "sapling_rod", "tattered_primer"],
+	"adventurer": ["ember_cap", "moss_coat", "moss_breeches", "moss_boots", "copper_blade", "oak_buckler"],
 }
 ## Backpack slots without a pack; a worn pack adds its "slots", up to BACKPACK_MAX.
 const BACKPACK_SIZE: int = 8
@@ -1032,10 +1034,30 @@ func choose_vocation(id: int, trainer: Variant, _now: float) -> Dictionary:
 		if not kind in player["equipment"].values() and not player["backpack"].any(func(entry: String) -> bool:
 				return kind_of(entry) == kind):
 			gifts.append(kind)
+	# The trainer takes back Adventurer starter pieces the class cannot use, worn or carried, and
+	# hands over the class's piece for that slot in their place; only the rest needs room.
+	var swaps: Array = []
+	var places: Array = []
+	for slot: String in player["equipment"]:
+		places.append([player["equipment"], slot])
+	for index: int in player["backpack"].size():
+		places.append([player["backpack"], index])
+	for place: Array in places:
+		var kind: String = kind_of(place[0][place[1]])
+		if kind in START_KITS[Balance.ADVENTURER] and not requirement_error(kind, player["level"], vocation).is_empty():
+			for gift: String in gifts:
+				if ITEMS[gift]["slot"] == ITEMS[kind]["slot"]:
+					swaps.append([place[0], place[1], gift])
+					gifts.erase(gift)
+					break
 	if player["backpack"].count("") < gifts.size():
 		return {"ok": false, "reason": "Make room for %d items in your backpack" % gifts.size()}
 	player["vocation"] = vocation
-	for kind: String in gifts:
+	for swap: Array in swaps:
+		swap[0][swap[1]] = swap[2]
+		gifts.append(swap[2])
+	for kind: String in gifts.filter(func(gift: String) -> bool: return not swaps.any(func(swap: Array) -> bool:
+			return swap[2] == gift)):
 		player["backpack"][player["backpack"].find("")] = kind
 	var limits: Dictionary = player_stats(id)
 	player["health"] = limits["health"]

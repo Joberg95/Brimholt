@@ -154,9 +154,10 @@ balance change:
 - **Weapons** add the class's share of `gear_attack_budget(tier + 2)`, the attack that
   lifts a player from base to geared hits (about six per same-level kill), with a floor that
   rises one point per tier so early tiers still upgrade.
-- **Defense** of a full set (helmet 22%, armor 42%, shield 36%) rises from 14 at tier 1 to
-  70 at tier 45 (about a third less damage taken). Armor adds 1% of reference health as
-  regeneration; spellbooks give 12% of the set defense plus 10% of reference mana.
+- **Defense** of a full set (helmet 15%, armor 30%, legs 15%, boots 10%, shield 30%) rises
+  from 14 at tier 1 to 70 at tier 45 (about a third less damage taken). Armor adds 1% of
+  reference health as regeneration; spellbooks give 6% of the set defense plus 10% of
+  reference mana, so a caster's helmet, armor, legs, boots, and book still make 76% of it.
 - **Accessories** take shares of the reference health and mana at their level: amulets 6%
   health, capes 8% defense share and 6% mana, charms 2% regen and 1% healing, rings 3%
   health and 3% mana each.
@@ -167,35 +168,35 @@ They use `Items.tier_stats` without per-item stat overrides. Their source-specif
 do not dilute the existing generic tier pool or vendor stock; equipment rolls are gated by
 the killed monster's level. Names and looks vary, not attack timing, range or damage type.
 
-Helmets and armor come in four armor types, one per class (`Balance.ARMOR_OF`): Plate for Warriors, Mail for Hunters, Leather for Druids and Cloth for Sorcerers. Each type has the same stats per tier; only names and looks differ. Relics have no armor type.
+Helmets, armor, legs, and boots come in four armor types, one per class (`Balance.ARMOR_OF`): Plate for Warriors, Mail for Hunters, Leather for Druids and Cloth for Sorcerers. Each type has the same stats per tier; only names and looks differ. Relics have no armor type.
 
 Regenerate with `make gear-table`:
 
 | Tier | Plate (Warrior) | Mail (Hunter) | Leather (Druid) | Cloth (Sorcerer) |
 | ---: | --- | --- | --- | --- |
-| 1 | Dented iron helm (3 def)<br>Rusted breastplate (6 def, 2 regen) | Ringmail coif (3 def)<br>Ringmail shirt (6 def, 2 regen) | Ember cap (3 def)<br>Moss coat (6 def, 2 regen) | Linen hat (3 def)<br>Linen robe (6 def, 2 regen) |
-| 5 | Iron sallet (4 def)<br>Iron cuirass (8 def, 2 regen) | Iron coif (4 def)<br>Iron ringmail (8 def, 2 regen) | Hide hood (4 def)<br>Hide jerkin (8 def, 2 regen) | Ashen hat (4 def)<br>Ash tunic (8 def, 2 regen) |
-| 10 | Bronze helm (6 def)<br>Bronze breastplate (11 def, 3 regen) | Bronze coif (6 def)<br>Bronze scale coat (11 def, 3 regen) | Thornvine circlet (6 def)<br>Thornvine jerkin (11 def, 3 regen) | Amber hat (6 def)<br>Amber robe (11 def, 3 regen) |
-| 15 | Steel kettle hat (7 def)<br>Steel cuirass (13 def, 5 regen) | Steel coif (7 def)<br>Steel hauberk (13 def, 5 regen) | Wolfhide hood (7 def)<br>Wolfhide coat (13 def, 5 regen) | Silkweave hat (7 def)<br>Silkweave robe (13 def, 5 regen) |
-| 20 | Silverleaf helm (8 def)<br>Silverleaf breastplate (16 def, 8 regen) | Silverleaf coif (8 def)<br>Silverleaf mail (16 def, 8 regen) | Silverleaf circlet (8 def)<br>Silverleaf leathers (16 def, 8 regen) | Moonsilk hat (8 def)<br>Moonsilk robe (16 def, 8 regen) |
-| 25 | Cobalt sallet (10 def)<br>Cobalt brigandine (19 def, 12 regen) | Cobalt coif (10 def)<br>Cobalt scale (19 def, 12 regen) | Mossbark hood (10 def)<br>Mossbark jerkin (19 def, 12 regen) | Cobalt hat (10 def)<br>Cobalt robe (19 def, 12 regen) |
-| 30 | Embersteel helm (11 def)<br>Embersteel cuirass (21 def, 18 regen) | Embersteel coif (11 def)<br>Embersteel hauberk (21 def, 18 regen) | Emberbloom circlet (11 def)<br>Emberbloom leathers (21 def, 18 regen) | Emberweave hat (11 def)<br>Emberweave robe (21 def, 18 regen) |
-| 35 | Duskiron visor (13 def)<br>Duskiron plate (24 def, 27 regen) | Grizzly coif (13 def)<br>Grizzly hauberk (24 def, 27 regen) | Stagwood circlet (13 def)<br>Stagwood leathers (24 def, 27 regen) | Ashcaller hat (13 def)<br>Ashcaller robe (24 def, 27 regen) |
-| 40 | Skullcrusher helm (14 def)<br>Skullcrusher plate (27 def, 42 regen) | Bearclaw hood (14 def)<br>Bearclaw mail (27 def, 42 regen) | Stag crown (14 def)<br>Stag hide (27 def, 42 regen) | Warlock's cowl (14 def)<br>Warlock's robe (27 def, 42 regen) |
-| 45 | Warlord's horned helm (15 def)<br>Warlord's spiked plate (29 def, 64 regen) | Great bear hood (15 def)<br>Great bear hauberk (29 def, 64 regen) | Elder stag crown (15 def)<br>Elder stag hide (29 def, 64 regen) | Infernal cowl (15 def)<br>Infernal robe (29 def, 64 regen) |
+| 1 | Dented iron helm (2 def)<br>Rusted breastplate (4 def, 2 regen)<br>Rusted legplates (2 def)<br>Rusted sabatons (1 def) | Ringmail coif (2 def)<br>Ringmail shirt (4 def, 2 regen)<br>Ringmail chausses (2 def)<br>Ringmail striders (1 def) | Ember cap (2 def)<br>Moss coat (4 def, 2 regen)<br>Moss breeches (2 def)<br>Moss boots (1 def) | Linen hat (2 def)<br>Linen robe (4 def, 2 regen)<br>Linen leggings (2 def)<br>Linen slippers (1 def) |
+| 5 | Iron sallet (3 def)<br>Iron cuirass (6 def, 2 regen)<br>Iron legplates (3 def)<br>Iron sabatons (2 def) | Ranger's cap (3 def)<br>Ranger's ringmail (6 def, 2 regen)<br>Ranger's chausses (3 def)<br>Ranger's striders (2 def) | Hide hood (3 def)<br>Hide jerkin (6 def, 2 regen)<br>Hide breeches (3 def)<br>Hide boots (2 def) | Apprentice's hat (3 def)<br>Apprentice's robe (6 def, 2 regen)<br>Apprentice's leggings (3 def)<br>Apprentice's slippers (2 def) |
+| 10 | Bronze helm (4 def)<br>Bronze breastplate (8 def, 3 regen)<br>Bronze legplates (4 def)<br>Bronze sabatons (3 def) | Bronze coif (4 def)<br>Bronze scale coat (8 def, 3 regen)<br>Bronze chausses (4 def)<br>Bronze striders (3 def) | Thornvine circlet (4 def)<br>Thornvine jerkin (8 def, 3 regen)<br>Thornvine breeches (4 def)<br>Thornvine boots (3 def) | Amethyst hat (4 def)<br>Amethyst robe (8 def, 3 regen)<br>Amethyst leggings (4 def)<br>Amethyst slippers (3 def) |
+| 15 | Steel kettle hat (5 def)<br>Steel cuirass (10 def, 5 regen)<br>Steel legplates (5 def)<br>Steel sabatons (3 def) | Tracker's hat (5 def)<br>Tracker's hauberk (10 def, 5 regen)<br>Tracker's chausses (5 def)<br>Tracker's striders (3 def) | Wolfhide hood (5 def)<br>Wolfhide coat (10 def, 5 regen)<br>Wolfhide breeches (5 def)<br>Wolfhide boots (3 def) | Crimson silk hat (5 def)<br>Crimson silk robe (10 def, 5 regen)<br>Crimson silk leggings (5 def)<br>Crimson silk slippers (3 def) |
+| 20 | Silverleaf helm (6 def)<br>Silverleaf breastplate (11 def, 8 regen)<br>Silverleaf legplates (6 def)<br>Silverleaf sabatons (4 def) | Silverleaf ranger hat (6 def)<br>Silverleaf mail (11 def, 8 regen)<br>Silverleaf chausses (6 def)<br>Silverleaf striders (4 def) | Silverleaf circlet (6 def)<br>Silverleaf leathers (11 def, 8 regen)<br>Silverleaf breeches (6 def)<br>Silverleaf boots (4 def) | Moonsilk hat (6 def)<br>Moonsilk robe (11 def, 8 regen)<br>Moonsilk leggings (6 def)<br>Moonsilk slippers (4 def) |
+| 25 | Golden lion helm (7 def)<br>Golden lion plate (13 def, 12 regen)<br>Golden lion legplates (7 def)<br>Golden lion sabatons (4 def) | Windrider helm (7 def)<br>Windrider mail (13 def, 12 regen)<br>Windrider chausses (7 def)<br>Windrider striders (4 def) | Spiritbloom hood (7 def)<br>Spiritbloom leathers (13 def, 12 regen)<br>Spiritbloom breeches (7 def)<br>Spiritbloom boots (4 def) | Astral veil hat (7 def)<br>Astral veil robe (13 def, 12 regen)<br>Astral veil leggings (7 def)<br>Astral veil slippers (4 def) |
+| 30 | Frostborn helm (8 def)<br>Frostborn plate (15 def, 18 regen)<br>Frostborn legplates (8 def)<br>Frostborn sabatons (5 def) | Sunspear hood (8 def)<br>Sunspear hauberk (15 def, 18 regen)<br>Sunspear chausses (8 def)<br>Sunspear striders (5 def) | Mooncloak hood (8 def)<br>Mooncloak leathers (15 def, 18 regen)<br>Mooncloak breeches (8 def)<br>Mooncloak boots (5 def) | Arcane eclipse cowl (8 def)<br>Arcane eclipse robe (15 def, 18 regen)<br>Arcane eclipse leggings (8 def)<br>Arcane eclipse slippers (5 def) |
+| 35 | Crimson aegis helm (9 def)<br>Crimson aegis plate (17 def, 27 regen)<br>Crimson aegis legplates (9 def)<br>Crimson aegis sabatons (6 def) | Glacierstrider hood (9 def)<br>Glacierstrider hauberk (17 def, 27 regen)<br>Glacierstrider chausses (9 def)<br>Glacierstrider striders (6 def) | Wildroot circlet (9 def)<br>Wildroot leathers (17 def, 27 regen)<br>Wildroot breeches (9 def)<br>Wildroot boots (6 def) | Ashcaller hat (9 def)<br>Ashcaller robe (17 def, 27 regen)<br>Ashcaller leggings (9 def)<br>Ashcaller slippers (6 def) |
+| 40 | Skullcrusher helm (10 def)<br>Skullcrusher plate (19 def, 42 regen)<br>Skullcrusher legplates (10 def)<br>Skullcrusher sabatons (6 def) | Shadowstalker hood (10 def)<br>Shadowstalker mail (19 def, 42 regen)<br>Shadowstalker chausses (10 def)<br>Shadowstalker striders (6 def) | Verdant spirit hood (10 def)<br>Verdant spirit hide (19 def, 42 regen)<br>Verdant spirit breeches (10 def)<br>Verdant spirit boots (6 def) | Voidweaver cowl (10 def)<br>Voidweaver robe (19 def, 42 regen)<br>Voidweaver leggings (10 def)<br>Voidweaver slippers (6 def) |
+| 45 | Obsidian bulwark helm (11 def)<br>Obsidian bulwark plate (21 def, 64 regen)<br>Obsidian bulwark legplates (11 def)<br>Obsidian bulwark sabatons (7 def) | Great bear hood (11 def)<br>Great bear hauberk (21 def, 64 regen)<br>Great bear chausses (11 def)<br>Great bear striders (7 def) | Elder stag crown (11 def)<br>Elder stag hide (21 def, 64 regen)<br>Elder stag breeches (11 def)<br>Elder stag boots (7 def) | Netherflame cowl (11 def)<br>Netherflame robe (21 def, 64 regen)<br>Netherflame leggings (11 def)<br>Netherflame slippers (7 def) |
 
 | Tier | Shield (Warrior, Hunter) | Spellbook (Sorcerer, Druid) |
 | ---: | --- | --- |
-| 1 | Oak buckler (5 def) | Tattered primer (2 def, 6 mana) |
-| 5 | Hide targe (7 def) | Apprentice grimoire (2 def, 8 mana) |
-| 10 | Bronze heater (9 def) | Bound codex (3 def, 13 mana) |
-| 15 | Steel kite shield (11 def) | Runed tome (4 def, 20 mana) |
-| 20 | Silverleaf shield (14 def) | Silverleaf folio (5 def, 30 mana) |
-| 25 | Cobalt tower shield (16 def) | Cobalt codex (5 def, 47 mana) |
-| 30 | Embersteel aegis (18 def) | Ember tome (6 def, 71 mana) |
-| 35 | Duskiron bulwark (21 def) | Dusk grimoire (7 def, 109 mana) |
-| 40 | Starforged bulwark (23 def) | Star atlas (8 def, 168 mana) |
-| 45 | Wyrmglass ward (25 def) | Wyrmglass codex (8 def, 257 mana) |
+| 1 | Oak buckler (4 def) | Tattered primer (1 def, 6 mana) |
+| 5 | Hide targe (6 def) | Apprentice grimoire (1 def, 8 mana) |
+| 10 | Bronze heater (8 def) | Bound codex (2 def, 13 mana) |
+| 15 | Steel kite shield (10 def) | Runed tome (2 def, 20 mana) |
+| 20 | Silverleaf shield (11 def) | Silverleaf folio (2 def, 30 mana) |
+| 25 | Cobalt tower shield (13 def) | Cobalt codex (3 def, 47 mana) |
+| 30 | Embersteel aegis (15 def) | Ember tome (3 def, 71 mana) |
+| 35 | Duskiron bulwark (17 def) | Dusk grimoire (3 def, 109 mana) |
+| 40 | Starforged bulwark (19 def) | Star atlas (4 def, 168 mana) |
+| 45 | Wyrmglass ward (21 def) | Wyrmglass codex (4 def, 257 mana) |
 
 | Tier | Warrior | Hunter | Sorcerer | Druid |
 | ---: | --- | --- | --- | --- |
@@ -222,9 +223,9 @@ Regenerate with `make gear-table`:
 | Boss | Relics (level 50, bound; one trophy each) |
 | --- | --- |
 | Vaelith, Sovereign of the Hollow | Voidrend (64 atk); Eclipse bow (107 atk); Starless wand (139 atk); Nightbloom rod (43 atk); Sovereign's mantle (8 def, 307 mana) |
-| Morvain the Drowned | Abyssal greathelm (20 def); Abyssal plate (37 def, 113 regen); Tidebreaker (56 atk); Abyssal ward (31 def) |
+| Morvain the Drowned | Abyssal greathelm (13 def); Abyssal plate (26 def, 113 regen); Tidebreaker (56 atk); Abyssal ward (26 def) |
 | Kharzul the Cinder Colossus | Cinderheart bow (94 atk); Cinderheart wand (123 atk); Molten heart (679 hp); Cinderheart charm (227 regen, 113 heal) |
-| Sylvaine the Hollow Bloom | Bloomheart rod (38 atk); Verdant codex (10 def, 452 mana); Hollowbloom cape (7 def, 271 mana); Bloomsoul ring (339 hp, 136 mana) |
+| Sylvaine the Hollow Bloom | Bloomheart rod (38 atk); Verdant codex (6 def, 452 mana); Hollowbloom cape (7 def, 271 mana); Bloomsoul ring (339 hp, 136 mana) |
 
 ## Level table (reference class: Hunter)
 
