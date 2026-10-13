@@ -27,6 +27,7 @@ const DungeonPainter = preload("res://tools/generators/dungeons.gd")
 ## Turns trees and grass inside the desert into cacti, scrub, and sand.
 const DesertPainter = preload("res://tools/generators/desert.gd")
 const TownPainter = preload("res://tools/generators/towns.gd")
+const IslandPainter = preload("res://tools/generators/island.gd")
 ## Quest NPCs: node name, display name, place, cell. The Relic keeper trades boss trophies.
 ## Quest givers: id, name, place, cell, task (game/data/quests.gd; "" for the Relic keeper).
 ## Town task givers are added on their town plaza (TASK_GIVERS).
@@ -784,6 +785,7 @@ func _save(items: Array) -> void:
 		marker.set("task" if person[5] == "quest" else "role", person[4])
 		_add(quest_root if person[5] == "quest" else folk_root, marker, scene_root)
 	TownPainter.apply(scene_root)
+	IslandPainter.apply(scene_root)
 	var packed := PackedScene.new()
 	packed.pack(scene_root)
 	var error: Error = ResourceSaver.save(packed, SCENE_PATH)

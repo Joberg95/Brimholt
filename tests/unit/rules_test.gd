@@ -2510,8 +2510,22 @@ func _dungeon_task_and_region_checks() -> void:
 			check(spawn["level"] >= place["min_level"] and spawn["level"] <= place["max_level"], "region levels cover their monsters")
 
 
-## Blocked spawns retry until their camp is full; town rest boosts regeneration with a cooldown.
+## Blocked spawns retry until their camp is full; town rest boosts regeneration with a cooldown;
+## Blackreed Isle stays open enough to fight on.
 func _spawn_and_rest_checks() -> void:
+	var Island: GDScript = load("res://tools/generators/island.gd")
+	var isle_scene: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
+	check(Island.TERRAINS == World.TERRAINS and Island.apply(isle_scene) == 0, "Blackreed Isle is already thinned (a re-run changes nothing)")
+	isle_scene.free()
+	var isle: Rect2i = World.ZONES.filter(func(zone: Dictionary) -> bool: return zone["name"] == "Blackreed Isle")[0]["rect"]
+	var trees: int = 0
+	var land: int = 0
+	for y: int in range(isle.position.y, isle.end.y):
+		for x: int in range(isle.position.x, isle.end.x):
+			var tile: String = World.terrain(Vector2i(x, y))
+			trees += 1 if tile == "T" else 0
+			land += 1 if tile == "T" or tile in World.LAND else 0
+	check(trees * 100 < land * 10, "Blackreed Isle is mostly open ground (%d trees on %d tiles)" % [trees, land])
 	# Fill a camp's whole area with players so nothing can spawn there, then free it.
 	var world := World.new()
 	var combat := Combat.new(world, 21)

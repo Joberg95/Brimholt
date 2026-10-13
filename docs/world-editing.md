@@ -74,6 +74,10 @@ Sunscar Dunes); towns and the PvP zones keep their own zones on top. Levels are 
 `World` derives each region's range from the monster spawns inside it (bosses excluded). Move
 an anchor to reshape regions; add one to split a region.
 
+**Blackreed Isle** is kept open for PvP: `tools/generators/island.gd` (`make island`) keeps about
+a quarter of the trees inside its zone (a fixed hash of each tile picks which) and turns the rest
+into grass. Re-running it changes nothing.
+
 **Buildings** are found from the walls: a room of at most 48 tiles in a town zone, enclosed
 by `#` walls and doors (an open tile between two walls in a line). They get a roof, and
 nobody inside can be dealt with from outside. Paint houses at least three tiles wide inside.

@@ -226,7 +226,7 @@ quarters. Monster camps are dense (about 600 monsters), so levelling is close to
 **Cinder Crossing**, the starting town, sits in the north-west corner with gates to the east
 and south. A sea runs down the whole western edge with two ports: **Cinder Landing** at the
 top and **Lastlight** at the bottom, joined by one ferry. In the middle of the world lies a
-great irregular lake with **Blackreed Isle** in it, a **level 40–50 PvP hunting ground**
+great irregular lake with **Blackreed Isle** in it, a **level 40–50 PvP hunting ground** of open meadows and scattered trees
 reached only by the ferry from **Reedmere** on the west shore; entering it shows a red
 banner, and the island is tinted red on the minimap and world map.
 

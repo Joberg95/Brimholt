@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim playtest check \
-	sprites map map-force endgame-zone dungeons desert towns gear-table balance-table export-windows clean
+	sprites map map-force endgame-zone dungeons desert towns island gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -97,6 +97,9 @@ map-force: ## Regenerate the overworld draft, overwriting game/maps/overworld.ts
 
 towns: ## Build missing shops and banks and move vendors and bankers indoors (keeps other edits)
 	$(GODOT) --headless --path . --script res://tools/generators/towns.gd
+
+island: ## Thin Blackreed Isle's forest to about a quarter of its trees (keeps other edits)
+	$(GODOT) --headless --path . --script res://tools/generators/island.gd
 
 desert: ## Repaint the desert's plants and sand into the existing map (keeps other edits)
 	$(GODOT) --headless --path . --script res://tools/generators/desert.gd
