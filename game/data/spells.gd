@@ -59,12 +59,21 @@ const SPELLS: Dictionary = {
 }
 
 
+## Whether `vocation` may cast `id`: its own spells, or for Adventurers the spells every
+## vocation shares.
+static func allows(id: String, vocation: String) -> bool:
+	var vocations: Array = SPELLS[id]["vocations"]
+	if vocation == Balance.ADVENTURER:
+		return vocations.size() == Balance.VOCATIONS.size()
+	return vocation in vocations
+
+
 ## A vocation's spells by unlock level (catalog order within a level): the action bar's order.
 static func for_vocation(vocation: String) -> Array[String]:
 	var result: Array[String] = []
 	var order: Dictionary = {}
 	for id: String in SPELLS:
-		if vocation in SPELLS[id]["vocations"]:
+		if allows(id, vocation):
 			order[id] = SPELLS[id]["level"] * 1000 + result.size()
 			result.append(id)
 	result.sort_custom(func(a: String, b: String) -> bool: return order[a] < order[b])

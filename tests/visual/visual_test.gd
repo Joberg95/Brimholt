@@ -13,6 +13,7 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Spells = preload("res://game/data/spells.gd")
+const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 var game: Node2D
@@ -98,6 +99,9 @@ func _run() -> void:
 	game.close_ends_session = false
 	# Never touch the player's real key bindings, saves, or identity.
 	game.keybinds.persistent = false
+	# The checks play a Paladin; real new characters start as Adventurers (see _check_training_hall).
+	game.start_vocation = "paladin"
+	game.allow_start_vocation = true
 	screen.add_child(game)
 	game.save_enabled = false
 	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
@@ -232,6 +236,8 @@ func _run() -> void:
 		return
 	if not await _check_micro_menu():
 		return
+	if not await _check_training_hall():
+		return
 	if not await _check_waystone():
 		return
 	if not await _check_town_services():
@@ -252,7 +258,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1108,6 +1114,46 @@ func _check_micro_menu() -> bool:
 	menu.buttons[1].gui_input.emit(release)
 	await process_frame
 	return _expect(swapped and not game.spell_book.visible, "Micro menu buttons do not toggle their panels")
+
+
+## Cinder Crossing's training hall: an Adventurer who passed the trial right-clicks a trainer,
+## chooses Vocation, and becomes a Paladin through the real dialog button.
+func _check_training_hall() -> bool:
+	var player: Dictionary = game.world.players[1]
+	var saved: Dictionary = {"cell": player["cell"], "backpack": player["backpack"].duplicate(), "done": player["done_tasks"].duplicate()}
+	var trainer: Dictionary = World.QUEST_GIVERS["trainer_paladin"]
+	var front: Vector2i = trainer["cell"] + trainer["facing"]
+	player["vocation"] = "adventurer"
+	player["done_tasks"][Quests.TRIAL_TASK] = true
+	player["backpack"] = player["backpack"].map(func(_entry: String) -> String: return "")
+	player["cell"] = front
+	player["from"] = front
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	if not await _open_service("trainer_paladin", "Vocation"):
+		return false
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-trainer.png")
+	var become: Button = null
+	for button: Node in game._travel_list.find_children("*", "Button", true, false):
+		if button.text == "Become a Paladin":
+			become = button
+	if not _expect(become != null and not become.disabled and game.dialogs.mode == "vocation",
+			"The paladin trainer offers no vocation to a qualified Adventurer"):
+		return false
+	become.pressed.emit()
+	await create_timer(0.3).timeout
+	var chosen: bool = player["vocation"] == "paladin" and player["backpack"].has("willow_shortbow") \
+		and game.actors[1]["state"]["vocation"] == "paladin"
+	game.dialogs.close()
+	player["backpack"] = saved["backpack"]
+	player["done_tasks"] = saved["done"]
+	player["cell"] = saved["cell"]
+	player["from"] = saved["cell"]
+	game._publish_actor(1)
+	await create_timer(0.5).timeout
+	return _expect(chosen, "Choosing a vocation at the trainer did not make the Adventurer a Paladin")
 
 
 func _texts(node: Node, into: PackedStringArray) -> void:

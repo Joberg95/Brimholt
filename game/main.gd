@@ -106,7 +106,10 @@ var dialogs: NpcDialogs
 var start_panel: StartPanel
 # Shortcuts to component controls, used by input handling and the tests.
 var _address: LineEdit
-var _vocation: OptionButton
+## The vocation a new character asks to start with (--vocation=, for tests and bots); hosts only
+## grant it when started with --allow-start-vocation, otherwise every new character is an Adventurer.
+var start_vocation: String = Balance.ADVENTURER
+var allow_start_vocation: bool = false
 var _controls: PanelContainer
 var _zone_label: Label
 var _minimap: Control
@@ -138,11 +141,13 @@ func _ready() -> void:
 	for arg: String in args:
 		if arg.begins_with("--vocation="):
 			var choice: String = arg.trim_prefix("--vocation=")
-			if not Balance.VOCATIONS.has(choice):
-				_fail("Vocation must be one of: %s." % ", ".join(Balance.VOCATIONS.keys()))
+			if not Balance.is_vocation(choice):
+				_fail("Vocation must be one of: %s, %s." % [", ".join(Balance.VOCATIONS.keys()), Balance.ADVENTURER])
 				get_tree().quit(1)
 				return
-			_vocation.select(Balance.VOCATIONS.keys().find(choice))
+			start_vocation = choice
+		elif arg == "--allow-start-vocation":
+			allow_start_vocation = true
 	for arg: String in args:
 		if arg.begins_with("--port="):
 			var value: String = arg.trim_prefix("--port=")
@@ -480,7 +485,8 @@ func _admit(id: int, token: String, vocation: String) -> String:
 			return "Your saved character on this host %s. Ask the host to restore its .bak file." % loaded["reason"]
 		saved = loaded["data"]
 	var returning: bool = not CharacterStore.saved_vocation(saved).is_empty()
-	if not world.add_player(id, _now(), CharacterStore.saved_vocation(saved) if returning else vocation):
+	var fresh: String = vocation if allow_start_vocation and Balance.VOCATIONS.has(vocation) else Balance.ADVENTURER
+	if not world.add_player(id, _now(), CharacterStore.saved_vocation(saved) if returning else fresh):
 		return "This world is full (%d players maximum)." % World.MAX_PLAYERS
 	_accounts[id] = account
 	if returning:
@@ -488,9 +494,12 @@ func _admit(id: int, token: String, vocation: String) -> String:
 		# A character saved inside a dungeon returns to its stairway: copies do not persist.
 		instances.evacuate(id, _now())
 		var player: Dictionary = world.players[id]
-		_greetings[id] = "Welcome back: your level %d %s." % [player["level"], Balance.VOCATIONS[player["vocation"]]["name"]]
-	elif store != null:
-		_save_player(id)
+		_greetings[id] = "Welcome back: your level %d %s." % [player["level"], Balance.profile_of(player["vocation"])["name"]]
+	else:
+		if fresh == Balance.ADVENTURER:
+			_greetings[id] = "Welcome, adventurer. Master Hesk outside the training hall has a trial for you."
+		if store != null:
+			_save_player(id)
 	return ""
 
 
@@ -547,7 +556,7 @@ func hello(map_signature: Variant, vocation: Variant, token: Variant) -> void:
 	if typeof(map_signature) != TYPE_STRING or map_signature != World.signature():
 		_reject_connection(sender, "World/protocol mismatch. Use the same project files as the host.")
 		return
-	if typeof(vocation) != TYPE_STRING or not Balance.VOCATIONS.has(vocation):
+	if not Balance.is_vocation(vocation):
 		_reject_connection(sender, "Unknown vocation.")
 		return
 	var refused: String = _admit(sender, token if typeof(token) == TYPE_STRING else "", vocation)
@@ -679,6 +688,16 @@ func task_local(npc: String, task: String, action: String) -> void:
 		request_task.rpc_id(1, npc, task, action)
 
 
+## Asks a trainer to make you their vocation (permanent; the host checks the trial and level).
+func vocation_local(npc: String) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_vocation(1, npc)
+	else:
+		request_vocation.rpc_id(1, npc)
+
+
 func buy_local(npc: String, kind: String, count: int) -> void:
 	if not connected or self_id == 0:
 		return
@@ -801,7 +820,7 @@ func _chase_direction() -> Vector2i:
 		return Vector2i.ZERO
 	var own: Dictionary = actors[self_id]["state"]
 	var goal: Vector2i = target["state"]["cell"]
-	if Combat.in_reach(own["cell"], goal, Combat.VOCATION_RANGE.get(own["vocation"], 1)):
+	if Combat.in_reach(own["cell"], goal, Combat.VOCATION_RANGE.get(Combat.attack_style(own["vocation"], own["equipment"]), 1)):
 		return Vector2i.ZERO
 	var taken: Dictionary = {}
 	for group: Dictionary in [actors, monsters]:
@@ -862,6 +881,22 @@ func request_task(npc: Variant, task: Variant, action: Variant) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	if _valid_sender(sender):
 		_handle_task(sender, npc, task, action)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_vocation(npc: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_vocation(sender, npc)
+
+
+func _handle_vocation(id: int, npc: Variant) -> void:
+	var result: Dictionary = world.choose_vocation(id, npc, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+		_save_player(id)
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
 
 
 func _handle_task(id: int, npc: Variant, task: Variant, action: Variant) -> void:
@@ -1319,7 +1354,7 @@ func _build_ui() -> void:
 	action_bar.build(self, layer)
 	dialogs.build(self, layer)
 	start_panel = StartPanel.new()
-	start_panel.setup(self, hud.address, hud.vocation)
+	start_panel.setup(self, hud.address)
 	layer.add_child(start_panel)
 	quest_list = QuestList.new()
 	quest_list.game = self
@@ -1339,7 +1374,6 @@ func _build_ui() -> void:
 			maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
-	_vocation = hud.vocation
 	_controls = hud.controls
 	_zone_label = hud.zone_label
 	_minimap = maps.minimap
@@ -1393,7 +1427,7 @@ func _close_travel() -> void:
 
 
 func selected_vocation() -> String:
-	return Balance.VOCATIONS.keys()[maxi(0, _vocation.selected)]
+	return start_vocation
 
 
 ## Map pixel the camera centres: your character's interpolated position, else the map centre.

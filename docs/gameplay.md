@@ -13,7 +13,7 @@ before the target's armour), mana cost, and cooldown.
 The **spell book** (B, or "Open spell book" in a slot's right-click menu) lists every spell of
 your vocation by unlock level with the same details; locked spells say the level they need.
 Drag a spell's rune from the book onto the action bar to put it there. Before you join, it
-shows the vocation picked in the top bar.
+shows the Adventurer's spells.
 
 The **micro menu** right of the action bar has a button for each panel: Character (C), Spell
 book (B), Quests (L), World map (M), and Controls. A gold frame marks the panels that are
@@ -299,10 +299,10 @@ the copy is close to the overworld on the host's map.
 
 The right-hand panel shows a Tibia-style paperdoll with ten slots (necklace, helmet, pack /
 main hand, armor, off hand / ring, cape, ring / charm), a backpack of 8 slots (up to 20 with
-a pack from a town task), and your stat sheet. Each vocation starts with a tier-1 kit in its backpack: Ember cap and Moss coat
-for everyone, plus a Copper blade and Oak buckler (Knight), a Willow shortbow and Oak
-buckler (Paladin), a Kindling wand and Tattered primer (Sorcerer), or a Sapling rod and
-Tattered primer (Druid). Tier-5 gear for every vocation lies around Cinder Crossing. Rings
+a pack from a town task), and your stat sheet. Adventurers start with an Ember cap, Moss
+coat, Copper blade, and Oak buckler in the backpack. Choosing a vocation adds its tier-1
+weapon and off-hand if you lack them: a Willow shortbow (Paladin), a Kindling wand and
+Tattered primer (Sorcerer), or a Sapling rod and Tattered primer (Druid). Tier-5 gear for every vocation lies around Cinder Crossing. Rings
 fit either ring slot; right-clicking a ring fills an empty ring slot first. Helmets, capes,
 armor, and both hands are drawn on the character (a cape appears only when equipped);
 rings, amulets, and charms are too small to show. Items can be dropped on any walkable
@@ -397,11 +397,23 @@ even with a red skull.
 
 ## Stats and balance
 
-Pick a vocation in the top bar before hosting or joining (or pass `--vocation=knight`,
-`paladin`, `sorcerer`, or `druid` after `--`). The four follow the classic roles:
-**Knight** (tank: most health, base defense), **Paladin** (ranged damage, light healing),
-**Sorcerer** (burst damage, frail), and **Druid** (healer, frail). The host validates the
-choice during the handshake; everyone sees each player's vocation and level.
+Every new character starts as an **Adventurer**: no vocation yet, middling health and
+mana, only Light heal, and the tier-1 gear of every vocation to try (an Adventurer with a
+bow shoots from six tiles, with a wand or rod from five). Adventurers stop at level 8.
+**Master Hesk**, outside Cinder Crossing's training hall in the south-east corner, gives
+**The adventurer's trial**: hunt eight thornback boars in Greywood. Once you have passed it and
+reached level 5, right-click a trainer in the hall and choose **Vocation**: Sir Garrow
+(Knight), Ranger Tamsin (Paladin), Magister Vell (Sorcerer), or Elder Fenna (Druid). Each
+explains the vocation and its spells; **Become a ...** is permanent, restores your health
+and mana, and hands you the vocation's tier-1 weapon and off-hand that you lack. Your
+spells fill the action bar at once.
+
+The four follow the classic roles: **Knight** (tank: most health, base defense), **Paladin**
+(ranged damage, light healing), **Sorcerer** (burst damage, frail), and **Druid** (healer,
+frail). The host checks every choice; clients never pick their own vocation. Characters
+saved before trainers existed keep their vocation. Test hosts started with
+`--allow-start-vocation` let new characters begin with `--vocation=knight` (and so on);
+without it, `--vocation` is ignored. Everyone sees each player's vocation and level.
 
 Each item has stats (health, mana, attack, defense, critical chance, regeneration,
 healing) that add to your vocation's base stats for your level; the stat sheet shows the

@@ -8,10 +8,11 @@ const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Quests = preload("res://game/data/quests.gd")
+const Spells = preload("res://game/data/spells.gd")
 const Economy = preload("res://game/core/economy.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Layout = preload("res://game/ui/layout.gd")
-const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests"}
+const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests", "vocation": "Vocation"}
 const DEPOT_COLUMNS: int = 8
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
 	"join": "Join party", "leave": "Leave party"}
@@ -22,7 +23,7 @@ var panel: PanelContainer
 var list: VBoxContainer
 ## The NPC whose dialog is open, or "".
 var talking_to: String = ""
-## The open dialog: "travel", "trade", "bank", or "quests".
+## The open dialog: "travel", "trade", "bank", "quests", or "vocation".
 var mode: String = ""
 var _shown_state: String = ""
 var _bank_amount: int = 100
@@ -67,7 +68,7 @@ func refresh() -> void:
 	if not talking_to.is_empty() and (not actors.has(self_id) or not World.in_talk_range(
 			actors[self_id]["state"]["cell"], World.npc(talking_to)["cell"])):
 		close()
-	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests"] and _state_key() != _shown_state:
+	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests", "vocation"] and _state_key() != _shown_state:
 		_open(mode, talking_to)
 
 
@@ -88,7 +89,7 @@ func _state_key() -> String:
 		return ""
 	var state: Dictionary = actors[game.self_id]["state"]
 	return str([state.get("gold"), state.get("bank"), state.get("backpack"), state.get("tasks"), state.get("done_tasks"),
-		state.get("trophies"), state.get("level"), state["equipment"].get("bag")])
+		state.get("trophies"), state.get("level"), state["equipment"].get("bag"), state.get("vocation")])
 
 
 func _open(kind: String, npc: String) -> void:
@@ -99,6 +100,8 @@ func _open(kind: String, npc: String) -> void:
 			open_bank(npc)
 		"quests":
 			open_quests(npc)
+		"vocation":
+			open_vocation(npc)
 
 
 ## Right-clicking a person opens their services; there is no typed dialogue.
@@ -119,7 +122,7 @@ func _npc_service_chosen(id: int) -> void:
 	var service: Variant = npc_menu.get_item_metadata(npc_menu.get_item_index(id))
 	if service == "travel":
 		talk_to(npc_menu_target)
-	elif service in ["trade", "bank", "quests"]:
+	elif service in ["trade", "bank", "quests", "vocation"]:
 		_open(service, npc_menu_target)
 
 
@@ -255,6 +258,45 @@ static func icon(kind: String) -> AtlasTexture:
 	texture.atlas = SpriteArt.ITEM_ICONS
 	texture.region = SpriteArt.item_region(kind)
 	return texture
+
+
+## A vocation trainer: what the vocation does, what choosing needs (the trial and a level), and
+## the permanent choice. Other vocations hear that they already have one.
+func open_vocation(npc: String) -> void:
+	if not _begin(npc) or not Quests.TRAINERS.has(npc):
+		return
+	var trainer: Dictionary = World.npc(npc)
+	var vocation: String = Quests.TRAINERS[npc][0]
+	var profile: Dictionary = Balance.VOCATIONS[vocation]
+	var state: Dictionary = game.actors[game.self_id]["state"]
+	_wrapped("%s, %s trainer\n\"%s\"" % [trainer["name"], profile["name"], Quests.TRAINERS[npc][1]])
+	var spells: PackedStringArray = []
+	for spell: String in Spells.for_vocation(vocation):
+		spells.append("%s (%d)" % [Spells.SPELLS[spell]["name"], Spells.SPELLS[spell]["level"]])
+	_wrapped("Role: %s. Health ×%s, mana ×%s, damage ×%s.\nSpells: %s." % [profile["role"], Spells.number(profile["health"]),
+		Spells.number(profile["mana"]), Spells.number(profile["damage"]), ", ".join(spells)], Color("#a7b0b8"))
+	if state.get("vocation", "") != Balance.ADVENTURER:
+		_label("You are already a %s; a vocation is for life." % Balance.profile_of(state.get("vocation", ""))["name"], Color("#a7b0b8"))
+		_farewell()
+		_show(npc, "vocation")
+		return
+	var trial: String = Quests.TASKS[Quests.TRIAL_TASK]["title"]
+	var passed: bool = Quests.TRIAL_TASK in state.get("done_tasks", [])
+	var levelled: bool = state.get("level", 1) >= Balance.CHOOSE_LEVEL
+	_label("%s %s" % ["✓" if passed else "✗", "Passed %s" % trial if passed else "Pass %s (Master Hesk, outside the hall)" % trial],
+		Color("#9fe07a") if passed else Color("#e05a4a"))
+	_label("%s Level %d or higher" % ["✓" if levelled else "✗", Balance.CHOOSE_LEVEL], Color("#9fe07a") if levelled else Color("#e05a4a"))
+	_label("The choice is permanent. You receive the %s's starting weapon and off-hand." % profile["name"], Color("#ffcf6a"))
+	_button("Become a %s" % profile["name"], passed and levelled, func() -> void: game.vocation_local(npc))
+	_farewell()
+	_show(npc, "vocation")
+
+
+func _wrapped(text: String, color: Color = Color.TRANSPARENT) -> Label:
+	var label: Label = _label(text, color)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size.x = 460
+	return label
 
 
 ## A vendor: buy potions and levelling gear for your vocation, and sell loot.

@@ -28,7 +28,7 @@ from the command line: open the project in the Godot editor, or run `make import
 (`godot --headless --path . --editor --quit`). Otherwise sprites fail to load.
 
 Without `--host` or `--join` (for example when you press F5 in the editor), the game opens
-on a start menu over Cinder Crossing: pick a vocation and click **Host a game** in one
+on a start menu over Cinder Crossing: click **Host a game** in one
 instance. In another instance, enter the host's LAN IPv4 address and click **Join**. Use `127.0.0.1` only for two instances on the same
 computer. All computers must use the same project files. Allow inbound **UDP
 1234** through the host firewall; ENet does not use TCP/WebSockets.
@@ -61,7 +61,7 @@ items and monsters reset when the host stops.
   Use `--save-dir=PATH` for another folder or `--no-save` to play without saving.
 - **Who you are:** each computer has a secret identity token in the same user data folder
   (`identity.cfg`). Joining sends it to the host, which keeps only its hash and loads the
-  matching character (your saved vocation wins over the one you pick). Keep `identity.cfg`
+  matching character. New characters start as Adventurers and choose a vocation in the game. Keep `identity.cfg`
   private; copy it to play your characters from another computer. To run two players on one
   computer, give one `--profile=NAME` (its own `identity-NAME.cfg`). One identity can be in a
   world only once.

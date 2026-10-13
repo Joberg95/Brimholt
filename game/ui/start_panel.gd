@@ -1,6 +1,7 @@
 extends PanelContainer
-## The start menu shown until you host or join: vocation, Host, and Join with an address,
-## kept in sync with the title row's address and vocation, plus the connection status.
+## The start menu shown until you host or join: Host, and Join with an address kept in sync
+## with the title row's address, plus the connection status. New characters start as
+## Adventurers and choose a vocation in the game (Quests.TRAINERS).
 
 const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
@@ -9,7 +10,7 @@ var game: Node
 var _status: Label
 
 
-func setup(game_node: Node, address: LineEdit, vocation: OptionButton) -> void:
+func setup(game_node: Node, address: LineEdit) -> void:
 	game = game_node
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#151a20")
@@ -27,25 +28,11 @@ func setup(game_node: Node, address: LineEdit, vocation: OptionButton) -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 	var intro := Label.new()
-	intro.text = "Host a game for your friends, or join one on your network.\nNew characters start in Cinder Crossing;" \
-		+ "\nthe host saves yours, so you return as you left."
+	intro.text = "Host a game for your friends, or join one on your network.\nNew characters start as adventurers in Cinder" \
+		+ " Crossing,\npass a trial, and choose a vocation from its trainers.\nThe host saves yours, so you return as you left."
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	intro.modulate = Color("#a7b0b8")
 	box.add_child(intro)
-	var vocation_row := HBoxContainer.new()
-	box.add_child(vocation_row)
-	var vocation_label := Label.new()
-	vocation_label.text = "Vocation"
-	vocation_label.custom_minimum_size.x = 90
-	vocation_row.add_child(vocation_label)
-	var start_vocation := OptionButton.new()
-	for choice: String in Balance.VOCATIONS:
-		start_vocation.add_item("%s  (%s)" % [Balance.VOCATIONS[choice]["name"], Balance.VOCATIONS[choice]["role"]])
-	start_vocation.select(vocation.selected)
-	start_vocation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	start_vocation.item_selected.connect(func(index: int) -> void: vocation.select(index))
-	vocation.item_selected.connect(func(index: int) -> void: start_vocation.select(index))
-	vocation_row.add_child(start_vocation)
 	var host := Button.new()
 	host.text = "Host a game"
 	host.pressed.connect(Callable(game, "host_game"))

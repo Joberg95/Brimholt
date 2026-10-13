@@ -182,8 +182,17 @@ func monster_def(id: int) -> Dictionary:
 
 func reach_of(id: int) -> int:
 	if id > 0:
-		return VOCATION_RANGE.get(world.players[id]["vocation"], 1)
+		return VOCATION_RANGE.get(attack_style(world.players[id]["vocation"], world.players[id]["equipment"]), 1)
 	return monster_def(id)["range"]
+
+
+## The vocation whose auto-attack (reach and missile) a player uses: their own, or for an
+## Adventurer the vocation their weapon belongs to (melee when unarmed).
+static func attack_style(vocation: String, equipment: Dictionary) -> String:
+	if vocation != Balance.ADVENTURER:
+		return vocation
+	var weapon: Dictionary = World.ITEMS.get(World.kind_of(String(equipment.get("main_hand", ""))), {})
+	return weapon["vocations"][0] if not weapon.get("vocations", []).is_empty() else "knight"
 
 
 func in_pvp_zone(id: int) -> bool:
@@ -316,7 +325,7 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 		return {"ok": false, "reason": "Unknown spell", "events": []}
 	var player: Dictionary = world.players[id]
 	var definition: Dictionary = Spells.SPELLS[spell]
-	if player["vocation"] not in definition["vocations"]:
+	if not Spells.allows(spell, player["vocation"]):
 		return {"ok": false, "reason": "Your vocation cannot cast %s" % definition["name"], "events": []}
 	if player["level"] < definition["level"]:
 		return {"ok": false, "reason": "%s needs level %d" % [definition["name"], definition["level"]], "events": []}
@@ -768,7 +777,7 @@ func share_bonus(members: Array[int]) -> float:
 
 func describe(id: int) -> String:
 	var player: Dictionary = world.players[id]
-	return "%s %d" % [Balance.VOCATIONS[player["vocation"]]["name"], player["level"]]
+	return "%s %d" % [Balance.profile_of(player["vocation"])["name"], player["level"]]
 
 
 ## invite/revoke (by a leader or a player without a party), join (an inviting leader), and leave.
@@ -943,6 +952,13 @@ func grant_experience(id: int, amount: int, events: Array) -> void:
 	var player: Dictionary = world.players[id]
 	var before: int = player["level"]
 	var result: Array = level_from_total(total_experience(player["level"], player["experience"]) + maxi(amount, 0))
+	# Adventurers stop just short of the level after ADVENTURER_MAX_LEVEL until they choose a vocation.
+	if player["vocation"] == Balance.ADVENTURER and result[0] > Balance.ADVENTURER_MAX_LEVEL:
+		var full: int = Balance.experience_to_next(Balance.ADVENTURER_MAX_LEVEL) - 1
+		if player["level"] < Balance.ADVENTURER_MAX_LEVEL or player["experience"] < full:
+			events.append({"kind": "message", "id": id, "text":
+				"You cannot grow past level %d without a vocation. Choose one at a trainer in Cinder Crossing." % Balance.ADVENTURER_MAX_LEVEL})
+		result = [Balance.ADVENTURER_MAX_LEVEL, full]
 	player["level"] = result[0]
 	player["experience"] = result[1]
 	events.append({"kind": "hit", "target": id, "cell": player["cell"], "amount": amount, "style": "experience"})
@@ -1089,7 +1105,8 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 	if now >= player["next_attack"] and in_reach(player["cell"], creature(target)["cell"], reach_of(id)):
 		player["next_attack"] = now + Balance.ATTACK_SECONDS
 		if reach_of(id) > 1:
-			_missile(player["cell"], creature(target)["cell"], MISSILE_COLORS.get(player["vocation"], Color.WHITE), events)
+			_missile(player["cell"], creature(target)["cell"], MISSILE_COLORS.get(attack_style(player["vocation"],
+				player["equipment"]), Color.WHITE), events)
 		_hit(id, target, 1.0, now, events)
 
 

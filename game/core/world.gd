@@ -81,7 +81,7 @@ static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 const MAX_PLAYERS: int = 12
 const PORT: int = 1234
-const PROTOCOL: int = 9
+const PROTOCOL: int = 10
 const START_GOLD: int = 100
 ## Players must stand within this many tiles (in any direction) of a ferryman to sail.
 const TALK_RANGE: int = 2
@@ -102,6 +102,7 @@ const START_KITS: Dictionary = {
 	"paladin": ["ember_cap", "moss_coat", "willow_shortbow", "oak_buckler"],
 	"sorcerer": ["ember_cap", "moss_coat", "kindling_wand", "tattered_primer"],
 	"druid": ["ember_cap", "moss_coat", "sapling_rod", "tattered_primer"],
+	"adventurer": ["ember_cap", "moss_coat", "copper_blade", "oak_buckler"],
 }
 ## Backpack slots without a pack; a worn pack adds its "slots", up to BACKPACK_MAX.
 const BACKPACK_SIZE: int = 8
@@ -183,7 +184,8 @@ static func _static_init() -> void:
 				tasks.push_front(own)
 			QUEST_GIVERS[String(marker.name)] = {
 				"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
-				"cell": _cell_of(marker), "facing": marker.get("facing"), "services": ["quests"],
+				"cell": _cell_of(marker), "facing": marker.get("facing"),
+				"services": ["vocation"] if Quests.TRAINERS.has(String(marker.name)) else ["quests"],
 				"tasks": tasks, "boss": String(Quests.RELIC_KEEPERS.get(String(marker.name), "")),
 			}
 			NPC_CELLS[_cell_of(marker)] = String(marker.name)
@@ -526,7 +528,9 @@ static func requirement_error(kind: String, level: int, vocation: String) -> Str
 	if not ITEMS.has(kind):
 		return "Unknown item"
 	var item: Dictionary = ITEMS[kind]
-	if not item["vocations"].is_empty() and vocation not in item["vocations"]:
+	# Adventurers may try every vocation's tier-1 gear before choosing.
+	var trying: bool = vocation == Balance.ADVENTURER and item["level"] <= 1
+	if not item["vocations"].is_empty() and vocation not in item["vocations"] and not trying:
 		var names: PackedStringArray = []
 		for allowed: String in item["vocations"]:
 			names.append(Balance.VOCATIONS[allowed]["name"] + "s")
@@ -607,7 +611,7 @@ func clamp_vitals(id: int) -> void:
 
 
 func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION) -> bool:
-	if id <= 0 or players.has(id) or players.size() >= MAX_PLAYERS or not Balance.VOCATIONS.has(vocation):
+	if id <= 0 or players.has(id) or players.size() >= MAX_PLAYERS or not Balance.is_vocation(vocation):
 		return false
 	for cell: Vector2i in SPAWNS:
 		if not occupied(cell, now):
@@ -911,6 +915,46 @@ static func receiving_slot(slots: Array, kind: String, count: int) -> int:
 
 
 ## Wears a pack in the bag slot (replacing any smaller one) and grows the backpack to fit.
+## An Adventurer who passed the trial and reached Balance.CHOOSE_LEVEL takes up the vocation
+## taught by `trainer`, for good, and receives its tier-1 weapon and off-hand (the ones
+## not already carried). Returns {ok, events} or {ok: false, reason}.
+func choose_vocation(id: int, trainer: Variant, _now: float) -> Dictionary:
+	if not players.has(id):
+		return {"ok": false, "reason": "Unknown player"}
+	var player: Dictionary = players[id]
+	if not serves(trainer, "vocation", player["cell"]):
+		return {"ok": false, "reason": "Walk closer to a trainer"}
+	var vocation: String = Quests.TRAINERS[trainer][0]
+	var vocation_name: String = Balance.VOCATIONS[vocation]["name"]
+	if player["vocation"] != Balance.ADVENTURER:
+		return {"ok": false, "reason": "You are already a %s" % Balance.profile_of(player["vocation"])["name"]}
+	if not player["done_tasks"].has(Quests.TRIAL_TASK):
+		return {"ok": false, "reason": "Pass %s first" % Quests.TASKS[Quests.TRIAL_TASK]["title"]}
+	if player["level"] < Balance.CHOOSE_LEVEL:
+		return {"ok": false, "reason": "Reach level %d first" % Balance.CHOOSE_LEVEL}
+	var gifts: Array[String] = []
+	for kind: String in start_kit(vocation).slice(2):
+		if not kind in player["equipment"].values() and not player["backpack"].any(func(entry: String) -> bool:
+				return kind_of(entry) == kind):
+			gifts.append(kind)
+	if player["backpack"].count("") < gifts.size():
+		return {"ok": false, "reason": "Make room for %d items in your backpack" % gifts.size()}
+	player["vocation"] = vocation
+	for kind: String in gifts:
+		player["backpack"][player["backpack"].find("")] = kind
+	var limits: Dictionary = player_stats(id)
+	player["health"] = limits["health"]
+	player["mana"] = limits["mana"]
+	var gift_names: PackedStringArray = []
+	for kind: String in gifts:
+		gift_names.append(ITEMS[kind]["name"])
+	var text: String = "You are now a %s. %s" % [vocation_name, "%s hands you a %s." % [npc(trainer)["name"], " and a ".join(gift_names)]
+		if not gift_names.is_empty() else "Your gear already suits you."]
+	var flash: Array[Vector2i] = [player["cell"]]
+	return {"ok": true, "events": [{"kind": "player", "id": id}, {"kind": "message", "id": id, "text": text},
+		{"kind": "area", "cells": flash, "color": Color("#ffcf6a")}]}
+
+
 func wear_pack(id: int, kind: String) -> void:
 	var player: Dictionary = players[id]
 	player["equipment"]["bag"] = kind

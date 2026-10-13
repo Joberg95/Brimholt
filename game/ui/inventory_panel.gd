@@ -138,8 +138,8 @@ func update_stats() -> void:
 	var vocation: String = state.get("vocation", Balance.DEFAULT_VOCATION)
 	var stats: Dictionary = World.stats(level, state["equipment"], vocation)
 	var base: Dictionary = Balance.base_stats(level, vocation)
-	_stat_values["vocation"].text = Balance.VOCATIONS[vocation]["name"]
-	_stat_values["vocation"].tooltip_text = Balance.VOCATIONS[vocation]["role"]
+	_stat_values["vocation"].text = Balance.profile_of(vocation)["name"]
+	_stat_values["vocation"].tooltip_text = Balance.profile_of(vocation)["role"]
 	_stat_values["vocation"].mouse_filter = Control.MOUSE_FILTER_PASS
 	var next: int = Balance.experience_to_next(level)
 	_stat_values["level"].text = "%d / %d" % [level, Balance.MAX_LEVEL]

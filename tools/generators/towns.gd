@@ -31,6 +31,13 @@ const QUEST_GIVERS: Array = [
 	["sexton_wren", "Sexton Wren", "Ashford", Vector2i(189, 127), Vector2i.RIGHT],
 	["foreman_dagny", "Foreman Dagny", "Highmoor", Vector2i(337, 75), Vector2i.RIGHT],
 	["trapper_maud", "Trapper Maud", "Thornfield Wilds", Vector2i(85, 165), Vector2i.LEFT],
+	# Cinder Crossing's training hall (its old bank house): the trial master by the door, and
+	# one vocation trainer in each corner (Quests.TRAINERS).
+	["trial_master", "Master Hesk", "Cinder Crossing", Vector2i(21, 12), Vector2i.DOWN],
+	["trainer_knight", "Sir Garrow", "Cinder Crossing", Vector2i(18, 14), Vector2i.RIGHT],
+	["trainer_paladin", "Ranger Tamsin", "Cinder Crossing", Vector2i(22, 14), Vector2i.LEFT],
+	["trainer_sorcerer", "Magister Vell", "Cinder Crossing", Vector2i(18, 16), Vector2i.RIGHT],
+	["trainer_druid", "Elder Fenna", "Cinder Crossing", Vector2i(22, 16), Vector2i.LEFT],
 ]
 ## Ground a quest giver may stand on.
 const STANDING: String = ".,:="
@@ -46,7 +53,7 @@ const PATCHES: Array = [
 		"#=====#",
 		"#######",
 	]],
-	# A house in Cinder Crossing's south-east corner (its bank before banking moved to Reedmere).
+	# Cinder Crossing's training hall in the south-east corner (its bank before banking moved to Reedmere).
 	[Vector2i(17, 13), [
 		"##=####",
 		"#=====#",

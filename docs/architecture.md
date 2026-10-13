@@ -38,7 +38,7 @@ game/
     micro_menu.gd        Buttons right of the action bar for the character, book, quests, map, controls
     spell_rune.gd        A spell rune: drawing, coloured tooltip, drag and drop (bar and book)
     item_slot.gd         An item slot whose hover tooltip shows the rarity colour
-    action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation
+    action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation (again after a trainer)
     world_maps.gd        Minimap and world map drawn from one terrain texture
     npc_dialogs.gd       NPC service menu; travel, trade, bank (depot), and quest dialogs; player party menu
     start_panel.gd       Start menu shown until you host or join

@@ -114,7 +114,7 @@ func refresh() -> void:
 func _write(state: Dictionary, rest_left: int) -> void:
 	var level: int = state.get("level", 1)
 	var vocation: String = state.get("vocation", Balance.DEFAULT_VOCATION)
-	var profile: Dictionary = Balance.VOCATIONS[vocation]
+	var profile: Dictionary = Balance.profile_of(vocation)
 	var stats: Dictionary = World.stats(level, state.get("equipment", {}), vocation)
 	var base: Dictionary = Balance.base_stats(level, vocation)
 	_title.text = "%s · level %d" % [profile["name"], level]

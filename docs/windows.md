@@ -9,7 +9,8 @@ Windows SmartScreen may say "Windows protected your PC" because the game is not 
 Click "More info", then "Run anyway".
 
 PLAYING TOGETHER ON A LAN
-1. One person starts Brimholt.exe, picks a vocation, and clicks "Host a game".
+1. One person starts Brimholt.exe and clicks "Host a game". Everyone starts as an
+   Adventurer and chooses a vocation in the game (see the trainers in Cinder Crossing).
    Windows Firewall asks whether Brimholt may communicate: allow it on private networks.
    (The game uses UDP port 1234.)
 2. The host finds their IPv4 address: open Command Prompt, run "ipconfig", and read the

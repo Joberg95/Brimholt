@@ -19,6 +19,8 @@ var _menu: PopupMenu
 var _menu_slot: int = -1
 ## What the tooltips were last written for (bar entries, level, vocation, and gear).
 var _tooltip_key: String = ""
+## The vocation the bar was last filled for.
+var _vocation: String = ""
 
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
@@ -60,6 +62,10 @@ func redraw() -> void:
 	if key == _tooltip_key:
 		return
 	_tooltip_key = key
+	# Choosing a vocation at a trainer brings its spells onto the bar.
+	if state.get("vocation", "") != _vocation and not state.is_empty():
+		_vocation = state["vocation"]
+		fill_spell_slots(_vocation)
 	for slot: int in _slots.size():
 		var rune: SpellRune = _slots[slot]
 		var entry: String = keybinds.bar[slot]

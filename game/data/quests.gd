@@ -13,6 +13,11 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 
 const TASKS: Dictionary = {
+	# The adventurer's trial: passing it (and reaching Balance.CHOOSE_LEVEL) lets an Adventurer
+	# choose a vocation at a trainer. "level" sets the reward for monsters outside dungeons.
+	"adventurers_trial": {"title": "The adventurer's trial", "giver": "trial_master", "monster": "thornback_boar",
+		"count": 8, "level": 6, "reward": "experience", "share": 0.5,
+		"intro": "Every vocation began as an adventurer. Hunt eight thornback boars in Greywood,\nand the trainers in the hall behind me will teach you."},
 	"boar_cull": {"title": "Boar cull", "giver": "warden_brask", "monster": "thornback_boar", "count": 15,
 		"reward": "pack", "intro": "Thornback boars are tearing up the fields beyond the town walls."},
 	"outlaw_bounty": {"title": "Outlaw bounty", "giver": "captain_ardo", "monster": "outlaw_archer", "count": 25,
@@ -49,6 +54,16 @@ const TASKS: Dictionary = {
 const RELIC_KEEPERS: Dictionary = {
 	"relic_keeper": "morvain", "relic_keeper_kharzul": "kharzul", "relic_keeper_sylvaine": "sylvaine",
 	"relic_keeper_vaelith": "vaelith",
+}
+## The trial an Adventurer passes before choosing a vocation.
+const TRIAL_TASK: String = "adventurers_trial"
+## Vocation trainers in Cinder Crossing's training hall: quest giver -> the vocation they teach,
+## with what they say about it.
+const TRAINERS: Dictionary = {
+	"trainer_knight": ["knight", "Knights stand in front: the most health and armour, blades, axes, and maces, and Challenge to pull monsters off friends."],
+	"trainer_paladin": ["paladin", "Paladins shoot from six tiles with bows and crossbows, heal themselves, and hit hard all the way to level 50."],
+	"trainer_sorcerer": ["sorcerer", "Sorcerers burn everything from five tiles with wands: the most damage and mana, but little health."],
+	"trainer_druid": ["druid", "Druids keep everyone alive with healing that reaches the whole party, and freeze enemies with rods."],
 }
 ## Bound packs worn in the bag slot, smallest first; each adds backpack slots.
 const PACKS: Array[String] = ["traveler_pack", "explorer_pack", "pathfinder_pack"]
@@ -114,7 +129,7 @@ static func reward(task: String) -> Dictionary:
 	if definition["reward"] != "experience":
 		return {}
 	var kind: String = definition["monster"]
-	var level: int = monster_level(kind)
+	var level: int = definition.get("level", monster_level(kind))
 	var rank: String = Monsters.MONSTERS[kind]["rank"]
 	var piles: float = level / 10 + 0.6 + (3.0 if rank != "normal" else 0.0)
 	var share: float = definition["share"]

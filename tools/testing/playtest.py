@@ -46,7 +46,8 @@ def main():
             events.put((name, None))
         threading.Thread(target=read, daemon=True).start()
 
-    launch("server", [args.godot, "--headless", "--path", str(root), "--", "--headless-server", f"--port={port}", "--no-save"])
+    launch("server", [args.godot, "--headless", "--path", str(root), "--", "--headless-server", f"--port={port}", "--no-save",
+                              "--allow-start-vocation"])
     rows, shots, errors, done = [], [], [], set()
     try:
         while time.monotonic() - started < DEADLINE and done != {"knight", "sorcerer"}:

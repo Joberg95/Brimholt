@@ -59,7 +59,9 @@ def main():
             "--script", "res://tests/integration/peer_test.gd", "--",
             mode, f"--port={port}", f"--test-role={test_role(role)}",
             "--fresh-identity",
-        ] + (["--no-save"] if role == "host" else []) + (["--vocation=druid"] if role == "client" else [])
+        ] + (["--no-save"] if role == "host" else []) \
+            + (["--allow-start-vocation"] if role == "host" and not args.host_loss else []) \
+            + [f"--vocation={'druid' if role == 'client' else 'paladin'}"]
         process = subprocess.Popen(
             command, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1,
@@ -149,7 +151,7 @@ def persistence(godot, root):
             events.put((name, None))
         threading.Thread(target=read, daemon=True).start()
 
-    host = ["--headless-server", f"--save-dir={saves}"]
+    host = ["--headless-server", f"--save-dir={saves}", "--allow-start-vocation"]
     client = ["--join=127.0.0.1", f"--token={token}"]
     try:
         launch("host1", "persist_host", host)

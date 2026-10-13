@@ -1,6 +1,6 @@
 extends Node
 ## Heads-up display around the game window: the title row (Host, address, Join, Leave,
-## Controls, vocation), the connection status line, the centred action message, the zone
+## Controls), the connection status line, the centred action message, the zone
 ## banner, the health and mana bars, and the Controls menu.
 
 const World = preload("res://game/core/world.gd")
@@ -13,7 +13,6 @@ const MESSAGE_SECONDS: float = 4.0
 
 var game: Node
 var address: LineEdit
-var vocation: OptionButton
 var controls: PanelContainer
 var zone_label: Label
 var vitals: Control
@@ -50,12 +49,6 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	vitals.size = Vector2(220, 34)
 	vitals.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vitals.draw.connect(_draw_vitals)
-	vocation = OptionButton.new()
-	for choice: String in Balance.VOCATIONS:
-		vocation.add_item(Balance.VOCATIONS[choice]["name"])
-	vocation.select(Balance.VOCATIONS.keys().find(Balance.DEFAULT_VOCATION))
-	vocation.tooltip_text = "Vocation used when you host or join"
-	row.add_child(vocation)
 	_status = Label.new()
 	_status.position = Vector2(16, 48)
 	layer.add_child(_status)

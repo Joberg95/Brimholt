@@ -2942,6 +2942,40 @@ npc_name = "Trapper Maud"
 place = "Thornfield Wilds"
 facing = Vector2i(-1, 0)
 
+[node name="trial_master" type="Marker2D" parent="QuestGivers"]
+position = Vector2(688, 400)
+script = ExtResource("6_qgive")
+npc_name = "Master Hesk"
+place = "Cinder Crossing"
+
+[node name="trainer_knight" type="Marker2D" parent="QuestGivers"]
+position = Vector2(592, 464)
+script = ExtResource("6_qgive")
+npc_name = "Sir Garrow"
+place = "Cinder Crossing"
+facing = Vector2i(1, 0)
+
+[node name="trainer_paladin" type="Marker2D" parent="QuestGivers"]
+position = Vector2(720, 464)
+script = ExtResource("6_qgive")
+npc_name = "Ranger Tamsin"
+place = "Cinder Crossing"
+facing = Vector2i(-1, 0)
+
+[node name="trainer_sorcerer" type="Marker2D" parent="QuestGivers"]
+position = Vector2(592, 528)
+script = ExtResource("6_qgive")
+npc_name = "Magister Vell"
+place = "Cinder Crossing"
+facing = Vector2i(1, 0)
+
+[node name="trainer_druid" type="Marker2D" parent="QuestGivers"]
+position = Vector2(720, 528)
+script = ExtResource("6_qgive")
+npc_name = "Elder Fenna"
+place = "Cinder Crossing"
+facing = Vector2i(-1, 0)
+
 [node name="Townsfolk" type="Node2D" parent="."]
 
 [node name="cinder_vendor" type="Marker2D" parent="Townsfolk"]

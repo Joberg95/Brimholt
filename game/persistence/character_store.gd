@@ -129,7 +129,7 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 ## The saved vocation if it is valid, else "".
 static func saved_vocation(data: Dictionary) -> String:
 	var vocation: Variant = data.get("vocation")
-	return vocation if typeof(vocation) == TYPE_STRING and Balance.VOCATIONS.has(vocation) else ""
+	return vocation if Balance.is_vocation(vocation) else ""
 
 
 ## Applies a loaded save to a freshly added player (World.add_player with the saved vocation),

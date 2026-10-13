@@ -161,7 +161,9 @@ identity, steps off its spawn, equips its weapon, and leaves; the host process i
 the same folder; the same identity rejoins asking for a knight and must get its druid back on
 the same tile with the weapon worn, and a third client with that identity is refused.
 Integration tests and the visual check never use your real saves or identity: hosts run with
-`--no-save` (or a temporary `--save-dir`) and clients with `--fresh-identity`.
+`--no-save` (or a temporary `--save-dir`) and clients with `--fresh-identity`. Test hosts add
+`--allow-start-vocation` so bots can start with `--vocation=...`; the host-loss scenario
+leaves it out and checks that such a client still arrives as an Adventurer.
 `--host-loss` checks the exact disconnect error and
 clearing stale client state. `--occupied-port` checks an explicit hosting error
 and exit status 1 while another socket holds the port.

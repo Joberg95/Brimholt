@@ -149,8 +149,84 @@ func _run() -> void:
 	_sprite_checks()
 	_slot_and_stat_checks()
 	_balance_checks()
+	_adventurer_checks()
 	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
+
+
+## New characters start as Adventurers: shared tier-1 gear and spells, a level cap, then the
+## trial and a permanent vocation from a trainer in Cinder Crossing's training hall.
+func _adventurer_checks() -> void:
+	var trainers: Dictionary = {}
+	var hall: Array = []
+	for trainer: String in Quests.TRAINERS:
+		var giver: Dictionary = World.QUEST_GIVERS.get(trainer, {})
+		trainers[Quests.TRAINERS[trainer][0]] = trainer
+		check(not giver.is_empty() and giver["services"] == ["vocation"] and giver["tasks"].is_empty()
+			and giver["place"] == "Cinder Crossing" and World.ROOM_AT.has(giver["cell"]), "%s teaches in a Cinder Crossing building" % trainer)
+		hall.append(World.ROOM_AT.get(giver.get("cell", Vector2i(-1, -1)), -1))
+	check(trainers.keys().size() == Balance.VOCATIONS.size() and trainers.has_all(Balance.VOCATIONS.keys())
+		and hall.count(hall[0]) == hall.size(), "one trainer per vocation, together in the training hall")
+	var trial: Dictionary = Quests.TASKS[Quests.TRIAL_TASK]
+	var trial_levels: Array = World.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return spawn["monster"] == trial["monster"]) \
+		.map(func(spawn: Dictionary) -> int: return spawn["level"])
+	check(World.QUEST_GIVERS.get(trial["giver"], {}).get("tasks", []).has(Quests.TRIAL_TASK) and trial["level"] in trial_levels
+		and Quests.reward(Quests.TRIAL_TASK)["experience"] > 0 and trial["level"] <= Balance.ADVENTURER_MAX_LEVEL,
+		"the trial master hunts a nearby overworld monster within an Adventurer's reach and pays experience")
+
+	var world := World.new()
+	var combat := Combat.new(world, 5)
+	world.monsters.clear()
+	check(world.add_player(1, 0.0, Balance.ADVENTURER) and not world.add_player(2, 0.0, "pirate"), "Adventurer is a starting vocation")
+	var adventurer: Dictionary = world.players[1]
+	check(adventurer["backpack"].slice(0, 4) == World.START_KITS[Balance.ADVENTURER]
+		and world.player_stats(1)["health"] == Balance.base_stats(1, Balance.ADVENTURER)["health"], "Adventurers start with a kit and their own profile")
+	check(World.requirement_error("willow_shortbow", 1, Balance.ADVENTURER).is_empty()
+		and World.requirement_error("kindling_wand", 1, Balance.ADVENTURER).is_empty()
+		and not World.requirement_error("flint_hatchet", 5, Balance.ADVENTURER).is_empty(),
+		"Adventurers try every vocation's tier-1 gear, and nothing vocation-bound beyond it")
+	check(Combat.attack_style(Balance.ADVENTURER, {"main_hand": "willow_shortbow"}) == "paladin"
+		and Combat.attack_style(Balance.ADVENTURER, {}) == "knight" and Combat.attack_style("druid", {"main_hand": "copper_blade"}) == "druid",
+		"an Adventurer's weapon decides its reach and missile")
+	check(Spells.for_vocation(Balance.ADVENTURER) == ["light_heal"] and not Spells.allows("brutal_blow", Balance.ADVENTURER),
+		"Adventurers only know the spells every vocation shares")
+	adventurer["mana"] = 999
+	check(combat.cast(1, "light_heal", 1.0)["ok"] and not combat.cast(1, "brutal_blow", 5.0)["ok"], "Adventurers cast shared spells only")
+	var events: Array = []
+	combat.grant_experience(1, Combat.total_experience(20, 0), events)
+	check(adventurer["level"] == Balance.ADVENTURER_MAX_LEVEL
+		and adventurer["experience"] == Balance.experience_to_next(Balance.ADVENTURER_MAX_LEVEL) - 1
+		and events.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("without a vocation")),
+		"Adventurers stop at level %d and are told why" % Balance.ADVENTURER_MAX_LEVEL)
+	events.clear()
+	combat.grant_experience(1, 100, events)
+	check(not events.any(func(event: Dictionary) -> bool: return event["kind"] == "message"), "the level cap is announced once")
+	# Choosing: in range, trial passed, and the level reached; then for good.
+	var trainer: String = trainers["paladin"]
+	var front: Vector2i = World.QUEST_GIVERS[trainer]["cell"] + World.QUEST_GIVERS[trainer]["facing"]
+	check(world.choose_vocation(1, trainer, 2.0)["reason"] == "Walk closer to a trainer", "trainers teach only those beside them")
+	_place(world, 1, front)
+	check(world.choose_vocation(1, "trial_master", 2.0)["reason"] == "Walk closer to a trainer"
+		and world.choose_vocation(1, 7, 2.0)["reason"] == "Walk closer to a trainer", "only trainers teach vocations")
+	check(world.choose_vocation(1, trainer, 2.0)["reason"].begins_with("Pass"), "the trial comes first")
+	adventurer["done_tasks"][Quests.TRIAL_TASK] = true
+	adventurer["level"] = Balance.CHOOSE_LEVEL - 1
+	check(world.choose_vocation(1, trainer, 2.0)["reason"] == "Reach level %d first" % Balance.CHOOSE_LEVEL, "choosing needs a level")
+	adventurer["level"] = Balance.CHOOSE_LEVEL
+	var full: Array = adventurer["backpack"].duplicate()
+	adventurer["backpack"].fill("rat_tail")
+	check(world.choose_vocation(1, trainer, 2.0)["reason"].begins_with("Make room") and adventurer["vocation"] == Balance.ADVENTURER,
+		"the trainer's gift needs backpack room")
+	adventurer["backpack"] = full
+	var chosen: Dictionary = world.choose_vocation(1, trainer, 2.0)
+	check(chosen["ok"] and adventurer["vocation"] == "paladin" and adventurer["backpack"].count("willow_shortbow") == 1
+		and adventurer["backpack"].count("oak_buckler") == 1 and adventurer["health"] == world.player_stats(1)["health"],
+		"a trainer makes you their vocation and hands you only the starting gear you lack")
+	check(not world.choose_vocation(1, trainers["knight"], 2.0)["ok"], "a vocation is permanent")
+	combat.grant_experience(1, Combat.total_experience(12, 0), [])
+	check(adventurer["level"] > Balance.ADVENTURER_MAX_LEVEL, "with a vocation you level past the cap")
+	check(CharacterStore.saved_vocation({"vocation": Balance.ADVENTURER}) == Balance.ADVENTURER
+		and CharacterStore.saved_vocation({"vocation": "pirate"}).is_empty(), "saves keep Adventurers and refuse unknown vocations")
 
 
 func _inventory_checks() -> void:

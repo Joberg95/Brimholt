@@ -51,6 +51,16 @@ const VOCATIONS: Dictionary = {
 		"healing": 1.0, "defense": 0},
 }
 const DEFAULT_VOCATION: String = "paladin"
+## New characters start as Adventurers: no vocation yet. They pass the trial (Quests.TRIAL_TASK)
+## and, from CHOOSE_LEVEL, pick a vocation at its trainer in Cinder Crossing, for good. Until
+## then they stop at ADVENTURER_MAX_LEVEL, may use every vocation's tier-1 gear, and only know
+## spells every vocation shares.
+const ADVENTURER: String = "adventurer"
+const ADVENTURER_PROFILE: Dictionary = {"name": "Adventurer",
+	"role": "No vocation yet: pass the trial, then choose one at a trainer in Cinder Crossing", "health": 1.0,
+	"mana": 0.8, "damage": 0.8, "healing": 0.0, "defense": 5}
+const CHOOSE_LEVEL: int = 5
+const ADVENTURER_MAX_LEVEL: int = 8
 ## The smallest intended final-boss raid. Removing any one player makes the fight unwinnable.
 const RAID: Dictionary = {"knight": 2, "paladin": 3, "sorcerer": 3, "druid": 2}
 const RAID_FIGHT_SECONDS: float = 240.0
@@ -162,8 +172,20 @@ static func damage_taken(raw: int, defense: int) -> int:
 	return roundi(raw * 100.0 / (100.0 + maxi(defense, 0)))
 
 
+## A vocation's (or the Adventurer's) multipliers, name, and role; unknown ids get the default.
+static func profile_of(vocation: String) -> Dictionary:
+	if vocation == ADVENTURER:
+		return ADVENTURER_PROFILE
+	return VOCATIONS.get(vocation, VOCATIONS[DEFAULT_VOCATION])
+
+
+## A vocation a character may have: one of VOCATIONS, or the starting Adventurer.
+static func is_vocation(vocation: Variant) -> bool:
+	return typeof(vocation) == TYPE_STRING and (VOCATIONS.has(vocation) or vocation == ADVENTURER)
+
+
 static func base_stats(level: int, vocation: String = DEFAULT_VOCATION) -> Dictionary:
-	var profile: Dictionary = VOCATIONS.get(vocation, VOCATIONS[DEFAULT_VOCATION])
+	var profile: Dictionary = profile_of(vocation)
 	var health: int = roundi(player_health(level) * profile["health"])
 	return {
 		"health": health,

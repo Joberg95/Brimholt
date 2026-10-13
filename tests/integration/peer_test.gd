@@ -455,9 +455,12 @@ func _dedicated_client_tick(now: float) -> void:
 				return
 			game.equip_local("main_hand")
 			game.move_local(Vector2i.DOWN)
+			# Vocations are chosen at a trainer the host checks, never by a forged or distant request.
+			game.request_vocation.rpc_id(1, 42)
 			advance()
 		1:
 			if state(own)["cell"] == Vector2i(5, 7) and state(own)["equipment"].has("main_hand") \
+					and stage_messages.has("Walk closer to a trainer") and state(own)["vocation"] == "druid" \
 					and now - stage_since > 0.25:
 				game.move_item_local({"type": "backpack", "index": 0}, {"type": "ground", "cell": Vector2i(5, 7)})
 				advance()
@@ -701,7 +704,11 @@ func _loss_host_tick() -> void:
 
 
 func _loss_client_tick() -> void:
-	if stage == 0 and game.connected:
+	if stage == 0 and game.connected and game.actors.has(game.self_id):
+		# This host was started without --allow-start-vocation: asking for a vocation gets an Adventurer.
+		if state(game.self_id)["vocation"] != "adventurer":
+			fail("A client chose its own starting vocation (%s)" % state(game.self_id)["vocation"])
+			return
 		game.equip_local("helmet")
 		advance()
 	elif stage == 1 and not game.connected:
