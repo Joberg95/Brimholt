@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim playtest check \
-	sprites map map-force endgame-zone dungeons desert towns island gear-table balance-table export-windows clean
+	sprites map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -80,9 +80,13 @@ export-windows: import ## Build build/windows/Brimholt.exe (needs Godot 4.5.1 ex
 	@mkdir -p build/windows
 	$(GODOT) --headless --path . --export-release "Windows Desktop" build/windows/Brimholt.exe
 	@cp docs/windows.md build/windows/README.txt
+	@cp addons/limboai/LICENSE.md build/windows/LimboAI-LICENSE.txt
 	@ls -lh build/windows
 
 # --------------------------------------------------------------------- content
+bot-tree: ## Save the player bots' LimboAI behavior tree to game/data/bot_behavior.tres (replaces editor edits)
+	$(GODOT) --headless --path . --script res://tools/generators/bot_tree.gd 2>&1 | grep -vE '^Godot Engine|^$$'
+
 sprites: ## Regenerate the original sprite sheets in assets/sprites
 	$(PYTHON) tools/generators/make_sprites.py
 

@@ -173,6 +173,11 @@ below 25% mana; ranged bots step back from anything beside them.
 | PvP | Also attacks any player (bots too) within 7 tiles while both stand in a PvP zone: take one to Blackreed Isle to duel it |
 | Training dummy | Stands still and never fights back: test damage, spells, and skulls |
 
+A **LimboAI behavior tree** (`game/data/bot_behavior.tres`) makes each bot's decisions: dummies
+idle; everyone else uses spells and potions, then fights a target (picked from attackers, PvP
+victims, monsters after it, or prey near its post) or walks back to its post. Open the tree in
+the Godot editor's LimboAI tab to change how bots play; `make bot-tree` restores the default.
+
 A bot that dies comes back 6 seconds later where you placed it, with its level, gear, and
 potions restored, so a test can go on (what it dropped stays on the ground for you to loot).
 The panel lists each bot's stance, place, health, skull, and whether it is fighting, with

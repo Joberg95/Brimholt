@@ -14,12 +14,14 @@ game/
     instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
     bots.gd              Host player bots: hunter, PvP, and dummy stances through the real rules
+    ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
     items.json           Item catalog (also read by the sprite generator)
     items.gd             Loads items.json; derives tier and relic stats and vendor prices
     quests.gd            Town, hub, and dungeon tasks, their givers and rewards, relic keepers, trainers
     dungeons.gd          Instanced dungeon layouts, copies, levels, and monsters
+    bot_behavior.tres    The bots' LimboAI behavior tree (edit in the editor's LimboAI tab; `make bot-tree` rebuilds it)
     biomes.gd            Climate regions (the desert: no rain, cactus scrub)
     regions.gd           Named overworld regions (anchors and descriptions; levels derived)
     buildings.gd         Finds buildings (rooms, doors, roof footprints) from walls

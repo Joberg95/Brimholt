@@ -153,7 +153,11 @@ monsters), and accounts beyond the per-computer identity token are outside this 
 [The Forgotten Server](https://github.com/otland/forgottenserver) (GPL-2.0) and
 [OTClient Redemption](https://github.com/mehah/otclient) (MIT) are useful references
 for high-level container/item concepts and inventory-event/UI separation, not
-Godot/ENet dependencies. No third-party code is imported here. The only third-party assets
+Godot/ENet dependencies. The only third-party code is **LimboAI v1.6.0** (behavior trees
+for the player bots), MIT-licensed and vendored as a GDExtension in `addons/limboai/` (macOS,
+Windows x86_64, and Linux x86_64 builds) with its `LICENSE.md`; the Windows export ships
+that license beside its DLL. After a fresh clone run `make import` so Godot registers the
+extension. The only third-party assets
 are CC0 (public domain) textures, listed with their licenses in
 [`assets/third_party/CREDITS.md`](assets/third_party/CREDITS.md). Do not
 copy or translate GPL code into this project without a licensing decision.

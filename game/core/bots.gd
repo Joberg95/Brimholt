@@ -2,9 +2,11 @@ extends RefCounted
 ## Player bots on the host, for testing PvP and hunting with friends missing. A bot is a real
 ## player record (World.add_player, never saved, counting toward MAX_PLAYERS) driven through
 ## the same rules as everyone: World.move for steps, Combat.set_target, cast, and drink, so
-## skulls, PvP zones, death, and loot apply to it unchanged. It plays like the fight simulator
-## (tools/testing/fight_sim.gd): strongest ready spell, heals and potions at the same health
-## shares. Clients cannot create bots; only the host's Bots panel (game/ui/bot_panel.gd) does.
+## skulls, PvP zones, death, and loot apply to it unchanged. A LimboAI behavior tree
+## (game/data/bot_behavior.tres, built by game/core/ai/bot_tree.gd) decides each turn; its
+## tasks call the helpers below. It plays like the fight simulator (tools/testing/fight_sim.gd):
+## strongest ready spell, heals and potions at the same health shares. Clients cannot create
+## bots; only the host's Bots panel (game/ui/bot_panel.gd) does.
 ##
 ## Stances:
 ##   "hunter"  hunts monsters near its post and fights back against players who attack it.
@@ -18,6 +20,8 @@ const Combat = preload("res://game/core/combat.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Items = preload("res://game/data/items.gd")
+const BotAgent = preload("res://game/core/ai/bot_agent.gd")
+const BotTree = preload("res://game/core/ai/bot_tree.gd")
 
 const STANCES: Array[String] = ["hunter", "pvp", "dummy"]
 const STANCE_NAMES: Dictionary = {"hunter": "Hunter", "pvp": "PvP", "dummy": "Training dummy"}
@@ -44,11 +48,22 @@ var world: World
 var combat: Combat
 ## Bot id -> {vocation, level, stance, post, next_think, last_cell, restore_at}.
 var bots: Dictionary = {}
+## Bot id -> [BotAgent node, BTInstance]: the behavior tree running for it.
+var _brains: Dictionary = {}
+var _tree: BehaviorTree = BotTree.load_tree()
 
 
 func _init(owner: World, fights: Combat) -> void:
 	world = owner
 	combat = fights
+
+
+## Agents are nodes outside the scene tree: free them with the bots.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		for brain: Array in _brains.values():
+			(brain[0] as Node).free()
+		_brains.clear()
 
 
 ## Vendor-style gear for a level and vocation: the best regular helmet, armor, weapon, and
@@ -83,13 +98,26 @@ func add(vocation: String, level: int, stance: String, near: Vector2i, now: floa
 	bots[id] = {"vocation": vocation, "level": clampi(level, 1, Balance.MAX_LEVEL), "stance": stance, "post": post,
 		"next_think": now, "last_cell": post, "restore_at": -1.0}
 	world.players[id]["bot"] = true
+	var agent: Node = BotAgent.new()
+	agent.bots = self
+	agent.id = id
+	# The agent is its own scene root: bots live outside the scene tree.
+	_brains[id] = [agent, _tree.instantiate(agent, Blackboard.new(), agent, agent)]
 	_restore(id, now)
 	return {"ok": true, "id": id}
 
 
 func remove(id: int) -> void:
 	bots.erase(id)
+	_free_brain(id)
 	world.remove_player(id)
+
+
+func _free_brain(id: int) -> void:
+	if _brains.has(id):
+		var agent: Node = _brains[id][0]
+		_brains.erase(id)
+		agent.free()
 
 
 func is_bot(id: int) -> bool:
@@ -136,6 +164,7 @@ func tick(now: float) -> Array:
 	for id: int in bots.keys():
 		if not world.players.has(id):
 			bots.erase(id)
+			_free_brain(id)
 			continue
 		var bot: Dictionary = bots[id]
 		var player: Dictionary = world.players[id]
@@ -152,36 +181,38 @@ func tick(now: float) -> Array:
 		if now < bot["next_think"]:
 			continue
 		bot["next_think"] = now + THINK_SECONDS
-		if bot["stance"] != "dummy":
-			_think(id, bot, now, events)
+		var agent: Node = _brains[id][0]
+		agent.now = now
+		agent.events = events
+		_brains[id][1].update(THINK_SECONDS)
 		bot["last_cell"] = player["cell"]
 	return events
 
 
-func _think(id: int, bot: Dictionary, now: float, events: Array) -> void:
+## Moves into reach of the bot's target along a real path; ranged vocations back off a step
+## from a foe beside them, as players kite.
+func engage(id: int, now: float, events: Array) -> void:
 	var player: Dictionary = world.players[id]
-	_use_resources(id, now, events)
-	var target: int = _choose_target(id, bot, now)
-	if target != player["target"]:
-		combat.set_target(id, target, now)
-		events.append({"kind": "player", "id": id})
-	target = player["target"]
-	if target != 0 and combat.exists(target):
-		var there: Vector2i = combat.creature(target)["cell"]
-		var reach: int = combat.reach_of(id)
-		var away: int = Combat.distance(player["cell"], there)
-		if not Combat.in_reach(player["cell"], there, reach):
-			_step(id, Combat.path_step(player["cell"], there, _blocked_for(id, now)), now, events)
-		elif reach > 1 and away <= 1:
-			# Ranged vocations back off a step, as players kite.
-			_step(id, Combat.step_toward(player["cell"], player["cell"] * 2 - there, _blocked_for(id, now)), now, events)
-	elif Combat.distance(player["cell"], bot["post"]) > 2:
-		_step(id, Combat.path_step(player["cell"], bot["post"], _blocked_for(id, now)), now, events)
+	var target: int = player["target"]
+	if target == 0 or not combat.exists(target):
+		return
+	var there: Vector2i = combat.creature(target)["cell"]
+	var reach: int = combat.reach_of(id)
+	if not Combat.in_reach(player["cell"], there, reach):
+		_step(id, Combat.path_step(player["cell"], there, _blocked_for(id, now)), now, events)
+	elif reach > 1 and Combat.distance(player["cell"], there) <= 1:
+		_step(id, Combat.step_toward(player["cell"], player["cell"] * 2 - there, _blocked_for(id, now)), now, events)
+
+
+## One step along a path back to the bot's post.
+func walk_home(id: int, now: float, events: Array) -> void:
+	_step(id, Combat.path_step(world.players[id]["cell"], bots[id]["post"], _blocked_for(id, now)), now, events)
 
 
 ## Keeps a valid target, else picks: an attacker, a PvP victim (PvP stance), a monster after
 ## the bot, then (hunters and PvP bots) the nearest monster worth hunting near its post.
-func _choose_target(id: int, bot: Dictionary, now: float) -> int:
+func choose_target(id: int, now: float) -> int:
+	var bot: Dictionary = bots[id]
 	var player: Dictionary = world.players[id]
 	var current: int = player["target"]
 	if current != 0 and combat.hostile(id, current) \
@@ -211,7 +242,7 @@ func _choose_target(id: int, bot: Dictionary, now: float) -> int:
 
 
 ## Spells and potions exactly as the fight simulator's careful player uses them.
-func _use_resources(id: int, now: float, events: Array) -> void:
+func use_resources(id: int, now: float, events: Array) -> void:
 	var player: Dictionary = world.players[id]
 	var stats: Dictionary = world.player_stats(id)
 	var share: float = float(player["health"]) / stats["health"]

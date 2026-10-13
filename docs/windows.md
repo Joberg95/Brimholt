@@ -1,8 +1,10 @@
 Brimholt for Windows
 ====================
 
-Brimholt.exe is the whole game; no install is needed. Keep Brimholt.console.exe beside it
-(it is the same game with a console window, for running a server and reading its log).
+Brimholt.exe is the whole game; no install is needed. Keep the other files beside it:
+Brimholt.console.exe (the same game with a console window, for running a server and reading
+its log) and liblimboai.windows.template_release.x86_64.dll (the bots' AI; its MIT license
+is LimboAI-LICENSE.txt).
 
 FIRST START
 Windows SmartScreen may say "Windows protected your PC" because the game is not code-signed.
