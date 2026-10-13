@@ -10,6 +10,11 @@ or clear it, or drag a slot onto another to swap them. Hover a slot to see what 
 does: its unlock level, effect, damage or healing for your current level and gear (damage is
 before the target's armour), mana cost, and cooldown.
 
+Every spell is a **rune stone** carved with an Elder Futhark rune chosen for its meaning: Kenaz
+(the torch) for Ember bolt, Isa (ice) for Frost bolt, Hagalaz (hail) for Hailstorm, Berkano
+(the birch) for Light heal, Tiwaz (Tyr's spear) for Piercing shot, and so on; the tooltip and the
+spell book name it.
+
 The **spell book** (B, or "Open spell book" in a slot's right-click menu) lists every spell of
 your class by unlock level with the same details; locked spells say the level they need.
 Drag a spell's rune from the book onto the action bar to put it there. Before you join, it

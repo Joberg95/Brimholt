@@ -97,7 +97,7 @@ func _row(spell: String, details: Dictionary) -> Control:
 	rune.custom_minimum_size = Vector2(40, 40)
 	rune.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	rune.tooltip_text = "%s\nDrag onto the action bar" % details["name"]
-	rune.draw.connect(func() -> void: SpellRune.draw_rune(rune, spell, Vector2(20, 20), rune.usable))
+	rune.draw.connect(func() -> void: SpellRune.draw_rune(rune, spell, Vector2(20, 20), rune.usable, 36.0))
 	rune.mouse_default_cursor_shape = Control.CURSOR_DRAG
 	row.add_child(rune)
 	var text := VBoxContainer.new()
@@ -107,6 +107,7 @@ func _row(spell: String, details: Dictionary) -> Control:
 	var color: Color = Spells.SPELLS[spell]["color"]
 	text.add_child(_label(details["name"], 15, color if details["unlocked"] else color.darkened(0.4)))
 	text.add_child(_label(details["requirement"], 12, MUTED if details["unlocked"] else LOCKED))
+	text.add_child(_label(details["rune"], 11, Color(Spells.SPELLS[spell]["color"]).lerp(MUTED, 0.5)))
 	text.add_child(_label(details["effect"], 13, TEXT))
 	var numbers: PackedStringArray = []
 	for part: String in ["amount", "cost", "cooldown"]:

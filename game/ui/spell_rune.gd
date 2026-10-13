@@ -1,14 +1,16 @@
 extends Control
-## A spell's rune: a coloured disc with the spell's initials. Used by the action bar slots and
+## A spell's rune: its pixel icon (assets/sprites/spells.png). Used by the action bar slots and
 ## the spell book. Its tooltip (Spells.describe) is framed in the spell's colour; runes can be
 ## dragged (spell book to bar, or bar slot to bar slot) and the bar slots accept drops.
 
 const Spells = preload("res://game/data/spells.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 
-const RADIUS: float = 13.0
-const INK: Color = Color("#14181c")
-const RIM: Color = Color("#0b0e12")
+const SPELL_ICONS: Texture2D = preload("res://assets/sprites/spells.png")
+const ICON_CELL: float = 32.0
+const ICONS_PER_ROW: int = 8
+const ICON_SIZE: float = 32.0
+const LOCKED: Color = Color(0.45, 0.45, 0.45, 0.6)
 
 ## The spell shown, "" for none.
 var spell: String = ""
@@ -37,15 +39,17 @@ func _make_custom_tooltip(for_text: String) -> Object:
 
 
 ## Draws the rune centred at `center` on any canvas item.
-static func draw_rune(canvas: CanvasItem, id: String, center: Vector2, lit: bool) -> void:
-	var definition: Dictionary = Spells.SPELLS[id]
-	canvas.draw_circle(center, RADIUS, Color(definition["color"], 1.0 if lit else 0.35))
-	canvas.draw_arc(center, RADIUS, 0, TAU, 24, RIM, 1.0)
-	var initials: String = ""
-	for word: String in String(definition["name"]).split(" "):
-		initials += word[0]
-	canvas.draw_string(ThemeDB.fallback_font, Vector2(center.x - 20.0, center.y + 4.0), initials,
-		HORIZONTAL_ALIGNMENT_CENTER, 40.0, 12, INK)
+## Draws the spell's icon (spells.png, from the sprite generator) centred on `center`,
+## `width` pixels wide; locked spells are greyed out.
+static func draw_rune(canvas: CanvasItem, id: String, center: Vector2, lit: bool, width: float = ICON_SIZE) -> void:
+	var area := Rect2(center - Vector2.ONE * width / 2.0, Vector2.ONE * width)
+	canvas.draw_texture_rect_region(SPELL_ICONS, area, icon_region(id), Color.WHITE if lit else LOCKED)
+
+
+## The spell's 32x32 cell in spells.png (icons follow Spells.SPELLS order, eight per row).
+static func icon_region(id: String) -> Rect2:
+	var index: int = Spells.SPELLS.keys().find(id)
+	return Rect2(Vector2(index % ICONS_PER_ROW, index / ICONS_PER_ROW) * ICON_CELL, Vector2.ONE * ICON_CELL)
 
 
 func _get_drag_data(_at_position: Vector2) -> Variant:

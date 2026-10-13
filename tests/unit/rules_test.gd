@@ -3223,6 +3223,14 @@ func _combat_checks() -> void:
 		"an attack spell's description shows its damage spread")
 	check(not Spells.info("starfall", world.player_stats(1), 1)["unlocked"]
 		and Spells.info("starfall", {}, 1)["requirement"] == "✗ Needs level 45 (Sorcerer)", "locked spells say what level they need")
+	var runes: Dictionary = {}
+	for spell: String in Spells.SPELLS:
+		runes[Spells.SPELLS[spell]["rune"]] = true
+	var sheet: Texture2D = load("res://assets/sprites/spells.png")
+	var generator: String = FileAccess.get_file_as_string("res://tools/generators/make_sprites.py")
+	check(runes.size() == Spells.SPELLS.size() and runes.keys().all(func(rune: String) -> bool:
+		return Spells.RUNES.has(rune) and generator.contains('"%s": [[' % rune)), "every spell is carved as its own Elder Futhark rune")
+	check(sheet.get_width() / 32 * (sheet.get_height() / 32) >= Spells.SPELLS.size(), "spells.png has a rune stone for every spell")
 	for spell: String in Spells.SPELLS:
 		var text: String = Spells.describe(spell, druid_stats, 50)
 		check(text.split("\n").size() >= 5 and text.contains("Cooldown") and text.contains("Mana")

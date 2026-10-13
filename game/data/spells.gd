@@ -6,55 +6,67 @@ extends RefCounted
 ## "taunt" (Challenge) turns nearby monsters, bosses included, onto the caster: the tank swap.
 
 const Balance = preload("res://game/data/balance.gd")
+## Each spell is carved as one Elder Futhark rune (its icon in assets/sprites/spells.png, drawn by
+## tools/generators/make_sprites.py): rune id -> [name, meaning].
+const RUNES: Dictionary = {
+	"fehu": ["Fehu", "wealth"], "uruz": ["Uruz", "strength"], "thurisaz": ["Thurisaz", "Thor's thorn"],
+	"ansuz": ["Ansuz", "the gods"], "raido": ["Raido", "the thunder road"], "kenaz": ["Kenaz", "the torch"],
+	"gebo": ["Gebo", "the gift"], "wunjo": ["Wunjo", "joy"], "hagalaz": ["Hagalaz", "hail"], "naudiz": ["Naudiz", "need"],
+	"isa": ["Isa", "ice"], "jera": ["Jera", "the turning year"], "eihwaz": ["Eihwaz", "the yew"],
+	"perthro": ["Perthro", "fate"], "algiz": ["Algiz", "protection"], "sowilo": ["Sowilo", "the sun"],
+	"tiwaz": ["Tiwaz", "Tyr's spear"], "berkano": ["Berkano", "the birch"], "ehwaz": ["Ehwaz", "the horse"],
+	"mannaz": ["Mannaz", "kinship"], "laguz": ["Laguz", "water"], "ingwaz": ["Ingwaz", "the hearth"],
+	"dagaz": ["Dagaz", "the dawn"], "othala": ["Othala", "the homeland"],
+}
 const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0}
 const SPELLS: Dictionary = {
-	"light_heal": {"name": "Light heal", "vocations": ["knight", "paladin", "sorcerer", "druid"], "level": 1,
+	"light_heal": {"rune": "berkano", "name": "Light heal", "vocations": ["knight", "paladin", "sorcerer", "druid"], "level": 1,
 		"kind": "heal_self", "power": 0.15, "mana": 0.15, "cooldown": 2.0, "group": "healing", "color": Color("#7fe08a")},
-	"brutal_blow": {"name": "Brutal blow", "vocations": ["knight"], "level": 1, "kind": "target", "range": 1,
+	"brutal_blow": {"rune": "uruz", "name": "Brutal blow", "vocations": ["knight"], "level": 1, "kind": "target", "range": 1,
 		"power": 2.0, "mana": 0.15, "cooldown": 4.0, "group": "attack", "color": Color("#e0b060")},
-	"whirling_strike": {"name": "Whirling strike", "vocations": ["knight"], "level": 10, "kind": "area_self",
+	"whirling_strike": {"rune": "jera", "name": "Whirling strike", "vocations": ["knight"], "level": 10, "kind": "area_self",
 		"radius": 1, "power": 1.4, "mana": 0.25, "cooldown": 6.0, "group": "attack", "color": Color("#e0d0a0")},
-	"challenge": {"name": "Challenge", "vocations": ["knight"], "level": 20, "kind": "taunt", "radius": 2,
+	"challenge": {"rune": "algiz", "name": "Challenge", "vocations": ["knight"], "level": 20, "kind": "taunt", "radius": 2,
 		"power": 0.0, "mana": 0.1, "cooldown": 4.0, "group": "attack", "color": Color("#f0c060")},
-	"piercing_shot": {"name": "Piercing shot", "vocations": ["paladin"], "level": 1, "kind": "target", "range": 6,
+	"piercing_shot": {"rune": "tiwaz", "name": "Piercing shot", "vocations": ["paladin"], "level": 1, "kind": "target", "range": 6,
 		"power": 1.8, "mana": 0.1, "cooldown": 4.0, "group": "attack", "color": Color("#f0e6b0")},
-	"holy_mend": {"name": "Holy mend", "vocations": ["paladin"], "level": 8, "kind": "heal_self", "power": 0.3,
+	"holy_mend": {"rune": "wunjo", "name": "Holy mend", "vocations": ["paladin"], "level": 8, "kind": "heal_self", "power": 0.3,
 		"mana": 0.15, "cooldown": 3.0, "group": "healing", "color": Color("#f6e38a")},
-	"ember_bolt": {"name": "Ember bolt", "vocations": ["sorcerer"], "level": 1, "kind": "target", "range": 5,
+	"ember_bolt": {"rune": "kenaz", "name": "Ember bolt", "vocations": ["sorcerer"], "level": 1, "kind": "target", "range": 5,
 		"power": 2.2, "mana": 0.08, "cooldown": 2.0, "group": "attack", "color": Color("#ff8a4a")},
-	"flame_wave": {"name": "Flame wave", "vocations": ["sorcerer"], "level": 10, "kind": "area_target", "range": 5,
+	"flame_wave": {"rune": "fehu", "name": "Flame wave", "vocations": ["sorcerer"], "level": 10, "kind": "area_target", "range": 5,
 		"radius": 1, "power": 1.5, "mana": 0.2, "cooldown": 6.0, "group": "attack", "color": Color("#ff6a30")},
-	"frost_bolt": {"name": "Frost bolt", "vocations": ["druid"], "level": 1, "kind": "target", "range": 5,
+	"frost_bolt": {"rune": "isa", "name": "Frost bolt", "vocations": ["druid"], "level": 1, "kind": "target", "range": 5,
 		"power": 1.6, "mana": 0.06, "cooldown": 2.0, "group": "attack", "color": Color("#8ad0ff")},
-	"mend": {"name": "Mend", "vocations": ["druid"], "level": 1, "kind": "heal_self", "power": 0.35, "mana": 0.1,
+	"mend": {"rune": "laguz", "name": "Mend", "vocations": ["druid"], "level": 1, "kind": "heal_self", "power": 0.35, "mana": 0.1,
 		"cooldown": 1.0, "group": "healing", "color": Color("#7fe08a")},
 	# Higher-level spells: each vocation unlocks a stronger strike around level 15-20, another at 30,
 	# and a signature spell at 40-45, so damage (or a druid's group healing) keeps growing with level.
-	"rending_cut": {"name": "Rending cut", "vocations": ["knight"], "level": 20, "kind": "target", "range": 1,
+	"rending_cut": {"rune": "naudiz", "name": "Rending cut", "vocations": ["knight"], "level": 20, "kind": "target", "range": 1,
 		"power": 2.8, "mana": 0.15, "cooldown": 6.0, "group": "attack", "color": Color("#d89a5a")},
-	"sundering_blow": {"name": "Sundering blow", "vocations": ["knight"], "level": 30, "kind": "target", "range": 1,
+	"sundering_blow": {"rune": "thurisaz", "name": "Sundering blow", "vocations": ["knight"], "level": 30, "kind": "target", "range": 1,
 		"power": 3.8, "mana": 0.2, "cooldown": 10.0, "group": "attack", "color": Color("#c8703a")},
-	"earthshaker": {"name": "Earthshaker", "vocations": ["knight"], "level": 40, "kind": "area_self", "radius": 2,
+	"earthshaker": {"rune": "othala", "name": "Earthshaker", "vocations": ["knight"], "level": 40, "kind": "area_self", "radius": 2,
 		"power": 2.0, "mana": 0.3, "cooldown": 14.0, "group": "attack", "color": Color("#b89a6a")},
-	"arrow_volley": {"name": "Arrow volley", "vocations": ["paladin"], "level": 15, "kind": "area_target", "range": 6,
+	"arrow_volley": {"rune": "ehwaz", "name": "Arrow volley", "vocations": ["paladin"], "level": 15, "kind": "area_target", "range": 6,
 		"radius": 1, "power": 1.6, "mana": 0.15, "cooldown": 8.0, "group": "attack", "color": Color("#e8d8a0")},
-	"radiant_arrow": {"name": "Radiant arrow", "vocations": ["paladin"], "level": 30, "kind": "target", "range": 6,
+	"radiant_arrow": {"rune": "sowilo", "name": "Radiant arrow", "vocations": ["paladin"], "level": 30, "kind": "target", "range": 6,
 		"power": 3.2, "mana": 0.15, "cooldown": 8.0, "group": "attack", "color": Color("#fff0a0")},
-	"sunlance_barrage": {"name": "Sunlance barrage", "vocations": ["paladin"], "level": 40, "kind": "area_target", "range": 6,
+	"sunlance_barrage": {"rune": "dagaz", "name": "Sunlance barrage", "vocations": ["paladin"], "level": 40, "kind": "area_target", "range": 6,
 		"radius": 2, "power": 1.9, "mana": 0.3, "cooldown": 14.0, "group": "attack", "color": Color("#ffe070")},
-	"arc_lightning": {"name": "Arc lightning", "vocations": ["sorcerer"], "level": 20, "kind": "target", "range": 5,
+	"arc_lightning": {"rune": "raido", "name": "Arc lightning", "vocations": ["sorcerer"], "level": 20, "kind": "target", "range": 5,
 		"power": 3.2, "mana": 0.12, "cooldown": 6.0, "group": "attack", "color": Color("#a0c8ff")},
-	"firestorm": {"name": "Firestorm", "vocations": ["sorcerer"], "level": 30, "kind": "area_target", "range": 5,
+	"firestorm": {"rune": "ingwaz", "name": "Firestorm", "vocations": ["sorcerer"], "level": 30, "kind": "area_target", "range": 5,
 		"radius": 2, "power": 1.8, "mana": 0.25, "cooldown": 10.0, "group": "attack", "color": Color("#ff5a20")},
-	"starfall": {"name": "Starfall", "vocations": ["sorcerer"], "level": 45, "kind": "area_target", "range": 5,
+	"starfall": {"rune": "perthro", "name": "Starfall", "vocations": ["sorcerer"], "level": 45, "kind": "area_target", "range": 5,
 		"radius": 2, "power": 2.6, "mana": 0.35, "cooldown": 16.0, "group": "attack", "color": Color("#d8b0ff")},
-	"thorn_lash": {"name": "Thorn lash", "vocations": ["druid"], "level": 15, "kind": "target", "range": 5,
+	"thorn_lash": {"rune": "eihwaz", "name": "Thorn lash", "vocations": ["druid"], "level": 15, "kind": "target", "range": 5,
 		"power": 2.4, "mana": 0.1, "cooldown": 6.0, "group": "attack", "color": Color("#7ac85a")},
-	"hailstorm": {"name": "Hailstorm", "vocations": ["druid"], "level": 30, "kind": "area_target", "range": 5,
+	"hailstorm": {"rune": "hagalaz", "name": "Hailstorm", "vocations": ["druid"], "level": 30, "kind": "area_target", "range": 5,
 		"radius": 2, "power": 1.5, "mana": 0.22, "cooldown": 10.0, "group": "attack", "color": Color("#c8e8ff")},
-	"wild_growth": {"name": "Wild growth", "vocations": ["druid"], "level": 40, "kind": "heal_area", "radius": 3,
+	"wild_growth": {"rune": "mannaz", "name": "Wild growth", "vocations": ["druid"], "level": 40, "kind": "heal_area", "radius": 3,
 		"power": 5.0, "mana": 0.3, "cooldown": 8.0, "group": "healing", "color": Color("#60e070")},
-	"mass_mend": {"name": "Mass mend", "vocations": ["druid"], "level": 10, "kind": "heal_area", "radius": 3,
+	"mass_mend": {"rune": "gebo", "name": "Mass mend", "vocations": ["druid"], "level": 10, "kind": "heal_area", "radius": 3,
 		"power": 3.0, "mana": 0.2, "cooldown": 2.0, "group": "healing", "color": Color("#a6f0b0")},
 }
 
@@ -121,8 +133,9 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 	var vocations: Array = spell["vocations"]
 	var who: String = "Every class" if vocations.size() == Balance.VOCATIONS.size() \
 		else ", ".join(vocations.map(_class_name))
+	var rune: Array = RUNES[spell["rune"]]
 	return {
-		"name": spell["name"], "unlocked": level >= spell["level"],
+		"name": spell["name"], "unlocked": level >= spell["level"], "rune": "Rune of %s (%s)" % [rune[0], rune[1]],
 		"requirement": "%s · level %d" % [who, spell["level"]] if level >= spell["level"]
 			else "✗ Needs level %d (%s)" % [spell["level"], who],
 		"effect": effect, "amount": amount, "cost": cost,
@@ -134,7 +147,7 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 ## The tooltip text: name, requirement, effect, then the numbers.
 static func describe(id: String, stats: Dictionary, level: int) -> String:
 	var details: Dictionary = info(id, stats, level)
-	var lines: PackedStringArray = [details["name"], details["requirement"], details["effect"]]
+	var lines: PackedStringArray = [details["name"], details["requirement"], details["rune"], details["effect"]]
 	if not details["amount"].is_empty():
 		lines.append(details["amount"])
 	lines.append(details["cost"])
