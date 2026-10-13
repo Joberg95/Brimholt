@@ -12,13 +12,19 @@ const SHORT: Dictionary = {"health": "hp", "mana": "mana", "attack": "atk", "def
 
 func _initialize() -> void:
 	var lines: PackedStringArray = []
-	_table(lines, "Tier", ["Helmet", "Armor", "Shield (Knight, Paladin)", "Spellbook (Sorcerer, Druid)"],
+	# Helmet and armor of each armor type (Balance.ARMOR_OF), then the off-hands.
+	var wearers: Array = Balance.ARMOR_OF.keys()
+	_table(lines, "Tier", wearers.map(func(vocation: String) -> String:
+		return "%s (%s)" % [String(Balance.ARMOR_OF[vocation]).capitalize(), Balance.VOCATIONS[vocation]["name"]]),
 		func(level: int, column: int) -> String:
-			var slot: String = ["helmet", "armor", "off_hand", "off_hand"][column]
-			var vocation: String = ["", "", "knight", "sorcerer"][column]
-			return _cell(_find(slot, level, vocation)))
+			var type: String = Balance.ARMOR_OF[wearers[column]]
+			return "%s<br>%s" % [_cell(_find_armor("helmet", level, type)), _cell(_find_armor("armor", level, type))])
 	lines.append("")
-	_table(lines, "Tier", ["Knight", "Paladin", "Sorcerer", "Druid"],
+	_table(lines, "Tier", ["Shield (%s, %s)" % [_class("knight"), _class("paladin")], "Spellbook (%s, %s)" % [_class("sorcerer"), _class("druid")]],
+		func(level: int, column: int) -> String:
+			return _cell(_find("off_hand", level, ["knight", "sorcerer"][column])))
+	lines.append("")
+	_table(lines, "Tier", Balance.VOCATIONS.keys().map(_class),
 		func(level: int, column: int) -> String:
 			return _cell(_find("main_hand", level, Balance.VOCATIONS.keys()[column])))
 	lines.append("")
@@ -48,6 +54,18 @@ func _table(lines: PackedStringArray, first: String, columns: Array, cell: Calla
 		for column: int in columns.size():
 			cells.append(cell.call(level, column))
 		lines.append("| %d | %s |" % [level, " | ".join(cells)])
+
+
+func _class(vocation: String) -> String:
+	return Balance.VOCATIONS[vocation]["name"]
+
+
+func _find_armor(slot: String, level: int, type: String) -> String:
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] == slot and item["level"] == level and item.get("armor", "") == type and not item.get("loot_only", false):
+			return kind
+	return ""
 
 
 func _find(slot: String, level: int, vocation: String) -> String:

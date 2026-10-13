@@ -167,20 +167,36 @@ They use `Items.tier_stats` without per-item stat overrides. Their source-specif
 do not dilute the existing generic tier pool or vendor stock; equipment rolls are gated by
 the killed monster's level. Names and looks vary, not attack timing, range or damage type.
 
+Helmets and armor come in four armor types, one per class (`Balance.ARMOR_OF`): Plate for Warriors, Mail for Hunters, Leather for Druids and Cloth for Sorcerers. Each type has the same stats per tier; only names and looks differ. Relics have no armor type.
+
 Regenerate with `make gear-table`:
 
-| Tier | Helmet | Armor | Shield (Warrior, Hunter) | Spellbook (Sorcerer, Druid) |
+| Tier | Plate (Warrior) | Mail (Hunter) | Leather (Druid) | Cloth (Sorcerer) |
 | ---: | --- | --- | --- | --- |
-| 1 | Ember cap (3 def) | Moss coat (6 def, 2 regen) | Oak buckler (5 def) | Tattered primer (2 def, 6 mana) |
-| 5 | Iron coif (4 def) | Ash tunic (8 def, 2 regen) | Hide targe (7 def) | Apprentice grimoire (2 def, 8 mana) |
-| 10 | Bronze helm (6 def) | Bronze scale coat (11 def, 3 regen) | Bronze heater (9 def) | Bound codex (3 def, 13 mana) |
-| 15 | Steel kettle hat (7 def) | Steel hauberk (13 def, 5 regen) | Steel kite shield (11 def) | Runed tome (4 def, 20 mana) |
-| 20 | Silverleaf helm (8 def) | Silverleaf mail (16 def, 8 regen) | Silverleaf shield (14 def) | Silverleaf folio (5 def, 30 mana) |
-| 25 | Cobalt sallet (10 def) | Cobalt brigandine (19 def, 12 regen) | Cobalt tower shield (16 def) | Cobalt codex (5 def, 47 mana) |
-| 30 | Embersteel helm (11 def) | Embersteel cuirass (21 def, 18 regen) | Embersteel aegis (18 def) | Ember tome (6 def, 71 mana) |
-| 35 | Duskiron visor (13 def) | Duskiron plate (24 def, 27 regen) | Duskiron bulwark (21 def) | Dusk grimoire (7 def, 109 mana) |
-| 40 | Starforged helm (14 def) | Starforged plate (27 def, 42 regen) | Starforged bulwark (23 def) | Star atlas (8 def, 168 mana) |
-| 45 | Wyrmglass greathelm (15 def) | Wyrmglass plate (29 def, 64 regen) | Wyrmglass ward (25 def) | Wyrmglass codex (8 def, 257 mana) |
+| 1 | Dented iron helm (3 def)<br>Rusted breastplate (6 def, 2 regen) | Ringmail coif (3 def)<br>Ringmail shirt (6 def, 2 regen) | Ember cap (3 def)<br>Moss coat (6 def, 2 regen) | Linen hat (3 def)<br>Linen robe (6 def, 2 regen) |
+| 5 | Iron sallet (4 def)<br>Iron cuirass (8 def, 2 regen) | Iron coif (4 def)<br>Iron ringmail (8 def, 2 regen) | Hide hood (4 def)<br>Hide jerkin (8 def, 2 regen) | Ashen hat (4 def)<br>Ash tunic (8 def, 2 regen) |
+| 10 | Bronze helm (6 def)<br>Bronze breastplate (11 def, 3 regen) | Bronze coif (6 def)<br>Bronze scale coat (11 def, 3 regen) | Thornvine circlet (6 def)<br>Thornvine jerkin (11 def, 3 regen) | Amber hat (6 def)<br>Amber robe (11 def, 3 regen) |
+| 15 | Steel kettle hat (7 def)<br>Steel cuirass (13 def, 5 regen) | Steel coif (7 def)<br>Steel hauberk (13 def, 5 regen) | Wolfhide hood (7 def)<br>Wolfhide coat (13 def, 5 regen) | Silkweave hat (7 def)<br>Silkweave robe (13 def, 5 regen) |
+| 20 | Silverleaf helm (8 def)<br>Silverleaf breastplate (16 def, 8 regen) | Silverleaf coif (8 def)<br>Silverleaf mail (16 def, 8 regen) | Silverleaf circlet (8 def)<br>Silverleaf leathers (16 def, 8 regen) | Moonsilk hat (8 def)<br>Moonsilk robe (16 def, 8 regen) |
+| 25 | Cobalt sallet (10 def)<br>Cobalt brigandine (19 def, 12 regen) | Cobalt coif (10 def)<br>Cobalt scale (19 def, 12 regen) | Mossbark hood (10 def)<br>Mossbark jerkin (19 def, 12 regen) | Cobalt hat (10 def)<br>Cobalt robe (19 def, 12 regen) |
+| 30 | Embersteel helm (11 def)<br>Embersteel cuirass (21 def, 18 regen) | Embersteel coif (11 def)<br>Embersteel hauberk (21 def, 18 regen) | Emberbloom circlet (11 def)<br>Emberbloom leathers (21 def, 18 regen) | Emberweave hat (11 def)<br>Emberweave robe (21 def, 18 regen) |
+| 35 | Duskiron visor (13 def)<br>Duskiron plate (24 def, 27 regen) | Grizzly coif (13 def)<br>Grizzly hauberk (24 def, 27 regen) | Stagwood circlet (13 def)<br>Stagwood leathers (24 def, 27 regen) | Ashcaller hat (13 def)<br>Ashcaller robe (24 def, 27 regen) |
+| 40 | Skullcrusher helm (14 def)<br>Skullcrusher plate (27 def, 42 regen) | Bearclaw hood (14 def)<br>Bearclaw mail (27 def, 42 regen) | Stag crown (14 def)<br>Stag hide (27 def, 42 regen) | Warlock's cowl (14 def)<br>Warlock's robe (27 def, 42 regen) |
+| 45 | Warlord's horned helm (15 def)<br>Warlord's spiked plate (29 def, 64 regen) | Great bear hood (15 def)<br>Great bear hauberk (29 def, 64 regen) | Elder stag crown (15 def)<br>Elder stag hide (29 def, 64 regen) | Infernal cowl (15 def)<br>Infernal robe (29 def, 64 regen) |
+
+| Tier | Shield (Warrior, Hunter) | Spellbook (Sorcerer, Druid) |
+| ---: | --- | --- |
+| 1 | Oak buckler (5 def) | Tattered primer (2 def, 6 mana) |
+| 5 | Hide targe (7 def) | Apprentice grimoire (2 def, 8 mana) |
+| 10 | Bronze heater (9 def) | Bound codex (3 def, 13 mana) |
+| 15 | Steel kite shield (11 def) | Runed tome (4 def, 20 mana) |
+| 20 | Silverleaf shield (14 def) | Silverleaf folio (5 def, 30 mana) |
+| 25 | Cobalt tower shield (16 def) | Cobalt codex (5 def, 47 mana) |
+| 30 | Embersteel aegis (18 def) | Ember tome (6 def, 71 mana) |
+| 35 | Duskiron bulwark (21 def) | Dusk grimoire (7 def, 109 mana) |
+| 40 | Starforged bulwark (23 def) | Star atlas (8 def, 168 mana) |
+| 45 | Wyrmglass ward (25 def) | Wyrmglass codex (8 def, 257 mana) |
+
 | Tier | Warrior | Hunter | Sorcerer | Druid |
 | ---: | --- | --- | --- | --- |
 | 1 | Copper blade (2 atk) | Willow shortbow (2 atk) | Kindling wand (2 atk) | Sapling rod (2 atk) |
@@ -193,6 +209,7 @@ Regenerate with `make gear-table`:
 | 35 | Duskiron cleaver (16 atk) | Dusk longbow (27 atk) | Dusk wand (35 atk) | Duskbloom rod (11 atk) |
 | 40 | Starforged maul (25 atk) | Starforged crossbow (41 atk) | Starfire wand (54 atk) | Starbloom rod (17 atk) |
 | 45 | Wyrmglass greatsword (38 atk) | Wyrmglass bow (63 atk) | Wyrmglass wand (82 atk) | Wyrmglass rod (25 atk) |
+
 | Tier | Amulet | Cape | Charm | Ring |
 | ---: | --- | --- | --- | --- |
 | 20 | River pendant (46 hp) | Silverleaf cape (3 def, 18 mana) | Hearth charm (15 regen, 8 heal) | Garnet ring (23 hp, 9 mana) |
@@ -201,6 +218,7 @@ Regenerate with `make gear-table`:
 | 35 | Dusk amulet (164 hp) | Dusk cape (5 def, 66 mana) | Dusk charm (55 regen, 27 heal) | Dusk ring (82 hp, 33 mana) |
 | 40 | Star amulet (251 hp) | Starweave cape (5 def, 101 mana) | Star charm (84 regen, 42 heal) | Star ring (126 hp, 50 mana) |
 | 45 | Wyrmglass amulet (385 hp) | Wyrmscale cape (6 def, 154 mana) | Wyrm charm (128 regen, 64 heal) | Wyrmglass ring (192 hp, 77 mana) |
+
 | Boss | Relics (level 50, bound; one trophy each) |
 | --- | --- |
 | Vaelith, Sovereign of the Hollow | Voidrend (64 atk); Eclipse bow (107 atk); Starless wand (139 atk); Nightbloom rod (43 atk); Sovereign's mantle (8 def, 307 mana) |

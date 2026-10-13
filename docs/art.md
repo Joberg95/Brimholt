@@ -90,8 +90,13 @@ Every item is a row in `game/data/items.json`, read by both the game and the gen
 `id`, `name`, `slot`, `level`, optional `vocations`, `look`, and `colors` (main, light,
 accent), plus `glow` for relics and `gold` or `value` for coins and materials. The row
 order is the icon order in `items.png`. `look` picks the drawing: helmets `cap`, `coif`,
-`helm`, `kettle`, `greathelm` (decorate with `+plume`, `+crest`, `+horns`); armor `coat`,
-`tunic`, `mail`, `scale`, `brigandine`, `plate`; weapons `sword`, `greatsword`, `axe`, `mace`, `hammer`, `bow`, `crossbow`,
+`helm`, `kettle`, `greathelm`, `hood`, `hat`, `circlet`, `cowl`, `bearhood`, `staghelm`
+(decorate with `+plume`, `+crest`, `+horns`, `+feather`, `+stars`, `+flames`, `+leaves`,
+`+antlers`); armor `coat`, `tunic`, `leather`, `robe`, `mail`, `scale`, `brigandine`, `plate`
+(decorate with `+fur`, `+pelt`, `+spikes`, `+flames`, `+leaves`, `+runes`); helmets and
+armor also carry an `armor` type (`plate`, `mail`, `leather`, `cloth`) whose shapes should
+read at a glance: plate is brute steel, mail bear fur over rings, leather antler and leaf,
+cloth a warlock's flame-hemmed robe; weapons `sword`, `greatsword`, `axe`, `mace`, `hammer`, `bow`, `crossbow`,
 `wand`, `rod`; off-hands `buckler`, `heater`, `tower`, `book`, `torch` (held up, flame swaying with the walk); and `cape`, `amulet`,
 `charm`, `ring`. Tiers share fitting colours, but item construction should not be reduced
 to a colour swap: bows retain timber limbs and books leather covers with page edges. Run

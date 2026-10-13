@@ -17,7 +17,9 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Combat = preload("res://game/core/combat.gd")
 
-const VERSION: int = 1
+## Version 2 added armor types; version 1 saves still load and are migrated (_migrate_armor).
+const VERSION: int = 2
+const SUPPORTED_VERSIONS: Array[int] = [1, 2]
 const DEFAULT_DIR: String = "user://saves"
 ## The host also saves everyone this often, so a crash loses at most this much progress.
 const AUTOSAVE_SECONDS: float = 30.0
@@ -75,7 +77,7 @@ func load_character(owner: String) -> Dictionary:
 	var body: Variant = JSON.parse_string(envelope["body"])
 	if typeof(body) != TYPE_DICTIONARY or body.get("account") != owner:
 		return {"status": "invalid", "reason": "belongs to another character"}
-	if int(body.get("version", 0)) != VERSION:
+	if int(body.get("version", 0)) not in SUPPORTED_VERSIONS:
 		return {"status": "invalid", "reason": "has unsupported save version %s" % body.get("version")}
 	return {"status": "ok", "data": body}
 
@@ -134,6 +136,19 @@ static func saved_vocation(data: Dictionary) -> String:
 
 ## Applies a loaded save to a freshly added player (World.add_player with the saved vocation),
 ## keeping only values that are valid now. The saved tile is used when it is walkable and free.
+## Before armor types every class shared the same helmets and armor: swap each piece of
+## another type (worn, carried, or in the depot) for the same slot and tier of the player's own.
+static func _migrate_armor(player: Dictionary) -> void:
+	for slot: String in ["helmet", "armor"]:
+		if player["equipment"].has(slot):
+			player["equipment"][slot] = World.armor_counterpart(player["equipment"][slot], player["vocation"])
+	for container: String in ["backpack", "depot"]:
+		var slots: Array = player[container]
+		for index: int in slots.size():
+			if not String(slots[index]).is_empty():
+				slots[index] = World.armor_counterpart(slots[index], player["vocation"])
+
+
 static func restore(world: World, id: int, data: Dictionary, now: float) -> void:
 	var player: Dictionary = world.players[id]
 	player["level"] = clampi(_int(data.get("level"), 1), 1, Balance.MAX_LEVEL)
@@ -161,6 +176,8 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 			if typeof(saved) == TYPE_ARRAY and index < saved.size() and typeof(saved[index]) == TYPE_STRING \
 					and valid_entry(saved[index]):
 				slots[index] = saved[index]
+	if _int(data.get("version"), VERSION) < 2:
+		_migrate_armor(player)
 	var trophies: Variant = data.get("trophies")
 	if typeof(trophies) == TYPE_DICTIONARY:
 		for boss: Variant in trophies:

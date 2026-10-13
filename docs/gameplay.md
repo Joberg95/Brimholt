@@ -359,9 +359,11 @@ the copy is close to the overworld on the host's map.
 The right-hand panel shows a Tibia-style paperdoll with ten slots (necklace, helmet, pack /
 main hand, armor, off hand / ring, cape, ring / charm), a backpack of 8 slots (up to 20 with
 a pack from a town task), and your stat sheet. Adventurers start with an Ember cap, Moss
-coat, Copper blade, and Oak buckler in the backpack. Choosing a class adds its tier-1
-weapon and off-hand if you lack them: a Willow shortbow (Hunter), a Kindling wand and
-Tattered primer (Sorcerer), or a Sapling rod and Tattered primer (Druid). Tier-5 gear for every class lies around Cinder Crossing. Rings
+coat, Copper blade, and Oak buckler in the backpack. Choosing a class adds its tier-1 kit
+if you lack it: a Dented iron helm and Rusted breastplate (Warrior), a Ringmail coif,
+Ringmail shirt, and Willow shortbow (Hunter), a Linen hat, Linen robe, Kindling wand, and
+Tattered primer (Sorcerer), or a Sapling rod and Tattered primer (Druid, who keeps the
+leather Ember cap and Moss coat). Tier-5 gear for every class lies around Cinder Crossing. Rings
 fit either ring slot; right-clicking a ring fills an empty ring slot first. Helmets, capes,
 armor, and both hands are drawn on the character (a cape appears only when equipped);
 rings, amulets, and charms are too small to show. Items can be dropped on any walkable
@@ -395,11 +397,17 @@ cannot use yet is tinted red in its slot.
 
 Equipment comes in ten tiers, every five levels (1, 5, 10 … 45), each in its own material
 and colour: copper, iron, bronze, steel, silverleaf, cobalt, embersteel, duskiron,
-starforged, and wyrmglass. Every tier has a helmet and armor for everyone, a weapon per
+starforged, and wyrmglass. Every tier has a helmet and armor in four **armor types**, one per
+class: **Plate** for Warriors, **Mail** for Hunters, **Leather** for Druids, and **Cloth** for
+Sorcerers. A class wears only its own type (Adventurers may wear any tier-1 piece); the
+types share stats per tier and differ in looks. From tier 35 each line takes its class's
+theme, ending at tier 45 in a brute's horned helm and spiked plate (Warrior), a great bear's
+hood and fur hauberk (Hunter), an elder stag's antlered crown and hide (Druid), and an
+infernal warlock's cowl and burning robe (Sorcerer). There is also a weapon per
 class (Warriors: swords, axes, and maces; Hunters: bows and crossbows; Sorcerers: wands;
 Druids: rods), and an off-hand (shields for Warriors and Hunters, spellbooks for Sorcerers
 and Druids). **Amulets, capes, charms, and rings start at tier 20.** An item needs its tier
-level and, for weapons and off-hands, your class: the server refuses to equip it
+level and, for weapons, off-hands, helmets, and armor, your class: the server refuses to equip it
 otherwise, and worn items you no longer qualify for (after losing levels) give no stats.
 Tooltips show the tier, level, and who can use an item; a coloured bar under each slot
 shows its tier, red when you cannot use it yet. Stats come from the balance curves
@@ -464,13 +472,14 @@ bow shoots from six tiles, with a wand or rod from five). Adventurers stop at le
 reached level 5, right-click a trainer in the hall and choose **Class**: Sir Garrow
 (Warrior), Ranger Tamsin (Hunter), Magister Vell (Sorcerer), or Elder Fenna (Druid). Each
 explains the class and its spells; **Become a ...** is permanent, restores your health
-and mana, and hands you the class's tier-1 weapon and off-hand that you lack. Your
+and mana, and hands you the class's tier-1 kit (helmet, armor, weapon, off-hand) that you lack. Your
 spells fill the action bar at once.
 
 The four follow the classic roles: **Warrior** (tank: most health, base defense), **Hunter**
 (ranged damage, light healing), **Sorcerer** (burst damage, frail), and **Druid** (healer,
 frail). The host checks every choice; clients never pick their own class. Characters
-saved before trainers existed keep their class. Test hosts started with
+saved before trainers existed keep their class, and saves from before armor types swap
+worn, carried, and stored helmets and armor for the same tier's piece of their class's type. Test hosts started with
 `--allow-start-vocation` let new characters begin with `--vocation=knight` (and so on);
 without it, `--vocation` is ignored. Everyone sees each player's class and level.
 

@@ -286,7 +286,8 @@ func open_vocation(npc: String) -> void:
 	_label("%s %s" % ["✓" if passed else "✗", "Passed %s" % trial if passed else "Pass %s (Master Hesk, outside the hall)" % trial],
 		Color("#9fe07a") if passed else Color("#e05a4a"))
 	_label("%s Level %d or higher" % ["✓" if levelled else "✗", Balance.CHOOSE_LEVEL], Color("#9fe07a") if levelled else Color("#e05a4a"))
-	_label("The choice is permanent. You receive the %s's starting weapon and off-hand." % profile["name"], Color("#ffcf6a"))
+	_label("The choice is permanent. You wear %s and receive the %s's starting kit." % [Balance.ARMOR_OF[vocation], profile["name"]],
+		Color("#ffcf6a"))
 	_button("Become a %s" % profile["name"], passed and levelled, func() -> void: game.vocation_local(npc))
 	_farewell()
 	_show(npc, "vocation")
@@ -321,7 +322,7 @@ func open_trade(npc: String) -> void:
 	rows.add_child(heading)
 	for kind: String in Economy.stock():
 		var item: Dictionary = World.ITEMS[kind]
-		if not item["vocations"].is_empty() and vocation not in item["vocations"]:
+		if not World.requirement_error(kind, Balance.MAX_LEVEL, vocation).is_empty():
 			continue
 		var row := HBoxContainer.new()
 		rows.add_child(row)

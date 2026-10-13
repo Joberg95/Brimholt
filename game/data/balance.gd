@@ -52,6 +52,9 @@ const VOCATIONS: Dictionary = {
 		"healing": 1.0, "defense": 0},
 }
 const DEFAULT_VOCATION: String = "paladin"
+## The helmet and armor type each class wears (and only that type): Warriors plate, Hunters
+## mail, Druids leather, Sorcerers cloth. Items without an "armor" type (relics) fit everyone.
+const ARMOR_OF: Dictionary = {"knight": "plate", "paladin": "mail", "druid": "leather", "sorcerer": "cloth"}
 ## New characters start as Adventurers: no vocation yet. They pass the trial (Quests.TRIAL_TASK)
 ## and, from CHOOSE_LEVEL, pick a vocation at its trainer in Cinder Crossing, for good. Until
 ## then they stop at ADVENTURER_MAX_LEVEL, may use every vocation's tier-1 gear, and only know

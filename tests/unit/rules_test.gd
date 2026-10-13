@@ -119,10 +119,10 @@ func _run() -> void:
 	check(not world.toggle_equipment(999, "helmet", 0.0)["ok"], "unknown equipment owner rejected")
 	check(not world.toggle_equipment(2, "unknown", 0.0)["ok"], "unknown slot rejected")
 	check(world.toggle_equipment(2, "helmet", 0.6)["ok"], "equip sample")
-	check(world.players[2]["equipment"]["helmet"] == "ember_cap", "server picks item")
+	check(world.players[2]["equipment"]["helmet"] == "ringmail_coif", "server picks item")
 	check(not world.toggle_equipment(2, "helmet", 0.61)["ok"], "equipment cooldown")
 	var snapshot: Dictionary = world.snapshot(0.7)
-	check(snapshot[2]["equipment"]["helmet"] == "ember_cap", "late-join equipment")
+	check(snapshot[2]["equipment"]["helmet"] == "ringmail_coif", "late-join equipment")
 	snapshot[2]["equipment"].erase("helmet")
 	check(world.players[2]["equipment"].has("helmet"), "snapshot cannot mutate server equipment")
 	check(world.toggle_equipment(2, "helmet", 0.8)["ok"], "unequip sample")
@@ -154,6 +154,7 @@ func _run() -> void:
 	_adventurer_checks()
 	_quest_hub_and_lexicon_checks()
 	_bot_checks()
+	_armor_type_checks()
 	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
 
@@ -427,6 +428,46 @@ func _bot_checks() -> void:
 		"bots need a real vocation and stance")
 
 
+## Each class wears one armor type: Warriors plate, Hunters mail, Druids leather, Sorcerers cloth.
+func _armor_type_checks() -> void:
+	check(World.requirement_error("rusted_breastplate", 50, "sorcerer") == "The Rusted breastplate is plate: only Warriors wear it"
+		and World.requirement_error("linen_robe", 50, "knight").contains("only Sorcerers")
+		and World.requirement_error("ringmail_coif", 50, "druid").contains("only Hunters")
+		and World.requirement_error("ember_cap", 50, "paladin").contains("only Druids"), "each class is refused the other armor types")
+	check(World.requirement_error("abyssal_plate", 50, "sorcerer").is_empty(), "relics fit every class")
+	check(World.requirement_error("linen_robe", 1, Balance.ADVENTURER).is_empty()
+		and not World.requirement_error("hide_jerkin", 5, Balance.ADVENTURER).is_empty(), "Adventurers try only tier-1 armor of any type")
+	for vocation: String in Balance.VOCATIONS:
+		var type: String = Balance.ARMOR_OF[vocation]
+		for kind: String in World.start_kit(vocation):
+			check(World.ITEMS[kind].get("armor", type) == type, "%s starts in %s" % [vocation, type])
+		var tiers: Dictionary = {}
+		for kind: String in World.ITEMS:
+			var item: Dictionary = World.ITEMS[kind]
+			if item.get("armor", "") == type and not item.get("loot_only", false):
+				tiers["%s/%d" % [item["slot"], item["level"]]] = true
+		check(tiers.size() == Items.TIER_LEVELS.size() * 2, "%s has a helmet and armor of every tier" % type)
+	# Trainers hand over the class's armor; old saves swap shared pieces for the player's own type.
+	var world := World.new()
+	world.add_player(1, 0.0, Balance.ADVENTURER)
+	var player: Dictionary = world.players[1]
+	player["done_tasks"][Quests.TRIAL_TASK] = true
+	player["level"] = Balance.CHOOSE_LEVEL
+	var trainer: Dictionary = World.QUEST_GIVERS["trainer_sorcerer"]
+	_place(world, 1, trainer["cell"] + trainer["facing"])
+	check(world.choose_vocation(1, "trainer_sorcerer", 1.0)["ok"] and player["backpack"].has("linen_hat") and player["backpack"].has("linen_robe"),
+		"a trainer hands over the class's tier-1 armor")
+	player["equipment"] = {"helmet": "ember_cap", "armor": "steel_hauberk"}
+	player["backpack"][7] = "embersteel_cuirass"
+	CharacterStore.restore(world, 1, {"version": 1, "level": 30, "equipment": player["equipment"].duplicate(),
+		"backpack": player["backpack"].duplicate()}, 2.0)
+	check(player["equipment"] == {"helmet": "linen_hat", "armor": World.armor_counterpart("steel_hauberk", "sorcerer")}
+		and World.ITEMS[player["equipment"]["armor"]]["armor"] == "cloth" and World.ITEMS[player["backpack"][7]]["armor"] == "cloth"
+		and World.ITEMS[player["backpack"][7]]["level"] == 30, "a version-1 save swaps shared armor for the class's own type")
+	CharacterStore.restore(world, 1, {"version": CharacterStore.VERSION, "level": 30, "equipment": {}, "backpack": ["steel_hauberk"]}, 3.0)
+	check(player["backpack"][0] == "steel_hauberk", "newer saves keep spare armor of other types as it is")
+
+
 func _inventory_checks() -> void:
 	for entry: Array in World.GROUND_ITEMS:
 		check(World.walkable(entry[0]), "seeded ground item on walkable tile")
@@ -459,7 +500,7 @@ func _inventory_checks() -> void:
 	check(bag.snapshot(0.0, 1)[1].has("backpack"), "snapshot includes the viewer's backpack")
 	var private_copy: Array = bag.export_player(1, 0.0, true)["backpack"]
 	private_copy[0] = "glowcap"
-	check(backpack[0] == "ember_cap", "exported backpack cannot mutate server state")
+	check(backpack[0] == "dented_iron_helm", "exported backpack cannot mutate server state")
 
 	var slot0: Dictionary = {"type": "backpack", "index": 0}
 	var slot1: Dictionary = {"type": "backpack", "index": 1}
@@ -479,19 +520,19 @@ func _inventory_checks() -> void:
 	check(act(bag, {"type": "backpack", "index": 5}, slot1)["reason"] == "There is no item there", "empty source rejected")
 	check(not act(bag, {"type": "equipment", "slot": "helmet"}, {"type": "backpack"})["ok"], "empty equipment rejected")
 	check(act(bag, slot0, {"type": "equipment", "slot": "armor"})["reason"] == "That item does not fit there", "slot type enforced")
-	check(backpack[0] == "ember_cap" and equipment.is_empty() and bag.ground_stack(here).is_empty(),
+	check(backpack[0] == "dented_iron_helm" and equipment.is_empty() and bag.ground_stack(here).is_empty(),
 		"rejected item actions change nothing")
 
 	check(act(bag, slot0, slot1)["ok"], "backpack swap")
-	check(backpack[0] == "moss_coat" and backpack[1] == "ember_cap", "swap exchanges items")
+	check(backpack[0] == "rusted_breastplate" and backpack[1] == "dented_iron_helm", "swap exchanges items")
 	check(bag.move_item(1, slot0, slot1, clock + 0.01)["reason"] == "Item cooldown", "item cooldown")
 	check(not bag.move_item(1, slot0, slot1, clock + World.ITEM_SECONDS - 0.000001)["ok"], "reject just before item cooldown")
 	check(bag.move_item(1, slot0, slot1, clock + World.ITEM_SECONDS)["ok"], "accept exactly at item cooldown")
 	clock += World.ITEM_SECONDS
-	check(backpack[0] == "ember_cap" and backpack[1] == "moss_coat", "swap back")
+	check(backpack[0] == "dented_iron_helm" and backpack[1] == "rusted_breastplate", "swap back")
 
 	check(act(bag, slot0, {"type": "equipment", "slot": "helmet"})["ok"], "drag to equip")
-	check(equipment["helmet"] == "ember_cap" and backpack[0] == "", "equip moves the item out of the backpack")
+	check(equipment["helmet"] == "dented_iron_helm" and backpack[0] == "", "equip moves the item out of the backpack")
 	var dropped: Dictionary = act(bag, {"type": "backpack", "index": 2}, {"type": "ground", "cell": here})
 	check(dropped["ok"] and dropped["ground"] == [here], "drop reports its changed tile")
 	check(bag.ground_stack(here) == ["copper_blade"] and backpack[2] == "", "drop places the item on the ground")
@@ -503,26 +544,26 @@ func _inventory_checks() -> void:
 	check(act(bag, slot1, {"type": "ground", "cell": Vector2i(9, 7)})["ok"], "diagonal drop within reach")
 	var shifted: Dictionary = act(bag, {"type": "ground", "cell": Vector2i(9, 7)}, {"type": "ground", "cell": here})
 	check(shifted["ok"] and shifted["ground"].size() == 2, "ground move reports both tiles")
-	check(bag.ground_stack(here) == ["copper_blade", "moss_coat"] and not bag.ground.has(Vector2i(9, 7)),
+	check(bag.ground_stack(here) == ["copper_blade", "rusted_breastplate"] and not bag.ground.has(Vector2i(9, 7)),
 		"ground move stacks on top and clears the source")
 	check(act(bag, {"type": "ground", "cell": here}, {"type": "backpack"})["ok"], "pick up")
-	check(backpack[0] == "moss_coat" and bag.ground_stack(here) == ["copper_blade"], "pick up takes the top item")
+	check(backpack[0] == "rusted_breastplate" and bag.ground_stack(here) == ["copper_blade"], "pick up takes the top item")
 	check(act(bag, {"type": "ground", "cell": here}, {"type": "equipment", "slot": "main_hand"})["ok"], "equip from ground")
 	check(equipment["main_hand"] == "copper_blade" and not bag.ground.has(here), "ground equip clears the tile")
 	check(act(bag, {"type": "equipment", "slot": "helmet"}, {"type": "ground", "cell": here})["ok"], "drop worn item")
-	check(not equipment.has("helmet") and bag.ground_stack(here) == ["ember_cap"], "worn item reaches the ground")
+	check(not equipment.has("helmet") and bag.ground_stack(here) == ["dented_iron_helm"], "worn item reaches the ground")
 	bag.ground[Vector2i(9, 6)] = ["flint_hatchet"]
 	check(act(bag, {"type": "ground", "cell": Vector2i(9, 6)}, {"type": "equipment", "slot": "main_hand"})["ok"],
 		"equip over an occupied slot")
 	check(equipment["main_hand"] == "flint_hatchet" and bag.ground_stack(Vector2i(9, 6)) == ["copper_blade"],
 		"displaced item returns to the source tile")
 	check(act(bag, slot0, {"type": "equipment", "slot": "armor"})["ok"], "equip armor")
-	backpack[3] = "ash_tunic"
+	backpack[3] = "iron_cuirass"
 	check(act(bag, {"type": "equipment", "slot": "armor"}, {"type": "backpack", "index": 3})["ok"], "swap worn and carried armor")
-	check(equipment["armor"] == "ash_tunic" and backpack[3] == "moss_coat", "worn/carried swap")
+	check(equipment["armor"] == "iron_cuirass" and backpack[3] == "rusted_breastplate", "worn/carried swap")
 	backpack[4] = "glowcap"
 	check(act(bag, {"type": "equipment", "slot": "armor"}, {"type": "backpack", "index": 4})["ok"], "unequip onto an unfit item")
-	check(backpack[0] == "ash_tunic" and backpack[4] == "glowcap" and not equipment.has("armor"),
+	check(backpack[0] == "iron_cuirass" and backpack[4] == "glowcap" and not equipment.has("armor"),
 		"unfit occupant stays; item uses the first free slot")
 	check(act(bag, {"type": "backpack", "index": 4}, {"type": "equipment", "slot": "helmet"})["reason"] \
 		== "That item does not fit there", "non-equippable item rejected")
@@ -534,10 +575,10 @@ func _inventory_checks() -> void:
 	check(act(bag, {"type": "ground", "cell": here}, slot1)["reason"] == "Your backpack is full", "full explicit pickup rejected")
 	clock += 1.0
 	check(bag.toggle_equipment(1, "main_hand", clock)["reason"] == "Your backpack is full", "full unequip rejected")
-	check(equipment["main_hand"] == "flint_hatchet" and bag.ground_stack(here) == ["ember_cap"], "full backpack keeps state")
+	check(equipment["main_hand"] == "flint_hatchet" and bag.ground_stack(here) == ["dented_iron_helm"], "full backpack keeps state")
 	while bag.ground[here].size() < World.GROUND_STACK_MAX:
-		bag.ground[here].append("iron_coif")
-	backpack[1] = "ash_tunic"
+		bag.ground[here].append("iron_sallet")
+	backpack[1] = "iron_cuirass"
 	check(act(bag, slot1, {"type": "ground", "cell": here})["reason"] == "There is no room on that tile", "ground stack cap")
 	var ground_copy: Dictionary = bag.ground_snapshot()
 	ground_copy[here].append("glowcap")
@@ -1264,7 +1305,10 @@ func _gear_tier_checks() -> void:
 			check(item["vocations"].is_empty(), "accessories suit every vocation")
 		if item["slot"] in ["main_hand", "off_hand"]:
 			check(not item["vocations"].is_empty(), "%s belongs to vocations" % kind)
-		for vocation: String in (item["vocations"] if not item["vocations"].is_empty() else Balance.VOCATIONS.keys()):
+		var wearers: Array = item["vocations"] if not item["vocations"].is_empty() else Balance.VOCATIONS.keys()
+		if item.has("armor"):
+			wearers = Balance.VOCATIONS.keys().filter(func(vocation: String) -> bool: return Balance.ARMOR_OF[vocation] == item["armor"])
+		for vocation: String in wearers:
 			check(Balance.VOCATIONS.has(vocation), "%s names a known vocation" % kind)
 			var key: String = "%s/%s/%d" % [item["slot"], vocation, item["level"]]
 			by_key[key] = by_key.get(key, []) + [kind]
@@ -1639,7 +1683,7 @@ func _endgame_zone_checks() -> void:
 	for event: Dictionary in events:
 		if event["kind"] == "message" and event["id"] == 1:
 			message = event["text"]
-	check(message.contains("Wyrmglass plate") and message.contains("your backpack"), "the death message lists everything lost")
+	check(message.contains("Warlord's spiked plate") and message.contains("your backpack"), "the death message lists everything lost")
 
 
 ## Trophy credit on a boss kill, claiming at the Relic keeper, and bound relics.

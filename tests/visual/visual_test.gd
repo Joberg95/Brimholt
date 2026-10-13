@@ -398,19 +398,19 @@ func _check_mouse_inventory() -> bool:
 	var tile_center: Vector2 = _tile_center(cell)
 	if not await _drag_to_map(slot_center, tile_center):
 		return false
-	if not _expect(game.world.ground_stack(cell) == ["ember_cap"] and player["backpack"][0] == "",
+	if not _expect(game.world.ground_stack(cell) == ["ringmail_coif"] and player["backpack"][0] == "",
 			"Mouse drag did not drop the backpack item on the tile"):
 		return false
 	await create_timer(World.ITEM_SECONDS + 0.05).timeout
 	await _push_mouse(tile_center, MOUSE_BUTTON_RIGHT, true)
 	await _push_mouse(tile_center, MOUSE_BUTTON_RIGHT, false)
-	if not _expect(game.world.ground_stack(cell).is_empty() and player["backpack"][0] == "ember_cap",
+	if not _expect(game.world.ground_stack(cell).is_empty() and player["backpack"][0] == "ringmail_coif",
 			"Right-clicking the tile did not pick up its item"):
 		return false
 	await create_timer(World.ITEM_SECONDS + 0.05).timeout
 	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, true)
 	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, false)
-	if not _expect(player["equipment"].get("helmet", "") == "ember_cap" and game.actors[1]["state"]["backpack"][0] == "",
+	if not _expect(player["equipment"].get("helmet", "") == "ringmail_coif" and game.actors[1]["state"]["backpack"][0] == "",
 			"Right-clicking the backpack item did not equip it"):
 		return false
 	await process_frame

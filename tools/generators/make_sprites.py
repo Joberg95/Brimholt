@@ -642,11 +642,13 @@ def armor_surface(image, points, shape, palette):
 def armor_builder(kind):
     palette, accent = tones(kind)
     light, main, dark = palette
-    shape, _ = look(kind)
-    tunic = shape == "tunic"
+    shape, extras = look(kind)
+    tunic = shape in ("tunic", "leather")
 
     def build(direction, frame):
         covers = body_covers(direction, frame)
+        if shape == "robe":
+            return robe(direction, frame, covers)
         pauldron = shape == "plate"
         side = direction == "left"
         if tunic:
@@ -655,7 +657,20 @@ def armor_builder(kind):
             body = box(27, 23, 10, 16) | box(28, 39, 8, 4) if side else (box(25, 23, 14, 16) | box(26, 39, 5, 4)
                                                                        | box(33, 39, 5, 4))
         image = layer(body, palette)
-        if tunic:
+        if shape == "leather":
+            image.rect(26 if not side else 27, 36, 12 if not side else 10, 2, LEATHER)
+            image.rect(31 if not side else 30, 36, 2, 2, accent)
+            if not side and direction != "up":
+                for y in range(25, 35, 2):
+                    image.set(29, y, dark)
+                    image.set(34, y, dark)
+            if "fur" in extras:
+                for x, y in box(24 if not side else 26, 22, 16 if not side else 12, 3):
+                    image.set(x, y, FUR[0] if (x * 3 + y) % 4 else FUR[1])
+            if "leaves" in extras:
+                for x in ((26, 30, 34, 38) if not side else (28, 33)):
+                    shade(image, ellipse(x, 23, 1.8, 1.4), LEAF_TONES, False)
+        elif tunic:
             image.rect(26 if not side else 27, 36, 12 if not side else 10, 1, accent)
         elif shape == "mail":
             for x, y in body:
@@ -668,6 +683,10 @@ def armor_builder(kind):
             if shape == "brigandine":
                 image.rect(31, 25, 1, 10, dark)
         elif shape == "plate":
+            if "spikes" in extras:
+                for x, y in body:
+                    if y in (26, 30) and (x % 4 == 1) and direction != "up":
+                        image.set(x, y, scale(accent, 1.2))
             for y in (28, 31, 34):
                 for x, row in body:
                     if row == y:
@@ -681,6 +700,10 @@ def armor_builder(kind):
                 image.set(31, y, dark)
         if direction == "up":
             image.rect(31, 27, 1, 8, dark)
+        if "pelt" in extras:
+            mantle = box(24 if not side else 26, 22, 16 if not side else 12, 4)
+            for x, y in mantle:
+                image.set(x, y, BEAR_FUR[(x * 5 + y * 3) % 3])
         image = image.outlined().cut(covers)
         extra = Image(FRAME, FRAME)
         if side:
@@ -693,10 +716,56 @@ def armor_builder(kind):
             extra = layer(box(21, 24 + swing(frame), 3, 4), palette).over(layer(box(40, 24 - swing(frame), 3, 4), palette))
         elif pauldron:
             extra = layer(ellipse(23, 24, 3.5, 3), palette).over(layer(ellipse(41, 24, 3.5, 3), palette))
+            if "spikes" in extras:
+                spikes = {(22, 20), (22, 21), (21, 21), (42, 20), (42, 21), (43, 21), (24, 21), (40, 21)}
+                extra.over(layer(spikes, BONE, False))
         else:
             extra = layer(box(21, 22, 6, 5), palette).over(layer(box(37, 22, 6, 5), palette))
         return image.over(extra.outlined())
+
+    def robe(direction, frame, covers):
+        side = direction == "left"
+        body = set()
+        for y in range(23, 50):
+            spread = (y - 23) // 6
+            body |= box(27 - spread // 2, y, 10 + spread, 1) if side else box(25 - spread, y, 14 + spread * 2, 1)
+        image = layer(body, palette)
+        if "flames" in extras:
+            for x, y in body:
+                if y >= 44 and (y - 44) < 2 + ((x * 7) % 5):
+                    image.set(x, y, FLAME_TONES[min(2, (49 - y) // 2)])
+        if "runes" in extras:
+            for x, y in body:
+                if y >= 47:
+                    image.set(x, y, accent if (x + y) % 3 else scale(accent, 0.7))
+            if not side and direction != "up":
+                image.rect(31, 24, 2, 23, accent)
+        image.rect(25 if not side else 27, 34, 14 if not side else 10, 1, scale(dark, 0.85))
+        if direction == "up":
+            image.rect(31, 27, 1, 18, dark)
+        image = image.outlined().cut(covers)
+        if side:
+            sleeve = layer(box(side_arm_x(frame) - 1, 24, 5, 7), palette)
+        else:
+            sleeve = layer(box(20, 24 + swing(frame), 5, 7), palette).over(layer(box(39, 24 - swing(frame), 5, 7), palette))
+        return image.over(sleeve.outlined())
     return build
+
+
+## Leaf greens for druidic circlets and leathers.
+LEAF_TONES = (rgba("8cc060"), rgba("6aa04a"), rgba("4a7a32"))
+FUR = (rgba("d8ccb4"), rgba("a89c84"))
+BEAR_FUR = (rgba("8a6440"), rgba("6a4a2e"), rgba("4a3220"))
+FLAME_TONES = (rgba("ffd060"), rgba("ff8a2a"), rgba("c8401a"))
+EYE_GLOW = rgba("ff6a3a")
+
+
+def antler(big):
+    """One branching antler rising from the left temple (mirror for the right)."""
+    points = {(25, 11), (24, 9), (23, 7), (22, 5), (24, 6), (21, 8)}
+    if big:
+        points |= {(21, 3), (20, 1), (22, 2), (19, 5), (18, 4), (23, 4), (24, 2)}
+    return thick(points, ((0, 0), (1, 0)))
 
 
 CAP = [
@@ -737,6 +806,78 @@ def helmet_builder(kind):
             for x, y in hood:
                 if (x + y) % 2 == 0 and y % 2 == 1 and image.get(x, y) == main:
                     image.set(x, y, light)
+            return image.outlined()
+        if shape == "hood":
+            hood = box(31, 6, 3, 2) | box(29, 8, 6, 1) | box(27, 9, 10, 1) | box(26, 10, 12, 2) | box(25, 12, 14, 10) | box(24, 22, 16, 3)
+            if direction == "up":
+                hood |= box(30, 25, 4, 2)
+            elif side:
+                hood -= box(25, 13, 6, 9)
+            else:
+                hood -= box(28, 13, 8, 9)
+            shade(image, hood, palette)
+            for x, y in hood:
+                if y >= 22 and (x + y) % 3 == 0:
+                    image.set(x, y, dark)
+            if "feather" in extras:
+                quill = line(37, 13, 41, 4) if not side else line(34, 12, 39, 3)
+                shade(image, thick(quill, ((0, 0), (1, 0))), (scale(accent, 1.2), accent, scale(accent, 0.7)), False)
+            return image.outlined()
+        if shape in ("bearhood", "cowl"):
+            hood = box(29, 8, 6, 1) | box(27, 9, 10, 1) | box(26, 10, 12, 2) | box(25, 12, 14, 10) | box(24, 22, 16, 3)
+            face = box(25, 13, 6, 9) if side else box(28, 13, 8, 9)
+            tones = BEAR_FUR if shape == "bearhood" else palette
+            shade(image, hood - face if direction != "up" else hood, tones)
+            if direction != "up" and shape == "cowl":
+                # A deep hood: a shadowed face with two glowing eyes.
+                for x, y in face:
+                    image.set(x, y, rgba("1a1418"))
+                for x in ((26, 29) if side else (30, 34)):
+                    image.set(x, 17, EYE_GLOW)
+            if shape == "bearhood":
+                ears = ellipse(26, 9, 2, 2) | ellipse(38, 9, 2, 2) if not side else ellipse(30, 8, 2, 2)
+                shade(image, ears, BEAR_FUR, False)
+                if direction == "down":
+                    shade(image, box(29, 11, 6, 3), BEAR_FUR, False)
+                    image.rect(31, 13, 2, 1, rgba("1a1210"))
+            if "horns" in extras:
+                horn = thick({(25, 10), (24, 8), (23, 6), (23, 4), (24, 3)}, ((0, 0), (1, 0)))
+                shade(image, horn | mirror_x(horn) if not side else {(x + 9, y) for x, y in horn}, BONE, False)
+            return image.outlined()
+        if shape == "staghelm":
+            band = box(25, 12, 14, 2)
+            shade(image, band, palette, False)
+            shade(image, antler(True) | mirror_x(antler(True)) if not side else {(x + 9, y) for x, y in antler(True)}, BONE, False)
+            for x in ((25, 38) if not side else (31,)):
+                shade(image, ellipse(x, 12, 1.6, 2.0), LEAF_TONES, False)
+            return image.outlined()
+        if shape == "hat":
+            cone = set()
+            for row in range(13):
+                half = 1 + row * 6 // 12
+                lean = (12 - row) // 4
+                cone |= box(32 - half + lean - (2 if side else 0), 1 + row, half * 2, 1)
+            shade(image, cone, palette)
+            shade(image, box(22, 13, 20, 2) | box(24, 15, 16, 1), palette, False)
+            image.rect(26, 12, 12, 1, accent)
+            if "stars" in extras:
+                for x, y in ((31, 6), (34, 9), (29, 10)):
+                    image.set(x, y, scale(accent, 1.3))
+            if "flames" in extras:
+                shade(image, ellipse(34 - (2 if side else 0), 2, 2, 3) | box(33 - (2 if side else 0), 4, 2, 2), FLAME_TONES, False)
+                image.rect(26, 12, 12, 1, FLAME_TONES[1])
+            return image.outlined()
+        if shape == "circlet":
+            band = box(25, 12, 14, 2) if direction != "up" else box(25, 11, 14, 2)
+            shade(image, band, palette, False)
+            if direction == "down":
+                image.rect(31, 11, 2, 2, accent)
+            if "leaves" in extras:
+                for x in ((25, 28, 35, 38) if not side else (26, 29, 33)):
+                    shade(image, ellipse(x, 11, 1.6, 2.2), LEAF_TONES, False)
+            if "antlers" in extras:
+                tines = antler(False)
+                shade(image, tines | mirror_x(tines) if not side else {(x + 9, y) for x, y in tines}, BONE, False)
             return image.outlined()
         shell = set(DOME)
         if shape == "greathelm":
@@ -1469,15 +1610,93 @@ def item_icon(kind):
         if "horns" in extras:
             for x, y in thick({(6, 9), (5, 7), (4, 5), (4, 3)} | {(25, 9), (26, 7), (27, 5), (27, 3)}, ((0, 0), (1, 0))):
                 image.set(x, y, BONE[0])
-    elif shape in ("coat", "tunic", "mail", "scale", "brigandine", "plate"):
-        tunic = shape == "tunic"
+    elif shape == "hood":
+        hood = (ellipse(16, 15, 9, 10) | box(13, 3, 6, 4)) - ellipse(16, 18, 5, 6)
+        shade(image, {p for p in hood if p[1] <= 25}, (light, main, dark))
+        if "feather" in extras:
+            shade(image, thick(line(23, 13, 28, 3), ((0, 0), (1, 0))), gem, False)
+    elif shape in ("bearhood", "cowl"):
+        hood = (ellipse(16, 15, 9, 10)) - ellipse(16, 18, 5, 6)
+        hood = {p for p in hood if p[1] <= 25}
+        shade(image, hood, BEAR_FUR if shape == "bearhood" else (light, main, dark))
+        if shape == "bearhood":
+            shade(image, ellipse(9, 7, 3, 3) | ellipse(23, 7, 3, 3), BEAR_FUR, False)
+            shade(image, box(13, 10, 6, 4), BEAR_FUR, False)
+        else:
+            for x, y in ellipse(16, 18, 5, 6):
+                if y <= 25:
+                    image.set(x, y, rgba("1a1418"))
+            image.set(14, 18, EYE_GLOW)
+            image.set(18, 18, EYE_GLOW)
+        if "horns" in extras:
+            for x, y in thick({(7, 8), (5, 6), (4, 4), (5, 2), (25, 8), (27, 6), (28, 4), (27, 2)}, ((0, 0), (1, 0))):
+                image.set(x, y, BONE[0])
+    elif shape == "staghelm":
+        shade(image, ellipse(16, 22, 10, 4) - ellipse(16, 22, 8, 2.5), (light, main, dark), False)
+        for x, y in thick({(9, 19), (8, 15), (6, 11), (5, 7), (4, 3), (8, 9), (3, 9), (7, 5), (23, 19), (24, 15), (26, 11), (27, 7), (28, 3), (24, 9), (29, 9), (25, 5)}, ((0, 0), (1, 0))):
+            image.set(x, y, BONE[0] if y % 3 else BONE[1])
+        shade(image, ellipse(16, 18, 2, 2), gem, False)
+    elif shape == "hat":
+        cone = set()
+        for row in range(16):
+            half = 1 + row * 7 // 15
+            cone |= box(16 - half + (15 - row) // 5, 4 + row, half * 2, 1)
+        shade(image, cone, (light, main, dark))
+        bevel(image, box(4, 20, 24, 3), main, light, dark)
+        image.rect(9, 19, 14, 1, accent)
+        if "stars" in extras:
+            for x, y in ((15, 9), (18, 13), (13, 15)):
+                image.set(x, y, scale(accent, 1.3))
+        if "flames" in extras:
+            shade(image, ellipse(19, 4, 3, 4), FLAME_TONES, False)
+    elif shape == "circlet":
+        shade(image, ellipse(16, 18, 11, 6) - ellipse(16, 18, 9, 4), (light, main, dark), False)
+        shade(image, ellipse(16, 13, 2.2, 2.2), gem, False)
+        if "leaves" in extras:
+            for x, y in ((7, 15), (11, 13), (21, 13), (25, 15)):
+                shade(image, ellipse(x, y, 2, 2.6), LEAF_TONES, False)
+        if "antlers" in extras:
+            for x, y in thick({(8, 14), (6, 10), (5, 6), (7, 8), (3, 9), (24, 14), (26, 10), (27, 6), (25, 8), (29, 9)}, ((0, 0), (1, 0))):
+                image.set(x, y, BONE[0])
+    elif shape == "robe":
+        robe = set()
+        for y in range(6, 29):
+            spread = (y - 6) // 5
+            robe |= box(11 - spread, y, 10 + spread * 2, 1)
+        robe = (robe | box(6, 7, 5, 9) | box(21, 7, 5, 9)) - box(14, 6, 4, 2)
+        shade(image, robe, (light, main, dark))
+        image.rect(11, 16, 10, 1, dark)
+        if "runes" in extras:
+            image.rect(15, 8, 2, 20, accent)
+            image.rect(7, 26, 18, 2, accent)
+        if "flames" in extras:
+            for x in range(6, 27):
+                for y in range(29 - 2 - (x * 7) % 4, 29):
+                    image.set(x, y, FLAME_TONES[(29 - y) % 3])
+    elif shape in ("coat", "tunic", "mail", "scale", "brigandine", "plate", "leather"):
+        tunic = shape in ("tunic", "leather")
         body = box(11, 9, 10, 15 if tunic else 16)
         if tunic:
             body |= box(10, 22, 12, 3)
         sleeves = box(7, 10, 4, 6 if tunic else 9) | box(21, 10, 4, 6 if tunic else 9)
         silhouette = (body | sleeves) - {(7, 10), (24, 10), (11, 24), (20, 24)}
         shade(image, silhouette, (light, main, dark))
-        if tunic:
+        if "pelt" in extras:
+            for x, y in box(8, 8, 16, 4):
+                image.set(x, y, BEAR_FUR[(x * 5 + y * 3) % 3])
+        if shape == "leather":
+            image.rect(11, 18, 10, 2, LEATHER)
+            image.rect(15, 18, 2, 2, accent)
+            for y in range(11, 17, 2):
+                image.set(13, y, dark)
+                image.set(18, y, dark)
+            if "fur" in extras:
+                for x, y in box(9, 8, 14, 3):
+                    image.set(x, y, FUR[0] if (x * 3 + y) % 4 else FUR[1])
+            if "leaves" in extras:
+                for x in (11, 15, 19):
+                    shade(image, ellipse(x, 9, 2, 1.5), LEAF_TONES, False)
+        elif tunic:
             image.rect(11, 18, 10, 1, LEATHER)
         elif shape == "coat":
             image.rect(15, 11, 1, 13, dark)
@@ -1495,6 +1714,9 @@ def item_icon(kind):
                 image.rect(15, 11, 1, 9, dark)
         else:
             shade(image, ellipse(9, 11, 3, 3) | ellipse(23, 11, 3, 3), (light, main, dark))
+            if "spikes" in extras:
+                for x, y in ((7, 6), (9, 6), (23, 6), (25, 6), (8, 7), (24, 7)):
+                    image.set(x, y, BONE[0])
             for y in (18, 22):
                 image.rect(11, y, 10, 1, dark)
             image.rect(15, 12, 1, 4, light)

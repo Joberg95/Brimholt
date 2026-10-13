@@ -1,7 +1,8 @@
 extends RefCounted
 ## Item catalog: definitions from items.json, stats derived from Balance by tier and slot.
 ## Equipment comes in tiers every TIER_STEP levels; accessories (amulets, capes, charms,
-## rings) start at ACCESSORY_LEVEL. Weapons and off-hands belong to vocations.
+## rings) start at ACCESSORY_LEVEL. Weapons and off-hands belong to classes; helmets and armor
+## have an "armor" type (plate, mail, leather, cloth) that only its class wears (Balance.ARMOR_OF).
 
 const Balance = preload("res://game/data/balance.gd")
 const PATH: String = "res://game/data/items.json"
@@ -59,6 +60,8 @@ static func load_catalog() -> Dictionary:
 		for vocation: Variant in entry.get("vocations", []):
 			vocations.append(String(vocation))
 		item["vocations"] = vocations
+		if entry.has("armor"):
+			item["armor"] = String(entry["armor"])
 		if bool(entry.get("loot_only", false)):
 			item["loot_only"] = true
 		for key: String in ["gold", "value", "price", "slots"]:

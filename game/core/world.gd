@@ -101,11 +101,11 @@ const SLOT_TYPES: Dictionary = {
 ## Item catalog from game/data/items.json (see game/data/items.gd): stats add to
 ## Balance.base_stats(level) when the wearer meets the item's level and vocation.
 static var ITEMS: Dictionary = Items.load_catalog()
-## Starting gear by vocation: tier-1 helmet, armor, weapon, and off-hand, in the backpack.
+## Starting gear by class: tier-1 helmet and armor of its armor type, weapon, and off-hand, in the backpack.
 const START_KITS: Dictionary = {
-	"knight": ["ember_cap", "moss_coat", "copper_blade", "oak_buckler"],
-	"paladin": ["ember_cap", "moss_coat", "willow_shortbow", "oak_buckler"],
-	"sorcerer": ["ember_cap", "moss_coat", "kindling_wand", "tattered_primer"],
+	"knight": ["dented_iron_helm", "rusted_breastplate", "copper_blade", "oak_buckler"],
+	"paladin": ["ringmail_coif", "ringmail_shirt", "willow_shortbow", "oak_buckler"],
+	"sorcerer": ["linen_hat", "linen_robe", "kindling_wand", "tattered_primer"],
 	"druid": ["ember_cap", "moss_coat", "sapling_rod", "tattered_primer"],
 	"adventurer": ["ember_cap", "moss_coat", "copper_blade", "oak_buckler"],
 }
@@ -540,9 +540,30 @@ static func requirement_error(kind: String, level: int, vocation: String) -> Str
 		for allowed: String in item["vocations"]:
 			names.append(Balance.VOCATIONS[allowed]["name"] + "s")
 		return "Only %s can use the %s" % [" and ".join(names), item["name"]]
+	if item.has("armor") and Balance.ARMOR_OF.get(vocation, "") != item["armor"] and not trying:
+		var wearers: PackedStringArray = []
+		for allowed: String in Balance.ARMOR_OF:
+			if Balance.ARMOR_OF[allowed] == item["armor"]:
+				wearers.append(Balance.VOCATIONS[allowed]["name"] + "s")
+		return "The %s is %s: only %s wear it" % [item["name"], item["armor"], " and ".join(wearers)]
 	if level < item["level"]:
 		return "The %s requires level %d" % [item["name"], item["level"]]
 	return ""
+
+
+## The same-slot, same-tier regular piece of the class's own armor type for a helmet or armor of
+## another type; any other entry unchanged.
+static func armor_counterpart(entry: String, vocation: String) -> String:
+	var item: Dictionary = ITEMS.get(kind_of(entry), {})
+	var wanted: String = Balance.ARMOR_OF.get(vocation, "")
+	if not item.has("armor") or wanted.is_empty() or item["armor"] == wanted:
+		return entry
+	for kind: String in ITEMS:
+		var other: Dictionary = ITEMS[kind]
+		if other.get("armor", "") == wanted and other["slot"] == item["slot"] and other["level"] == item["level"] \
+				and not other.get("loot_only", false):
+			return kind
+	return entry
 
 
 static func start_kit(vocation: String) -> Array:
@@ -990,8 +1011,8 @@ static func quest_mark(npc_id: String, state: Dictionary) -> String:
 
 
 ## An Adventurer who passed the trial and reached Balance.CHOOSE_LEVEL takes up the vocation
-## taught by `trainer`, for good, and receives its tier-1 weapon and off-hand (the ones
-## not already carried). Returns {ok, events} or {ok: false, reason}.
+## taught by `trainer`, for good, and receives its tier-1 kit: helmet and armor of its armor
+## type, weapon, and off-hand (the pieces not already carried). Returns {ok, events} or {ok: false, reason}.
 func choose_vocation(id: int, trainer: Variant, _now: float) -> Dictionary:
 	if not players.has(id):
 		return {"ok": false, "reason": "Unknown player"}
@@ -1007,7 +1028,7 @@ func choose_vocation(id: int, trainer: Variant, _now: float) -> Dictionary:
 	if player["level"] < Balance.CHOOSE_LEVEL:
 		return {"ok": false, "reason": "Reach level %d first" % Balance.CHOOSE_LEVEL}
 	var gifts: Array[String] = []
-	for kind: String in start_kit(vocation).slice(2):
+	for kind: String in start_kit(vocation):
 		if not kind in player["equipment"].values() and not player["backpack"].any(func(entry: String) -> bool:
 				return kind_of(entry) == kind):
 			gifts.append(kind)
