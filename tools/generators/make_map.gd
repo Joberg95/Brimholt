@@ -722,7 +722,9 @@ func _save(items: Array) -> void:
 		marker.set("npc_name", dock["name"])
 		marker.set("place", dock["place"])
 		marker.set("facing", dock["facing"])
-		marker.set("vehicle", "coach" if id in COACHES else "ferry")
+		marker.set("vehicle", "waystone" if id in COACHES else "ferry")
+		if id in COACHES:
+			marker.set("npc_name", "Waystone")
 		var fares: Dictionary[String, int] = {}
 		for destination: String in ROUTES[id]:
 			var distance: float = Vector2(dock["cell"]).distance_to(Vector2(docks[destination]["cell"]))

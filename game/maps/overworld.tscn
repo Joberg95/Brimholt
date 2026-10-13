@@ -98,7 +98,7 @@ facing = Vector2i(1, 0)
 [node name="cinder_coach" type="Marker2D" parent="Ferrymen"]
 position = Vector2(1104, 304)
 script = ExtResource("2_vknn6")
-npc_name = "Coachman Pell"
+npc_name = "Waystone"
 place = "Cinder Crossing"
 routes = Dictionary[String, int]({
 "ashford": 20,
@@ -107,12 +107,12 @@ routes = Dictionary[String, int]({
 "highmoor": 30,
 "reedmere_coach": 25
 })
-vehicle = "coach"
+vehicle = "waystone"
 
 [node name="ashford" type="Marker2D" parent="Ferrymen"]
 position = Vector2(6416, 3632)
 script = ExtResource("2_vknn6")
-npc_name = "Coachman Merrit"
+npc_name = "Waystone"
 place = "Ashford"
 routes = Dictionary[String, int]({
 "cinder_coach": 20,
@@ -121,12 +121,12 @@ routes = Dictionary[String, int]({
 "highmoor": 15,
 "reedmere_coach": 15
 })
-vehicle = "coach"
+vehicle = "waystone"
 
 [node name="highmoor" type="Marker2D" parent="Ferrymen"]
 position = Vector2(10576, 2672)
 script = ExtResource("2_vknn6")
-npc_name = "Coachwoman Dalla"
+npc_name = "Waystone"
 place = "Highmoor"
 routes = Dictionary[String, int]({
 "ashford": 15,
@@ -135,12 +135,12 @@ routes = Dictionary[String, int]({
 "emberfall": 15,
 "reedmere_coach": 25
 })
-vehicle = "coach"
+vehicle = "waystone"
 
 [node name="emberfall" type="Marker2D" parent="Ferrymen"]
 position = Vector2(9296, 6192)
 script = ExtResource("2_vknn6")
-npc_name = "Coachman Rusk"
+npc_name = "Waystone"
 place = "Emberfall"
 routes = Dictionary[String, int]({
 "ashford": 15,
@@ -149,12 +149,12 @@ routes = Dictionary[String, int]({
 "highmoor": 15,
 "reedmere_coach": 15
 })
-vehicle = "coach"
+vehicle = "waystone"
 
 [node name="dunmere" type="Marker2D" parent="Ferrymen"]
 position = Vector2(6288, 8496)
 script = ExtResource("2_vknn6")
-npc_name = "Coachwoman Fenna"
+npc_name = "Waystone"
 place = "Dunmere"
 routes = Dictionary[String, int]({
 "ashford": 20,
@@ -163,12 +163,12 @@ routes = Dictionary[String, int]({
 "highmoor": 25,
 "reedmere_coach": 10
 })
-vehicle = "coach"
+vehicle = "waystone"
 
 [node name="reedmere_coach" type="Marker2D" parent="Ferrymen"]
 position = Vector2(4720, 6352)
 script = ExtResource("2_vknn6")
-npc_name = "Coachwoman Ilse"
+npc_name = "Waystone"
 place = "Reedmere"
 routes = Dictionary[String, int]({
 "ashford": 15,
@@ -177,7 +177,7 @@ routes = Dictionary[String, int]({
 "emberfall": 15,
 "highmoor": 25
 })
-vehicle = "coach"
+vehicle = "waystone"
 
 [node name="Items" type="Node2D" parent="."]
 

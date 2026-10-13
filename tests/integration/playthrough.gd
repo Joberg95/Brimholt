@@ -2,7 +2,7 @@ extends SceneTree
 ## Automated playthrough bot. Two of these join a real dedicated server as a Knight and a
 ## Sorcerer and play through every system using the same client calls as the UI: gear up,
 ## walk out of town with pathfinding, hunt the nearest monsters with spells and healing, loot
-## gold, walk to the coach stop and ride to Reedmere, walk to the pier and sail to Blackreed
+## gold, walk to the waystone and travel to Reedmere, walk to the pier and sail to Blackreed
 ## Isle, then duel there (white skull, self-defence, death, item loss, looting the corpse).
 ## Rendering goes to an offscreen buffer; screenshots land in .tools/playtest. Run it through
 ## tools/testing/playtest.py, which starts the server and writes the report.
@@ -407,7 +407,7 @@ func defend() -> bool:
 	return false
 
 
-## Walks to the coach stop outside Cinder Crossing's east gate.
+## Walks to the waystone outside Cinder Crossing's east gate.
 func _to_port() -> void:
 	if defend():
 		return
@@ -420,18 +420,18 @@ func _to_port() -> void:
 			_finish()
 		return
 	if walk_to(dock_cell("cinder_coach")):
-		report("ok", "reached the Cinder Crossing coach stop in %.0f s" % (now() - phase_since))
+		report("ok", "reached the Cinder Crossing waystone in %.0f s" % (now() - phase_since))
 		_enter("sail_coast")
 	elif now() - phase_since > WALK_SECONDS:
-		report("fail", "could not reach the coach stop from %s" % me()["cell"])
+		report("fail", "could not reach the waystone from %s" % me()["cell"])
 		_finish()
 
 
-## Rides the coach across the 768-tile world to Reedmere (fast travel), like a player would.
+## Travels by waystone across the world to Reedmere (fast travel), like a player would.
 func _sail_coast() -> void:
 	if Combat.distance(me()["cell"], World.FERRYMEN["reedmere_coach"]["cell"]) <= World.TALK_RANGE:
-		report("ok", "rode the coach to Reedmere; gold now %d" % me()["gold"])
-		shot("coach", "Arrived at Reedmere by coach")
+		report("ok", "travelled by waystone to Reedmere; gold now %d" % me()["gold"])
+		shot("coach", "Arrived at Reedmere through the waystones")
 		_enter("to_reedmere")
 	elif throttle(1.2) and not sail("cinder_coach", "reedmere_coach"):
 		_finish()

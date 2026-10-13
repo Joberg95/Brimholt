@@ -32,6 +32,7 @@ var weather: Dictionary = {"kind": "clear", "cloud": 0.0, "rain": 0.0, "storm": 
 ## Point lights reused every frame in request order; the pool only grows to the most lights
 ## ever shown at once (at most MAX_LIGHTS), so no node is created per creature or tile.
 const MAX_LIGHTS: int = 64
+const WAYSTONE_GLOW: Color = Color("#7fe8f0")
 var _pool: Array[PointLight2D] = []
 var _in_use: int = 0
 
@@ -89,10 +90,14 @@ func _process(_delta: float) -> void:
 				_light(_centre(actor["visual"]), LANTERN, LANTERN_TILES * (1.0 if id == game.self_id else 0.7),
 					1.15 * darkness)
 		for cell: Vector2i in World.NPC_CELLS:
-			if area.has_point(cell):
+			if area.has_point(cell) and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") != "waystone":
 				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness)
-	# Coloured light from relics and glowing bosses, faint even by day.
+	# Coloured light from relics, glowing bosses, and waystone runes, faint even by day.
 	var tint: float = maxf(darkness, 0.18)
+	for id: String in World.FERRYMEN:
+		var stone: Dictionary = World.FERRYMEN[id]
+		if stone["vehicle"] == "waystone" and area.has_point(stone["cell"]):
+			_light(_centre(Vector2(stone["cell"])) - Vector2(0, 12), WAYSTONE_GLOW, 2.0, 0.8 * tint)
 	for id: int in game.actors:
 		var actor: Dictionary = game.actors[id]
 		var glow: Variant = _glow_color(actor["state"]["equipment"])

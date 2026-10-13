@@ -1,5 +1,6 @@
 extends Marker2D
-## A travel NPC: a ferryman at the end of a pier, or a coachman at an inland coach station.
+## A travel point: a ferryman at the end of a pier, or a waystone (a carved standing stone) at an
+## inland travel station.
 ## Players within World.TALK_RANGE tiles right-click them to travel one of the routes.
 
 @export var npc_name: String = "Ferryman"
@@ -8,5 +9,5 @@ extends Marker2D
 ## Destination ferryman node name -> fare in gold.
 @export var routes: Dictionary[String, int] = {}
 @export var facing: Vector2i = Vector2i.DOWN
-## "ferry" (a pier ferryman) or "coach" (an inland coach station); both use the same routes.
+## "ferry" (a pier ferryman) or "waystone" (an inland standing stone); both use the same routes.
 @export var vehicle: String = "ferry"

@@ -225,6 +225,8 @@ func _run() -> void:
 		return
 	if not await _check_quest_list():
 		return
+	if not await _check_waystone():
+		return
 	if not await _check_town_services():
 		return
 	if not await _check_roofs_and_signs():
@@ -905,6 +907,20 @@ func _check_dungeons() -> bool:
 	var mine: Image = screen.get_texture().get_image()
 	mine.save_png("res://.tools/visual-mine.png")
 	return _expect(_colours(mine, Rect2(game.VIEW_ORIGIN + Vector2(260, 220), Vector2(160, 120))) > 20, "The mine caves are blank")
+
+
+## The waystone outside Cinder Crossing: a standing stone (not a person) with its name.
+func _check_waystone() -> bool:
+	var player: Dictionary = game.world.players[1]
+	var stone: Vector2i = World.FERRYMEN["cinder_coach"]["cell"]
+	player["cell"] = stone + Vector2i(-2, 1)
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.6).timeout
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-waystone.png")
+	var named: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == "Waystone")
+	return _expect(World.FERRYMEN["cinder_coach"]["vehicle"] == "waystone" and named, "The Cinder Crossing waystone is not drawn")
 
 
 ## The quest list: one task in progress and one ready to turn in, then hidden with its key.

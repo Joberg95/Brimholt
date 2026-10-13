@@ -38,7 +38,7 @@ filtering:
 | `roofs.png` | Per material row (clay, slate, wooden shingle) four 32×32 swatches: near slope, far slope, timber gable, trim (ridge cap, eave board, chimney stone). `game/render/roof_art.gd` rasterizes each building's roof from them |
 | `furniture.png` | 32×48 shop and bank furniture drawn 16 px above their tile: shop counter, bank counter, potion shelf, bookshelf, weapon rack, barrel, crate, strongbox (`SpriteArt.FURNITURE` order) |
 | `signs.png` | 32×32 hanging signs on an iron bracket: shop (flask and sword), bank (coins) |
-| `objects.png` | 64×96 trees (three living, two dead for the Hollow Reach, then three desert plants: a columnar cactus, a barrel-cactus clump, and a thorn shrub for terrain `K`); trunk base on the tile centre at cell pixel (32, 80) |
+| `objects.png` | 64×96 trees (three living, two dead for the Hollow Reach, then three desert plants: a columnar cactus, a barrel-cactus clump, and a thorn shrub for terrain `K`, then the waystone, a carved standing stone with a cyan rune); trunk base on the tile centre at cell pixel (32, 80) |
 | `terrain_palette.png` | 32×32 map-editor palette, one tile per terrain |
 
 A character is drawn as: main-hand item behind when facing up, side-facing shield behind,

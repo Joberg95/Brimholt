@@ -238,6 +238,15 @@ static func draw_tree(canvas: CanvasItem, cell: Vector2i) -> void:
 	canvas.draw_texture_rect_region(OBJECTS, dest, Rect2(Vector2(variant * TREE_SIZE.x, 0), TREE_SIZE))
 
 
+## A waystone (objects.png after the desert plants), standing on its tile like a tree.
+const WAYSTONE_OBJECT: int = 8
+
+
+static func draw_waystone(canvas: CanvasItem, cell: Vector2i) -> void:
+	var dest: Rect2 = Rect2((Vector2(cell) + Vector2(0.5, 0.5)) * TILE - TREE_ANCHOR, TREE_SIZE)
+	canvas.draw_texture_rect_region(OBJECTS, dest, Rect2(Vector2(WAYSTONE_OBJECT * TREE_SIZE.x, 0), TREE_SIZE))
+
+
 ## Walls are drawn raised up and left; call in row-major order so nearer walls cover.
 static func wall_mask(cell: Vector2i) -> int:
 	var mask: int = 0

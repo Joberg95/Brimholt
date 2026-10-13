@@ -20,6 +20,7 @@ const NPC_NAME: Color = Color("#9fe0c8")
 const QUEST_GIVER_GEAR: Dictionary = {"cape": "starweave_cape"}
 const QUEST_GIVER_TINT: Color = Color("#a8843a")
 const QUEST_GIVER_NAME: Color = Color("#ffcf6a")
+const WAYSTONE_NAME: Color = Color("#8fe8f0")
 ## Vendors wear a cap and coat, bankers a bronze coat.
 const TOWNSFOLK_LOOKS: Dictionary = {
 	"vendor": [{"helmet": "ember_cap", "armor": "moss_coat"}, Color("#8a6a3a")],
@@ -170,7 +171,12 @@ func _draw() -> void:
 			_draw_stack(cell, game.ground_view[cell])
 		if tile == "furniture":
 			SpriteArt.draw_furniture(self, cell, World.FURNITURE[cell])
-		if tile == "npc":
+		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") == "waystone":
+			SpriteArt.draw_waystone(self, cell)
+			if not covered(cell):
+				# The stone stands taller than a person: its name sits above it.
+				names.append([(Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE - Vector2(0, 24), "Waystone", WAYSTONE_NAME])
+		elif tile == "npc":
 			var npc: Dictionary = World.npc(World.NPC_CELLS[cell])
 			var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
 			var keeper: bool = "quests" in npc["services"]

@@ -754,7 +754,7 @@ func _zone_checks() -> void:
 	var central: int = 0
 	for id: String in World.FERRYMEN:
 		var cell: Vector2 = Vector2(World.FERRYMEN[id]["cell"])
-		if World.FERRYMEN[id]["vehicle"] == "coach" and cell.distance_to(Vector2(World.width(), World.height()) / 2.0) < 220.0:
+		if World.FERRYMEN[id]["vehicle"] == "waystone" and cell.distance_to(Vector2(World.width(), World.height()) / 2.0) < 220.0:
 			central += 1
 	check(central >= 4, "coach towns ring the centre of the map")
 	var ferries: Array = World.FERRYMEN.keys().filter(func(id: String) -> bool:
@@ -772,7 +772,7 @@ func _zone_checks() -> void:
 		check(on_isle >= 5, "the island has monster spawn points")
 		var coaches: Array[String] = []
 		for id: String in World.FERRYMEN:
-			if World.FERRYMEN[id]["vehicle"] == "coach":
+			if World.FERRYMEN[id]["vehicle"] == "waystone":
 				coaches.append(id)
 			elif id not in ["reedmere", "blackreed_isle"]:
 				check(not World.FERRYMEN[id]["routes"].has("blackreed_isle") and World.FERRYMEN[id]["cell"].x < 64,
@@ -783,7 +783,7 @@ func _zone_checks() -> void:
 			var routes: Dictionary = World.FERRYMEN[id]["routes"]
 			check(routes.size() == coaches.size() - 1, "%s runs to every other coach station" % id)
 			for destination: String in routes:
-				check(World.FERRYMEN[destination]["vehicle"] == "coach" and routes[destination] > 0,
+				check(World.FERRYMEN[destination]["vehicle"] == "waystone" and routes[destination] > 0,
 					"coaches only run between coach stations, for a fare")
 
 

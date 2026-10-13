@@ -145,13 +145,13 @@ top-left of the game window.
 ## Talking to people
 
 There is no typed dialogue: right-click a person to open their menu and pick an option.
-Ferrymen and coachmen offer **Travel**, vendors **Trade**, bankers **Bank**, and quest givers
+Ferrymen and waystones offer **Travel**, vendors **Trade**, bankers **Bank**, and quest givers
 (gold names) **Quests**. Stand within 2 tiles; a dialog closes when you walk away.
 
 ## Vendors, potions, and the bank
 
 Every town has a vendor (green on the maps) in a furnished shop. There is only **one bank**:
-Banker Orrin in **Reedmere** (pale blue on the maps), the lakeside hub with the coach station
+Banker Orrin in **Reedmere** (pale blue on the maps), the lakeside hub with a waystone
 and the ferry to Blackreed Isle. Plan trips to deposit gold and store gear there. A hanging
 sign beside each door shows what is inside: a flask and a sword for the shop, a coin stack for
 the bank. Step inside to deal with them; you cannot trade or bank through
@@ -236,15 +236,16 @@ rock ridges. Every town (Cinder Crossing and the ports too) is a **safe zone**: 
 monsters never cross into it; a green banner shows when you enter. A desert spreads across
 the south-west, and the Hollow Reach waits in the far south-east, well away from the towns.
 
-**Coaches** are the fast travel: each town has a coachman, and Cinder Crossing has a coach
-stop just outside its east gate. Coaches run between every station; ferries run along the
-coast and to the island. Stand within 2 tiles of a ferryman or coachman, right-click them,
-choose **Travel**, and pick a destination; the host checks your distance, the route, that
-you are standing still, a 1-second travel cooldown, and your gold, then deducts the fare and
-lands you next to the destination's ferryman or coachman. A crowded stop refuses passengers.
+**Waystones** are the fast travel over land: carved standing stones with a glowing rune, one in
+each inland town and one just outside Cinder Crossing's east gate. Every waystone links to the
+others; ferrymen on the piers sail along the coast and to the island. Stand within 2 tiles of a
+waystone or ferryman, right-click it, choose **Travel**, and pick a destination; the host checks
+your distance, the route, that you are standing still, a 1-second travel cooldown, and your
+gold, then deducts the fare and lands you next to the destination's waystone or ferryman. A
+crowded stop refuses travellers.
 
 Everyone starts with 100 gold. Gold coin piles lie around the wilds; picking one up adds 25
-gold per coin pile in the stack to your purse without using a backpack slot. Coach fares are about 5 gold per 60
+gold per coin pile in the stack to your purse without using a backpack slot. Waystone fares are about 5 gold per 60
 tiles (Cinder Crossing to Reedmere is about 45), the coastal ferry from top to bottom costs
 65, and the island crossing 40 each way. Monsters grow from level 1-4 around Cinder
 Crossing to level 45 in the far east and south.

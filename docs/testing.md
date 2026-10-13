@@ -100,7 +100,7 @@ and reachable on foot from Cinder Crossing, obsidian blocking movement and sight
 loot on death inside it while relics stay and other zones keep the 10% rule), boss raid
 mechanics (engage warning, pulse timing, radius, and damage, wound stacks and their expiry,
 Challenge swaps, enrage time and damage, and the reset when the raid leaves), and the
-384×384 overworld (a single top-to-bottom coastal ferry, coach stations linking every town,
+384×384 overworld (a single top-to-bottom coastal ferry, waystones linking every town,
 towns as safe zones without spawns and away from the Hollow Reach, and more than 550 monsters),
 instanced dungeons (stairways in towns, copies outside the overworld, layouts with one arrival,
 exit, and champion, private and party-shared copies, a full dungeon, exits, delayed reset of
@@ -243,7 +243,7 @@ The playthrough starts a real dedicated server and two bot clients (`tests/integ
 a Knight and a Sorcerer, that play the game through the same calls as the UI: they form
 a party, equip the start kit, walk out of town with pathfinding, hunt the nearest monsters
 with spells and healing (checking that party sharing keeps the Knight level with the
-Sorcerer), pick up gold and nearby monster materials, finish their fight, walk to the Cinder Crossing coach stop and ride the coach to Reedmere, walk to its pier
+Sorcerer), pick up gold and nearby monster materials, finish their fight, walk to the Cinder Crossing waystone and travel through it to Reedmere, walk to its pier
 (routing around monster spawns), and sail to Blackreed Isle. There the Knight leaves the
 party and attacks the
 Sorcerer (white skull), the Sorcerer fights back (no skull), and the Knight kills him

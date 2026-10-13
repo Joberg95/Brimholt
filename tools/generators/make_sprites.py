@@ -1773,6 +1773,47 @@ SPINE = rgba("d4cca4")
 THORN_WOOD = (rgba("a28c6c"), rgba("7c6852"), rgba("554638"))
 
 
+def waystone():
+    """A carved standing stone (64x96 object cell, base on the tile centre at (32, 80)): a weathered
+    grey menhir on a ring of flat stones, with a rune that glows cyan; the travel point that
+    replaced the coachmen."""
+    image = Image(64, 96)
+    for x, y in ellipse(32, 81, 15, 4):
+        image.set(x, y, rgba("000000", 70))
+    for cx, cy, rx in ((20, 80, 5), (44, 80, 5), (25, 84, 5), (39, 84, 5), (32, 85, 5)):
+        for x, y in ellipse(cx, cy, rx, 2.2):
+            image.set(x, y, WALL_TOP[2])
+        for x in range(cx - rx + 1, cx + rx):
+            image.set(x, cy - 2, WALL_TOP[0])
+    body = set()
+    for y in range(34, 82):
+        t = (y - 34) / 47.0
+        half = round(6 + 4 * t + (1 if 40 < y < 60 else 0))
+        lean = round((1 - t) * 2)
+        body |= {(x, y) for x in range(32 - half + lean, 32 + half + lean)}
+    body -= {(x, y) for x, y in body if y < 38 and abs(x - 34) > 4 + (y - 34)}
+    for x, y in body:
+        left = min(px for px, py in body if py == y)
+        right = max(px for px, py in body if py == y)
+        color = WALL_TOP[0]
+        if x - left < 2:
+            color = WALL_TOP[1]
+        elif right - x < 4:
+            color = WALL_SOUTH[0]
+        if (x * 7 + y * 3) % 23 == 0:
+            color = scale(color, 0.85)
+        if y % 11 == 0 and (x + y) % 3:
+            color = scale(color, 0.92)
+        image.set(x, y, color)
+    rune = rgba("7fe8f0")
+    core = rgba("e8ffff")
+    for x, y in line(31, 46, 31, 64) | line(31, 50, 37, 46) | line(31, 56, 26, 52) | line(31, 60, 36, 64):
+        image.set(x, y, rune)
+    for x, y in ((31, 46), (31, 55), (31, 64)):
+        image.set(x, y, core)
+    return image.outlined()
+
+
 def desert_plant(variant):
     """Original desert flora in the 64x96 tree cell, base on the tile centre at (32, 80):
     0 a ribbed columnar cactus with two arms, 1 a clump of barrel cacti, 2 a dry thorn shrub."""
@@ -2332,7 +2373,7 @@ def main():
                            + edge_set("sand"),
                            4, TILE),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
-                                 + [desert_plant(v) for v in range(3)]),
+                                 + [desert_plant(v) for v in range(3)] + [waystone()]),
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker")]),
         "terrain_palette.png": terrain_palette(),

@@ -12,7 +12,8 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
    plank piers. Keep the map at non-negative coordinates; unpainted cells are void.
 2. **Spawns**: the twelve `Marker2D` nodes under `Spawns`, one per player, in order.
-3. **Ferrymen and coachmen**: nodes under `Ferrymen` (set `vehicle` to `ferry` or `coach`).
+3. **Ferrymen and waystones**: nodes under `Ferrymen` (set `vehicle` to `ferry` for a pier
+   ferryman, or `waystone` for an inland standing stone, drawn as a stone with a glowing rune).
    The node name is the id; set the name,
    dock name, facing, and `routes` (destination ferryman id → fare in gold) in the
    Inspector. Put a ferryman at the end of a pier with walkable tiles within 2 tiles.
