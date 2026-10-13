@@ -5,6 +5,7 @@ extends RefCounted
 ## Like Tibia, every spell has its own cooldown and also starts its group's shared cooldown.
 ## "taunt" (Challenge) turns nearby monsters, bosses included, onto the caster: the tank swap.
 
+const Balance = preload("res://game/data/balance.gd")
 const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0}
 const SPELLS: Dictionary = {
 	"light_heal": {"name": "Light heal", "vocations": ["knight", "paladin", "sorcerer", "druid"], "level": 1,
@@ -68,3 +69,73 @@ static func for_vocation(vocation: String) -> Array[String]:
 			result.append(id)
 	result.sort_custom(func(a: String, b: String) -> bool: return order[a] < order[b])
 	return result
+
+
+## What a spell does, for its tooltip and the spell book, from the same numbers Combat.cast uses.
+## `stats` are the caster's World.stats (empty: no estimates); `level` gates "unlocked".
+## Returns name, requirement, effect, amount ("" for none), cost, cooldown, and unlocked.
+static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
+	var spell: Dictionary = SPELLS[id]
+	var power: float = spell["power"]
+	var radius: int = spell.get("radius", 0)
+	var area: String = "%d tile%s" % [radius, "" if radius == 1 else "s"]
+	var reach: int = spell.get("range", 1)
+	var effect: String = ""
+	var amount: String = ""
+	var attack: float = float(stats.get("attack", 0))
+	var hit: String = "%d–%d damage before armour" % [roundi(attack * power * 0.85), roundi(attack * power * 1.15)]
+	match spell["kind"]:
+		"target":
+			effect = "Strikes %s for %s× your attack." % ["an adjacent target" if reach <= 1
+				else "your target up to %d tiles away" % reach, _times(power)]
+			amount = hit
+		"area_self":
+			effect = "Hits every enemy within %s of you for %s× your attack." % [area, _times(power)]
+			amount = hit + " each"
+		"area_target":
+			effect = "Hits your target (up to %d tiles away) and every enemy within %s of it for %s× your attack." % [
+				reach, area, _times(power)]
+			amount = hit + " each"
+		"taunt":
+			effect = "Turns every monster within %s of you, bosses included, onto you: take a boss off a wounded ally." % area
+		"heal_self":
+			effect = "Heals you for %d%% of your max health." % roundi(power * 100.0)
+			amount = "Heals about %d" % roundi(float(stats.get("health", 0)) * power)
+		"heal_area":
+			effect = "Heals every player within %s of you, you included, for %s× your healing." % [area, _times(power)]
+			amount = "Heals %d each" % maxi(1, roundi(float(stats.get("healing", 0)) * power))
+	if stats.is_empty():
+		amount = ""
+	var cost: String = "Mana %d%%" % roundi(spell["mana"] * 100.0)
+	if stats.has("mana"):
+		cost = "Mana %d (%d%% of your max)" % [maxi(1, roundi(float(stats["mana"]) * spell["mana"])), roundi(spell["mana"] * 100.0)]
+	var vocations: Array = spell["vocations"]
+	var who: String = "Every vocation" if vocations.size() == Balance.VOCATIONS.size() \
+		else ", ".join(vocations.map(_capitalized))
+	return {
+		"name": spell["name"], "unlocked": level >= spell["level"],
+		"requirement": "%s · level %d" % [who, spell["level"]] if level >= spell["level"]
+			else "✗ Needs level %d (%s)" % [spell["level"], who],
+		"effect": effect, "amount": amount, "cost": cost,
+		"cooldown": "Cooldown %s s, and %s s for all %s spells" % [_times(spell["cooldown"]),
+			_times(GROUP_SECONDS[spell["group"]]), spell["group"]],
+	}
+
+
+## The tooltip text: name, requirement, effect, then the numbers.
+static func describe(id: String, stats: Dictionary, level: int) -> String:
+	var details: Dictionary = info(id, stats, level)
+	var lines: PackedStringArray = [details["name"], details["requirement"], details["effect"]]
+	if not details["amount"].is_empty():
+		lines.append(details["amount"])
+	lines.append(details["cost"])
+	lines.append(details["cooldown"])
+	return "\n".join(lines)
+
+
+static func _times(value: float) -> String:
+	return String.num(value, 2)
+
+
+static func _capitalized(text: Variant) -> String:
+	return String(text).capitalize()

@@ -822,6 +822,14 @@ func _keybind_checks() -> void:
 	check(tampered.keys["slot_1"] == [KEY_1, KEY_NONE] and tampered.bar == Keybinds.DEFAULT_BAR,
 		"malformed saved values fall back to defaults")
 	check(tampered.action_for(KEY_P) == "slot_2" and tampered.keys["slot_3"][0] == KEY_NONE, "duplicate saved keys are dropped")
+	var detached := Keybinds.new(path)
+	detached.persistent = false
+	detached.load_saved()
+	detached.set_bar(4, "spell:mend")
+	detached.save()
+	var reread := Keybinds.new(path)
+	reread.load_saved()
+	check(detached.action_for(KEY_P) != "slot_2" and reread.bar[4] != "spell:mend", "test bindings never read or write the saved file")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
@@ -2929,6 +2937,22 @@ func _combat_checks() -> void:
 	world.players[3]["health"] = 10
 	var mass: Dictionary = combat.cast(4, "mass_mend", time + 20.0)
 	check(mass["ok"] and paladin["health"] > 10 and world.players[3]["health"] == 10, "mass mend heals players within its radius only")
+	# Spell tooltips and the spell book state the numbers casting uses.
+	var druid_stats: Dictionary = world.player_stats(4)
+	var mend_info: Dictionary = Spells.info("mass_mend", druid_stats, 10)
+	check(mend_info["amount"] == "Heals %d each" % (paladin["health"] - 10)
+		and mend_info["cost"].begins_with("Mana %d " % maxi(1, roundi(druid_stats["mana"] * Spells.SPELLS["mass_mend"]["mana"]))),
+		"a spell's description shows the healing and mana a cast really gives and costs")
+	var bolt: Dictionary = Spells.info("piercing_shot", world.player_stats(1), 1)
+	var shot_damage: float = world.player_stats(1)["attack"] * Spells.SPELLS["piercing_shot"]["power"]
+	check(bolt["amount"].begins_with("%d–%d damage" % [roundi(shot_damage * 0.85), roundi(shot_damage * 1.15)]),
+		"an attack spell's description shows its damage spread")
+	check(not Spells.info("starfall", world.player_stats(1), 1)["unlocked"]
+		and Spells.info("starfall", {}, 1)["requirement"] == "✗ Needs level 45 (Sorcerer)", "locked spells say what level they need")
+	for spell: String in Spells.SPELLS:
+		var text: String = Spells.describe(spell, druid_stats, 50)
+		check(text.split("\n").size() >= 5 and text.contains("Cooldown") and text.contains("Mana")
+			and not Spells.info(spell, {}, 50)["effect"].is_empty(), "every spell explains itself")
 
 	# Regeneration.
 	paladin["health"] = 10

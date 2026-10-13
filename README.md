@@ -81,7 +81,8 @@ These are the default keys; every key can be changed (see below).
 | WASD / arrows | Move one cardinal tile; hold to repeat |
 | Left-click a creature | Lock it as your target (click again to release) |
 | Space | Target the nearest monster |
-| 1–9 | Cast the spell in action bar slot 1–9 (filled with your vocation's spells) |
+| 1–9 | Cast the spell in action bar slot 1–9 (filled with your vocation's spells); hover a slot to see what it does |
+| B | Open or close the spell book (every spell of your vocation; drag one onto the action bar) |
 | Drag an item | Move it between backpack slots, equipment slots, and nearby tiles |
 | Right-click item | Equip from the backpack, unequip into it, drink a potion, or (bank open) deposit it |
 | Right-click tile / G | Pick up the top item on a tile (G: your tile, else the one you face) |

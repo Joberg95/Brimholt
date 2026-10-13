@@ -24,6 +24,7 @@ CAPTURES = (
     ("visual-map.png", "World map (M) with the PvP island"),
     ("visual-combat.png", "Combat: locked target, nameplates, health/mana bars, floating damage"),
     ("visual-waystone.png", "Waystone outside Cinder Crossing: a carved standing stone with a glowing rune"),
+    ("visual-spellbook.png", "Spell book (B): each spell's rune, unlock level, effect, damage or healing, mana, and cooldown"),
     ("visual-quests.png", "Quest list: a task in progress and one ready to turn in, with giver and town"),
     ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
     ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),

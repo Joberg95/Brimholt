@@ -6,8 +6,15 @@ How Brimholt plays: key bindings, combat, parties, loot, death, the world, inven
 
 The nine-slot action bar sits at the bottom of the game window, with each slot's key in its
 corner. The bar holds spells only: right-click a slot to pick one of your vocation's spells
-or clear it. Change gear on the equipment panel; targeting, pick up, the world map, and the
-health and mana potions (Q and E) have their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
+or clear it, or drag a slot onto another to swap them. Hover a slot to see what its spell
+does: its unlock level, effect, damage or healing for your current level and gear (damage is
+before the target's armour), mana cost, and cooldown.
+
+The **spell book** (B, or "Open spell book" in a slot's right-click menu) lists every spell of
+your vocation by unlock level with the same details; locked spells say the level they need.
+Drag a spell's rune from the book onto the action bar to put it there. Before you join, it
+shows the vocation picked in the top bar. Change gear on the equipment panel; targeting, pick up, the world map, and the
+health and mana potions (Q and E), the quest list (L), and the spell book (B) have their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
 position, so WASD stays under your hand on any keyboard layout. Bindings and bar contents

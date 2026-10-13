@@ -21,6 +21,7 @@ const NpcDialogs = preload("res://game/ui/npc_dialogs.gd")
 const StartPanel = preload("res://game/ui/start_panel.gd")
 const CellIndex = preload("res://game/render/cell_index.gd")
 const QuestList = preload("res://game/ui/quest_list.gd")
+const SpellBook = preload("res://game/ui/spell_book.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -93,6 +94,7 @@ var identity_profile: String = ""
 var close_ends_session: bool = true
 var hud: Hud
 var quest_list: QuestList
+var spell_book: SpellBook
 var inventory: InventoryPanel
 var maps: WorldMaps
 var action_bar: ActionBar
@@ -237,6 +239,7 @@ func _process(delta: float) -> void:
 	dialogs.refresh()
 	hud.refresh()
 	quest_list.refresh()
+	spell_book.refresh()
 	start_panel.refresh()
 	action_bar.redraw()
 	maps.redraw()
@@ -254,11 +257,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.is_pressed() or event.is_echo() or _address.has_focus():
 		return
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
-		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and own_target() != 0:
+		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
+				and own_target() != 0:
 			target_local(0)
 		_world_map.hide()
 		_close_travel()
 		_controls.hide()
+		spell_book.hide()
 		return
 	var key: Key = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	var action: String = keybinds.action_for(key)
@@ -279,6 +284,8 @@ func _run_action(action: String) -> void:
 		_world_map.visible = not _world_map.visible
 	elif action == "quest_list":
 		quest_list.shown = not quest_list.shown
+	elif action == "spell_book":
+		spell_book.toggle()
 	elif not connected:
 		return
 	elif action == "pick_up":
@@ -1284,9 +1291,13 @@ func _build_ui() -> void:
 	quest_list = QuestList.new()
 	quest_list.game = self
 	layer.add_child(quest_list)
+	spell_book = SpellBook.new()
+	spell_book.game = self
+	layer.add_child(spell_book)
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
-	# list, location line, world map, dialog panel, and Controls menu.
-	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, maps.world_map, dialogs.panel, hud.controls]:
+	# list, location line, spell book, world map, dialog panel, and Controls menu.
+	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, maps.world_map, dialogs.panel,
+			hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_vocation = hud.vocation

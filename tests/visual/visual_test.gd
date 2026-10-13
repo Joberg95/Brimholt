@@ -12,6 +12,7 @@ const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
+const Spells = preload("res://game/data/spells.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 var game: Node2D
 ## The game renders offscreen into this buffer; the real window only needs to exist.
@@ -94,8 +95,9 @@ func _run() -> void:
 	root.add_child(screen)
 	game = load("res://game/main.tscn").instantiate()
 	game.close_ends_session = false
+	# Never touch the player's real key bindings, saves, or identity.
+	game.keybinds.persistent = false
 	screen.add_child(game)
-	# Never touch the player's real saves or identity.
 	game.save_enabled = false
 	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
 	game.port = 0
@@ -225,6 +227,8 @@ func _run() -> void:
 		return
 	if not await _check_quest_list():
 		return
+	if not await _check_spell_book():
+		return
 	if not await _check_waystone():
 		return
 	if not await _check_town_services():
@@ -245,7 +249,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1024,6 +1028,56 @@ func _mean_luminance(image: Image, area: Rect2i) -> float:
 			total += image.get_pixel(x, y).get_luminance()
 			samples += 1
 	return total / maxi(samples, 1)
+
+
+## The spell book opens with its key and lists your vocation's spells with their numbers; a bar
+## slot's tooltip explains its spell; dragging a rune from the book onto the bar fills the slot.
+func _check_spell_book() -> bool:
+	var saved_bar: Array[String] = game.keybinds.bar.duplicate()
+	var key := InputEventKey.new()
+	key.pressed = true
+	key.physical_keycode = game.keybinds.keys["spell_book"][0]
+	game._unhandled_key_input(key)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-spellbook.png")
+	var book: Control = game.spell_book
+	var vocation: String = game.actors[game.self_id]["state"]["vocation"]
+	var text: PackedStringArray = []
+	_texts(book, text)
+	var listed: bool = Spells.for_vocation(vocation).all(func(spell: String) -> bool:
+		return Spells.SPELLS[spell]["name"] in text)
+	if not _expect(book.visible and listed and "\n".join(text).contains("Cooldown"),
+			"The spell book does not list every %s spell with its numbers" % vocation):
+		return false
+	var slot: Control = game.action_bar._slots[0]
+	var tip: Control = slot._make_custom_tooltip(slot.tooltip_text)
+	var tip_text: PackedStringArray = []
+	_texts(tip, tip_text)
+	tip.free()
+	if not _expect(tip_text.size() >= 5 and tip_text[0] == Spells.SPELLS[slot.spell]["name"] and "\n".join(tip_text).contains("Mana"),
+			"An action bar slot has no spell tooltip (%s)" % [tip_text]):
+		return false
+	var last: String = Spells.for_vocation(vocation)[-1]
+	var runes: Array = book.find_children("*", "Control", true, false).filter(func(node: Node) -> bool:
+		return node.get("spell") == last)
+	var drag: Variant = runes[0]._get_drag_data(Vector2.ZERO) if not runes.is_empty() else null
+	var target: Control = game.action_bar._slots[8]
+	if drag != null and target._can_drop_data(Vector2.ZERO, drag):
+		target._drop_data(Vector2.ZERO, drag)
+	var dropped: bool = game.keybinds.bar[8] == "spell:" + last
+	game.keybinds.bar = saved_bar
+	game._unhandled_key_input(key)
+	await process_frame
+	return _expect(dropped and not book.visible, "Dragging a spell from the book onto the bar failed, or the key did not close it")
+
+
+func _texts(node: Node, into: PackedStringArray) -> void:
+	if node is Label:
+		into.append(node.text)
+	for child: Node in node.get_children():
+		_texts(child, into)
 
 
 ## The quest list: one task in progress and one ready to turn in, then hidden with its key.

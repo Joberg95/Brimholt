@@ -16,6 +16,7 @@ const DEFAULTS: Dictionary = {
 	"target_nearest": ["Target nearest", KEY_SPACE, KEY_NONE],
 	"world_map": ["World map", KEY_M, KEY_NONE],
 	"quest_list": ["Quest list", KEY_L, KEY_NONE],
+	"spell_book": ["Spell book", KEY_B, KEY_NONE],
 	"health_potion": ["Health potion", KEY_Q, KEY_NONE],
 	"mana_potion": ["Mana potion", KEY_E, KEY_NONE],
 	"slot_1": ["Action bar 1", KEY_1, KEY_NONE],
@@ -31,7 +32,7 @@ const DEFAULTS: Dictionary = {
 ## Escape always closes menus and cannot be bound.
 const RESERVED: Array[Key] = [KEY_ESCAPE]
 ## The action bar holds spells only, stored as "spell:<id>"; "" is an empty slot. Other
-## actions (target nearest, pick up, world map, quest list, potions) have their own key bindings above.
+## actions (target nearest, pick up, world map, quest list, spell book, potions) have their own key bindings above.
 const DEFAULT_BAR: Array[String] = ["", "", "", "", "", "", "", "", ""]
 
 ## Action id -> [primary, secondary] physical keycodes.
@@ -39,6 +40,8 @@ var keys: Dictionary = {}
 ## Nine action-bar entries: "" or "spell:<id>".
 var bar: Array[String] = []
 var path: String = PATH
+## False keeps the defaults and never reads or writes `path` (tests: the player's own bindings stay untouched).
+var persistent: bool = true
 
 
 func _init(config_path: String = PATH) -> void:
@@ -113,6 +116,8 @@ func label(action: String) -> String:
 
 
 func save() -> Error:
+	if not persistent:
+		return OK
 	var config := ConfigFile.new()
 	for action: String in keys:
 		config.set_value("keys", action, keys[action])
@@ -122,6 +127,8 @@ func save() -> Error:
 
 ## Loads saved bindings over the defaults, ignoring unknown actions and malformed values.
 func load_saved() -> void:
+	if not persistent:
+		return
 	var config := ConfigFile.new()
 	if config.load(path) != OK:
 		return
