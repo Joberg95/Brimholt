@@ -94,7 +94,7 @@ func redraw_slots() -> void:
 			if World.count_of(entry) > 1:
 				slot.tooltip_text += "\nStack of %d" % World.count_of(entry)
 			slot.queue_redraw()
-		elif World.ITEMS.has(kind) and World.ITEMS[kind].has("glow"):
+		elif World.ITEMS.has(kind) and (World.ITEMS[kind].has("glow") or potion_cooldown(kind) > 0.0):
 			slot.queue_redraw()
 	if stale:
 		var alive: Array[Control] = []
@@ -224,7 +224,7 @@ func item_tooltip(kind: String) -> String:
 		for stat: String in item["drink"]:
 			lines.append("Restores %d%% of your maximum %s" % [roundi(item["drink"][stat] * 100.0), stat])
 		var key: String = game.keybinds.label(kind)
-		lines.append("Right-click%s to drink" % ("" if key.is_empty() else " or press " + key))
+		lines.append("Right-click%s to drink  ·  %d s cooldown" % ["" if key.is_empty() else " or press " + key, roundi(item["cooldown"])])
 	if item.has("slots"):
 		lines.append("+%d backpack slots  ·  bound to you" % item["slots"])
 	elif item.get("sell", 0) > 0 and not item.has("value"):
@@ -294,10 +294,24 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 		SpriteArt.draw_item_glow(slot, slot.size / 2.0, kind, 0.6 + 0.25 * sin(now * 2.6))
 		# Rarity is shown in the tooltip; an item you cannot use yet is tinted red.
 		SpriteArt.draw_item(slot, slot.size / 2.0, kind, Color.WHITE if usable else Color(1.0, 0.55, 0.55))
+		var cooling: float = potion_cooldown(kind)
+		if cooling > 0.0:
+			# Shade the part of the potion still cooling down, draining from the top.
+			var share: float = clampf(cooling / item["cooldown"], 0.0, 1.0)
+			slot.draw_rect(Rect2(Vector2(0, slot.size.y * (1.0 - share)), Vector2(slot.size.x, slot.size.y * share)), Color(0, 0, 0, 0.6))
 		if World.count_of(entry) > 1:
 			SpriteArt.draw_count(slot, slot.size - Vector2(3, 3), World.count_of(entry))
 	elif location["type"] == "equipment":
 		SpriteArt.draw_slot_hint(slot, slot.size / 2.0, location["slot"])
+
+
+## Seconds until you can drink another potion of `kind` (0 when ready or not a potion).
+func potion_cooldown(kind: String) -> float:
+	if not World.ITEMS.get(kind, {}).has("drink") or not game.actors.has(game.self_id):
+		return 0.0
+	var view: Dictionary = game.actors[game.self_id]
+	var left: float = view["state"].get("cooldowns", {}).get(Combat.potion_timer(kind), 0.0)
+	return maxf(0.0, left - (game._now() - view.get("received", game._now())))
 
 
 func item_drag(_at: Vector2, source: Control, location: Dictionary) -> Variant:

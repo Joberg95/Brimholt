@@ -1675,11 +1675,19 @@ func _town_checks() -> void:
 	var drunk: Dictionary = combat.drink(1, 0, tick.call())
 	check(drunk["ok"] and player["health"] == 1 + roundi(limits["health"] * 0.2) and backpack[0] == "health_potion",
 		"a health potion restores a fifth of your health")
-	check(combat.drink(1, 0, ticks[0] + 0.5)["reason"] == "Potion cooldown", "potions share a cooldown")
+	var health_ready: float = ticks[0] + World.ITEMS["health_potion"]["cooldown"]
+	check(World.ITEMS["health_potion"]["cooldown"] > World.ITEMS["mana_potion"]["cooldown"] and World.ITEMS["mana_potion"]["cooldown"] >= 2.0,
+		"health potions have the longer cooldown")
+	check(combat.drink(1, 0, ticks[0] + 0.5)["reason"] == "Health potion ready in %d s" % ceili(World.ITEMS["health_potion"]["cooldown"] - 0.5),
+		"a health potion has its own cooldown, and says when it is ready")
+	check(combat.drink(1, 0, health_ready - 0.05)["reason"].begins_with("Health potion ready"), "the cooldown lasts its full time")
+	check(world.export_player(1, ticks[0] + 1.0, true)["cooldowns"].has(Combat.potion_timer("health_potion")),
+		"the owner sees the potion cooldown")
 	player["mana"] = 0
-	check(combat.drink(1, 1, tick.call())["ok"] and player["mana"] == roundi(limits["mana"] * 0.25) and backpack[1] == "",
-		"a mana potion restores a quarter of your mana and the last one is used up")
-	check(combat.drink(1, 0, tick.call())["ok"] and backpack[0] == "", "the last health potion is used up")
+	check(combat.drink(1, 1, ticks[0] + 0.6)["ok"] and player["mana"] == roundi(limits["mana"] * 0.25) and backpack[1] == "",
+		"mana potions have a separate timer; the last one is used up")
+	ticks[0] = health_ready
+	check(combat.drink(1, 0, tick.call())["ok"] and backpack[0] == "", "after its cooldown the last health potion is used up")
 	for bad: Variant in [2, 1, -1, "0", 0.0, null, backpack.size()]:
 		check(not combat.drink(1, bad, tick.call())["ok"], "drinking needs a potion")
 	check(player["active_at"] == -INF, "drinking is not combat activity")

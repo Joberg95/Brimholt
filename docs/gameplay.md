@@ -145,7 +145,10 @@ buy monster materials for their value (one stack, or **Sell all materials**) and
 for a quarter of its price; they never buy potions, relics, or packs.
 
 **Potions** stack like materials. A health potion restores 20% of your maximum health, a mana
-potion 25% of your maximum mana; potions share a 1-second cooldown and are refused at full.
+potion 25% of your maximum mana. Each kind has its own cooldown: 6 seconds for health
+potions and 3 seconds for mana potions, so you can drink one of each together but cannot chain
+health potions to outlast a fight. The backpack slot shades while a potion cools down, and
+potions are refused at full health or mana.
 Right-click one in the backpack, or press Q (health) or E (mana) to drink the first one.
 
 **The banker** keeps your gold and an item depot. Deposit

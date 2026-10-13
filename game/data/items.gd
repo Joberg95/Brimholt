@@ -73,6 +73,7 @@ static func load_catalog() -> Dictionary:
 			for stat: String in entry["drink"]:
 				drink[stat] = float(entry["drink"][stat])
 			item["drink"] = drink
+			item["cooldown"] = float(entry.get("cooldown", 1.0))
 		if not item["slot"].is_empty() and not item.has("bound") and not item.has("price"):
 			item["price"] = gear_price(item["level"], item["slot"])
 		if item.has("value"):

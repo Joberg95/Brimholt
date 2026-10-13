@@ -66,8 +66,6 @@ const ENRAGE_MULTIPLIER: float = 10.0
 ## Bosses drop relics from their loot table instead.
 const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.04, "elite": 0.25, "champion": 1.0, "boss": 0.0}
 const GEAR_LOWER_TIER_CHANCE: float = 0.3
-## Shared cooldown between potions.
-const POTION_SECONDS: float = 1.0
 const PARTY_ACTIONS: Array[String] = ["invite", "revoke", "join", "leave"]
 const STEPS: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
@@ -640,6 +638,11 @@ func _credit_tasks(kind: String, credited: Array[int], events: Array) -> void:
 
 # ---------------------------------------------------------------- potions
 
+## The cooldown timer key of a potion kind (shared with spell timers in player["cooldowns"]).
+static func potion_timer(kind: String) -> String:
+	return "potion:" + kind
+
+
 ## Drinks one potion from a backpack stack: restores its share of maximum health or mana.
 func drink(id: int, index: Variant, now: float) -> Dictionary:
 	if not world.players.has(id):
@@ -651,8 +654,10 @@ func drink(id: int, index: Variant, now: float) -> Dictionary:
 	var kind: String = World.kind_of(backpack[index])
 	if not World.ITEMS.get(kind, {}).has("drink"):
 		return {"ok": false, "reason": "You cannot drink that", "events": []}
-	if now < player["next_potion"]:
-		return {"ok": false, "reason": "Potion cooldown", "events": []}
+	# Each potion kind has its own cooldown (items.json), kept with the spell timers so the client sees it.
+	var ready: float = player["cooldowns"].get(potion_timer(kind), -INF)
+	if now < ready:
+		return {"ok": false, "reason": "%s ready in %d s" % [World.ITEMS[kind]["name"], ceili(ready - now)], "events": []}
 	var limits: Dictionary = world.player_stats(id)
 	var restores: Dictionary = World.ITEMS[kind]["drink"]
 	var needed: bool = false
@@ -661,7 +666,7 @@ func drink(id: int, index: Variant, now: float) -> Dictionary:
 	if not needed:
 		return {"ok": false, "reason": "You are already at full %s" % " and ".join(restores.keys()), "events": []}
 	backpack[index] = World.make_entry(kind, World.count_of(backpack[index]) - 1) if World.count_of(backpack[index]) > 1 else ""
-	player["next_potion"] = now + POTION_SECONDS
+	player["cooldowns"][potion_timer(kind)] = now + World.ITEMS[kind]["cooldown"]
 	var events: Array = []
 	for stat: String in restores:
 		var amount: int = maxi(1, roundi(limits[stat] * restores[stat]))

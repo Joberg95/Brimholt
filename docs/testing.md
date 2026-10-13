@@ -60,7 +60,7 @@ stack limit, cooldown boundary, and backpack privacy), item stacking (merging on
 drag, and drop, the 100-item limit and overflow, gold stacks, bound checks), town services
 (a vendor in every town and the one banker in Reedmere, stock and prices, buying, selling, and bad requests, bank
 deposits and withdrawals, the shared depot and its banker range, what survives death, hunting
-task credit and turn-in, pack upgrades and locked backpack slots, potions and their cooldown), and saved characters (identity tokens and profiles, a full save and
+task credit and turn-in, pack upgrades and locked backpack slots, potions and their per-kind cooldowns), and saved characters (identity tokens and profiles, a full save and
 restore including time-relative skull timers, `.bak` backups, refusing edited, swapped,
 foreign, and damaged saves, and sanitizing a hostile but signed save), the map scene (known terrain,
 spawn/item/ferryman markers, routes, and reachability of every ferryman and item on foot
