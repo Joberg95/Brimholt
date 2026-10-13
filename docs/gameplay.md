@@ -180,12 +180,30 @@ boars, levels 5–7), **Captain Ardo** in Ashford (25 outlaw archers, levels 19�
 kill of that monster that earns you experience (your own or your party's shared kills) counts;
 progress shows in the message line and in the quest dialog. Turn it in to the giver.
 
-Each finished task gives you the next **pack**, worn in the bag slot (top right of the
+**Dungeon tasks** are given by the stairway down into each dungeon: **Cellarmaster Pell** in
+Cinder Crossing (25 cellar rats, then the Rat King), **Sexton Wren** inside Ashford's crypt
+house (30 risen dead, then Abbot Morrow), and **Foreman Dagny** inside Highmoor's mine house
+(30 mine creatures, then the Forgemaw). Any of the dungeon's regular monsters count toward its
+hunt, and your party's shared kills count too. They pay experience and gold instead of a pack:
+half of what the kills themselves gave for a hunt, and as much again as the boss gave for a
+boss task (shown in the quest dialog). A giver lists all their tasks; each is done once.
+
+Each finished town task gives you the next **pack**, worn in the bag slot (top right of the
 paperdoll): a Traveler's pack (12 backpack slots), then an Explorer's pack (16), then a
 Pathfinder's pack (20), whichever task you finish first. Packs are bound: they never come off,
 drop, or get lost on death. Backpack slots beyond your pack are shown dark and locked.
 
 ## The world, towns, and travel
+
+The overworld is divided into named **regions**, each with its own monsters: the Cinder
+Meadows (levels 1–5) around the starting town, the Greywood, the Westwind Coast, Lurkmoor,
+Outlaw Ridge, the Thornfield Wilds, the Golemback Hills, Stillwater Shore, Stonevale, the
+Smoulder Fells, the Sunscar Dunes (the desert), the Hollow March, Lastlight Downs, the
+Emberwaste, the Mirewood Fen, and the Gloamwood (levels 34–45). The line under the minimap
+shows where you are and the monster levels there, coloured white, yellow, or red by how they
+compare to your level (hover it for a description); crossing into a new region is announced.
+The world map (M) labels every region with its levels. A region's levels come from the
+monsters placed in it, so they stay correct when spawns move.
 
 The sky follows a 40-minute day and night and changing weather: clear, overcast, rain, and
 thunderstorms with lightning, the same for everyone in the session. Weather is only for looks.
@@ -327,8 +345,10 @@ ENRAGED once it enrages.
 
 Glowing **relics** are quest rewards. Everyone who took part in the fight earns one
 **trophy** for that boss when it dies: players who damaged it, players it hit, and players
-who healed any of them. Standing nearby, or casting at full health, earns nothing. Right-click **Ysolde**, the Relic keeper in Cinder Crossing (gold name), choose
-**Quests**, and trade a trophy for any one of that boss's four relics: Morvain gives
+who healed any of them. Standing nearby, or casting at full health, earns nothing. Each final boss has its own **relic keeper** on Reedmere's north plaza, the town in the middle
+of the world (gold names): **Ysolde** keeps Morvain's relics, **Brannoc the Forgemaster**
+Kharzul's, **Liraen of the Thorn** Sylvaine's, and **Oswin the Ashen** Vaelith's. Right-click
+the keeper, choose **Quests**, and trade a trophy for any one of that boss's relics: Morvain gives
 Knight and shared armor, Kharzul a Paladin bow, Sorcerer wand, amulet, and charm, and
 Sylvaine a Druid rod, spellbook, cape, and ring. Vaelith's trophies buy the strongest
 relics: a void weapon for each vocation (Voidrend, Eclipse bow, Starless wand, Nightbloom

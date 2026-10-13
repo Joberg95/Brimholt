@@ -7,6 +7,8 @@ const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ControlsMenu = preload("res://game/ui/controls_menu.gd")
+const SpriteArt = preload("res://game/render/sprite_art.gd")
+const Regions = preload("res://game/data/regions.gd")
 const MESSAGE_SECONDS: float = 4.0
 
 var game: Node
@@ -18,6 +20,9 @@ var vitals: Control
 var _status: Label
 var _action: Label
 var _zone_name: String = ""
+## Under the minimap: where you are and its monster levels (World.location_at).
+var location_label: Label
+var _location_key: String = ""
 var _shown_message: String = ""
 var _message_since: float = 0.0
 
@@ -73,6 +78,16 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	zone_label.add_theme_constant_override("outline_size", 6)
 	zone_label.visible = false
 	layer.add_child(zone_label)
+	location_label = Label.new()
+	location_label.position = Layout.PANEL_ORIGIN + Vector2(0, 681)
+	location_label.size = Vector2(184, 18)
+	location_label.add_theme_font_size_override("font_size", 11)
+	location_label.clip_text = true
+	location_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	location_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	# The side panel's background is built later in the same layer; stay above it.
+	location_label.z_index = 2
+	layer.add_child(location_label)
 	layer.add_child(vitals)
 	controls = ControlsMenu.new()
 	controls.visible = false
@@ -131,9 +146,36 @@ func _draw_vitals() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 
 
+## The location line under the minimap, and "Entering ..." when you cross into a new region.
+func _update_location() -> void:
+	var actors: Dictionary = game.actors
+	if not actors.has(game.self_id):
+		location_label.text = ""
+		return
+	var state: Dictionary = actors[game.self_id]["state"]
+	var place: Dictionary = World.location_at(state["cell"])
+	var key: String = "%s|%d" % [place.get("name", ""), state.get("level", 1)]
+	if key == _location_key:
+		return
+	var entered: bool = place.get("name", "") != _location_key.get_slice("|", 0)
+	_location_key = key
+	if place.is_empty():
+		location_label.text = ""
+		return
+	var levels: String = "safe town" if place["kind"] == "town" else ("no monsters" if place["max_level"] == 0
+		else "levels %d–%d" % [place["min_level"], place["max_level"]])
+	location_label.text = "%s · %s%s" % [place["name"], levels, " · PvP" if place["kind"] == "pvp" else ""]
+	location_label.tooltip_text = Regions.description(place["name"])
+	var colour: Color = Color("#9fe0a0") if place["kind"] == "town" else SpriteArt.danger_color(place["max_level"], state.get("level", 1))
+	location_label.add_theme_color_override("font_color", Color("#ff8a7a") if place["kind"] == "pvp" else colour)
+	if entered and place["kind"] == "region" and game.last_action_message.is_empty():
+		game.last_action_message = "Entering %s (%s)." % [place["name"], levels]
+
+
 func _update_zone() -> void:
 	var actors: Dictionary = game.actors
 	var self_id: int = game.self_id
+	_update_location()
 	var zone: Dictionary = World.zone_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else {}
 	var zone_name: String = zone.get("name", "")
 	var message: String = game.last_action_message

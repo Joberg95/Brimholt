@@ -5,6 +5,8 @@ const Items = preload("res://game/data/items.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Buildings = preload("res://game/data/buildings.gd")
+const Regions = preload("res://game/data/regions.gd")
+const Monsters = preload("res://game/data/monsters.gd")
 
 const TILE_SIZE: int = 32
 const WORLD_NAME: String = "Cinder Crossing"
@@ -59,6 +61,13 @@ static var ROOM_AT: Dictionary = {}
 static var SIGNS: Array = []
 ## Shop and bank furniture: cell -> kind (SpriteArt.FURNITURE). It blocks movement like an NPC.
 static var FURNITURE: Dictionary = {}
+## Named regions (game/data/regions.gd) on a grid of REGION_BLOCK x REGION_BLOCK tiles (an index
+## into REGION_NAMES per block), and per region {min_level, max_level, centre} derived from the
+## monster spawns and tiles inside it.
+const REGION_BLOCK: int = 4
+static var REGION_GRID: PackedByteArray
+static var REGION_NAMES: Array[String] = []
+static var REGION_INFO: Dictionary = {}
 ## Furniture around a keeper, standing at the back of their building facing the door:
 ## [steps toward the door, steps across, kind]. Pieces that would block the room are skipped.
 const FURNISHINGS: Dictionary = {
@@ -69,7 +78,7 @@ static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 const MAX_PLAYERS: int = 12
 const PORT: int = 1234
-const PROTOCOL: int = 8
+const PROTOCOL: int = 9
 const START_GOLD: int = 100
 ## Players must stand within this many tiles (in any direction) of a ferryman to sail.
 const TALK_RANGE: int = 2
@@ -164,10 +173,15 @@ static func _static_init() -> void:
 		NPC_CELLS[_cell_of(marker)] = String(marker.name)
 	if scene.has_node("QuestGivers"):
 		for marker: Node2D in scene.get_node("QuestGivers").get_children():
+			# A giver offers every task naming it (game/data/quests.gd), plus its marker's task.
+			var tasks: Array[String] = Quests.tasks_of(String(marker.name))
+			var own: String = String(marker.get("task")) if marker.get("task") != null else ""
+			if not own.is_empty() and Quests.TASKS.has(own) and own not in tasks:
+				tasks.push_front(own)
 			QUEST_GIVERS[String(marker.name)] = {
 				"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
 				"cell": _cell_of(marker), "facing": marker.get("facing"), "services": ["quests"],
-				"task": String(marker.get("task")) if marker.get("task") != null else "",
+				"tasks": tasks, "boss": String(Quests.RELIC_KEEPERS.get(String(marker.name), "")),
 			}
 			NPC_CELLS[_cell_of(marker)] = String(marker.name)
 	if scene.has_node("Townsfolk"):
@@ -213,6 +227,7 @@ static func _static_init() -> void:
 	scene.free()
 	_find_buildings()
 	OVERWORLD = Rect2i(0, 0, mini(size.x, Dungeons.BAND_X - Dungeons.COPY_GAP), size.y)
+	_map_regions()
 	MAP_HASH = ("".join(ROWS) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK) + str(ZONES)
 		+ str(MONSTER_SPAWNS) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS)).sha256_text()
 
@@ -288,6 +303,58 @@ static func _room_open(building: Dictionary, entrance: Vector2i, keeper: Vector2
 		if walkable(cell) and not reached.has(cell):
 			return false
 	return talk
+
+
+## Assigns each block of the overworld to a region and derives each region's level range.
+static func _map_regions() -> void:
+	REGION_NAMES = Regions.names()
+	var blocks := Vector2i(ceili(GRID_SIZE.x / float(REGION_BLOCK)), ceili(GRID_SIZE.y / float(REGION_BLOCK)))
+	REGION_GRID = PackedByteArray()
+	REGION_GRID.resize(blocks.x * blocks.y)
+	var sums: Dictionary = {}
+	for by: int in blocks.y:
+		for bx: int in blocks.x:
+			var centre := Vector2i(bx * REGION_BLOCK + REGION_BLOCK / 2, by * REGION_BLOCK + REGION_BLOCK / 2)
+			var name: String = Regions.name_at(centre)
+			REGION_GRID[by * blocks.x + bx] = REGION_NAMES.find(name)
+			if OVERWORLD.has_point(centre) and terrain(centre) in LAND:
+				var sum: Array = sums.get_or_add(name, [Vector2.ZERO, 0])
+				sum[0] += Vector2(centre)
+				sum[1] += 1
+	for name: String in REGION_NAMES:
+		var sum: Array = sums.get(name, [Vector2.ZERO, 0])
+		REGION_INFO[name] = {"min_level": 0, "max_level": 0,
+			"centre": Vector2i((sum[0] / maxf(1.0, sum[1])).round())}
+	for spawn: Dictionary in MONSTER_SPAWNS:
+		# Raid bosses are not the region's hunting level.
+		if not OVERWORLD.has_point(spawn["cell"]) or not zone_at(spawn["cell"]).is_empty() \
+				or Monsters.MONSTERS[spawn["monster"]]["rank"] == "boss":
+			continue
+		var info: Dictionary = REGION_INFO[region_at(spawn["cell"])]
+		info["min_level"] = spawn["level"] if info["min_level"] == 0 else mini(info["min_level"], spawn["level"])
+		info["max_level"] = maxi(info["max_level"], spawn["level"])
+
+
+## The region name at an overworld tile ("" outside the overworld).
+static func region_at(cell: Vector2i) -> String:
+	if not OVERWORLD.has_point(cell):
+		return ""
+	var columns: int = ceili(GRID_SIZE.x / float(REGION_BLOCK))
+	return REGION_NAMES[REGION_GRID[(cell.y / REGION_BLOCK) * columns + cell.x / REGION_BLOCK]]
+
+
+## Where a tile is, for the HUD: {name, kind ("town", "pvp", "dungeon", or "region"), min_level,
+## max_level}; levels are 0 for towns and for regions without monsters.
+static func location_at(cell: Vector2i) -> Dictionary:
+	var zone: Dictionary = zone_at(cell)
+	if not zone.is_empty():
+		var kind: String = "town" if zone["town"] else ("dungeon" if zone.get("underground", false) else ("pvp" if zone["pvp"] else "region"))
+		return {"name": zone["name"], "kind": kind, "min_level": 0 if zone["town"] else zone["min_level"],
+			"max_level": 0 if zone["town"] else zone["max_level"]}
+	var name: String = region_at(cell)
+	if name.is_empty():
+		return {}
+	return {"name": name, "kind": "region", "min_level": REGION_INFO[name]["min_level"], "max_level": REGION_INFO[name]["max_level"]}
 
 
 ## Whether `cell` and `other` are on the same side of every building wall: both outside, or

@@ -2864,10 +2864,10 @@ dungeon = "highmoor_mine"
 [node name="QuestGivers" type="Node2D" parent="."]
 
 [node name="relic_keeper" type="Marker2D" parent="QuestGivers"]
-position = Vector2(656, 400)
+position = Vector2(4752, 6000)
 script = ExtResource("6_qgive")
 npc_name = "Ysolde"
-place = "Cinder Crossing"
+place = "Reedmere"
 
 [node name="warden_brask" type="Marker2D" parent="QuestGivers"]
 position = Vector2(688, 176)
@@ -2889,6 +2889,45 @@ script = ExtResource("6_qgive")
 npc_name = "Marshal Venn"
 place = "Emberfall"
 task = "hollow_purge"
+
+[node name="relic_keeper_kharzul" type="Marker2D" parent="QuestGivers"]
+position = Vector2(4816, 6000)
+script = ExtResource("6_qgive")
+npc_name = "Brannoc the Forgemaster"
+place = "Reedmere"
+
+[node name="relic_keeper_sylvaine" type="Marker2D" parent="QuestGivers"]
+position = Vector2(4880, 6000)
+script = ExtResource("6_qgive")
+npc_name = "Liraen of the Thorn"
+place = "Reedmere"
+
+[node name="relic_keeper_vaelith" type="Marker2D" parent="QuestGivers"]
+position = Vector2(4880, 6096)
+script = ExtResource("6_qgive")
+npc_name = "Oswin the Ashen"
+place = "Reedmere"
+facing = Vector2i(-1, 0)
+
+[node name="cellarmaster_pell" type="Marker2D" parent="QuestGivers"]
+position = Vector2(496, 176)
+script = ExtResource("6_qgive")
+npc_name = "Cellarmaster Pell"
+place = "Cinder Crossing"
+
+[node name="sexton_wren" type="Marker2D" parent="QuestGivers"]
+position = Vector2(6064, 4080)
+script = ExtResource("6_qgive")
+npc_name = "Sexton Wren"
+place = "Ashford"
+facing = Vector2i(1, 0)
+
+[node name="foreman_dagny" type="Marker2D" parent="QuestGivers"]
+position = Vector2(10800, 2416)
+script = ExtResource("6_qgive")
+npc_name = "Foreman Dagny"
+place = "Highmoor"
+facing = Vector2i(1, 0)
 
 [node name="Townsfolk" type="Node2D" parent="."]
 

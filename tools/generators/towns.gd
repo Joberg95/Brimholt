@@ -18,6 +18,21 @@ const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## The only town with a banker (and so the only bank and depot).
 const BANK_PLACE: String = "Reedmere"
 const TILE: int = 32
+const QUEST_SCRIPT: Script = preload("res://game/maps/markers/quest_giver.gd")
+## Quest givers this painter places (or moves): node name, display name, place, cell, facing.
+## Relic keepers (one per final boss, game/data/quests.gd RELIC_KEEPERS) stand on Reedmere's
+## north plaza, the town at the middle of the world; dungeon task givers stand by their stairway.
+const QUEST_GIVERS: Array = [
+	["relic_keeper", "Ysolde", "Reedmere", Vector2i(148, 187), Vector2i.DOWN],
+	["relic_keeper_kharzul", "Brannoc the Forgemaster", "Reedmere", Vector2i(150, 187), Vector2i.DOWN],
+	["relic_keeper_sylvaine", "Liraen of the Thorn", "Reedmere", Vector2i(152, 187), Vector2i.DOWN],
+	["relic_keeper_vaelith", "Oswin the Ashen", "Reedmere", Vector2i(152, 190), Vector2i.LEFT],
+	["cellarmaster_pell", "Cellarmaster Pell", "Cinder Crossing", Vector2i(15, 5), Vector2i.DOWN],
+	["sexton_wren", "Sexton Wren", "Ashford", Vector2i(189, 127), Vector2i.RIGHT],
+	["foreman_dagny", "Foreman Dagny", "Highmoor", Vector2i(337, 75), Vector2i.RIGHT],
+]
+## Ground a quest giver may stand on.
+const STANDING: String = ".,:="
 ## Terrain patches: top-left cell and rows; a space keeps the cell as it is.
 const PATCHES: Array = [
 	# Cinder Crossing's shop in the south-west corner of the town walls, door to the east.
@@ -86,6 +101,10 @@ static func apply(scene_root: Node) -> int:
 					return -1
 				layer.set_cell(cell, 0, Vector2i(TERRAINS.find(row[x]), 0))
 				changed += 1
+	var placed: int = _place_quest_givers(scene_root, layer, blocked)
+	if placed < 0:
+		return -1
+	changed += placed
 	var terrain: Callable = func(cell: Vector2i) -> String: return _terrain(layer, cell)
 	var keepers: Array = []
 	if scene_root.has_node("Townsfolk"):
@@ -128,6 +147,35 @@ static func apply(scene_root: Node) -> int:
 				keeper.position = position
 				keeper.set("facing", outward)
 				changed += 1
+	return changed
+
+
+## Creates missing QUEST_GIVERS markers and moves existing ones into place; -1 on a bad cell.
+static func _place_quest_givers(scene_root: Node, layer: TileMapLayer, blocked: Dictionary) -> int:
+	var changed: int = 0
+	var group: Node = scene_root.get_node("QuestGivers")
+	for entry: Array in QUEST_GIVERS:
+		var cell: Vector2i = entry[3]
+		var marker: Node2D = group.get_node_or_null(String(entry[0]))
+		var other: String = blocked.get(cell, "")
+		if not _terrain(layer, cell) in STANDING or _terrain(layer, cell).is_empty() or (not other.is_empty() and other != entry[0]):
+			push_error("%s cannot stand at %s" % [entry[1], cell])
+			return -1
+		if marker == null:
+			marker = Marker2D.new()
+			marker.name = String(entry[0])
+			marker.set_script(QUEST_SCRIPT)
+			group.add_child(marker)
+			marker.owner = scene_root
+		var position := Vector2((Vector2(cell) + Vector2(0.5, 0.5)) * TILE)
+		if marker.position != position or marker.get("facing") != entry[4] or marker.get("npc_name") != entry[1] \
+				or marker.get("place") != entry[2]:
+			marker.position = position
+			marker.set("facing", entry[4])
+			marker.set("npc_name", entry[1])
+			marker.set("place", entry[2])
+			changed += 1
+		blocked[cell] = String(entry[0])
 	return changed
 
 

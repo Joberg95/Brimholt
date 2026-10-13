@@ -625,13 +625,13 @@ func quest_local(npc: String, relic: String) -> void:
 
 # ---------------------------------------------------------------- town services
 
-func task_local(npc: String, action: String) -> void:
+func task_local(npc: String, task: String, action: String) -> void:
 	if not connected or self_id == 0:
 		return
 	if hosting:
-		_handle_task(1, npc, action)
+		_handle_task(1, npc, task, action)
 	else:
-		request_task.rpc_id(1, npc, action)
+		request_task.rpc_id(1, npc, task, action)
 
 
 func buy_local(npc: String, kind: String, count: int) -> void:
@@ -813,14 +813,14 @@ func _handle_quest(id: int, npc: Variant, relic: Variant) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func request_task(npc: Variant, action: Variant) -> void:
+func request_task(npc: Variant, task: Variant, action: Variant) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	if _valid_sender(sender):
-		_handle_task(sender, npc, action)
+		_handle_task(sender, npc, task, action)
 
 
-func _handle_task(id: int, npc: Variant, action: Variant) -> void:
-	var result: Dictionary = combat.task_action(id, npc, action, _now())
+func _handle_task(id: int, npc: Variant, task: Variant, action: Variant) -> void:
+	var result: Dictionary = combat.task_action(id, npc, task, action, _now())
 	if result["ok"]:
 		_handle_events(result["events"])
 	else:

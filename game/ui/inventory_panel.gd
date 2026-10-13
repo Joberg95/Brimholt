@@ -48,10 +48,6 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	for index: int in World.BACKPACK_MAX:
 		_add_slot(layer, {"type": "backpack", "index": index}, slot_position({"type": "backpack", "index": index}))
 	_build_stat_sheet(layer)
-	var hint: Label = _add_panel_label(layer, "Drag or right-click items and people.",
-		Layout.PANEL_ORIGIN + Vector2(0, 684))
-	hint.add_theme_font_size_override("font_size", 10)
-	hint.modulate = Color("#a7b0b8")
 
 
 func slot_position(location: Dictionary) -> Vector2:

@@ -87,8 +87,8 @@ from tier 20; each tier beats the one below; tier weapons keep about six hits pe
 level and vocation requirements, including swaps and the equip key; start kits; tier
 drops), and relics (twelve, bound, glow sheets, each the reward of exactly one boss quest
 and better than tier 45; boss health, lairs, slow respawns; trophies for attackers and
-nearby active helpers only; claiming at Ysolde with range, wrong boss, malformed, full
-backpack, and spent-trophy checks; no dropping and no loss on death), and the Hollow Reach (level 45-50 PvP zone, fully
+nearby active helpers only; one relic keeper per boss in Reedmere, claiming with range, the
+wrong keeper (who names the right one), malformed, full backpack, and spent-trophy checks; no dropping and no loss on death), and the Hollow Reach (level 45-50 PvP zone, fully
 themed, a single narrow gate, level 45+ spawns on open floor, Vaelith on the Sanctum floor
 and reachable on foot from Cinder Crossing, obsidian blocking movement and sight, full
 loot on death inside it while relics stay and other zones keep the 10% rule), boss raid
@@ -105,7 +105,10 @@ within range, reaches every kind, flashes only in storms, and is absent undergro
 in the desert), chasing and leashing (monsters outpace players, a level 1 and a level 40
 monster both catch a fleeing player, dragging past the leash or into a town resets them to full
 health, a monster going home cannot be hurt or re-pulled and fights again once home, and steps
-replicate their real duration), spell progression (every vocation unlocks three or more spells from level 15 including a
+replicate their real duration), dungeon tasks (a hunt and a boss task per dungeon, given by its stairway, every dungeon
+monster counting, experience and gold rewards, one giver per task), regions (every overworld
+tile located, level ranges covering their monsters, the desert, towns, PvP, and dungeons),
+spell progression (every vocation unlocks three or more spells from level 15 including a
 stronger strike, listed by level, fitting the bar), PvP (player hits scaled by `PVP_DAMAGE`,
 PvP combat starting for both players, reduced and fading healing, recovery after combat, and
 monster fights never counting), the monster catalog contract (ids, names, ranks, looks, sizes,
@@ -135,8 +138,8 @@ malformed travel requests. (The server test script carries the client to the doc
 instead of walking.) Then the server places a weak monster beside the client, which sends
 a malformed target, locks the monster, casts Piercing shot, and must see floating damage,
 the kill, its experience, and its cleared target; the late joiner must receive every
-monster in its snapshot. Finally the server grants a Kharzul trophy beside Ysolde: the
-client is refused Morvain's Tidebreaker, claims the Cinderheart bow, and cannot drop it.
+monster in its snapshot. Finally the server grants a Kharzul trophy in Reedmere: Ysolde
+refuses the Cinderheart bow and names Brannoc, who trades it; the client cannot drop it.
 The server then carries the client (hurt, with 200 extra gold) to the Cinder Crossing
 vendor, banker, and Warden Brask: the client is refused an unstocked relic and the sale of
 its bound bow, buys three health potions, drinks one, deposits gold, is refused an
@@ -202,8 +205,8 @@ then Reedmere to Blackreed Isle), the island's PvP banner, casting the spell in 
 bar slot 1 with its key (the bar holds spells only), and opening and closing the world map with its bound key.
 Key presses use the player's current bindings. Finally it spawns two monsters, locks one
 with a real left-click, and checks the red target square and a landed hit. Last, it
-right-clicks Ysolde, opens Quests, claims the Abyssal plate with a Morvain trophy (the other
-bosses' relics stay locked), and checks that the glow layer lights the relic-wearing
+right-clicks Ysolde, opens Quests, claims the Abyssal plate with a Morvain trophy (she offers
+exactly Morvain's relics), and checks that the glow layer lights the relic-wearing
 player, a relic on the ground, Morvain, and Kharzul (`visual-relics.png`). Then it opens the
 Cinder Crossing vendor's Trade window from the real menu, presses Buy 10 on health potions
 (`visual-trade.png`), drinks one with the potion key, opens the banker's Bank window,

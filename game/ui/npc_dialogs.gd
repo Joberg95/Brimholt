@@ -371,31 +371,46 @@ func _open_task(npc: String) -> void:
 	if not _begin(npc):
 		return
 	var giver: Dictionary = World.QUEST_GIVERS[npc]
-	var task: String = giver["task"]
-	var definition: Dictionary = Quests.TASKS[task]
 	var state: Dictionary = game.actors[game.self_id]["state"]
-	var monster: String = Monsters.MONSTERS[definition["monster"]]["name"].to_lower() + "s"
-	_label("%s, %s\n\"%s\"" % [giver["name"], giver["place"], definition["intro"]])
 	var tasks: Dictionary = state.get("tasks", {})
-	var pack: String = Quests.next_pack(state["equipment"].get("bag", ""))
-	if task in state.get("done_tasks", []):
-		_label("%s: done." % definition["title"], Color("#9fe07a"))
-	elif tasks.has(task):
-		var finished: bool = tasks[task] >= definition["count"]
-		_label("%s: %d/%d %s slain." % [definition["title"], tasks[task], definition["count"], monster],
-			Color("#9fe07a") if finished else Color("#ffcf6a"))
-		_button("Turn in the task", finished, func() -> void: game.task_local(npc, "complete"))
-	else:
-		_label("%s: slay %d %s and return to %s." % [definition["title"], definition["count"], monster, giver["name"]],
-			Color("#ffcf6a"))
-		_button("Accept the task", true, func() -> void: game.task_local(npc, "accept"))
-	if not pack.is_empty() and task not in state.get("done_tasks", []):
-		var reward: Label = _label("Reward: a %s (%d backpack slots)." % [World.ITEMS[pack]["name"],
-			mini(World.BACKPACK_MAX, World.BACKPACK_SIZE + World.ITEMS[pack]["slots"])], Color("#a7b0b8"))
-		reward.tooltip_text = game.inventory.item_tooltip(pack)
-		reward.mouse_filter = Control.MOUSE_FILTER_PASS
+	var done: Array = state.get("done_tasks", [])
+	var first: Dictionary = Quests.TASKS[giver["tasks"][0]]
+	_label("%s, %s\n\"%s\"" % [giver["name"], giver["place"], first["intro"]])
+	for task: String in giver["tasks"]:
+		var definition: Dictionary = Quests.TASKS[task]
+		var target: String = Quests.target_name(task)
+		if task != giver["tasks"][0] and task not in done:
+			_label("\"%s\"" % definition["intro"], Color("#a7b0b8"))
+		if task in done:
+			_label("%s: done." % definition["title"], Color("#9fe07a"))
+			continue
+		if tasks.has(task):
+			var finished: bool = tasks[task] >= definition["count"]
+			_label("%s: %d/%d %s slain." % [definition["title"], tasks[task], definition["count"], target],
+				Color("#9fe07a") if finished else Color("#ffcf6a"))
+			_button("Turn in: %s" % definition["title"], finished, func() -> void: game.task_local(npc, task, "complete"))
+		else:
+			_label("%s: slay %s and return to %s." % [definition["title"],
+				target if definition["count"] == 1 else "%d %s" % [definition["count"], target], giver["name"]], Color("#ffcf6a"))
+			_button("Accept: %s" % definition["title"], true, func() -> void: game.task_local(npc, task, "accept"))
+		_reward_label(task, state)
 	_farewell()
 	_show(npc, "quests")
+
+
+## What a task pays: the next pack, or experience and gold.
+func _reward_label(task: String, state: Dictionary) -> void:
+	var reward: Dictionary = Quests.reward(task)
+	if not reward.is_empty():
+		_label("Reward: %d experience and %d gold." % [reward["experience"], reward["gold"]], Color("#a7b0b8"))
+		return
+	var pack: String = Quests.next_pack(state["equipment"].get("bag", ""))
+	if pack.is_empty():
+		return
+	var line: Label = _label("Reward: a %s (%d backpack slots)." % [World.ITEMS[pack]["name"],
+		mini(World.BACKPACK_MAX, World.BACKPACK_SIZE + World.ITEMS[pack]["slots"])], Color("#a7b0b8"))
+	line.tooltip_text = game.inventory.item_tooltip(pack)
+	line.mouse_filter = Control.MOUSE_FILTER_PASS
 
 
 ## A quest giver: their hunting task, or the Relic keeper's quests (one per final boss, with
@@ -405,7 +420,7 @@ func open_quests(npc: String) -> void:
 	var self_id: int = game.self_id
 	if not actors.has(self_id) or not World.QUEST_GIVERS.has(npc):
 		return
-	if not World.QUEST_GIVERS[npc]["task"].is_empty():
+	if not World.QUEST_GIVERS[npc]["tasks"].is_empty():
 		_open_task(npc)
 		return
 	var keeper: Dictionary = World.QUEST_GIVERS[npc]
@@ -415,15 +430,14 @@ func open_quests(npc: String) -> void:
 	for child: Node in list.get_children():
 		child.queue_free()
 	var title := Label.new()
-	title.text = "%s, Relic keeper\n\"Bring me proof of a fallen titan and I will forge you a relic.\"" % keeper["name"]
+	title.text = "%s, %s\n\"Bring me proof that %s has fallen and I will forge you a relic.\"" % [keeper["name"], keeper["place"],
+		Monsters.MONSTERS[keeper["boss"]]["name"]]
 	list.add_child(title)
 	var state: Dictionary = actors[self_id]["state"]
 	var trophies: Dictionary = state.get("trophies", {})
 	var room: bool = state.get("backpack", []).has("")
-	for boss: String in Monsters.MONSTERS:
+	for boss: String in [keeper["boss"]]:
 		var definition: Dictionary = Monsters.MONSTERS[boss]
-		if not definition.has("relics"):
-			continue
 		var heading := Label.new()
 		heading.text = "Slay %s  —  trophies: %d" % [definition["name"], trophies.get(boss, 0)]
 		heading.add_theme_color_override("font_color", Color("#ffcf6a") if trophies.get(boss, 0) > 0 else Color("#a7b0b8"))

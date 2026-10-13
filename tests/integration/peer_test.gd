@@ -369,7 +369,7 @@ func _dedicated_host_tick() -> void:
 	if saw_voyage and sparring != 0 and not game.world.monsters.has(sparring) and not quest_ready:
 		for id: int in game.world.players:
 			var player: Dictionary = game.world.players[id]
-			var beside: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"] + Vector2i.DOWN
+			var beside: Vector2i = World.QUEST_GIVERS["relic_keeper_kharzul"]["cell"] + Vector2i.DOWN
 			player["trophies"] = {"kharzul": 1}
 			player["cell"] = beside
 			player["from"] = beside
@@ -510,13 +510,14 @@ func _dedicated_client_tick(now: float) -> void:
 			if not game.monsters.has(sparring) and state(own)["experience"] > 0 and state(own)["target"] == 0 and saw_hit:
 				advance()
 		17:
-			var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"]
+			var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper_kharzul"]["cell"]
 			if state(own)["trophies"].get("kharzul", 0) == 1 and World.chebyshev(state(own)["cell"], keeper) <= World.TALK_RANGE:
-				game.quest_local("relic_keeper", "tidebreaker")
+				# Ysolde keeps only Morvain's relics and sends the client to Brannoc.
+				game.quest_local("relic_keeper", "cinderheart_bow")
 				advance()
 		18:
-			if game.last_action_message == "Slay Morvain the Drowned first":
-				game.quest_local("relic_keeper", "cinderheart_bow")
+			if game.last_action_message.begins_with("Ysolde only keeps"):
+				game.quest_local("relic_keeper_kharzul", "cinderheart_bow")
 				advance()
 		19:
 			var relic: int = state(own)["backpack"].find("cinderheart_bow")
@@ -563,7 +564,7 @@ func _dedicated_client_tick(now: float) -> void:
 		28:
 			if state(own)["depot"][0] == "health_potion#2" and not state(own)["backpack"].has("health_potion#2") \
 					and World.chebyshev(state(own)["cell"], World.npc("warden_brask")["cell"]) <= World.TALK_RANGE:
-				game.task_local("warden_brask", "accept")
+				game.task_local("warden_brask", "boar_cull", "accept")
 				advance()
 		29:
 			if state(own)["tasks"].get("boar_cull", -1) == 0 and game.last_action_message.begins_with("Boar cull"):

@@ -25,10 +25,12 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
    `game/data/monsters.gd`, level (1–50), count, and spawn radius.
    The three final-boss lairs (`MorvainLair`, `KharzulLair`, `SylvaineLair`) are spawns
    too: count 1, radius 1, level 50.
-7. **Quest givers**: nodes under `QuestGivers` with a name, place, facing, and `task` (a
-   `game/data/quests.gd` id). The node name is the id; `relic_keeper` is Ysolde (no task),
-   who trades boss trophies for relics. Like ferrymen, they block their tile and answer
-   within 2 tiles.
+7. **Quest givers**: nodes under `QuestGivers` with a name, place, and facing. The node name is
+   the id: a giver offers every task in `game/data/quests.gd` whose `giver` is that id, and
+   a relic keeper trades the trophies of the boss `Quests.RELIC_KEEPERS` assigns to it. Like
+   ferrymen, they block their tile and answer within 2 tiles. `make towns` places the relic
+   keepers in Reedmere and the dungeon task givers by their stairways (`QUEST_GIVERS` in
+   `tools/generators/towns.gd`).
 9. **Dungeon entrances**: nodes under `DungeonEntrances`, with `dungeon` set to a
    `game/data/dungeons.gd` id. Keep them inside a town zone.
 8. **Townsfolk**: vendors and the banker, nodes under `Townsfolk` with a name, place, facing,
@@ -65,6 +67,12 @@ most of the surroundings are sand become sand (`:`) or cactus scrub (`K`, a bloc
 sand). It repeats until nothing changes, so re-running it is harmless, and it never touches
 water, walls, roads, towns, spawns, or items. Paint `K` by hand for single cacti. Sand next to
 grass draws a dry-grass fringe automatically.
+
+**Regions** are defined in `game/data/regions.gd`: a name, an anchor tile, and a one-line
+description. Every overworld tile belongs to the nearest anchor (the desert is always the
+Sunscar Dunes); towns and the PvP zones keep their own zones on top. Levels are not stored:
+`World` derives each region's range from the monster spawns inside it (bosses excluded). Move
+an anchor to reshape regions; add one to split a region.
 
 **Buildings** are found from the walls: a room of at most 48 tiles in a town zone, enclosed
 by `#` walls and doors (an open tile between two walls in a line). They get a roof, and

@@ -557,15 +557,16 @@ func _award_trophies(boss: String, fought: Dictionary, events: Array) -> void:
 			continue
 		var player: Dictionary = world.players[id]
 		player["trophies"][boss] = player["trophies"].get(boss, 0) + 1
-		events.append({"kind": "message", "id": id, "text": "You helped slay %s. Claim a relic from %s." % [name, relic_keeper_text()]})
+		events.append({"kind": "message", "id": id, "text": "You helped slay %s. Claim a relic from %s." % [name, relic_keeper_text(boss)]})
 		events.append({"kind": "player", "id": id})
 
 
-static func relic_keeper_text() -> String:
+## Who trades `boss`'s trophies for relics, for messages ("Ysolde in Reedmere").
+static func relic_keeper_text(boss: String) -> String:
 	for id: String in World.QUEST_GIVERS:
-		if World.QUEST_GIVERS[id]["task"].is_empty():
+		if World.QUEST_GIVERS[id]["boss"] == boss:
 			return "%s in %s" % [World.QUEST_GIVERS[id]["name"], World.QUEST_GIVERS[id]["place"]]
-	return "the Relic keeper"
+	return "the relic keepers"
 
 
 ## The boss whose quest rewards a relic, or "".
@@ -580,7 +581,7 @@ static func relic_boss(relic: String) -> String:
 func claim_relic(id: int, npc: Variant, relic: Variant, _now: float) -> Dictionary:
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player", "events": []}
-	if typeof(npc) != TYPE_STRING or not World.QUEST_GIVERS.has(npc) or not World.QUEST_GIVERS[npc]["task"].is_empty():
+	if typeof(npc) != TYPE_STRING or not World.QUEST_GIVERS.has(npc) or World.QUEST_GIVERS[npc]["boss"].is_empty():
 		return {"ok": false, "reason": "Unknown quest giver", "events": []}
 	var player: Dictionary = world.players[id]
 	var keeper: Dictionary = World.QUEST_GIVERS[npc]
@@ -589,6 +590,9 @@ func claim_relic(id: int, npc: Variant, relic: Variant, _now: float) -> Dictiona
 	var boss: String = relic_boss(relic) if typeof(relic) == TYPE_STRING else ""
 	if boss.is_empty():
 		return {"ok": false, "reason": "Unknown relic", "events": []}
+	if boss != keeper["boss"]:
+		return {"ok": false, "reason": "%s only keeps %s's relics; see %s" % [keeper["name"],
+			Monsters.MONSTERS[keeper["boss"]]["name"], relic_keeper_text(boss)], "events": []}
 	if player["trophies"].get(boss, 0) <= 0:
 		return {"ok": false, "reason": "Slay %s first" % Monsters.MONSTERS[boss]["name"], "events": []}
 	var slot: int = player["backpack"].find("")
@@ -607,39 +611,50 @@ func claim_relic(id: int, npc: Variant, relic: Variant, _now: float) -> Dictiona
 
 ## Accepts ("accept") or turns in ("complete") the hunting task of a quest giver in range.
 ## Turning in a finished task replaces your pack with the next, bigger one.
-func task_action(id: int, npc: Variant, action: Variant, _now: float) -> Dictionary:
+func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: float) -> Dictionary:
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player", "events": []}
 	var player: Dictionary = world.players[id]
-	if not World.serves(npc, "quests", player["cell"]) or World.QUEST_GIVERS[npc]["task"].is_empty():
+	if not World.serves(npc, "quests", player["cell"]) or World.QUEST_GIVERS[npc]["tasks"].is_empty():
 		return {"ok": false, "reason": "Walk closer to a quest giver", "events": []}
-	var task: String = World.QUEST_GIVERS[npc]["task"]
+	if typeof(task) != TYPE_STRING or task not in World.QUEST_GIVERS[npc]["tasks"]:
+		return {"ok": false, "reason": "%s has no such task" % World.QUEST_GIVERS[npc]["name"], "events": []}
 	var definition: Dictionary = Quests.TASKS[task]
 	var giver: String = World.QUEST_GIVERS[npc]["name"]
 	if player["done_tasks"].has(task):
 		return {"ok": false, "reason": "You already finished %s" % definition["title"], "events": []}
-	var monster: String = Monsters.MONSTERS[definition["monster"]]["name"]
+	var target: String = Quests.target_name(task)
 	var text: String = ""
+	var events: Array = [{"kind": "player", "id": id}]
 	match action:
 		"accept":
 			if player["tasks"].has(task):
 				return {"ok": false, "reason": "You are already on that task", "events": []}
 			player["tasks"][task] = 0
-			text = "%s: slay %d %ss, then return to %s." % [definition["title"], definition["count"], monster.to_lower(), giver]
+			text = "%s: slay %s, then return to %s." % [definition["title"],
+				target if definition["count"] == 1 else "%d %s" % [definition["count"], target], giver]
 		"complete":
 			if player["tasks"].get(task, 0) < definition["count"]:
-				return {"ok": false, "reason": "Slay %d %ss first" % [definition["count"], monster.to_lower()], "events": []}
-			var pack: String = Quests.next_pack(player["equipment"].get("bag", ""))
+				return {"ok": false, "reason": "Slay %s first" % (target if definition["count"] == 1
+					else "%d %s" % [definition["count"], target]), "events": []}
 			player["tasks"].erase(task)
 			player["done_tasks"][task] = true
-			if pack.is_empty():
-				text = "%s thanks you. Your pack is already the largest there is." % giver
+			if definition["reward"] == "experience":
+				var reward: Dictionary = Quests.reward(task)
+				player["gold"] += reward["gold"]
+				text = "%s rewards you with %d gold." % [giver, reward["gold"]]
+				grant_experience(id, reward["experience"], events)
 			else:
-				world.wear_pack(id, pack)
-				text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], player["backpack"].size()]
+				var pack: String = Quests.next_pack(player["equipment"].get("bag", ""))
+				if pack.is_empty():
+					text = "%s thanks you. Your pack is already the largest there is." % giver
+				else:
+					world.wear_pack(id, pack)
+					text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], player["backpack"].size()]
 		_:
 			return {"ok": false, "reason": "Unknown task request", "events": []}
-	return {"ok": true, "events": [{"kind": "player", "id": id}, {"kind": "message", "id": id, "text": text}]}
+	events.append({"kind": "message", "id": id, "text": text})
+	return {"ok": true, "events": events}
 
 
 func _credit_tasks(kind: String, credited: Array[int], events: Array) -> void:
@@ -647,7 +662,7 @@ func _credit_tasks(kind: String, credited: Array[int], events: Array) -> void:
 		var tasks: Dictionary = world.players[id]["tasks"]
 		for task: String in tasks:
 			var definition: Dictionary = Quests.TASKS[task]
-			if definition["monster"] == kind and tasks[task] < definition["count"]:
+			if Quests.counts(task, kind) and tasks[task] < definition["count"]:
 				tasks[task] += 1
 				var done: bool = tasks[task] == definition["count"]
 				events.append({"kind": "message", "id": id, "text": "%s: %d/%d%s" % [definition["title"], tasks[task],

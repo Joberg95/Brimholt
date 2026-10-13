@@ -787,18 +787,17 @@ func _check_relics() -> bool:
 			"Choosing Quests did not open the relic quests"):
 		return false
 	var claim: Button = null
+	var offered: int = 0
 	var locked: int = 0
 	for child: Node in game._travel_list.get_children():
 		if child is Button and child.text.contains("Abyssal plate"):
 			claim = child
-		elif child is Button and child.text.contains("Claim") and child.disabled:
-			locked += 1
-	var others: int = 0
-	for boss: String in Monsters.MONSTERS:
-		if boss != "morvain":
-			others += Monsters.MONSTERS[boss].get("relics", []).size()
-	if not _expect(claim != null and not claim.disabled and locked == others,
-			"The quest window should offer Morvain's relics and lock the bosses you have not slain"):
+		if child is Button and child.text.contains("Claim"):
+			offered += 1
+			locked += 1 if child.disabled else 0
+	# Ysolde keeps only Morvain's relics; the other bosses have their own keepers in Reedmere.
+	if not _expect(claim != null and not claim.disabled and locked == 0 and offered == Monsters.MONSTERS["morvain"]["relics"].size(),
+			"Ysolde's quest window should offer exactly Morvain's relics"):
 		return false
 	claim.pressed.emit()
 	await process_frame
@@ -1006,6 +1005,9 @@ func _check_weather_and_desert() -> bool:
 		var pixel: Color = desert.get_pixelv(Vector2i(origin) + Vector2i(0, dy))
 		plant_drawn = plant_drawn or (pixel.g > pixel.r and pixel.g > pixel.b + 0.05)
 	Weather.override = "clear"
+	var location: String = game.hud.location_label.text
+	if not _expect(location.begins_with("Sunscar Dunes · levels "), "The location line should name the desert and its levels (%s)" % location):
+		return false
 	return _expect(not game._view.rain.visible, "It must not rain in the desert") \
 		and _expect(plant_drawn and sand.r > sand.b + 0.1, "Desert plants must stand on sand")
 

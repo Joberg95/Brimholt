@@ -16,6 +16,7 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const Instances = preload("res://game/core/instances.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
+const Regions = preload("res://game/data/regions.gd")
 const SpriteArtSheets = preload("res://game/render/sprite_art.gd")
 var failures: int = 0
 var checks: int = 0
@@ -56,6 +57,7 @@ func _run() -> void:
 	_chase_checks()
 	_monster_catalog_checks()
 	_pvp_and_spell_checks()
+	_dungeon_task_and_region_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -1345,6 +1347,17 @@ func _relic_quest_checks() -> void:
 		"the Relic keeper offers quests")
 	var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"]
 	check(not World.walkable(keeper) and World.NPC_CELLS.get(keeper, "") == "relic_keeper", "the Relic keeper blocks her tile")
+	var kept: Array = []
+	for giver: String in World.QUEST_GIVERS:
+		var boss_kept: String = World.QUEST_GIVERS[giver]["boss"]
+		if not boss_kept.is_empty():
+			check(boss_kept not in kept and Monsters.MONSTERS[boss_kept]["rank"] == "boss" and World.QUEST_GIVERS[giver]["tasks"].is_empty()
+				and World.QUEST_GIVERS[giver]["place"] == "Reedmere" and World.zone_at(World.QUEST_GIVERS[giver]["cell"]).get("name", "") == "Reedmere",
+				"%s keeps one boss's relics in Reedmere, the middle town" % giver)
+			kept.append(boss_kept)
+	for kind: String in Monsters.MONSTERS:
+		if Monsters.MONSTERS[kind]["rank"] == "boss":
+			check(kind in kept, "%s has a relic keeper" % kind)
 	var world := World.new()
 	var combat := Combat.new(world, 8)
 	world.monsters.clear()
@@ -1394,13 +1407,15 @@ func _relic_quest_checks() -> void:
 	var backpack: Array = world.players[4]["backpack"]
 	var saved: Array = backpack.duplicate()
 	backpack.fill("glowcap")
-	check(combat.claim_relic(4, "relic_keeper", "cinderheart_bow", 101.0)["reason"] == "Your backpack is full"
+	check(combat.claim_relic(4, "relic_keeper", "cinderheart_bow", 101.0)["reason"].begins_with("Ysolde only keeps Morvain the Drowned's relics; see Brannoc"),
+		"each relic keeper trades one boss's relics and points to the right keeper")
+	check(combat.claim_relic(4, "relic_keeper_kharzul", "cinderheart_bow", 101.0)["reason"] == "Your backpack is full"
 		and world.players[4]["trophies"] == {"kharzul": 1}, "a full backpack keeps the trophy")
 	backpack.assign(saved)
-	var claimed: Dictionary = combat.claim_relic(4, "relic_keeper", "cinderheart_bow", 101.0)
+	var claimed: Dictionary = combat.claim_relic(4, "relic_keeper_kharzul", "cinderheart_bow", 101.0)
 	check(claimed["ok"] and backpack.has("cinderheart_bow") and world.players[4]["trophies"].is_empty(),
 		"a trophy becomes the relic of your choice")
-	check(combat.claim_relic(4, "relic_keeper", "molten_heart", 102.0)["reason"] == "Slay Kharzul the Cinder Colossus first",
+	check(combat.claim_relic(4, "relic_keeper_kharzul", "molten_heart", 102.0)["reason"] == "Slay Kharzul the Cinder Colossus first",
 		"each trophy is spent once")
 	# Bound: no dropping, no losing on death.
 	var player: Dictionary = world.players[4]
@@ -1454,17 +1469,22 @@ func _town_checks() -> void:
 	check(banks == ["Reedmere"] and World.bank_place() == "Reedmere", "Reedmere is the only bank town (%s)" % [banks])
 	var givers: Dictionary = {}
 	for id: String in World.QUEST_GIVERS:
-		var giver_task: String = World.QUEST_GIVERS[id]["task"]
-		if not giver_task.is_empty():
-			check(Quests.TASKS.has(giver_task), "%s gives a known task" % id)
+		for giver_task: String in World.QUEST_GIVERS[id]["tasks"]:
+			check(Quests.TASKS.has(giver_task) and Quests.TASKS[giver_task]["giver"] == id, "%s gives a known task" % id)
 			check(World.zone_at(World.QUEST_GIVERS[id]["cell"]).get("town", false), "%s stands in a town" % id)
 			givers[giver_task] = id
+	var packs: int = 0
 	for task: String in Quests.TASKS:
+		var definition: Dictionary = Quests.TASKS[task]
 		check(givers.has(task), "%s has a quest giver" % task)
-		var monster: String = Quests.TASKS[task]["monster"]
-		check(not World.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return spawn["monster"] == monster).is_empty(),
-			"%s hunts a monster that spawns" % task)
-	check(Quests.TASKS.size() == Quests.PACKS.size(), "one pack per town task")
+		var placed: bool = Quests.monster_level(definition["monster"]) > 0 or not World.MONSTER_SPAWNS.filter(
+			func(spawn: Dictionary) -> bool: return spawn["monster"] == definition["monster"]).is_empty()
+		check(placed, "%s hunts a monster that spawns" % task)
+		for kind: String in definition.get("also", []):
+			check(Monsters.MONSTERS.has(kind) and Quests.counts(task, kind), "%s also counts %s" % [task, kind])
+		check(definition["reward"] in ["pack", "experience"], "%s has a reward" % task)
+		packs += 1 if definition["reward"] == "pack" else 0
+	check(packs == Quests.PACKS.size(), "one pack per town task")
 	var last_slots: int = World.BACKPACK_SIZE
 	for pack: String in Quests.PACKS:
 		var slots: int = World.BACKPACK_SIZE + World.ITEMS[pack]["slots"]
@@ -1622,16 +1642,18 @@ func _town_checks() -> void:
 
 	# Town tasks.
 	var giver: String = "warden_brask"
-	var task: String = World.QUEST_GIVERS[giver]["task"]
+	var task: String = World.QUEST_GIVERS[giver]["tasks"][0]
 	var count: int = Quests.TASKS[task]["count"]
 	var hunted: String = Quests.TASKS[task]["monster"]
-	check(combat.task_action(1, giver, "accept", tick.call())["reason"] == "Walk closer to a quest giver", "tasks need the giver nearby")
+	check(combat.task_action(1, giver, task, "accept", tick.call())["reason"] == "Walk closer to a quest giver", "tasks need the giver nearby")
 	_place(world, 1, _beside(giver))
-	check(not combat.task_action(1, giver, "dance", tick.call())["ok"] and not combat.task_action(1, 7, "accept", tick.call())["ok"]
-		and not combat.task_action(1, "relic_keeper", "accept", tick.call())["ok"], "malformed task requests rejected")
-	check(combat.task_action(1, giver, "complete", tick.call())["reason"].begins_with("Slay"), "a task must be accepted and finished")
-	check(combat.task_action(1, giver, "accept", tick.call())["ok"] and player["tasks"] == {task: 0}, "accepting a task")
-	check(not combat.task_action(1, giver, "accept", tick.call())["ok"], "a task is accepted once")
+	check(not combat.task_action(1, giver, task, "dance", tick.call())["ok"] and not combat.task_action(1, 7, task, "accept", tick.call())["ok"]
+		and not combat.task_action(1, "relic_keeper", task, "accept", tick.call())["ok"]
+		and not combat.task_action(1, giver, "rat_king", "accept", tick.call())["ok"] and not combat.task_action(1, giver, 3, "accept", tick.call())["ok"],
+		"malformed task requests rejected, and givers only offer their own tasks")
+	check(combat.task_action(1, giver, task, "complete", tick.call())["reason"].begins_with("Slay"), "a task must be accepted and finished")
+	check(combat.task_action(1, giver, task, "accept", tick.call())["ok"] and player["tasks"] == {task: 0}, "accepting a task")
+	check(not combat.task_action(1, giver, task, "accept", tick.call())["ok"], "a task is accepted once")
 	check(not combat.claim_relic(1, giver, "tidebreaker", tick.call())["ok"], "task givers do not hand out relics")
 	var field := Vector2i(9, 10)
 	_place(world, 1, field + Vector2i(1, 0))
@@ -1647,21 +1669,21 @@ func _town_checks() -> void:
 	check(player["tasks"][task] == count and world.players[2]["tasks"][task] == 0,
 		"kills count up to the goal, and only for players who earned the kill")
 	_place(world, 1, _beside(giver))
-	var turned: Dictionary = combat.task_action(1, giver, "complete", tick.call())
+	var turned: Dictionary = combat.task_action(1, giver, task, "complete", tick.call())
 	check(turned["ok"] and player["equipment"]["bag"] == Quests.PACKS[0] and backpack.size() == World.BACKPACK_SIZE + 4
 		and not player["tasks"].has(task) and player["done_tasks"].has(task), "finishing a task gives the first pack")
 	check(world.export_player(1, 0.0, true)["backpack"].size() == backpack.size() and task in world.export_player(1, 0.0, true)["done_tasks"],
 		"the bigger backpack and finished tasks replicate to the owner")
 	check(world.move_item(1, slot0, {"type": "backpack", "index": backpack.size() - 1}, tick.call())["reason"] == "There is no item there",
 		"new pack slots are usable")
-	check(not combat.task_action(1, giver, "accept", tick.call())["ok"], "a finished task cannot be repeated")
+	check(not combat.task_action(1, giver, task, "accept", tick.call())["ok"], "a finished task cannot be repeated")
 	for target: Variant in [slot0, {"type": "ground", "cell": player["cell"] + Vector2i.DOWN}, {"type": "backpack"}]:
 		check(world.move_item(1, {"type": "equipment", "slot": "bag"}, target, tick.call())["reason"] == "Your pack stays on your back",
 			"packs cannot be taken off")
 	check(world.toggle_equipment(1, "bag", tick.call())["reason"] == "Your pack stays on your back", "the pack key does nothing")
 	world.players[1]["done_tasks"].erase(task)
 	world.players[1]["tasks"][task] = count
-	check(combat.task_action(1, giver, "complete", tick.call())["ok"] and player["equipment"]["bag"] == Quests.PACKS[1]
+	check(combat.task_action(1, giver, task, "complete", tick.call())["ok"] and player["equipment"]["bag"] == Quests.PACKS[1]
 		and backpack.size() == World.BACKPACK_SIZE + World.ITEMS[Quests.PACKS[1]]["slots"], "the next task upgrades the pack")
 
 	# Potions.
@@ -2392,6 +2414,93 @@ func _pvp_and_spell_checks() -> void:
 	check(world.players[2]["health"] == before + roundi(100 * Balance.PVP_HEALING), "inside PvP combat heals are reduced")
 	combat._damage(1, vole, 1, "damage", later + 20.0, events_pvp)
 	check(combat.healing_factor(1, later + 20.0) == 1.0, "fighting monsters is never PvP combat")
+
+
+## Dungeon hunting and boss tasks, their givers by the stairways, and named regions.
+func _dungeon_task_and_region_checks() -> void:
+	for dungeon: String in Dungeons.DUNGEONS:
+		var definition: Dictionary = Dungeons.DUNGEONS[dungeon]
+		var boss: String = definition["monsters"][definition["boss"]][0]
+		var hunted: Array = []
+		var boss_task: String = ""
+		for task: String in Quests.TASKS:
+			if Quests.monster_level(Quests.TASKS[task]["monster"]) == 0:
+				continue
+			if Quests.dungeon_of(task) != dungeon:
+				continue
+			if Quests.TASKS[task]["monster"] == boss:
+				boss_task = task
+			else:
+				hunted.append(task)
+		check(not boss_task.is_empty() and Quests.TASKS[boss_task]["count"] == 1 and hunted.size() >= 1,
+			"%s has a hunting task and a boss task" % dungeon)
+		var stairway_giver: Dictionary = World.QUEST_GIVERS.get(Quests.TASKS[boss_task]["giver"] if not boss_task.is_empty() else "", {})
+		check(not stairway_giver.is_empty() and World.chebyshev(stairway_giver["cell"], World.ENTRANCE_OF[dungeon]) <= 6
+			and stairway_giver["place"] == definition["town"], "%s's tasks are given by its stairway in %s" % [dungeon, definition["town"]])
+		for task: String in hunted + [boss_task]:
+			var reward: Dictionary = Quests.reward(task)
+			check(reward.get("experience", 0) > 0 and reward.get("gold", 0) > 0 and reward["gold"] % 5 == 0,
+				"%s pays experience and gold" % task)
+		for symbol: String in definition["monsters"]:
+			var kind: String = definition["monsters"][symbol][0]
+			check(kind == boss or hunted.any(func(task: String) -> bool: return Quests.counts(task, kind)),
+				"every %s monster counts toward a task" % dungeon)
+	check(Quests.reward("rat_king")["experience"] == Balance.mob_experience(9, "champion"), "a boss task doubles the boss's experience")
+	# Playing the cellar tasks.
+	var world := World.new()
+	var combat := Combat.new(world, 12)
+	world.monsters.clear()
+	world.add_player(1, 0.0, "knight")
+	var player: Dictionary = world.players[1]
+	var giver: String = "cellarmaster_pell"
+	_place(world, 1, _beside(giver))
+	check(combat.task_action(1, giver, "cellar_vermin", "accept", 1.0)["ok"] and combat.task_action(1, giver, "rat_king", "accept", 1.0)["ok"],
+		"one giver offers both cellar tasks")
+	var copy: Vector2i = Dungeons.origin("cinder_cellar", 0) + Dungeons.cells("cinder_cellar", "@")[0]
+	_place(world, 1, copy)
+	var kills: int = 0
+	for kind: String in ["sewer_rat", "giant_rat", "giant_rat", "sewer_rat"]:
+		var rat: int = combat.spawn_monster(kind, 3, copy + Vector2i(1, 0), 2.0)
+		combat._damage(1, rat, 9999999, "damage", 2.0 + kills, [])
+		kills += 1
+	check(player["tasks"]["cellar_vermin"] == 4, "sewer and giant rats both count")
+	player["tasks"]["cellar_vermin"] = Quests.TASKS["cellar_vermin"]["count"]
+	var king: int = combat.spawn_monster("rat_king", 9, copy + Vector2i(1, 0), 10.0)
+	combat._damage(1, king, 99999999, "damage", 10.0, [])
+	check(player["tasks"]["rat_king"] == 1, "slaying the Rat King counts for the boss task")
+	_place(world, 1, _beside(giver))
+	var gold: int = player["gold"]
+	var before: int = Combat.total_experience(player["level"], player["experience"])
+	check(combat.task_action(1, giver, "cellar_vermin", "complete", 11.0)["ok"] and player["gold"] == gold + Quests.reward("cellar_vermin")["gold"]
+		and Combat.total_experience(player["level"], player["experience"]) == before + Quests.reward("cellar_vermin")["experience"],
+		"turning in a dungeon hunt pays its experience and gold")
+	check(combat.task_action(1, giver, "rat_king", "complete", 12.0)["ok"] and player["done_tasks"].has("rat_king")
+		and not player["equipment"].has("bag"), "the boss task pays out without a pack")
+	check(not combat.task_action(1, giver, "rat_king", "accept", 13.0)["ok"], "a boss task is done once")
+	check(not combat.task_action(1, "sexton_wren", "cellar_vermin", "accept", 13.0)["ok"], "only the right giver offers a task")
+	# Regions: every overworld land tile is named, with levels from the monsters placed there.
+	for name: String in World.REGION_NAMES:
+		check(World.REGION_INFO.has(name) and not Regions.description(name).is_empty(), "%s is described" % name)
+		var info: Dictionary = World.REGION_INFO[name]
+		check(info["max_level"] >= info["min_level"] and info["max_level"] <= 45, "%s has a level range from its monsters" % name)
+	check(World.REGION_INFO["Cinder Meadows"]["min_level"] == 1 and World.region_at(World.SPAWNS[0] + Vector2i(30, 25)) == "Cinder Meadows",
+		"the starting fields are Cinder Meadows, from level 1")
+	check(World.region_at(Biomes.DESERT_CENTRE) == Regions.DESERT, "the desert is the Sunscar Dunes")
+	var unnamed: int = 0
+	for y: int in range(0, World.OVERWORLD.size.y, 7):
+		for x: int in range(0, World.OVERWORLD.size.x, 7):
+			if World.terrain(Vector2i(x, y)) in World.LAND and World.location_at(Vector2i(x, y)).is_empty():
+				unnamed += 1
+	check(unnamed == 0, "every overworld tile has a location")
+	check(World.location_at(World.SPAWNS[0])["kind"] == "town" and World.location_at(World.SPAWNS[0])["min_level"] == 0,
+		"towns show as safe")
+	check(World.location_at(Vector2i(200, 190))["kind"] == "pvp", "Blackreed Isle shows as PvP")
+	check(World.location_at(Dungeons.origin("cinder_cellar", 0) + Vector2i(2, 2))["kind"] == "dungeon"
+		and World.region_at(Dungeons.origin("cinder_cellar", 0)).is_empty(), "dungeon copies are not regions")
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var place: Dictionary = World.location_at(spawn["cell"])
+		if place.get("kind", "") == "region" and Monsters.MONSTERS[spawn["monster"]]["rank"] != "boss":
+			check(spawn["level"] >= place["min_level"] and spawn["level"] <= place["max_level"], "region levels cover their monsters")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:
