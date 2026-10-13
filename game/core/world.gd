@@ -534,7 +534,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"target": 0, "next_attack": now, "next_regen": now, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {},
-				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {},
+				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "pvp_until": -INF, "pvp_since": -INF,
 			}
 			var limits: Dictionary = stats(1, {}, vocation)
 			players[id]["health"] = limits["health"]

@@ -63,7 +63,7 @@ tests/
   visual/                Offscreen rendering checks
 tools/
   generators/            make_sprites.py, make_map.gd, endgame_zone.gd, dungeons.gd, desert.gd, towns.gd, balance_table.gd, gear_table.gd
-  testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd
+  testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd
 docs/                    Gameplay, world editing, art, balance, testing, this file
 .tools/                  Ignored: test reports, captures, downloads
 ```

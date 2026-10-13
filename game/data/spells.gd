@@ -27,14 +27,44 @@ const SPELLS: Dictionary = {
 		"power": 1.6, "mana": 0.06, "cooldown": 2.0, "group": "attack", "color": Color("#8ad0ff")},
 	"mend": {"name": "Mend", "vocations": ["druid"], "level": 1, "kind": "heal_self", "power": 0.35, "mana": 0.1,
 		"cooldown": 1.0, "group": "healing", "color": Color("#7fe08a")},
+	# Higher-level spells: each vocation unlocks a stronger strike around level 15-20, another at 30,
+	# and a signature spell at 40-45, so damage (or a druid's group healing) keeps growing with level.
+	"rending_cut": {"name": "Rending cut", "vocations": ["knight"], "level": 20, "kind": "target", "range": 1,
+		"power": 2.8, "mana": 0.15, "cooldown": 6.0, "group": "attack", "color": Color("#d89a5a")},
+	"sundering_blow": {"name": "Sundering blow", "vocations": ["knight"], "level": 30, "kind": "target", "range": 1,
+		"power": 3.8, "mana": 0.2, "cooldown": 10.0, "group": "attack", "color": Color("#c8703a")},
+	"earthshaker": {"name": "Earthshaker", "vocations": ["knight"], "level": 40, "kind": "area_self", "radius": 2,
+		"power": 2.0, "mana": 0.3, "cooldown": 14.0, "group": "attack", "color": Color("#b89a6a")},
+	"arrow_volley": {"name": "Arrow volley", "vocations": ["paladin"], "level": 15, "kind": "area_target", "range": 6,
+		"radius": 1, "power": 1.6, "mana": 0.15, "cooldown": 8.0, "group": "attack", "color": Color("#e8d8a0")},
+	"radiant_arrow": {"name": "Radiant arrow", "vocations": ["paladin"], "level": 30, "kind": "target", "range": 6,
+		"power": 3.2, "mana": 0.15, "cooldown": 8.0, "group": "attack", "color": Color("#fff0a0")},
+	"sunlance_barrage": {"name": "Sunlance barrage", "vocations": ["paladin"], "level": 40, "kind": "area_target", "range": 6,
+		"radius": 2, "power": 1.9, "mana": 0.3, "cooldown": 14.0, "group": "attack", "color": Color("#ffe070")},
+	"arc_lightning": {"name": "Arc lightning", "vocations": ["sorcerer"], "level": 20, "kind": "target", "range": 5,
+		"power": 3.2, "mana": 0.12, "cooldown": 6.0, "group": "attack", "color": Color("#a0c8ff")},
+	"firestorm": {"name": "Firestorm", "vocations": ["sorcerer"], "level": 30, "kind": "area_target", "range": 5,
+		"radius": 2, "power": 1.8, "mana": 0.25, "cooldown": 10.0, "group": "attack", "color": Color("#ff5a20")},
+	"starfall": {"name": "Starfall", "vocations": ["sorcerer"], "level": 45, "kind": "area_target", "range": 5,
+		"radius": 2, "power": 2.6, "mana": 0.35, "cooldown": 16.0, "group": "attack", "color": Color("#d8b0ff")},
+	"thorn_lash": {"name": "Thorn lash", "vocations": ["druid"], "level": 15, "kind": "target", "range": 5,
+		"power": 2.4, "mana": 0.1, "cooldown": 6.0, "group": "attack", "color": Color("#7ac85a")},
+	"hailstorm": {"name": "Hailstorm", "vocations": ["druid"], "level": 30, "kind": "area_target", "range": 5,
+		"radius": 2, "power": 1.5, "mana": 0.22, "cooldown": 10.0, "group": "attack", "color": Color("#c8e8ff")},
+	"wild_growth": {"name": "Wild growth", "vocations": ["druid"], "level": 40, "kind": "heal_area", "radius": 3,
+		"power": 5.0, "mana": 0.3, "cooldown": 8.0, "group": "healing", "color": Color("#60e070")},
 	"mass_mend": {"name": "Mass mend", "vocations": ["druid"], "level": 10, "kind": "heal_area", "radius": 3,
 		"power": 3.0, "mana": 0.2, "cooldown": 2.0, "group": "healing", "color": Color("#a6f0b0")},
 }
 
 
+## A vocation's spells by unlock level (catalog order within a level): the action bar's order.
 static func for_vocation(vocation: String) -> Array[String]:
 	var result: Array[String] = []
+	var order: Dictionary = {}
 	for id: String in SPELLS:
 		if vocation in SPELLS[id]["vocations"]:
+			order[id] = SPELLS[id]["level"] * 1000 + result.size()
 			result.append(id)
+	result.sort_custom(func(a: String, b: String) -> bool: return order[a] < order[b])
 	return result

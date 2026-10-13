@@ -55,6 +55,7 @@ func _run() -> void:
 	_hardening_checks()
 	_chase_checks()
 	_monster_catalog_checks()
+	_pvp_and_spell_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -2300,6 +2301,97 @@ func _monster_catalog_checks() -> void:
 			check(not definition.has("relics"), "%s: only bosses have relics" % named)
 	for kind: String in Monsters.LOOT:
 		check(Monsters.MONSTERS.has(kind), "loot table %s belongs to a monster" % kind)
+
+
+## Spell progression per vocation, and PvP damage, healing reduction, and dampening.
+func _pvp_and_spell_checks() -> void:
+	for vocation: String in Balance.VOCATIONS:
+		var spells: Array[String] = Spells.for_vocation(vocation)
+		var late: int = 0
+		var best: float = 0.0
+		var levels: Array[int] = []
+		for spell: String in spells:
+			levels.append(Spells.SPELLS[spell]["level"])
+			if Spells.SPELLS[spell]["level"] >= 15:
+				late += 1
+		for index: int in range(1, levels.size()):
+			check(levels[index] >= levels[index - 1], "%s spells are listed by unlock level" % vocation)
+		for spell: String in spells:
+			var definition: Dictionary = Spells.SPELLS[spell]
+			if definition["kind"] in ["target", "area_self", "area_target"] and definition["level"] < 15:
+				best = maxf(best, definition["power"])
+		var stronger: bool = false
+		for spell: String in spells:
+			var definition: Dictionary = Spells.SPELLS[spell]
+			stronger = stronger or (definition["level"] >= 15 and definition["kind"] in ["target", "area_self", "area_target"]
+				and definition["power"] > best)
+		check(late >= 3 and stronger and spells.size() <= Keybinds.SLOTS,
+			"%s unlocks three or more spells from level 15, a stronger strike among them, and all fit the bar" % vocation)
+	# PvP: harder hits between players, weaker healing while in PvP combat, fading over a long fight.
+	var world := World.new()
+	var combat := Combat.new(world, 6)
+	world.monsters.clear()
+	world.add_player(1, 0.0, "paladin")
+	world.add_player(2, 0.0, "paladin")
+	var arena: Vector2i = Vector2i(-1, -1)
+	for zone: Dictionary in World.ZONES:
+		if zone["pvp"] and arena.x < 0:
+			for y: int in range(zone["rect"].position.y, zone["rect"].end.y):
+				for x: int in range(zone["rect"].position.x, zone["rect"].end.x):
+					if arena.x < 0 and World.walkable(Vector2i(x, y)) and World.walkable(Vector2i(x + 1, y)) \
+							and World.zone_at(Vector2i(x + 1, y)).get("pvp", false):
+						arena = Vector2i(x, y)
+	_place(world, 1, arena)
+	_place(world, 2, arena + Vector2i.RIGHT)
+	check(combat.healing_factor(1, 0.0) == 1.0, "full healing outside PvP combat")
+	var vole: int = combat.spawn_monster("field_vole", 1, arena + Vector2i(0, 1), 0.0)
+	world.players[2]["health"] = 999999
+	var dealt: int = 0
+	for round_index: int in 400:
+		var events: Array = []
+		combat._hit(1, 2, 1.0, 1.0, events)
+		for event: Dictionary in events:
+			if event["kind"] == "hit" and event["target"] == 2:
+				dealt += event["amount"]
+	var critical: float = world.player_stats(1)["critical"] / 100.0
+	var expected: float = Balance.damage_taken(roundi(combat.attack_of(1) * Balance.PVP_DAMAGE), combat.defense_of(2)) \
+		* (1.0 + critical * (Combat.CRITICAL_MULTIPLIER - 1.0))
+	check(Balance.PVP_DAMAGE > 1.0 and absf(dealt / 400.0 - expected) < expected * 0.12,
+		"players hit players PVP_DAMAGE times harder (%.1f per hit, expected %.1f)" % [dealt / 400.0, expected])
+	for id: int in [1, 2]:
+		world.players[id]["pvp_until"] = -INF
+		world.players[id]["pvp_since"] = -INF
+	world.players[2]["health"] = 10
+	var events_pvp: Array = []
+	combat._damage(1, 2, 1, "damage", 5.0, events_pvp)
+	check(world.players[1]["pvp_until"] == 5.0 + Balance.PVP_COMBAT_SECONDS and world.players[2]["pvp_since"] == 5.0,
+		"a hit between players starts PvP combat for both")
+	check(is_equal_approx(combat.healing_factor(2, 5.0), Balance.PVP_HEALING), "healing is reduced in PvP combat")
+	# Keep the fight going (a hit every 5 s) so PvP combat stays continuous.
+	var fight_time: float = 5.0
+	while fight_time < 5.0 + Balance.PVP_DAMPENING_SECONDS / 2.0:
+		fight_time += 5.0
+		world.players[2]["health"] = 999
+		combat._damage(1, 2, 1, "damage", fight_time, events_pvp)
+	check(is_equal_approx(combat.healing_factor(2, 5.0 + Balance.PVP_DAMPENING_SECONDS / 2.0), Balance.PVP_HEALING * 0.5),
+		"healing fades the longer PvP combat lasts")
+	while fight_time < 5.0 + Balance.PVP_DAMPENING_SECONDS:
+		fight_time += 5.0
+		world.players[2]["health"] = 999
+		combat._damage(1, 2, 1, "damage", fight_time, events_pvp)
+	check(combat.healing_factor(2, 5.0 + Balance.PVP_DAMPENING_SECONDS) == 0.0, "after the dampening time, healing stops")
+	var later: float = 5.0 + Balance.PVP_DAMPENING_SECONDS + Balance.PVP_COMBAT_SECONDS + 0.1
+	check(combat.healing_factor(2, later) == 1.0, "leaving PvP combat restores healing")
+	world.players[2]["health"] = 10
+	var before: int = world.players[2]["health"]
+	combat._heal(2, 100, [], 0, later)
+	check(world.players[2]["health"] == before + 100, "outside PvP combat a heal restores its full amount")
+	combat._damage(1, 2, 1, "damage", later, events_pvp)
+	before = world.players[2]["health"]
+	combat._heal(2, 100, [], 0, later)
+	check(world.players[2]["health"] == before + roundi(100 * Balance.PVP_HEALING), "inside PvP combat heals are reduced")
+	combat._damage(1, vole, 1, "damage", later + 20.0, events_pvp)
+	check(combat.healing_factor(1, later + 20.0) == 1.0, "fighting monsters is never PvP combat")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

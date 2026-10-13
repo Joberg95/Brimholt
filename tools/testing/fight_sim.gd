@@ -92,6 +92,8 @@ func _fight(level: int, monster_level: int, vocation: String, count: int, kind: 
 		player["backpack"][0] = "health_potion#100"
 		player["backpack"][1] = "mana_potion#100"
 	var spells: Array[String] = Spells.for_vocation(vocation).filter(func(id: String) -> bool: return Spells.SPELLS[id]["level"] <= level)
+	# Strongest first, like a player reaching for their best spell that is ready.
+	spells.sort_custom(func(a: String, b: String) -> bool: return Spells.SPELLS[a]["power"] > Spells.SPELLS[b]["power"])
 	var now: float = 0.0
 	var lowest: int = player["health"]
 	var potions: int = 0

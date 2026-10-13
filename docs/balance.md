@@ -104,8 +104,37 @@ monsters at the player's level currently give:
 | Fight | Auto-attacks only | Spells and potions |
 | --- | --- | --- |
 | One monster | 3–27% health lost; nobody dies | 3–27% lost, 0–3 potions |
-| A camp of three | Knights end at 5–60% health; Paladins die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–8 potions (Druids about 5–6, mostly mana) |
+| A camp of three | Knights end at 5–60% health; Paladins die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–6 potions (Druids about 4–6, mostly mana); higher-level spells clear camps faster (a level 45 Sorcerer in about 6 s, a Paladin in about 8 s) |
 | Level 1 against a level 40 | Dead within 2 seconds | Dead |
+
+## PvP
+
+Player health is built to survive many monster hits, so without help duels never end: at level
+45 a knight dealt about 35 damage per second to another knight with about 10,000 health,
+less than natural regeneration. Three constants fix that (`Balance`):
+
+- `PVP_DAMAGE` 1.5: player-on-player hits (auto-attacks and spells) deal 1.5× damage.
+- `PVP_HEALING` 0.35: for `PVP_COMBAT_SECONDS` (10 s) after any hit between two players, both
+  heal at 35% (spells, potions, regeneration).
+- `PVP_DAMPENING_SECONDS` 90: that healing fades linearly to zero over 90 s of continuous PvP
+  combat, so even two healers finish.
+
+Potions have their own cooldowns (health 6 s, mana 3 s). `make duel-sim` fights same-level
+duels with spells and potions (levels 20, 30, 45; duelists start adjacent):
+
+| Matchup | Winner and time |
+| --- | --- |
+| Paladin vs Sorcerer | Paladin, 13–17 s |
+| Paladin vs Knight | Paladin, 49–57 s |
+| Paladin vs Druid | Paladin, 20–25 s |
+| Knight vs Sorcerer | Knight, 21–25 s |
+| Knight vs Druid | Knight, 25–29 s |
+| Sorcerer vs Druid | Sorcerer, 8–11 s |
+| Knight and Druid mirrors | 42–85 s |
+| Paladin mirror (level 30) | 61 s |
+| Sorcerer mirror (level 30) | 6 s: glass cannons |
+
+Paladins are the strongest duelists; druids, as healers, lose one-on-one.
 
 ## Early game
 

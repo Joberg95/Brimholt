@@ -11,6 +11,7 @@ Run these through `make` (see `make help`) or directly. Every check uses Godot 4
 | `make test` | Lint, unit, and LAN | ~1 min |
 | `make test-visual` | `tools/testing/test_visual.py`: offscreen graphical checks, `.tools/visual-report.html` | ~30 s |
 | `make fight-sim` | `tools/testing/fight_sim.gd`: one monster (`MONSTER=`, `LEVELS=`, `COUNT=`) against each vocation, auto-attacks vs spells and potions | ~10 s |
+| `make duel-sim` | `tools/testing/duel_sim.gd`: same-level PvP duels per vocation pair with spells and potions (`LEVELS=`) | ~30 s |
 | `make soak` | `tests/integration/soak_test.gd`: busy hosted session, fails on growth (memory, objects, nodes, pools) | ~1 min |
 | `make check` | Import, lint, unit, LAN, visual, and soak | ~3 min |
 | `make playtest` | `tools/testing/playtest.py`: two-bot playthrough, `.tools/playtest/report.html` | ~5 min |
@@ -104,7 +105,10 @@ within range, reaches every kind, flashes only in storms, and is absent undergro
 in the desert), chasing and leashing (monsters outpace players, a level 1 and a level 40
 monster both catch a fleeing player, dragging past the leash or into a town resets them to full
 health, a monster going home cannot be hurt or re-pulled and fights again once home, and steps
-replicate their real duration), the monster catalog contract (ids, names, ranks, looks, sizes,
+replicate their real duration), spell progression (every vocation unlocks three or more spells from level 15 including a
+stronger strike, listed by level, fitting the bar), PvP (player hits scaled by `PVP_DAMAGE`,
+PvP combat starting for both players, reduced and fading healing, recovery after combat, and
+monster fights never counting), the monster catalog contract (ids, names, ranks, looks, sizes,
 ranges, idle pace, known fields only, no hand-set numbers, loot of real non-relic items, placement
 on the map or in a dungeon, boss relics), long-session safety (ground decay timing, restarts on change, rate limit, and
 exemptions for starting items and relics; the client spatial index; monsters closing in on a

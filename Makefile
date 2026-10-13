@@ -8,7 +8,7 @@ PORT ?= 1234
 GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
-.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim playtest check \
+.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim playtest check \
 	sprites map map-force endgame-zone dungeons desert towns gear-table balance-table export-windows clean
 
 help: ## List commands
@@ -64,6 +64,10 @@ soak: ## Busy hosted session with clock jumps; fails if objects, nodes, or memor
 fight-sim: ## Balance a monster: MONSTER=field_vole LEVELS=1,10,20,30,40 COUNT=3 (auto-attack vs spells+potions per vocation)
 	@$(GODOT) --headless --path . --script res://tools/testing/fight_sim.gd -- --monster=$(or $(MONSTER),field_vole) \
 		--levels=$(or $(LEVELS),1,10,20,30,40) --count=$(or $(COUNT),1) $(if $(PLAYER_LEVEL),--player-level=$(PLAYER_LEVEL)) 2>&1 \
+		| grep -vE '^Godot Engine|^$$'
+
+duel-sim: ## Same-level PvP duels with spells and potions per vocation pair (LEVELS=20,30,45)
+	@$(GODOT) --headless --path . --script res://tools/testing/duel_sim.gd -- --levels=$(or $(LEVELS),20,30,45) 2>&1 \
 		| grep -vE '^Godot Engine|^$$'
 
 playtest: ## Two-bot full-game playthrough (about 5 minutes); writes .tools/playtest/report.html

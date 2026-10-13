@@ -17,6 +17,14 @@ const BASE_HITS_PER_KILL: float = 8.0
 const HITS_TO_FALL: float = 18.0
 ## Seconds per tile a monster takes while chasing (level 1 to MAX_LEVEL): always quicker than a
 ## player's World.MOVE_SECONDS (0.18), so nobody outruns or kites a monster; it catches up.
+## PvP: players hit players PVP_DAMAGE times harder (player health is built to survive many
+## monster hits). For PVP_COMBAT_SECONDS after any hit between players, both heal at PVP_HEALING
+## strength (spells, potions, and regeneration), fading to nothing over PVP_DAMPENING_SECONDS of
+## continuous PvP combat, so even two healers cannot stall forever.
+const PVP_DAMAGE: float = 1.5
+const PVP_HEALING: float = 0.35
+const PVP_COMBAT_SECONDS: float = 10.0
+const PVP_DAMPENING_SECONDS: float = 90.0
 const CHASE_SECONDS_LEVEL_1: float = 0.14
 const CHASE_SECONDS_MAX_LEVEL: float = 0.11
 const EARLY_DAMAGE_LEVELS: float = 10.0
@@ -191,4 +199,5 @@ static func signature() -> String:
 	return str([MAX_LEVEL, FINAL_BOSS_HEALTH, ATTACK_SECONDS, GEARED_HITS_PER_KILL, BASE_HITS_PER_KILL,
 		HITS_TO_FALL, MOB_HEALTH_LEVEL_1, PLAYER_HEALTH_LEVEL_1, PLAYER_MANA_LEVEL_1, BASE_CRITICAL,
 		REGEN_FRACTION, HEAL_FRACTION, EARLY_DAMAGE_LEVELS, VOCATIONS, RAID, RAID_FIGHT_SECONDS, ENRAGE_SECONDS,
-		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_LEVEL_1, CHASE_SECONDS_MAX_LEVEL])
+		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_LEVEL_1, CHASE_SECONDS_MAX_LEVEL,
+		PVP_DAMAGE, PVP_HEALING, PVP_COMBAT_SECONDS, PVP_DAMPENING_SECONDS])

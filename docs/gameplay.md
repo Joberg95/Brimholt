@@ -21,10 +21,19 @@ Knights fight in melee (any of the 8 surrounding tiles); Paladins (6 tiles), Sor
 Druids (5 tiles) attack at range, which needs a clear line of sight: walls and trees block
 it, water does not. If your target is out of reach and you are not steering, you walk
 toward it. Spells sit on the action bar; each costs mana, has its own cooldown, and starts
-a shared cooldown for its group (attack 2 s, healing 1 s). Every vocation has Light heal;
-Knights add Brutal blow and Whirling strike (level 10), Paladins Piercing shot and Holy
-mend (level 8), Sorcerers Ember bolt and Flame wave (level 10), and Druids Frost bolt,
-Mend, and Mass mend (level 10), which heals everyone within 3 tiles.
+a shared cooldown for its group (attack 2 s, healing 1 s). Every vocation has Light heal, and each
+unlocks stronger spells as it levels, so its damage keeps growing (spell damage is your attack
+times the spell's power):
+
+| Vocation | Spells (unlock level) |
+| --- | --- |
+| Knight | Brutal blow (1), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
+| Paladin | Piercing shot (1), Holy mend (8), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
+| Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
+| Druid | Frost bolt (1), Mend (1), Mass mend (10, heals everyone within 3 tiles), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
+
+New spells fill empty action-bar slots when you reach their level (or right-click a slot to
+choose one).
 
 Monsters stand idle until a player comes within 6 tiles, then chase and attack. A chasing
 monster is faster than you (from 0.14 s per tile at level 1 to 0.11 s at level 50, against
@@ -41,7 +50,11 @@ or red (5+ levels above you). Experience is shared by damage dealt; level 2 take
 kills. Monsters drop loot from their own table (see below), spilling onto nearby tiles when
 the corpse tile is full. Health and mana regenerate every 2 seconds,
 three times faster after 8 seconds out of combat. Players can only attack each other while both stand in a PvP zone (Blackreed
-Isle); leaving it drops the target.
+Isle or the Hollow Reach); leaving it drops the target. Players hit each other 1.5 times
+harder than their normal damage, and for 10 seconds after any hit between players both are
+in **PvP combat**: all healing (spells, potions, and regeneration) works at 35%, and it fades
+to nothing over 90 seconds of continuous PvP combat, so every duel ends. Same-level duels take
+roughly 10–90 seconds.
 
 ## Parties and shared experience
 

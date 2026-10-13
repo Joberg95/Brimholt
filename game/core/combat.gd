@@ -382,6 +382,8 @@ func _hit(attacker: int, target: int, power: float, now: float, events: Array) -
 		raw *= 1.0 + WOUND_STEP * wound_stacks(attacker, target, now)
 		var wounds: Dictionary = world.monsters[attacker]["wounds"]
 		wounds[target] = [wound_stacks(attacker, target, now) + 1, now + WOUND_SECONDS]
+	if attacker > 0 and target > 0:
+		raw *= Balance.PVP_DAMAGE
 	var critical: bool = attacker > 0 and rng.randi_range(1, 100) <= world.player_stats(attacker)["critical"]
 	if critical:
 		raw *= CRITICAL_MULTIPLIER
@@ -399,6 +401,12 @@ func _damage(attacker: int, target: int, amount: int, style: String, now: float,
 		if id > 0 and world.players.has(id):
 			world.players[id]["last_combat"] = now
 			world.players[id]["active_at"] = now
+	if attacker > 0 and target > 0:
+		for id: int in [attacker, target]:
+			if world.players.has(id):
+				if now >= world.players[id]["pvp_until"]:
+					world.players[id]["pvp_since"] = now
+				world.players[id]["pvp_until"] = now + Balance.PVP_COMBAT_SECONDS
 	victim["health"] -= amount
 	events.append({"kind": "hit", "target": target, "cell": victim["cell"], "amount": amount, "style": style, "source": attacker})
 	if attacker < 0 and target > 0 and world.monsters.has(attacker):
@@ -449,6 +457,7 @@ func _register_aggression(attacker: int, target: int, now: float, events: Array)
 ## (boss trophies). Casting at full health earns neither.
 func _heal(id: int, amount: int, events: Array, healer: int = 0, now: float = 0.0) -> void:
 	var player: Dictionary = world.players[id]
+	amount = roundi(amount * healing_factor(id, now))
 	var healed: int = mini(amount, world.player_stats(id)["health"] - player["health"])
 	player["health"] += healed
 	if healer > 0 and healed > 0 and world.players.has(healer):
@@ -459,6 +468,16 @@ func _heal(id: int, amount: int, events: Array, healer: int = 0, now: float = 0.
 				world.monsters[monster]["fought"][healer] = true
 	events.append({"kind": "hit", "target": id, "cell": player["cell"], "amount": healed, "style": "heal"})
 	events.append({"kind": "player", "id": id})
+
+
+## Healing strength for a player: 1 outside PvP combat; in it Balance.PVP_HEALING, fading to 0
+## over PVP_DAMPENING_SECONDS of continuous PvP combat.
+func healing_factor(id: int, now: float) -> float:
+	var player: Dictionary = world.players[id]
+	if now >= player.get("pvp_until", -INF):
+		return 1.0
+	var fading: float = 1.0 - (now - player.get("pvp_since", now)) / Balance.PVP_DAMPENING_SECONDS
+	return Balance.PVP_HEALING * clampf(fading, 0.0, 1.0)
 
 
 func _missile(from: Vector2i, to: Vector2i, color: Color, events: Array) -> void:
@@ -671,7 +690,7 @@ func drink(id: int, index: Variant, now: float) -> Dictionary:
 	for stat: String in restores:
 		var amount: int = maxi(1, roundi(limits[stat] * restores[stat]))
 		if stat == "health":
-			_heal(id, amount, events)
+			_heal(id, amount, events, 0, now)
 		else:
 			var gained: int = mini(amount, limits[stat] - player[stat])
 			player[stat] += gained
@@ -948,6 +967,7 @@ func _kill_player(id: int, now: float, events: Array, killer: int = 0) -> void:
 			world.players[other]["target"] = 0
 			events.append({"kind": "player", "id": other})
 	player["aggressors"].clear()
+	player["pvp_until"] = -INF
 	var summary: String = "You are dead. You lost %d experience" % lost
 	if lost_items.is_empty():
 		summary += "; below level %d you keep your items and gold" % PROTECTION_LEVEL
@@ -1028,7 +1048,7 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 		var limits: Dictionary = world.player_stats(id)
 		var before: Array = [player["health"], player["mana"]]
 		var rate: float = REGEN_SECONDS / 10.0 * (RESTING_MULTIPLIER if resting(id, now) else 1.0)
-		player["health"] = mini(limits["health"], player["health"] + maxi(1, roundi(limits["regen"] * rate)))
+		player["health"] = mini(limits["health"], player["health"] + maxi(1, roundi(limits["regen"] * rate * healing_factor(id, now))))
 		player["mana"] = mini(limits["mana"], player["mana"] + maxi(1, roundi(limits["mana"] * MANA_REGEN_FRACTION * rate)))
 		if [player["health"], player["mana"]] != before:
 			events.append({"kind": "player", "id": id})
