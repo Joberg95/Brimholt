@@ -87,14 +87,14 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 	match spell["kind"]:
 		"target":
 			effect = "Strikes %s for %s× your attack." % ["an adjacent target" if reach <= 1
-				else "your target up to %d tiles away" % reach, _times(power)]
+				else "your target up to %d tiles away" % reach, number(power)]
 			amount = hit
 		"area_self":
-			effect = "Hits every enemy within %s of you for %s× your attack." % [area, _times(power)]
+			effect = "Hits every enemy within %s of you for %s× your attack." % [area, number(power)]
 			amount = hit + " each"
 		"area_target":
 			effect = "Hits your target (up to %d tiles away) and every enemy within %s of it for %s× your attack." % [
-				reach, area, _times(power)]
+				reach, area, number(power)]
 			amount = hit + " each"
 		"taunt":
 			effect = "Turns every monster within %s of you, bosses included, onto you: take a boss off a wounded ally." % area
@@ -102,7 +102,7 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 			effect = "Heals you for %d%% of your max health." % roundi(power * 100.0)
 			amount = "Heals about %d" % roundi(float(stats.get("health", 0)) * power)
 		"heal_area":
-			effect = "Heals every player within %s of you, you included, for %s× your healing." % [area, _times(power)]
+			effect = "Heals every player within %s of you, you included, for %s× your healing." % [area, number(power)]
 			amount = "Heals %d each" % maxi(1, roundi(float(stats.get("healing", 0)) * power))
 	if stats.is_empty():
 		amount = ""
@@ -117,8 +117,8 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 		"requirement": "%s · level %d" % [who, spell["level"]] if level >= spell["level"]
 			else "✗ Needs level %d (%s)" % [spell["level"], who],
 		"effect": effect, "amount": amount, "cost": cost,
-		"cooldown": "Cooldown %s s, and %s s for all %s spells" % [_times(spell["cooldown"]),
-			_times(GROUP_SECONDS[spell["group"]]), spell["group"]],
+		"cooldown": "Cooldown %s s, and %s s for all %s spells" % [number(spell["cooldown"]),
+			number(GROUP_SECONDS[spell["group"]]), spell["group"]],
 	}
 
 
@@ -133,8 +133,9 @@ static func describe(id: String, stats: Dictionary, level: int) -> String:
 	return "\n".join(lines)
 
 
-static func _times(value: float) -> String:
-	return String.num(value, 2)
+## A multiplier or duration without trailing zeros: 2.0 -> "2", 1.45 -> "1.45".
+static func number(value: float) -> String:
+	return ("%.2f" % value).rstrip("0").rstrip(".")
 
 
 static func _capitalized(text: Variant) -> String:

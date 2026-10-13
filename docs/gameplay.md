@@ -13,8 +13,15 @@ before the target's armour), mana cost, and cooldown.
 The **spell book** (B, or "Open spell book" in a slot's right-click menu) lists every spell of
 your vocation by unlock level with the same details; locked spells say the level they need.
 Drag a spell's rune from the book onto the action bar to put it there. Before you join, it
-shows the vocation picked in the top bar. Change gear on the equipment panel; targeting, pick up, the world map, and the
-health and mana potions (Q and E), the quest list (L), and the spell book (B) have their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
+shows the vocation picked in the top bar.
+
+The **micro menu** right of the action bar has a button for each panel: Character (C), Spell
+book (B), Quests (L), World map (M), and Controls. A gold frame marks the panels that are
+open; hover a button for its key. The **character window** explains every stat (your base
+value, what your gear adds, and what the stat does, such as how much your defense cuts
+damage), shows experience to the next level, and your status: gold and bank, party, skull,
+unjustified kills, town rest, and relic trophies waiting at a relic keeper. Change gear on the equipment panel; targeting, pick up, the world map, and the
+health and mana potions (Q and E), the quest list (L), the spell book (B), and the character window (C) have their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
 position, so WASD stays under your hand on any keyboard layout. Bindings and bar contents

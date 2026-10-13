@@ -34,6 +34,8 @@ game/
     inventory_panel.gd   Paperdoll and backpack slots, drag-and-drop, stat sheet, item tooltips
     quest_list.gd        Quest list in the game window: active tasks, givers, progress
     spell_book.gd        Spell book (B): your vocation's spells explained (Spells.info), drag to the bar
+    character_window.gd  Character window (C): stats explained, experience, and status
+    micro_menu.gd        Buttons right of the action bar for the character, book, quests, map, controls
     spell_rune.gd        A spell rune: drawing, coloured tooltip, drag and drop (bar and book)
     item_slot.gd         An item slot whose hover tooltip shows the rarity colour
     action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation

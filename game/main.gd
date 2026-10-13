@@ -22,6 +22,8 @@ const StartPanel = preload("res://game/ui/start_panel.gd")
 const CellIndex = preload("res://game/render/cell_index.gd")
 const QuestList = preload("res://game/ui/quest_list.gd")
 const SpellBook = preload("res://game/ui/spell_book.gd")
+const CharacterWindow = preload("res://game/ui/character_window.gd")
+const MicroMenu = preload("res://game/ui/micro_menu.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -95,6 +97,8 @@ var close_ends_session: bool = true
 var hud: Hud
 var quest_list: QuestList
 var spell_book: SpellBook
+var character_window: CharacterWindow
+var micro_menu: MicroMenu
 var inventory: InventoryPanel
 var maps: WorldMaps
 var action_bar: ActionBar
@@ -240,8 +244,10 @@ func _process(delta: float) -> void:
 	hud.refresh()
 	quest_list.refresh()
 	spell_book.refresh()
+	character_window.refresh()
 	start_panel.refresh()
 	action_bar.redraw()
+	micro_menu.redraw()
 	maps.redraw()
 
 
@@ -258,12 +264,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
 		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
-				and own_target() != 0:
+				and not character_window.visible and own_target() != 0:
 			target_local(0)
 		_world_map.hide()
 		_close_travel()
 		_controls.hide()
 		spell_book.hide()
+		character_window.hide()
 		return
 	var key: Key = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	var action: String = keybinds.action_for(key)
@@ -271,6 +278,30 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		use_bar_slot(int(action.trim_prefix("slot_")) - 1)
 	elif not action.is_empty():
 		_run_action(action)
+
+
+## Opens or closes a panel from the micro menu: a Keybinds action, or "controls".
+func toggle_panel(action: String) -> void:
+	if action == "controls":
+		_controls.visible = not _controls.visible
+	else:
+		_run_action(action)
+
+
+## Whether the micro menu should show a panel's button as open.
+func panel_open(action: String) -> bool:
+	match action:
+		"character":
+			return character_window.visible
+		"spell_book":
+			return spell_book.visible
+		"quest_list":
+			return quest_list.shown
+		"world_map":
+			return _world_map.visible
+		"controls":
+			return _controls.visible
+	return false
 
 
 ## Casts the spell in an action-bar slot (0-8).
@@ -286,6 +317,8 @@ func _run_action(action: String) -> void:
 		quest_list.shown = not quest_list.shown
 	elif action == "spell_book":
 		spell_book.toggle()
+	elif action == "character":
+		character_window.toggle()
 	elif not connected:
 		return
 	elif action == "pick_up":
@@ -1294,10 +1327,16 @@ func _build_ui() -> void:
 	spell_book = SpellBook.new()
 	spell_book.game = self
 	layer.add_child(spell_book)
+	character_window = CharacterWindow.new()
+	character_window.game = self
+	layer.add_child(character_window)
+	micro_menu = MicroMenu.new()
+	add_child(micro_menu)
+	micro_menu.build(self, layer)
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
-	# list, location line, spell book, world map, dialog panel, and Controls menu.
-	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, maps.world_map, dialogs.panel,
-			hud.controls]:
+	# list, location line, spell book, character window, world map, dialog panel, and Controls menu.
+	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, character_window,
+			maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_vocation = hud.vocation

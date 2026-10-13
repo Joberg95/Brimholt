@@ -13,6 +13,7 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Spells = preload("res://game/data/spells.gd")
+const Layout = preload("res://game/ui/layout.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 var game: Node2D
 ## The game renders offscreen into this buffer; the real window only needs to exist.
@@ -229,6 +230,8 @@ func _run() -> void:
 		return
 	if not await _check_spell_book():
 		return
+	if not await _check_micro_menu():
+		return
 	if not await _check_waystone():
 		return
 	if not await _check_town_services():
@@ -249,7 +252,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1071,6 +1074,40 @@ func _check_spell_book() -> bool:
 	game._unhandled_key_input(key)
 	await process_frame
 	return _expect(dropped and not book.visible, "Dragging a spell from the book onto the bar failed, or the key did not close it")
+
+
+## The micro menu beside the action bar opens the character window (stats explained) and the
+## other panels by click, marks open panels, and names each button's key in its tooltip.
+func _check_micro_menu() -> bool:
+	var menu: Node = game.micro_menu
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	menu.buttons[0].gui_input.emit(release)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-character.png")
+	var window: Control = game.character_window
+	var text: PackedStringArray = []
+	_texts(window, text)
+	var joined: String = "\n".join(text)
+	var bar_right: float = game.action_bar._slots[-1].get_global_rect().end.x
+	var placed: bool = menu.buttons.all(func(button: Control) -> bool:
+		return button.position.x > bar_right and button.get_global_rect().end.x <= Layout.VIEW_ORIGIN.x + Layout.VIEW_SIZE.x)
+	if not _expect(window.visible and game.panel_open("character") and joined.contains("Defense") and joined.contains("Cuts damage")
+			and joined.contains("Town rest") and joined.contains("Experience"), "The micro menu does not open a character window with stats explained"):
+		return false
+	if not _expect(placed and menu.buttons[1].tooltip_text.begins_with("Spell book  (B)"),
+			"The micro menu sits outside the space right of the action bar, or its tooltips lack keys"):
+		return false
+	menu.buttons[1].gui_input.emit(release)
+	menu.buttons[0].gui_input.emit(release)
+	await process_frame
+	var swapped: bool = game.spell_book.visible and not window.visible
+	menu.buttons[1].gui_input.emit(release)
+	await process_frame
+	return _expect(swapped and not game.spell_book.visible, "Micro menu buttons do not toggle their panels")
 
 
 func _texts(node: Node, into: PackedStringArray) -> void:
