@@ -41,8 +41,11 @@ than you (0.17 s per tile against your 0.18 s), and much quicker when it outleve
 to 0.13 s from 10 levels above: you cannot outrun a monster far above your level, and kiting
 one of your own level gains you little. Fight with armor, spells, and potions, or flee. A monster gives up if you reach a town, drag it more than 12 tiles from its spawn, or
 get more than 12 tiles away. It then heals to full at once and walks home, ignoring everyone
-and taking no damage until it gets there, so you cannot wear one down and run. They respawn 45 seconds after death, once no player stands within 4 tiles of the
-spawn. Monsters chase along real paths around trees and walls. Level 1–4 voles and toads
+and taking no damage until it gets there, so you cannot wear one down and run. Every camp holds a fixed number of monsters (usually three). A killed monster respawns at its
+camp 45 seconds later, once no player stands within 4 tiles of the camp, so hunting is
+unlimited but limited by how fast camps refill: good camps are worth holding, and worth
+fighting over in PvP zones. A camp that cannot place a monster (its ground is blocked) keeps
+retrying every 5 seconds until it is full. Monsters chase along real paths around trees and walls. Level 1–4 voles and toads
 ring Cinder Crossing; beyond them, levels rise to 35 in the far east and south, and
 Blackreed Isle holds levels 40–50. Spawns sit in small clearings at least 7 steps from
 roads, so travel between towns stays safe. Early monsters hit softer (half damage at level
@@ -50,7 +53,11 @@ roads, so travel between towns stays safe. Early monsters hit softer (half damag
 or red (5+ levels above you). Experience is shared by damage dealt; level 2 takes about 4
 kills. Monsters drop loot from their own table (see below), spilling onto nearby tiles when
 the corpse tile is full. Health and mana regenerate every 2 seconds,
-three times faster after 8 seconds out of combat. Players can only attack each other while both stand in a PvP zone (Blackreed
+three times faster after 8 seconds out of combat. In a town you **rest**: missing health or
+mana comes back ten times faster than normal (about 25 seconds from empty to full) until you
+are full or leave town. Then the rest needs 3 minutes before it can start again, so a town is
+not a free heal in the middle of a fight; the line under the minimap shows "resting", "rest
+ready", or the time left. Players can only attack each other while both stand in a PvP zone (Blackreed
 Isle or the Hollow Reach); leaving it drops the target. Players hit each other 1.5 times
 harder than their normal damage, and for 10 seconds after any hit between players both are
 in **PvP combat**: all healing (spells, potions, and regeneration) works at 35%, and it fades

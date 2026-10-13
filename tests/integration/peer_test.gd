@@ -10,6 +10,9 @@ var game: Node2D
 var role: String = ""
 var stage: int = 0
 var stage_since: float = 0.0
+## Messages shown since the current stage began: an unrelated message (a town rest, a level-up)
+## arriving in the same frame must not hide the one a stage waits for.
+var stage_messages: Dictionary = {}
 var started: float = 0.0
 var client_id: int = 0
 var late_id: int = 0
@@ -87,10 +90,26 @@ func _process(_delta: float) -> bool:
 	return false
 
 
+## Whether a message since the stage began starts with, or contains, `text`.
+func _saw_start(text: String) -> bool:
+	for message: String in stage_messages:
+		if message.begins_with(text):
+			return true
+	return false
+
+
+func _saw_part(text: String) -> bool:
+	for message: String in stage_messages:
+		if message.contains(text):
+			return true
+	return false
+
+
 func advance() -> void:
 	stage += 1
 	stage_since = Time.get_ticks_msec() / 1000.0
 	game.last_action_message = ""
+	stage_messages.clear()
 	print("BRIMHOLT_TEST_STAGE %s %d" % [role, stage])
 
 
@@ -428,6 +447,7 @@ func _dedicated_host_tick() -> void:
 
 func _dedicated_client_tick(now: float) -> void:
 	var own: int = game.self_id
+	stage_messages[game.last_action_message] = true
 	match stage:
 		0:
 			if game.actors.size() != 1 or own == 1 or game.actors.has(1):
@@ -455,7 +475,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.move_item_local({"type": "backpack", "index": ring}, {"type": "equipment", "slot": "ring_2"})
 				advance()
 		5:
-			if game.last_action_message == "The Garnet ring requires level %d" % Items.ACCESSORY_LEVEL:
+			if stage_messages.has("The Garnet ring requires level %d" % Items.ACCESSORY_LEVEL):
 				if state(own)["equipment"].has("ring_2"):
 					fail("The server equipped a ring below its level")
 					return
@@ -470,7 +490,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.travel_local("cinder_landing", "lastlight")
 				advance()
 		8:
-			if game.last_action_message == "Walk closer to the ferryman":
+			if stage_messages.has("Walk closer to the ferryman"):
 				game.move_local(Vector2i.RIGHT)
 				advance()
 		9:
@@ -479,17 +499,17 @@ func _dedicated_client_tick(now: float) -> void:
 				game.request_travel.rpc_id(1, "cinder_landing", "nowhere")
 				advance()
 		10:
-			if game.last_action_message == "That ferryman does not sail there":
+			if stage_messages.has("That ferryman does not sail there"):
 				game.request_travel.rpc_id(1, 5, null)
 				advance()
 		11:
-			if game.last_action_message == "Unknown ferryman":
+			if stage_messages.has("Unknown ferryman"):
 				game.travel_local("cinder_landing", "lastlight")
 				advance()
 		12:
 			var fare: int = World.FERRYMEN["cinder_landing"]["routes"]["lastlight"]
 			if World.chebyshev(state(own)["cell"], World.FERRYMEN["lastlight"]["cell"]) <= World.TALK_RANGE \
-					and state(own)["gold"] == World.START_GOLD - fare and game.last_action_message.contains("Lastlight"):
+					and state(own)["gold"] == World.START_GOLD - fare and _saw_part("Lastlight"):
 				advance()
 		13:
 			for id: int in game.monsters:
@@ -498,7 +518,7 @@ func _dedicated_client_tick(now: float) -> void:
 					game.request_target.rpc_id(1, "not-a-creature")
 					advance()
 		14:
-			if game.last_action_message == "Unknown target":
+			if stage_messages.has("Unknown target"):
 				game.target_local(sparring)
 				advance()
 		15:
@@ -517,7 +537,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.quest_local("relic_keeper", "cinderheart_bow")
 				advance()
 		18:
-			if game.last_action_message.begins_with("Ysolde only keeps"):
+			if _saw_start("Ysolde only keeps"):
 				game.quest_local("relic_keeper_kharzul", "cinderheart_bow")
 				advance()
 		19:
@@ -526,7 +546,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.move_item_local({"type": "backpack", "index": relic}, {"type": "ground", "cell": state(own)["cell"]})
 				advance()
 		20:
-			if game.last_action_message == "The Cinderheart bow is bound to you" and now - stage_since > 0.2:
+			if stage_messages.has("The Cinderheart bow is bound to you") and now - stage_since > 0.2:
 				if not state(own)["backpack"].has("cinderheart_bow") or game.ground_view.has(state(own)["cell"]):
 					fail("A bound relic left the backpack")
 					return
@@ -536,11 +556,11 @@ func _dedicated_client_tick(now: float) -> void:
 				game.request_buy.rpc_id(1, "cinder_vendor", "abyssal_greathelm", 1)
 				advance()
 		22:
-			if game.last_action_message == "The vendor does not sell that":
+			if stage_messages.has("The vendor does not sell that"):
 				game.sell_local("cinder_vendor", state(own)["backpack"].find("cinderheart_bow"))
 				advance()
 		23:
-			if game.last_action_message == "The vendor will not buy the Cinderheart bow":
+			if stage_messages.has("The vendor will not buy the Cinderheart bow"):
 				game.buy_local("cinder_vendor", "health_potion", 3)
 				advance()
 		24:
@@ -559,7 +579,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.request_bank.rpc_id(1, "reedmere_banker", "withdraw", 999)
 				advance()
 		27:
-			if game.last_action_message == "You only have 10 gold in the bank":
+			if stage_messages.has("You only have 10 gold in the bank"):
 				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("health_potion#2")}, {"type": "depot"})
 				advance()
 		28:
@@ -568,7 +588,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.task_local("warden_brask", "boar_cull", "accept")
 				advance()
 		29:
-			if state(own)["tasks"].get("boar_cull", -1) == 0 and game.last_action_message.begins_with("Boar cull"):
+			if state(own)["tasks"].get("boar_cull", -1) == 0 and _saw_start("Boar cull"):
 				advance()
 		30:
 			var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
@@ -590,7 +610,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.move_local(stairway - state(own)["cell"])
 				stage_since = now
 		32:
-			if World.OVERWORLD.has_point(state(own)["cell"]) and game.last_action_message.contains("Cinder Crossing") \
+			if World.OVERWORLD.has_point(state(own)["cell"]) and _saw_part("Cinder Crossing") \
 					and not _has_dungeon_monster() and state(own)["backpack"].has("alder_crook"):
 				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("alder_crook")},
 					{"type": "equipment", "slot": "main_hand"})

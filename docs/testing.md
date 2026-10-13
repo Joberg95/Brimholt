@@ -108,6 +108,8 @@ health, a monster going home cannot be hurt or re-pulled and fights again once h
 replicate their real duration), dungeon tasks (a hunt and a boss task per dungeon, given by its stairway, every dungeon
 monster counting, experience and gold rewards, one giver per task), regions (every overworld
 tile located, level ranges covering their monsters, the desert, towns, PvP, and dungeons),
+blocked camps (queued at start, filled once there is room), town rest (only in towns, much
+faster, ends when full or on leaving, a 3-minute cooldown visible to the owner),
 spell progression (every vocation unlocks three or more spells from level 15 including a
 stronger strike, listed by level, fitting the bar), PvP (player hits scaled by `PVP_DAMAGE`,
 PvP combat starting for both players, reduced and fading healing, recovery after combat, and

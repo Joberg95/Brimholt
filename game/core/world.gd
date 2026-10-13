@@ -598,7 +598,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"id": id, "cell": cell, "from": cell, "next_move": now,
 				"facing": Vector2i.DOWN, "equipment": {}, "backpack": backpack, "next_item": now,
 				"level": 1, "experience": 0, "vocation": vocation, "gold": START_GOLD, "next_travel": now,
-				"target": 0, "next_attack": now, "next_regen": now, "cooldowns": {}, "groups": {},
+				"target": 0, "next_attack": now, "next_regen": now, "town_rest": false, "town_rest_ready": -INF, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {},
 				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "pvp_until": -INF, "pvp_since": -INF,
@@ -658,6 +658,8 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["trophies"] = player["trophies"].duplicate()
 		state["unjustified"] = player["unjustified"].size()
 		state["mana"] = player["mana"]
+		state["town_rest"] = player["town_rest"]
+		state["town_rest_left"] = maxf(0.0, player["town_rest_ready"] - now)
 		state["max_mana"] = player_stats(id)["mana"]
 		state["target"] = player["target"]
 		for timers: String in ["cooldowns", "groups"]:

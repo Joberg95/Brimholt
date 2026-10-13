@@ -58,6 +58,7 @@ func _run() -> void:
 	_monster_catalog_checks()
 	_pvp_and_spell_checks()
 	_dungeon_task_and_region_checks()
+	_spawn_and_rest_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -2507,6 +2508,94 @@ func _dungeon_task_and_region_checks() -> void:
 		var place: Dictionary = World.location_at(spawn["cell"])
 		if place.get("kind", "") == "region" and Monsters.MONSTERS[spawn["monster"]]["rank"] != "boss":
 			check(spawn["level"] >= place["min_level"] and spawn["level"] <= place["max_level"], "region levels cover their monsters")
+
+
+## Blocked spawns retry until their camp is full; town rest boosts regeneration with a cooldown.
+func _spawn_and_rest_checks() -> void:
+	# Fill a camp's whole area with players so nothing can spawn there, then free it.
+	var world := World.new()
+	var combat := Combat.new(world, 21)
+	var index: int = 0
+	for candidate: int in World.MONSTER_SPAWNS.size():
+		var spawn: Dictionary = World.MONSTER_SPAWNS[candidate]
+		if spawn["radius"] <= 1 and spawn["count"] >= 1 and World.dungeon_at(spawn["cell"]).is_empty():
+			index = candidate
+			break
+	var camp: Dictionary = World.MONSTER_SPAWNS[index]
+	var blockers: Array[Vector2i] = []
+	for dy: int in range(-camp["radius"], camp["radius"] + 1):
+		for dx: int in range(-camp["radius"], camp["radius"] + 1):
+			if World.walkable(camp["cell"] + Vector2i(dx, dy)):
+				blockers.append(camp["cell"] + Vector2i(dx, dy))
+	var held: Dictionary = {}
+	for cell: Vector2i in blockers:
+		world.monsters[-90000 - held.size()] = {"cell": cell, "from": cell, "next_move": 0.0}
+		held[cell] = -90000 - (held.size())
+	combat.populate(0.0)
+	var in_camp: Callable = func() -> int:
+		return world.monsters.values().filter(func(monster: Dictionary) -> bool:
+			return monster.get("spawn", -1) == index).size()
+	check(in_camp.call() == 0 and combat.respawns.filter(func(entry: Array) -> bool: return entry[1] == index).size() == camp["count"],
+		"a blocked camp queues every monster it could not place")
+	for id: int in world.monsters.keys():
+		if id <= -90000:
+			world.monsters.erase(id)
+	var time: float = 0.0
+	while time < Combat.SPAWN_RETRY_SECONDS * 3.0:
+		time += Combat.TICK_SECONDS * 1.5
+		combat.tick(time)
+	check(in_camp.call() == camp["count"], "once there is room, the camp fills to its count")
+	# Town rest.
+	var town := World.new()
+	var rest := Combat.new(town, 22)
+	town.monsters.clear()
+	town.add_player(1, 0.0, "knight")
+	var player: Dictionary = town.players[1]
+	var limits: Dictionary = town.player_stats(1)
+	var outside: Vector2i = Vector2i(-1, -1)
+	for dy: int in range(0, 40):
+		if outside.x < 0 and World.walkable(World.SPAWNS[0] + Vector2i(0, dy)) and World.zone_at(World.SPAWNS[0] + Vector2i(0, dy)).is_empty():
+			outside = World.SPAWNS[0] + Vector2i(0, dy)
+	_place(town, 1, outside)
+	player["health"] = 1
+	var clock_now: float = 100.0
+	rest.tick(clock_now)
+	var outside_gain: int = player["health"] - 1
+	check(not player["town_rest"], "no town rest outside a town")
+	_place(town, 1, World.SPAWNS[0])
+	player["health"] = 1
+	player["next_regen"] = 0.0
+	var events: Array = []
+	clock_now += 1.0
+	rest._player_tick(1, clock_now, events)
+	var town_gain: int = player["health"] - 1
+	check(player["town_rest"] and town_gain >= outside_gain * 3 and events.any(func(event: Dictionary) -> bool:
+		return event["kind"] == "message" and event["text"].contains("rest")), "a town rest starts, announced, and heals much faster")
+	var seconds: float = 0.0
+	while player["health"] < limits["health"] and seconds < 60.0:
+		seconds += Combat.REGEN_SECONDS
+		player["next_regen"] = 0.0
+		rest._player_tick(1, clock_now + seconds, [])
+	check(seconds <= 32.0, "a town rest takes you from empty to full in about half a minute (%.0f s)" % seconds)
+	player["mana"] = limits["mana"]
+	player["next_regen"] = 0.0
+	rest._player_tick(1, clock_now + seconds + 0.1, [])
+	check(not player["town_rest"] and is_equal_approx(player["town_rest_ready"], clock_now + seconds + 0.1 + Combat.TOWN_REST_COOLDOWN),
+		"a full player's rest ends and starts its cooldown")
+	player["health"] = 1
+	player["next_regen"] = 0.0
+	rest._player_tick(1, clock_now + seconds + 10.0, [])
+	check(not player["town_rest"] and player["health"] < 1 + town_gain, "town rest waits for its cooldown")
+	check(town.export_player(1, clock_now + seconds + 10.0, true)["town_rest_left"] > 0.0
+		and not town.export_player(1, clock_now + seconds + 10.0).has("town_rest_left"), "the owner sees when rest is ready")
+	player["next_regen"] = 0.0
+	rest._player_tick(1, clock_now + seconds + 0.2 + Combat.TOWN_REST_COOLDOWN, [])
+	check(player["town_rest"], "after the cooldown a town rest starts again")
+	_place(town, 1, outside)
+	player["next_regen"] = 0.0
+	rest._player_tick(1, clock_now + seconds + 1.0 + Combat.TOWN_REST_COOLDOWN, [])
+	check(not player["town_rest"] and player["town_rest_ready"] > clock_now + seconds + Combat.TOWN_REST_COOLDOWN,
+		"leaving town ends the rest and starts its cooldown")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

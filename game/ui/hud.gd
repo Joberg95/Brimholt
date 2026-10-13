@@ -154,7 +154,8 @@ func _update_location() -> void:
 		return
 	var state: Dictionary = actors[game.self_id]["state"]
 	var place: Dictionary = World.location_at(state["cell"])
-	var key: String = "%s|%d" % [place.get("name", ""), state.get("level", 1)]
+	var rest: String = _rest_text(state, actors[game.self_id]) if place.get("kind", "") == "town" else ""
+	var key: String = "%s|%d|%s" % [place.get("name", ""), state.get("level", 1), rest]
 	if key == _location_key:
 		return
 	var entered: bool = place.get("name", "") != _location_key.get_slice("|", 0)
@@ -162,7 +163,7 @@ func _update_location() -> void:
 	if place.is_empty():
 		location_label.text = ""
 		return
-	var levels: String = "safe town" if place["kind"] == "town" else ("no monsters" if place["max_level"] == 0
+	var levels: String = "safe town%s" % rest if place["kind"] == "town" else ("no monsters" if place["max_level"] == 0
 		else "levels %d–%d" % [place["min_level"], place["max_level"]])
 	location_label.text = "%s · %s%s" % [place["name"], levels, " · PvP" if place["kind"] == "pvp" else ""]
 	location_label.tooltip_text = Regions.description(place["name"])
@@ -170,6 +171,16 @@ func _update_location() -> void:
 	location_label.add_theme_color_override("font_color", Color("#ff8a7a") if place["kind"] == "pvp" else colour)
 	if entered and place["kind"] == "region" and game.last_action_message.is_empty():
 		game.last_action_message = "Entering %s (%s)." % [place["name"], levels]
+
+
+## " · resting", " · rest ready", or " · rest in 2:31" (town rest, combat.gd TOWN_REST_*).
+func _rest_text(state: Dictionary, view: Dictionary) -> String:
+	if state.get("town_rest", false):
+		return " · resting"
+	var left: float = state.get("town_rest_left", 0.0) - (game._now() - view.get("received", game._now()))
+	if left <= 0.0:
+		return " · rest ready"
+	return " · rest in %d:%02d" % [int(left) / 60, int(left) % 60]
 
 
 func _update_zone() -> void:

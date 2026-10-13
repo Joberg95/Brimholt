@@ -24,6 +24,13 @@ const MANA_REGEN_FRACTION: float = 0.08
 ## Out of combat for this long, health and mana regenerate RESTING_MULTIPLIER times faster.
 const RESTING_SECONDS: float = 8.0
 const RESTING_MULTIPLIER: float = 3.0
+## Town rest: in a town and missing health or mana, you regenerate TOWN_REST_MULTIPLIER times the
+## base rate (about 25 s from empty to full) until you are full or leave; then it needs
+## TOWN_REST_COOLDOWN before it starts again, so towns are not a free mid-fight heal.
+const TOWN_REST_MULTIPLIER: float = 10.0
+const TOWN_REST_COOLDOWN: float = 180.0
+## A spawn that finds no free tile (or a player standing on its camp) tries again this much later.
+const SPAWN_RETRY_SECONDS: float = 5.0
 ## Below this level, dying never drops items or gold, so new players cannot be stranded.
 const PROTECTION_LEVEL: int = 8
 ## Players can lock targets within this many tiles.
@@ -219,11 +226,14 @@ func monster_snapshot(now: float) -> Dictionary:
 
 # ---------------------------------------------------------------- spawning
 
+## Fills every overworld spawn to its count. A monster that finds no free tile now is queued like
+## a respawn and retried every SPAWN_RETRY_SECONDS, so every camp reaches its full count.
 func populate(now: float) -> Array:
 	var events: Array = []
 	for index: int in World.MONSTER_SPAWNS.size():
 		for count: int in World.MONSTER_SPAWNS[index]["count"]:
-			_spawn_at_marker(index, now, events)
+			if not _spawn_at_marker(index, now, events):
+				respawns.append([now + SPAWN_RETRY_SECONDS, index])
 	return events
 
 
@@ -1049,7 +1059,7 @@ func tick(now: float) -> Array:
 			var spawn: int = respawns[index][1]
 			respawns.remove_at(index)
 			if _player_near(World.MONSTER_SPAWNS[spawn]["cell"], 4) or not _spawn_at_marker(spawn, now, events):
-				respawns.append([now + 5.0, spawn])
+				respawns.append([now + SPAWN_RETRY_SECONDS, spawn])
 	return events
 
 
@@ -1063,6 +1073,8 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 		var limits: Dictionary = world.player_stats(id)
 		var before: Array = [player["health"], player["mana"]]
 		var rate: float = REGEN_SECONDS / 10.0 * (RESTING_MULTIPLIER if resting(id, now) else 1.0)
+		if _town_rest(id, limits, now, events):
+			rate = REGEN_SECONDS / 10.0 * TOWN_REST_MULTIPLIER
 		player["health"] = mini(limits["health"], player["health"] + maxi(1, roundi(limits["regen"] * rate * healing_factor(id, now))))
 		player["mana"] = mini(limits["mana"], player["mana"] + maxi(1, roundi(limits["mana"] * MANA_REGEN_FRACTION * rate)))
 		if [player["health"], player["mana"]] != before:
@@ -1079,6 +1091,25 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 		if reach_of(id) > 1:
 			_missile(player["cell"], creature(target)["cell"], MISSILE_COLORS.get(player["vocation"], Color.WHITE), events)
 		_hit(id, target, 1.0, now, events)
+
+
+## Starts, keeps, or ends a player's town rest; returns whether it boosts this regeneration tick.
+func _town_rest(id: int, limits: Dictionary, now: float, events: Array) -> bool:
+	var player: Dictionary = world.players[id]
+	var in_town: bool = World.zone_at(player["cell"]).get("town", false)
+	var missing: bool = player["health"] < limits["health"] or player["mana"] < limits["mana"]
+	if player["town_rest"]:
+		if in_town and missing:
+			return true
+		player["town_rest"] = false
+		player["town_rest_ready"] = now + TOWN_REST_COOLDOWN
+		events.append({"kind": "player", "id": id})
+		return false
+	if in_town and missing and now >= player["town_rest_ready"]:
+		player["town_rest"] = true
+		events.append({"kind": "message", "id": id, "text": "You rest in town and recover quickly."})
+		return true
+	return false
 
 
 func resting(id: int, now: float) -> bool:
