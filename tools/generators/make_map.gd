@@ -797,6 +797,9 @@ func _save(items: Array) -> void:
 
 func dungeon_entrances() -> Dictionary:
 	var entrances: Dictionary = DUNGEON_ENTRANCES.duplicate()
+	for id: String in DungeonPainter.Dungeons.DUNGEONS:
+		if DungeonPainter.Dungeons.DUNGEONS[id].has("entrance"):
+			entrances[id] = DungeonPainter.Dungeons.DUNGEONS[id]["entrance"]
 	for id: String in TOWN_DUNGEONS:
 		entrances[id] = docks[TOWN_DUNGEONS[id][0]]["plaza"] + TOWN_DUNGEONS[id][1]
 	return entrances

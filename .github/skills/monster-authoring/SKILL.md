@@ -34,7 +34,7 @@ the contract below. Consult the gameplay and validation skills for wider rules.
     per tile at even level (a touch faster than a player's 0.18 s), down to 0.13 s when the
     monster outlevels its target by 10 or more.
   - So `step` never makes a monster kitable.
-- **look**: one of the tinted creature sheets (`quadruped`, `blob`, `golem`, `wraith`) with
+- **look**: one of the tinted creature sheets (`quadruped`, `spider`, `blob`, `golem`, `wraith`) with
   `color` as the tint. Or `humanoid` with `gear`: catalog item ids per visible slot, each of
   which must fit its slot.
 - **size**: scales the sprite, 0.4–2.0.
@@ -44,8 +44,8 @@ the contract below. Consult the gameplay and validation skills for wider rules.
 ### A new body shape
 
 Try an existing look with a different tint and size first. If a new body really is needed:
-- Write a builder in `tools/generators/make_sprites.py`, next to `quadruped`, `blob`,
-  `golem` and `wraith`. Use the same 64×64 frames: three columns, four facings, feet at y 53.
+- Write a builder in `tools/generators/make_sprites.py`, next to `quadruped`, `spider`,
+  `blob`, `golem` and `wraith`. Use the same 64×64 frames: three columns, four facings, feet at y 53.
 - Add its sheets to the `monsters/` outputs.
 - Register it in `SpriteArt.MONSTER_SHEETS` and `MONSTER_DETAILS` (and `MONSTER_GLOW` if it
   glows).
@@ -108,6 +108,7 @@ behave differently, change the shared rules in `combat.gd` and update the chase 
 make fight-sim MONSTER=ash_hound LEVELS=10,20 COUNT=1
 make fight-sim MONSTER=ash_hound LEVELS=10,20 COUNT=3
 make fight-sim MONSTER=ash_hound LEVELS=40 PLAYER_LEVEL=1     # an under-levelled player must lose
+make fight-sim MONSTER=cave_spider LEVELS=16 OFF_HAND=torch   # a dark dungeon: torch, no shield or book
 ```
 
 The simulator fights each vocation in its tier's vendor gear, first with auto-attacks only,

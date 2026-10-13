@@ -159,7 +159,8 @@ a wall. Town buildings have roofs that hide whoever is inside; the roof of the b
 stand in fades away while you are there.
 
 **Vendors** sell health and mana potions (20 gold each, in ones or tens) and levelling gear:
-the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your vocation.
+the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your vocation, and
+torches for dark caves.
 Gear costs about 40 × level^1.05 gold (weapons a quarter more): 40–50 gold at tier 1,
 215–270 at tier 5, and 450–560 at tier 10. Better gear comes from monsters and quests. Vendors
 buy monster materials for their value (one stack, or **Sell all materials**) and unbound gear
@@ -191,7 +192,8 @@ progress shows in the message line and in the quest dialog. Turn it in to the gi
 **Dungeon tasks** are given by the stairway down into each dungeon: **Cellarmaster Pell** in
 Cinder Crossing (25 cellar rats, then the Rat King), **Sexton Wren** inside Ashford's crypt
 house (30 risen dead, then Abbot Morrow), and **Foreman Dagny** inside Highmoor's mine house
-(30 mine creatures, then the Forgemaw). Any of the dungeon's regular monsters count toward its
+(30 mine creatures, then the Forgemaw); **Trapper Maud** waits at Silkhollow's cave mouth in
+Thornfield Wilds (25 Silkhollow spiders, then the Silk Matron). Any of the dungeon's regular monsters count toward its
 hunt, and your party's shared kills count too. They pay experience and gold instead of a pack:
 half of what the kills themselves gave for a hunt, and as much again as the boss gave for a
 boss task (shown in the quest dialog). A giver lists all their tasks; each is done once.
@@ -252,7 +254,8 @@ Crossing to level 45 in the far east and south.
 
 ## Instanced dungeons
 
-Some town buildings hold stairs down (orange on the world map). Step on them to enter a
+Some town buildings hold stairs down (orange on the world map), and one rock-ringed stairway
+lies in the wilds. Step on them to enter a
 private copy of that dungeon for you and your party; the party leader's copy is shared by
 everyone in the party. Stairs up lead back beside the town stairway. A copy runs its monsters
 only while players are inside, and resets 60 seconds after the last player leaves: monsters
@@ -264,6 +267,14 @@ and leaves you in town.
 | Cinder cellar | Cinder Crossing, north-east house | 3–9 | sewer rats, giant rats | The Rat King |
 | Ashford crypt | Ashford, south-west house | 19–25 | crypt skeletons, grave ghouls | Abbot Morrow |
 | Highmoor deep mine | Highmoor, north-east house | 33–40 | cave crawlers, ember golems | Forgemaw |
+| Silkhollow | Thornfield Wilds, a cave mouth west of the lake | 15–20 | cave spiders, venom weavers (spit from 3 tiles) | The Silk Matron |
+
+**Silkhollow is pitch dark**: your lantern lights only an arm's length, so you will not see a
+spider until it bites. Hold a **Torch** (15 gold at any vendor, any vocation, no stats) in your
+off hand for a wide, flickering light that everyone nearby sees by. That means going without
+your shield or spellbook: the spiders come singly or in pairs (weavers alone), so the camps
+stay fair without one (`make fight-sim MONSTER=cave_spider OFF_HAND=torch`). Entering without
+a torch tells you so. A torch also lights the night outside.
 
 Champions have ten times a normal monster's health, hit 1.8 times as hard, give 25 times the
 experience, and always drop gear of their tier plus a valuable trophy material. Dungeon copies

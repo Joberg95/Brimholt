@@ -1020,13 +1020,41 @@ def plate_face(image, points, palette, rim, emblem):
         image.set(x, y, rim)
 
 
+def torch_flame(image, cx, base, height, sway):
+    outer, mid, inner = rgba("d0581c"), rgba("f09a2a"), rgba("fff0a0")
+    for y in range(height):
+        half = max(0, round(2.4 * (1 - y / height) + 0.4))
+        shift = round(sway * y / height)
+        for x in range(cx - half + shift, cx + half + shift):
+            image.set(x, base - y, mid if half > 1 and cx - half + shift < x < cx + half - 1 + shift else outer)
+        if y < height // 2 and half > 1:
+            image.set(cx + shift - 1 + (y % 2), base - y, inner)
+
+
+def held_torch(direction, frame):
+    """A burning torch held up in the off hand; the flame sways with the walk."""
+    image = Image(FRAME, FRAME)
+    if direction in ("down", "up"):
+        x, top = 18, 24 + swing(frame)
+    else:
+        x, top = 20, 23 + swing(frame)
+    image.rect(x, top + 4, 2, 10, WOOD[1])
+    image.rect(x, top + 4, 1, 10, WOOD[0])
+    image.rect(x - 1, top + 3, 4, 2, rgba("3a2a1c"))
+    image = image.outlined()
+    torch_flame(image, x + 1, top + 2, 7 + (frame % 2), (0, -1, 1, 1, -1)[frame])
+    return image
+
+
 def shield_builder(kind):
-    """Off-hand items: buckler, heater, tower (shields) and book (spellbooks)."""
+    """Off-hand items: buckler, heater, tower (shields), book (spellbooks) and torch."""
     palette, accent = tones(kind)
     light, main, dark = palette
     shape, _ = look(kind)
 
     def build(direction, frame):
+        if shape == "torch":
+            return held_torch(direction, frame)
         image = Image(FRAME, FRAME)
         if direction in ("down", "up"):
             top = 25 + swing(frame)
@@ -1187,6 +1215,56 @@ def quadruped(direction, frame):
     return body, detail
 
 
+def spider(direction, frame):
+    """Eight jointed legs around a small head and a bulbous, banded abdomen; a cluster of red eyes."""
+    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
+    for x, y in ellipse(32, 53, 15, 3):
+        body.set(x, y, SHADOW)
+    shape = Image(FRAME, FRAME)
+    lift = swing(frame)
+    legs = set()
+    if direction in ("down", "up"):
+        for side in (-1, 1):
+            for index in range(4):
+                up = lift if (index + (side > 0)) % 2 else -lift
+                foot_y = 37 + index * 5 + up
+                hip = (32 + side * 5, 37 + index * 2)
+                knee = (32 + side * (11 + (2, 4, 4, 2)[index]), foot_y - 10)
+                foot = (32 + side * (16 + (2, 5, 5, 2)[index]), foot_y)
+                legs |= line(*hip, *knee) | line(*knee, *foot)
+        shade(shape, thick(legs, ((0, 0), (1, 0))), MONSTER_TONES, False)
+        abdomen_y, head_y = (34, 44) if direction == "down" else (45, 35)
+        shade(shape, ellipse(32, abdomen_y, 10, 9), MONSTER_TONES)
+        shade(shape, ellipse(32, head_y, 6, 5), MONSTER_TONES)
+        for x, y in ellipse(32, abdomen_y, 10, 9):
+            if (y - abdomen_y) in (-3, 2) and abs(x - 32) < 7:
+                shape.set(x, y, (120, 120, 120, 255))
+        if direction == "down":
+            for x, y in ((29, 43), (34, 43), (30, 41), (33, 41)):
+                detail.set(x, y, rgba("e0303a"))
+            detail.rect(29, 48, 1, 2, EYE_DARK)
+            detail.rect(34, 48, 1, 2, EYE_DARK)
+    else:
+        for index in range(4):
+            up = lift if index % 2 else -lift
+            for far in (2, 0):
+                hip = (25 + index * 3 + far, 40 - far)
+                knee = (17 + index * 8 + far, 27 + up - far)
+                foot = (11 + index * 12 + far, 52 - far + (up if far else -up) // 2)
+                legs |= line(*hip, *knee) | line(*knee, *foot)
+        shade(shape, thick(legs, ((0, 0), (0, 1))), MONSTER_TONES, False)
+        shade(shape, ellipse(41, 38, 11, 8), MONSTER_TONES)
+        shade(shape, ellipse(23, 42, 6, 5), MONSTER_TONES)
+        for x, y in ellipse(41, 38, 11, 8):
+            if x in (38, 44) and abs(y - 38) < 6:
+                shape.set(x, y, (120, 120, 120, 255))
+        for x, y in ((19, 40), (21, 39), (20, 42)):
+            detail.set(x, y, rgba("e0303a"))
+        detail.rect(17, 45, 2, 1, EYE_DARK)
+    body.over(shape.outlined())
+    return body, detail
+
+
 def blob(direction, frame):
     body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
     for x, y in ellipse(32, 53.5, 13, 3):
@@ -1211,7 +1289,7 @@ def golem(direction, frame):
         body.set(x, y, SHADOW)
     shape = Image(FRAME, FRAME)
     side = direction in ("left", "right")
-    lift = (0, 1, -1)[frame]
+    lift = swing(frame)
     plates = [
         ellipse(27, 48 - max(lift, 0), 4, 6),
         ellipse(37, 48 - max(-lift, 0), 4, 6),
@@ -1430,6 +1508,11 @@ def item_icon(kind):
         plate_face(image, heater_points(9, 6, 15, 21), (light, main, dark), dark, box(16, 11, 1, 8))
     elif shape == "tower":
         plate_face(image, heater_points(9, 5, 15, 23), (light, main, dark), dark, box(15, 11, 2, 10))
+    elif shape == "torch":
+        stick = thick(line(9, 27, 19, 12), ((0, 0), (1, 0)))
+        shade(image, stick, WOOD, False)
+        image.rect(18, 10, 4, 3, rgba("3a2a1c"))
+        torch_flame(image, 20, 10, 9, 1)
     elif shape == "book":
         bevel(image, box(9, 7, 14, 19), main, light, dark)
         image.rect(9, 7, 2, 19, dark)
@@ -2419,9 +2502,9 @@ def main():
         "items_glow.png": None,
         **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
         **{f"monsters/{name}.png": monster_sheet(builder, False)
-           for name, builder in (("quadruped", quadruped), ("blob", blob), ("golem", golem), ("wraith", wraith))},
+           for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},
         **{f"monsters/{name}_detail.png": monster_sheet(builder, True)
-           for name, builder in (("quadruped", quadruped), ("blob", blob), ("golem", golem), ("wraith", wraith))},
+           for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},
     }
     for name in [name for name, image in outputs.items() if image is None]:
         if name == "items_glow.png":

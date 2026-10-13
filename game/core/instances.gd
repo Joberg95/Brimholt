@@ -63,6 +63,9 @@ func enter(id: int, dungeon: String, now: float) -> Array:
 	_teleport(id, arrival, events)
 	events.append({"kind": "message", "id": id, "text": "You descend into the %s (levels %d-%d)." % [
 		definition["name"], definition["min_level"], definition["max_level"]]})
+	var held: String = String(world.players[id]["equipment"].get("off_hand", ""))
+	if definition.get("dark", false) and String(World.ITEMS.get(held, {}).get("look", "")) != "torch":
+		events.append({"kind": "message", "id": id, "text": "It is pitch black. Hold a torch in your off hand to see."})
 	return events
 
 

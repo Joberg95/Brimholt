@@ -241,9 +241,11 @@ func _run() -> void:
 		return
 	if not await _check_town_torches():
 		return
+	if not await _check_dark_cave():
+		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -959,6 +961,69 @@ func _check_town_torches() -> bool:
 		return false
 	return _expect(night.get_pixelv(wall).r > night.get_pixelv(wall).b,
 		"A town wall torch does not cast warm light on its wall")
+
+
+## Silkhollow is pitch dark: a lantern lights an arm's length, a held torch three tiles and more.
+func _check_dark_cave() -> bool:
+	var player: Dictionary = game.world.players[1]
+	var home: Vector2i = player["cell"]
+	var worn: Dictionary = player["equipment"].duplicate()
+	player["equipment"] = {}
+	var arrival: Vector2i = Dungeons.origin("silkhollow", 3) + Dungeons.cells("silkhollow", "@")[0]
+	var shots: Array[Image] = []
+	var spiders: Array[int] = []
+	for torch: bool in [false, true]:
+		if torch:
+			player["equipment"]["off_hand"] = "torch"
+			var events: Array = []
+			for entry: Array in [["cave_spider", Vector2i(3, 1)], ["venom_weaver", Vector2i(2, 3)]]:
+				var id: int = game.combat.spawn_monster(entry[0], 16, arrival + entry[1], game._now(), -1, events)
+				game.world.monsters[id]["next_move"] = INF
+				game.world.monsters[id]["next_attack"] = INF
+				spiders.append(id)
+			game._handle_events(events)
+		else:
+			player["equipment"].erase("off_hand")
+		player["cell"] = arrival
+		player["from"] = arrival
+		game._publish_actor(1)
+		await create_timer(0.8).timeout
+		await RenderingServer.frame_post_draw
+		shots.append(screen.get_texture().get_image())
+	shots[0].save_png("res://.tools/visual-cave.png")
+	shots[1].save_png("res://.tools/visual-cave-torch.png")
+	var gone: Array = []
+	for id: int in spiders:
+		game.combat.despawn(id, gone)
+	game._handle_events(gone)
+	# The cave mouth in Thornfield Wilds, by day.
+	var mouth: Vector2i = World.ENTRANCE_OF["silkhollow"] + Vector2i(0, 3)
+	player["cell"] = mouth
+	player["from"] = mouth
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-cave-mouth.png")
+	player["equipment"] = worn
+	player["cell"] = home
+	player["from"] = home
+	game._publish_actor(1)
+	await create_timer(0.5).timeout
+	var centre: Vector2 = game.map_to_screen(Vector2(home) * World.TILE_SIZE + Vector2(16, 16))
+	var dark: float = _mean_luminance(shots[0], Rect2i(Vector2i(centre) - Vector2i(240, 200), Vector2i(480, 400)))
+	var lit: float = _mean_luminance(shots[1], Rect2i(Vector2i(centre) - Vector2i(240, 200), Vector2i(480, 400)))
+	return _expect(dark < 0.06 and lit > dark * 2.5 and lit > 0.08, "Silkhollow is not dark without a torch, or a torch does not light it (%.2f -> %.2f)" % [dark, lit])
+
+
+func _mean_luminance(image: Image, area: Rect2i) -> float:
+	var region: Rect2i = area.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+	var total: float = 0.0
+	var samples: int = 0
+	for y: int in range(region.position.y, region.end.y, 8):
+		for x: int in range(region.position.x, region.end.x, 8):
+			total += image.get_pixel(x, y).get_luminance()
+			samples += 1
+	return total / maxi(samples, 1)
 
 
 ## The quest list: one task in progress and one ready to turn in, then hidden with its key.

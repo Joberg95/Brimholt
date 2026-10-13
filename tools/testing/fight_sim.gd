@@ -19,14 +19,22 @@ const Monsters = preload("res://game/data/monsters.gd")
 const OFFSETS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1)]
 const TIME_LIMIT: float = 300.0
 
+## Replaces every vocation's off-hand item (--off-hand=torch: a dark dungeon, no shield or book).
+var off_hand: String = ""
+
 
 func _initialize() -> void:
 	var options: Dictionary = {"monster": "field_vole", "levels": "1,10,20,30,40", "count": "1",
-		"player-level": "", "vocations": "knight,paladin,sorcerer,druid"}
+		"player-level": "", "vocations": "knight,paladin,sorcerer,druid", "off-hand": ""}
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--") and argument.contains("="):
 			options[argument.substr(2).get_slice("=", 0)] = argument.get_slice("=", 1)
 	var kind: String = options["monster"]
+	off_hand = options["off-hand"]
+	if not off_hand.is_empty() and World.ITEMS.get(off_hand, {}).get("slot", "") != "off_hand":
+		printerr("Unknown off-hand item %s" % off_hand)
+		quit(1)
+		return
 	if not Monsters.MONSTERS.has(kind):
 		printerr("Unknown monster %s" % kind)
 		quit(1)
@@ -55,6 +63,8 @@ func _gear(level: int, vocation: String) -> Dictionary:
 				and item["slot"] in ["helmet", "armor", "main_hand", "off_hand"] \
 				and (item["vocations"].is_empty() or vocation in item["vocations"]) and not gear.has(item["slot"]):
 			gear[item["slot"]] = kind
+	if not off_hand.is_empty():
+		gear["off_hand"] = off_hand
 	return gear
 
 

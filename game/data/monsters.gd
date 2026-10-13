@@ -55,6 +55,13 @@ const MONSTERS: Dictionary = {
 		"rank": "normal", "range": 1, "step": 0.6},
 	"forgemaw": {"name": "Forgemaw", "look": "golem", "color": Color("#6a3020"), "size": 1.7,
 		"rank": "champion", "range": 1, "step": 0.6, "glow": Color("#ff7a2a")},
+	# Silkhollow (Thornfield Wilds, levels 15-20): a lightless cave, so the off hand holds a torch.
+	"cave_spider": {"name": "Cave spider", "look": "spider", "color": Color("#5a5260"), "size": 0.85,
+		"rank": "normal", "range": 1, "step": 0.35},
+	"venom_weaver": {"name": "Venom weaver", "look": "spider", "color": Color("#6a7a3a"), "size": 0.9,
+		"rank": "normal", "range": 3, "step": 0.45},
+	"silk_matron": {"name": "The Silk Matron", "look": "spider", "color": Color("#4a2a3a"), "size": 1.6,
+		"rank": "champion", "range": 1, "step": 0.45},
 	# Final bosses: level 50 "boss" rank (Balance: a ten-player raid), slow respawn. Each kill
 	# gives every participant a trophy, traded at the Relic keeper for one of the boss's four
 	# glowing "relics". Raid mechanics (enrage, raid-wide damage, tank swaps) come later.
@@ -108,6 +115,9 @@ const LOOT: Dictionary = {
 	"cave_crawler": [["crawler_chitin", 0.3]],
 	"ember_golem": [["ember_ore", 0.25]],
 	"forgemaw": [["forge_heart", 1.0], ["ember_ore", 1.0], ["forgemaw_arbalest", 0.14]],
+	"cave_spider": [["spider_silk", 0.35]],
+	"venom_weaver": [["venom_gland", 0.3], ["spider_silk", 0.15]],
+	"silk_matron": [["matron_eye", 1.0], ["spider_silk", 1.0], ["venom_gland", 1.0]],
 	"obsidian_golem": [["obsidian_chunk", 0.4], ["sanctum_warhammer", 0.055]],
 	"vaelith": [],
 }

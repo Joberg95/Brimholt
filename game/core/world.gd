@@ -219,6 +219,7 @@ static func _static_init() -> void:
 			ZONES.append({
 				"name": definition["name"], "rect": Dungeons.rect(dungeon, copy), "pvp": false, "full_loot": false,
 				"town": false, "underground": true, "ambient": definition["ambient"], "dungeon": dungeon, "copy": copy,
+				"dark": definition.get("dark", false),
 				"min_level": definition["min_level"], "max_level": definition["max_level"],
 			})
 	if scene.has_node("MonsterSpawns"):

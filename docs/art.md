@@ -54,6 +54,9 @@ the same integer pixel mapping (80% authored height, feet anchored at frame y=53
 This is baked into the PNGs, not a runtime stretch. It keeps grips, masks, capes and
 walk poses registered without altering the 64×64 frame or gameplay collision footprint.
 Monster bodies keep their own proportions; humanoid monsters use the compact character rig.
+Creature sheets (`monsters/<look>.png`, greyscale and tinted per monster, with an untinted
+`_detail` sheet for eyes): `quadruped`, `spider` (eight jointed legs, a banded abdomen, red
+eyes), `blob`, `golem`, `wraith`.
 Glow masks are generated from the final compact sheets.
 
 To edit art, change a PNG in Aseprite or another pixel editor, keeping its frame
@@ -88,7 +91,7 @@ accent), plus `glow` for relics and `gold` or `value` for coins and materials. T
 order is the icon order in `items.png`. `look` picks the drawing: helmets `cap`, `coif`,
 `helm`, `kettle`, `greathelm` (decorate with `+plume`, `+crest`, `+horns`); armor `coat`,
 `tunic`, `mail`, `scale`, `brigandine`, `plate`; weapons `sword`, `greatsword`, `axe`, `mace`, `hammer`, `bow`, `crossbow`,
-`wand`, `rod`; off-hands `buckler`, `heater`, `tower`, `book`; and `cape`, `amulet`,
+`wand`, `rod`; off-hands `buckler`, `heater`, `tower`, `book`, `torch` (held up, flame swaying with the walk); and `cape`, `amulet`,
 `charm`, `ring`. Tiers share fitting colours, but item construction should not be reduced
 to a colour swap: bows retain timber limbs and books leather covers with page edges. Run
 `python3 tools/generators/make_sprites.py --preview .tools/gear-preview.png` for a sheet
@@ -131,7 +134,8 @@ The world renders into its own `SubViewport` (`game/ui/game_window.gd`), so ligh
 `game/render/lighting.gd` tints it with a `CanvasModulate`: a day and night cycle on the
 host's clock (a 40-minute day; sessions start in the morning; clients sync the clock in the
 welcome snapshot), multiplied by a zone's `ambient` colour (the Hollow Reach is a permanent
-violet dusk). Pooled `PointLight2D`s follow players (lanterns), NPCs, town wall torches (lit from dusk, flickering), relic wearers, glowing
+violet dusk). Pooled `PointLight2D`s follow players (lanterns, or a wider flickering torch light when a torch
+is held; in a `dark` dungeon such as Silkhollow the lantern shrinks to 1.4 tiles), NPCs, town wall torches (lit from dusk, flickering), relic wearers, glowing
 bosses and ground relics (coloured), missiles, and spell areas; lanterns fade in as the light
 fades. `game/render/fx.gd` emits one-shot `CPUParticles2D` bursts for hits, critical hits,
 heals, level-ups, monster deaths, spell areas, and missile impacts (sparks and magic blend

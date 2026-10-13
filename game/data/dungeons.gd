@@ -1,5 +1,6 @@
 extends RefCounted
-## Instanced dungeons. Each dungeon has a stairway down (terrain "v") in a town and several
+## Instanced dungeons. Each dungeon has a stairway down (terrain "v"), in a town or (with an
+## "entrance" cell, the default for its DungeonEntrances marker) in the wilds, and several
 ## identical copies painted in a band right of the overworld (BAND_X onward, never reachable
 ## on foot). Stepping on the stairway puts you, and later your party, in a copy of your own:
 ## the first free copy is claimed by your party (its leader, or you when alone), its monsters
@@ -8,14 +9,15 @@ extends RefCounted
 ## players are inside, so dungeons cost the host nothing when empty.
 ##
 ## Layout legend: "#" wall, "." floor, "^" stairs up, "@" arrival, anything else a monster from
-## "monsters" (symbol -> [id, level]); "boss" names the symbol of the dungeon's boss.
+## "monsters" (symbol -> [id, level]); "boss" names the symbol of the dungeon's boss. A "dark"
+## dungeon shrinks the lantern to an arm's length: only a held torch lights it.
 
 ## First column of the dungeon band; the overworld is everything left of BAND_X - COPY_GAP.
 const BAND_X: int = 388
 const COPY_GAP: int = 4
 const RESET_SECONDS: float = 60.0
 ## Band columns, left to right.
-const ORDER: Array[String] = ["cinder_cellar", "ashford_crypt", "highmoor_mine"]
+const ORDER: Array[String] = ["cinder_cellar", "ashford_crypt", "highmoor_mine", "silkhollow"]
 const DUNGEONS: Dictionary = {
 	"cinder_cellar": {
 		"name": "Cinder cellar", "town": "Cinder Crossing", "copies": 6, "floor": "=", "wall": "#",
@@ -110,6 +112,38 @@ const DUNGEONS: Dictionary = {
 			"#.....e.........F..............e...#",
 			"#..................................#",
 			"####################################",
+		],
+	},
+	# A lightless spider cave in the wilds: "dark" shrinks the lantern to an arm's length, so
+	# players carry a torch (a vendor off-hand item) instead of a shield or book.
+	"silkhollow": {
+		"name": "Silkhollow", "town": "Thornfield Wilds", "copies": 4, "floor": "c", "wall": "C",
+		"ambient": Color(0.05, 0.05, 0.07), "dark": true, "entrance": Vector2i(84, 163), "min_level": 15, "max_level": 20, "boss": "M",
+		"monsters": {"s": ["cave_spider", 16], "S": ["cave_spider", 18], "w": ["venom_weaver", 17],
+			"M": ["silk_matron", 20]},
+		"rows": [
+			"##################################",
+			"#^@...######.......####.........##",
+			"#.....######...s...####....s....##",
+			"#..................####.........##",
+			"####..######.......####..w......##",
+			"####..##########..#####.........##",
+			"##......########..######..########",
+			"##..s...########..######..########",
+			"##......####.........##....S....##",
+			"####..######..s...w..##.........##",
+			"####..######.........##.........##",
+			"####...............S............##",
+			"##########..##############..######",
+			"######.........######.........####",
+			"######..S..w...######...S.....####",
+			"######.........######.........####",
+			"######....................S...####",
+			"##############..##################",
+			"##########..............##########",
+			"##########......M.......##########",
+			"##########..............##########",
+			"##################################",
 		],
 	},
 }

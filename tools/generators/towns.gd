@@ -30,6 +30,7 @@ const QUEST_GIVERS: Array = [
 	["cellarmaster_pell", "Cellarmaster Pell", "Cinder Crossing", Vector2i(15, 5), Vector2i.DOWN],
 	["sexton_wren", "Sexton Wren", "Ashford", Vector2i(189, 127), Vector2i.RIGHT],
 	["foreman_dagny", "Foreman Dagny", "Highmoor", Vector2i(337, 75), Vector2i.RIGHT],
+	["trapper_maud", "Trapper Maud", "Thornfield Wilds", Vector2i(85, 165), Vector2i.LEFT],
 ]
 ## Ground a quest giver may stand on.
 const STANDING: String = ".,:="
@@ -60,6 +61,19 @@ const PATCHES: Array = [
 		"#===#",
 		"#===#",
 		"#####",
+	]],
+	# Silkhollow's cave mouth in Thornfield Wilds: a ring of cave rock, open to the south, around
+	# the stairway (painted by dungeons.gd at Dungeons.DUNGEONS["silkhollow"]["entrance"]), in a
+	# small clearing.
+	[Vector2i(79, 161), [
+		"   .....  ",
+		"   .CCC.  ",
+		"  .CC CC. ",
+		"  .C...C. ",
+		"..........",
+		"..........",
+		" ........ ",
+		"  ......  ",
 	]],
 ]
 ## Marker groups that must never end up inside a wall.

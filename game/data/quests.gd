@@ -38,6 +38,12 @@ const TASKS: Dictionary = {
 	"forgemaw": {"title": "Quench the Forgemaw", "giver": "foreman_dagny", "monster": "forgemaw", "count": 1,
 		"reward": "experience", "share": 1.0,
 		"intro": "Something burns at the bottom of the mine. The miners call it the Forgemaw."},
+	"silk_harvest": {"title": "Cut the webs", "giver": "trapper_maud", "monster": "cave_spider",
+		"also": ["venom_weaver"], "target": "Silkhollow spiders", "count": 25, "reward": "experience", "share": 0.5,
+		"intro": "Spiders the size of dogs nest in Silkhollow. Take a torch, it is black as pitch down there."},
+	"silk_matron": {"title": "The Silk Matron", "giver": "trapper_maud", "monster": "silk_matron", "count": 1,
+		"reward": "experience", "share": 1.0,
+		"intro": "Their mother spins at the bottom of the cave. Burn her nest and the wilds are ours again."},
 }
 ## Relic keepers: quest giver -> the final boss whose trophies they trade for relics.
 const RELIC_KEEPERS: Dictionary = {

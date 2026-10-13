@@ -18,6 +18,10 @@ const DUSK: Color = Color(0.92, 0.72, 0.6)
 const LANTERN: Color = Color(1.0, 0.82, 0.55)
 ## Light radius in tiles (the texture is 128 px wide, fading to its edge).
 const LANTERN_TILES: float = 5.0
+## In a "dark" dungeon a lantern only lights an arm's length; a held torch (look "torch" in
+## the off hand) lights TORCH_TILES anywhere.
+const DARK_LANTERN_TILES: float = 1.4
+const TORCH_TILES: float = 6.0
 const GLOW_TILES: float = 3.5
 const SPELL_TILES: float = 3.0
 
@@ -27,6 +31,8 @@ var time_override: float = -1.0
 var modulate_node: CanvasModulate
 ## The light before weather: what time of day and the zone alone would give.
 var clear_light: Color = Color.WHITE
+## The camera is in a "dark" dungeon (lanterns shrink; torches still light).
+var dark_zone: bool = false
 ## The weather at the camera this frame (Weather.local), read by the rain layer.
 var weather: Dictionary = {"kind": "clear", "cloud": 0.0, "rain": 0.0, "storm": 0.0, "flash": 0.0}
 ## Point lights reused every frame in request order; the pool only grows to the most lights
@@ -71,6 +77,7 @@ func ambient() -> Color:
 	var zone: Dictionary = World.zone_at(focus)
 	if zone.has("ambient"):
 		light = light * zone["ambient"]
+	dark_zone = zone.get("dark", false)
 	weather = Weather.local(game.world_clock(), focus)
 	clear_light = Color(light.r, light.g, light.b, 1.0)
 	light = light * Weather.tint(weather)
@@ -89,11 +96,15 @@ func _process(_delta: float) -> void:
 	var area: Rect2i = view.visible_cells().grow(4)
 	var time: float = Time.get_ticks_msec() / 1000.0
 	if darkness > 0.01:
+		var lantern: float = DARK_LANTERN_TILES if dark_zone else LANTERN_TILES
 		for id: int in game.actors:
 			var actor: Dictionary = game.actors[id]
 			if area.has_point(Vector2i(actor["visual"])):
-				_light(_centre(actor["visual"]), LANTERN, LANTERN_TILES * (1.0 if id == game.self_id else 0.7),
-					1.15 * darkness)
+				if holds_torch(actor["state"]["equipment"]):
+					var flicker: float = 0.92 + 0.08 * sin(time * 8.0 + id) * sin(time * 4.7)
+					_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness)
+				else:
+					_light(_centre(actor["visual"]), LANTERN, lantern * (1.0 if id == game.self_id else 0.7), 1.15 * darkness)
 		for cell: Vector2i in World.NPC_CELLS:
 			if area.has_point(cell) and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") != "waystone":
 				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness)
@@ -161,6 +172,11 @@ func _light(at: Vector2, color: Color, tiles: float, energy: float) -> void:
 
 static func _centre(cell: Vector2) -> Vector2:
 	return (cell + Vector2(0.5, 0.5)) * World.TILE_SIZE
+
+
+static func holds_torch(equipment: Dictionary) -> bool:
+	var kind: String = String(equipment.get("off_hand", ""))
+	return World.ITEMS.has(kind) and World.ITEMS[kind]["look"] == "torch"
 
 
 static func _glow_color(equipment: Dictionary) -> Variant:

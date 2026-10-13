@@ -24,6 +24,9 @@ func _initialize() -> void:
 	if scene_root.has_node("DungeonEntrances"):
 		for marker: Node2D in scene_root.get_node("DungeonEntrances").get_children():
 			entrances[String(marker.get("dungeon"))] = Vector2i((marker.position / TILE_SIZE).floor())
+	for id: String in Dungeons.DUNGEONS:
+		if not entrances.has(id) and Dungeons.DUNGEONS[id].has("entrance"):
+			entrances[id] = Dungeons.DUNGEONS[id]["entrance"]
 	if entrances.size() != Dungeons.DUNGEONS.size():
 		printerr("Every dungeon needs a DungeonEntrances marker (found %s)." % entrances.keys())
 		scene_root.free()

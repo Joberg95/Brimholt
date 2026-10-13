@@ -51,12 +51,14 @@ const NPC_TINT: Color = Color("#4f7f86")
 ## Creature sheets are greyscale (tinted per monster) with untinted eye/detail sheets.
 const MONSTER_SHEETS: Dictionary = {
 	"quadruped": preload("res://assets/sprites/monsters/quadruped.png"),
+	"spider": preload("res://assets/sprites/monsters/spider.png"),
 	"blob": preload("res://assets/sprites/monsters/blob.png"),
 	"golem": preload("res://assets/sprites/monsters/golem.png"),
 	"wraith": preload("res://assets/sprites/monsters/wraith.png"),
 }
 const MONSTER_DETAILS: Dictionary = {
 	"quadruped": preload("res://assets/sprites/monsters/quadruped_detail.png"),
+	"spider": preload("res://assets/sprites/monsters/spider_detail.png"),
 	"blob": preload("res://assets/sprites/monsters/blob_detail.png"),
 	"golem": preload("res://assets/sprites/monsters/golem_detail.png"),
 	"wraith": preload("res://assets/sprites/monsters/wraith_detail.png"),

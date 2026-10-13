@@ -972,6 +972,10 @@ func _gear_tier_checks() -> void:
 			check(item["stats"].is_empty() and World.bound(kind) and item["slots"] > 0 and kind in Quests.PACKS,
 				"%s is a bound quest pack that adds backpack slots" % kind)
 			continue
+		if item["look"] == "torch":
+			check(item["slot"] == "off_hand" and item["stats"].is_empty() and item["vocations"].is_empty()
+				and kind in Economy.stock(), "%s is a statless off-hand light every vocation can buy" % kind)
+			continue
 		check(not item["stats"].is_empty(), "%s has stats" % kind)
 		if item["slot"] in Items.ACCESSORY_SLOTS:
 			check(item["level"] >= Items.ACCESSORY_LEVEL, "%s is a later-stage accessory" % kind)
@@ -1486,7 +1490,8 @@ func _town_checks() -> void:
 	for id: String in World.QUEST_GIVERS:
 		for giver_task: String in World.QUEST_GIVERS[id]["tasks"]:
 			check(Quests.TASKS.has(giver_task) and Quests.TASKS[giver_task]["giver"] == id, "%s gives a known task" % id)
-			check(World.zone_at(World.QUEST_GIVERS[id]["cell"]).get("town", false), "%s stands in a town" % id)
+			check(World.zone_at(World.QUEST_GIVERS[id]["cell"]).get("town", false) or _by_wild_stairway(World.QUEST_GIVERS[id]),
+				"%s stands in a town (or by a wilderness stairway)" % id)
 			givers[giver_task] = id
 	var packs: int = 0
 	for task: String in Quests.TASKS:
@@ -1731,6 +1736,16 @@ func _town_checks() -> void:
 	check(player["active_at"] == -INF, "drinking is not combat activity")
 
 
+## A quest giver outside towns must stand by a wilderness dungeon's stairway, in its region.
+func _by_wild_stairway(giver: Dictionary) -> bool:
+	for dungeon: String in Dungeons.DUNGEONS:
+		var definition: Dictionary = Dungeons.DUNGEONS[dungeon]
+		if definition.has("entrance") and giver["place"] == definition["town"] \
+				and World.chebyshev(giver["cell"], World.ENTRANCE_OF[dungeon]) <= 6:
+			return true
+	return false
+
+
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
 	check(Dungeons.ORDER.size() == Dungeons.DUNGEONS.size() and World.ENTRANCE_OF.size() == Dungeons.DUNGEONS.size(),
@@ -1738,8 +1753,11 @@ func _dungeon_checks() -> void:
 	for dungeon: String in Dungeons.DUNGEONS:
 		var definition: Dictionary = Dungeons.DUNGEONS[dungeon]
 		var stairs: Vector2i = World.ENTRANCE_OF[dungeon]
-		check(World.OVERWORLD.has_point(stairs) and World.terrain(stairs) == "v" and World.zone_at(stairs).get("town", false),
-			"%s starts from a town stairway" % dungeon)
+		check(World.OVERWORLD.has_point(stairs) and World.terrain(stairs) == "v" and (World.zone_at(stairs).get("town", false)
+			or definition.has("entrance") and World.zone_at(stairs).is_empty() and World.region_at(stairs) == definition["town"]),
+			"%s starts from a town stairway (or one in the wilds of its region)" % dungeon)
+		check(World.zone_at(Dungeons.origin(dungeon, 0)).get("dark", false) == definition.get("dark", false),
+			"%s copies carry its darkness" % dungeon)
 		check(Dungeons.cells(dungeon, "^").size() == 1 and Dungeons.cells(dungeon, "@").size() == 1
 			and Dungeons.cells(dungeon, definition["boss"]).size() == 1, "%s has one exit, arrival, and champion" % dungeon)
 		var boss: String = Dungeons.DUNGEONS[dungeon]["monsters"][definition["boss"]][0]
@@ -1791,6 +1809,8 @@ func _dungeon_checks() -> void:
 	for id: int in world.monsters:
 		check(World.dungeon_at(world.monsters[id]["cell"]) == World.dungeon_at(world.monsters[id]["home"]),
 			"dungeon monsters stay in their copy")
+	check(not events.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("torch")),
+		"a lit dungeon needs no torch")
 	var exit: Vector2i = Dungeons.origin("cinder_cellar", 1) + Dungeons.cells("cinder_cellar", "^")[0]
 	_place(world, 3, exit)
 	instances.after_move(3, 4.0)
@@ -1819,6 +1839,17 @@ func _dungeon_checks() -> void:
 	restored_instances.evacuate(4, 0.0)
 	check(Combat.distance(restored.players[4]["cell"], World.ENTRANCE_OF["ashford_crypt"]) <= 3,
 		"a character saved in an expired dungeon returns to its stairway")
+	# Silkhollow is dark: entering without a torch in the off hand says so.
+	var torch_hints: Array[bool] = []
+	for id: int in [5, 6]:
+		restored.add_player(id, 0.0)
+		if id == 6:
+			restored.players[id]["equipment"]["off_hand"] = "torch"
+		_place(restored, id, World.ENTRANCE_OF["silkhollow"])
+		var entered: Array = restored_instances.after_move(id, 1.0)
+		torch_hints.append(entered.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("torch")))
+	check(World.dungeon_at(restored.players[5]["cell"])[0] == "silkhollow" and torch_hints == [true, false],
+		"Silkhollow tells players without a torch to bring one")
 
 	var outside: int = combat.spawn_monster("field_vole", 1, Vector2i(World.OVERWORLD.end.x - 3, 5), 0.0)
 	_place(world, 2, Dungeons.origin("cinder_cellar", 0) + Vector2i(1, 4))
