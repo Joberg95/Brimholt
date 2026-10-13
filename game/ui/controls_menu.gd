@@ -22,10 +22,10 @@ func setup(binds: Keybinds, close: Callable) -> void:
 	grid.add_theme_constant_override("v_separation", 2)
 	box.add_child(grid)
 	for action: String in Keybinds.DEFAULTS:
-		var name := Label.new()
-		name.text = Keybinds.DEFAULTS[action][0]
-		name.custom_minimum_size.x = 130
-		grid.add_child(name)
+		var title_label := Label.new()
+		title_label.text = Keybinds.DEFAULTS[action][0]
+		title_label.custom_minimum_size.x = 130
+		grid.add_child(title_label)
 		for index: int in 2:
 			var button := Button.new()
 			button.custom_minimum_size = Vector2(96, 0)

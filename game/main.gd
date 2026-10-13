@@ -7,6 +7,7 @@ const World = preload("res://game/core/world.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Economy = preload("res://game/core/economy.gd")
+const Instances = preload("res://game/core/instances.gd")
 const CharacterStore = preload("res://game/persistence/character_store.gd")
 const Identity = preload("res://game/persistence/identity.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -18,6 +19,7 @@ const WorldMaps = preload("res://game/ui/world_maps.gd")
 const ActionBar = preload("res://game/ui/action_bar.gd")
 const NpcDialogs = preload("res://game/ui/npc_dialogs.gd")
 const StartPanel = preload("res://game/ui/start_panel.gd")
+const CellIndex = preload("res://game/render/cell_index.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -29,12 +31,28 @@ const MAP_COLORS: Dictionary = WorldMaps.MAP_COLORS
 var world := World.new()
 var combat := Combat.new(world)
 var economy := Economy.new(world)
+var instances := Instances.new(world, combat)
+## Clients receive monsters and combat effects only within INTEREST_RADIUS tiles of their
+## character; peer id -> {monster id: true} they currently know about.
+const INTEREST_RADIUS: int = 24
+const INTEREST_SECONDS: float = 0.25
+var _known_monsters: Dictionary = {}
+var _next_interest: float = 0.0
 var actors: Dictionary = {}
 ## Client view of monsters, interpolated like actors.
 var monsters: Dictionary = {}
 ## Short-lived visuals: floating numbers, missiles, and spell areas.
 var effects: Array = []
-var ground_view: Dictionary = {}
+var ground_view: Dictionary = {}:
+	set(value):
+		ground_view = value
+		_ground_index.clear()
+		for cell: Vector2i in ground_view:
+			_ground_index.put(cell, cell)
+## Monsters and ground stacks by map chunk, so drawing visits only what is near the camera
+## (the host knows every monster in the world). See monsters_in and ground_in.
+var _monster_index := CellIndex.new()
+var _ground_index := CellIndex.new()
 var self_id: int = 0
 var connected: bool = false
 var hosting: bool = false
@@ -88,9 +106,12 @@ var _world_map: Control
 var _travel_panel: PanelContainer
 var _travel_list: VBoxContainer
 var _npc_menu: PopupMenu
+## Shortcuts to the dialog state, used by the integration and visual tests.
+@warning_ignore("unused_private_class_variable")
 var _talking_to: String:
 	get:
 		return dialogs.talking_to
+@warning_ignore("unused_private_class_variable")
 var _npc_menu_target: String:
 	get:
 		return dialogs.npc_menu_target
@@ -152,8 +173,12 @@ func _ready() -> void:
 				return
 
 
+## Test-only: seconds added to the clock, so soak tests can jump ahead (respawns, ground decay).
+var clock_skew: float = 0.0
+
+
 func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0
+	return Time.get_ticks_msec() / 1000.0 + clock_skew
 
 
 ## The host's clock, for the day and night cycle on every peer.
@@ -178,6 +203,11 @@ func _process(delta: float) -> void:
 					_pending_peers[id] = now
 	if hosting and not _leaving:
 		_handle_events(combat.tick(now))
+		_handle_events(instances.tick(now))
+		_handle_events(world.decay_ground(now))
+		if now >= _next_interest:
+			_next_interest = now + INTEREST_SECONDS
+			_sync_interest(now)
 		if store != null and now >= _next_autosave:
 			_next_autosave = now + CharacterStore.AUTOSAVE_SECONDS
 			save_all()
@@ -262,13 +292,17 @@ func _reset_session() -> void:
 	world = World.new()
 	combat = Combat.new(world)
 	economy = Economy.new(world)
+	instances = Instances.new(world, combat)
+	_known_monsters.clear()
+	_next_interest = 0.0
 	store = null
 	_accounts.clear()
 	_greetings.clear()
 	actors.clear()
 	monsters.clear()
+	_monster_index.clear()
 	effects.clear()
-	ground_view.clear()
+	ground_view = {}
 	if _travel_panel != null:
 		_close_travel()
 		_world_map.hide()
@@ -390,22 +424,24 @@ func own_token() -> String:
 func _admit(id: int, token: String, vocation: String) -> String:
 	if not Identity.valid_token(token):
 		return "Your client sent no valid identity."
-	var owner: String = CharacterStore.account(token)
-	if owner in _accounts.values():
+	var account: String = CharacterStore.account(token)
+	if account in _accounts.values():
 		return "That character is already in the world."
 	var saved: Dictionary = {}
 	if store != null:
-		var loaded: Dictionary = store.load_character(owner)
+		var loaded: Dictionary = store.load_character(account)
 		if loaded["status"] == "invalid":
-			push_warning("Refused a join: the save %s %s." % [ProjectSettings.globalize_path(store.path_for(owner)), loaded["reason"]])
+			push_warning("Refused a join: the save %s %s." % [ProjectSettings.globalize_path(store.path_for(account)), loaded["reason"]])
 			return "Your saved character on this host %s. Ask the host to restore its .bak file." % loaded["reason"]
 		saved = loaded["data"]
 	var returning: bool = not CharacterStore.saved_vocation(saved).is_empty()
 	if not world.add_player(id, _now(), CharacterStore.saved_vocation(saved) if returning else vocation):
 		return "This world is full (%d players maximum)." % World.MAX_PLAYERS
-	_accounts[id] = owner
+	_accounts[id] = account
 	if returning:
 		CharacterStore.restore(world, id, saved, _now())
+		# A character saved inside a dungeon returns to its stairway: copies do not persist.
+		instances.evacuate(id, _now())
 		var player: Dictionary = world.players[id]
 		_greetings[id] = "Welcome back: your level %d %s." % [player["level"], Balance.VOCATIONS[player["vocation"]]["name"]]
 	elif store != null:
@@ -440,6 +476,8 @@ func _peer_left(id: int) -> void:
 	_pending_peers.erase(id)
 	_closing_peers.erase(id)
 	_request_windows.erase(id)
+	_known_monsters.erase(id)
+	_greetings.erase(id)
 	if world.players.has(id):
 		_save_player(id)
 		_accounts.erase(id)
@@ -471,7 +509,7 @@ func hello(map_signature: Variant, vocation: Variant, token: Variant) -> void:
 	if not refused.is_empty():
 		_reject_connection(sender, refused)
 		return
-	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), combat.monster_snapshot(_now()), world_clock())
+	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), _interest_snapshot(sender, _now()), world_clock())
 	_publish_actor(sender)
 	if _greetings.has(sender):
 		_send_feedback(sender, _greetings[sender], 0.0, false)
@@ -504,6 +542,7 @@ func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dicti
 		_apply_actor(states[id])
 	ground_view = ground_state.duplicate(true)
 	monsters.clear()
+	_monster_index.clear()
 	for id: int in monster_states:
 		_apply_monster(monster_states[id])
 	self_id = multiplayer.get_unique_id()
@@ -682,6 +721,26 @@ func target_nearest() -> void:
 
 func own_target() -> int:
 	return actors[self_id]["state"].get("target", 0) if actors.has(self_id) else 0
+
+
+## Ids of monsters in view whose tile (or the tile they are stepping from) is in `area`.
+func monsters_in(area: Rect2i) -> Array[int]:
+	var result: Array[int] = []
+	for id: int in _monster_index.query(area.grow(1)):
+		if monsters.has(id):
+			result.append(id)
+		else:
+			_monster_index.remove(id)
+	return result
+
+
+## Cells with a ground stack in `area`.
+func ground_in(area: Rect2i) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for cell: Vector2i in _ground_index.query(area):
+		if area.has_point(cell) and ground_view.has(cell):
+			result.append(cell)
+	return result
 
 
 func creature_view(id: int) -> Dictionary:
@@ -863,27 +922,88 @@ func _handle_events(events: Array) -> void:
 				monsters_changed.erase(event["id"])
 				_monster_died(event["id"])
 				for peer_id: int in _remote_players():
-					monster_gone.rpc_id(peer_id, event["id"])
+					if _known_monsters.get(peer_id, {}).has(event["id"]):
+						_known_monsters[peer_id].erase(event["id"])
+						monster_gone.rpc_id(peer_id, event["id"])
 			"ground":
 				_publish_ground(event["cells"])
 			"message":
 				messages.append(event)
 			_:
 				_show_effect(event)
+				var at: Vector2i = _event_cell(event)
 				for peer_id: int in _remote_players():
-					combat_event.rpc_id(peer_id, event)
+					if _near_peer(peer_id, at):
+						combat_event.rpc_id(peer_id, event)
 	for id: int in players_changed:
 		if world.players.has(id):
 			_publish_actor(id)
 	for id: int in monsters_changed:
 		if world.monsters.has(id):
-			var state: Dictionary = combat.export_monster(id, _now())
-			_apply_monster(state)
-			for peer_id: int in _remote_players():
-				monster_updated.rpc_id(peer_id, state)
+			_publish_monster(id)
 	for event: Dictionary in messages:
 		if world.players.has(event["id"]):
 			_send_feedback(event["id"], event["text"], 0.0, false)
+
+
+## The tile an effect happens on, for interest management.
+func _event_cell(event: Dictionary) -> Vector2i:
+	match event["kind"]:
+		"missile":
+			return event["from"]
+		"area":
+			return event["cells"][0] if not event["cells"].is_empty() else Vector2i(-9999, -9999)
+	return event.get("cell", Vector2i(-9999, -9999))
+
+
+func _near_peer(peer_id: int, cell: Vector2i) -> bool:
+	if not world.players.has(peer_id):
+		return false
+	var own: Vector2i = world.players[peer_id]["cell"]
+	return Combat.distance(own, cell) <= INTEREST_RADIUS and World.dungeon_at(own) == World.dungeon_at(cell)
+
+
+## Sends a monster's state to the host's view and to remote players near it; peers it left
+## behind are told it is gone.
+func _publish_monster(id: int) -> void:
+	var state: Dictionary = combat.export_monster(id, _now())
+	_apply_monster(state)
+	for peer_id: int in _remote_players():
+		var known: Dictionary = _known_monsters.get_or_add(peer_id, {})
+		if _near_peer(peer_id, state["cell"]):
+			known[id] = true
+			monster_updated.rpc_id(peer_id, state)
+		elif known.has(id):
+			known.erase(id)
+			monster_gone.rpc_id(peer_id, id)
+
+
+## Monsters near a joining player; remembered as what that peer knows.
+func _interest_snapshot(peer_id: int, now: float) -> Dictionary:
+	var result: Dictionary = {}
+	var known: Dictionary = {}
+	for id: int in world.monsters:
+		if _near_peer(peer_id, world.monsters[id]["cell"]):
+			result[id] = combat.export_monster(id, now)
+			known[id] = true
+	_known_monsters[peer_id] = known
+	return result
+
+
+## Brings each remote player's monsters up to date as they move: new ones in range, gone
+## ones out of range (monsters that moved are already sent by _publish_monster).
+func _sync_interest(now: float) -> void:
+	for peer_id: int in _remote_players():
+		var known: Dictionary = _known_monsters.get_or_add(peer_id, {})
+		for id: int in world.monsters:
+			var near: bool = _near_peer(peer_id, world.monsters[id]["cell"])
+			if near and not known.has(id):
+				known[id] = true
+				monster_updated.rpc_id(peer_id, combat.export_monster(id, now))
+		for id: int in known.keys():
+			if not world.monsters.has(id) or not _near_peer(peer_id, world.monsters[id]["cell"]):
+				known.erase(id)
+				monster_gone.rpc_id(peer_id, id)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -900,6 +1020,7 @@ func _monster_died(id: int) -> void:
 	if monsters.has(id) and _world_view != null:
 		_world_view.fx.burst("death", (monsters[id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color(0.75, 0.7, 0.8))
 	monsters.erase(id)
+	_monster_index.remove(id)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -914,7 +1035,17 @@ func _apply_monster(state: Dictionary) -> void:
 	var start: Vector2 = Vector2(state["from"]).lerp(Vector2(state["cell"]), 1.0 - clampf(remaining / total, 0.0, 1.0))
 	if monsters.has(id) and monsters[id]["state"]["cell"] == state["cell"]:
 		start = monsters[id]["visual"]
+	var previous: Dictionary = monsters.get(id, {})
 	monsters[id] = {"state": state.duplicate(true), "start": start, "visual": start, "duration": remaining, "elapsed": 0.0}
+	_monster_index.put(id, state["cell"])
+	_keep_attack(previous, monsters[id])
+
+
+## An update arriving mid-swing must not cut the attack animation short.
+func _keep_attack(previous: Dictionary, view: Dictionary) -> void:
+	if previous.has("attack_born"):
+		view["attack_born"] = previous["attack_born"]
+		view["attack_facing"] = previous["attack_facing"]
 
 
 func _map_point(cell: Vector2i) -> Vector2:
@@ -937,6 +1068,11 @@ func _show_effect(event: Dictionary) -> void:
 			var at: Vector2 = (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 			effects.append({"kind": "text", "pos": at, "text": style[0], "color": style[1], "born": born,
 				"big": event["style"] == "critical"})
+			var attacker: Dictionary = creature_view(int(event.get("source", 0)))
+			if not attacker.is_empty() and event["style"] in ["damage", "critical"]:
+				# Presentation only: the attacker swings toward the target; its real facing is unchanged.
+				attacker["attack_born"] = born
+				attacker["attack_facing"] = Combat.facing_toward(Vector2i(attacker["visual"].round()), event["cell"])
 			if event["style"] in ["damage", "critical"] and event["amount"] > 0:
 				_world_view.fx.burst("critical" if event["style"] == "critical" else "hit", at + Vector2(0, -8), style[1])
 			elif event["style"] in ["heal", "mana"]:
@@ -1010,6 +1146,7 @@ func _handle_move(id: int, direction: Vector2i) -> void:
 	var result: Dictionary = world.move(id, direction, _now())
 	if result["ok"]:
 		_publish_actor(id, true)
+		_handle_events(instances.after_move(id, _now()))
 	else:
 		_send_feedback(id, result["reason"], result["retry"], true)
 
@@ -1077,8 +1214,10 @@ func ground_updated(cell: Vector2i, stack: Array) -> void:
 func _apply_ground(cell: Vector2i, stack: Array) -> void:
 	if stack.is_empty():
 		ground_view.erase(cell)
+		_ground_index.remove(cell)
 	else:
 		ground_view[cell] = stack.duplicate()
+		_ground_index.put(cell, cell)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -1095,10 +1234,12 @@ func _apply_actor(state: Dictionary, movement: bool = false) -> void:
 		start = actors[id]["visual"]
 	if actors.has(id) and state.get("level", 1) > actors[id]["state"].get("level", 1) and _world_view != null:
 		_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color("#ffd86a"))
+	var previous: Dictionary = actors.get(id, {})
 	actors[id] = {
 		"state": state.duplicate(true), "start": start, "visual": start,
 		"duration": remaining, "elapsed": 0.0, "received": _now(),
 	}
+	_keep_attack(previous, actors[id])
 	if id == self_id:
 		if movement:
 			_move_pending_since = -1.0

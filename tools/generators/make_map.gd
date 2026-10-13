@@ -1,5 +1,5 @@
 extends SceneTree
-## Generates the 768x768 overworld for the Godot map editor: a western coast with one ferry
+## Generates the 384x384 overworld for the Godot map editor: a western coast with one ferry
 ## from Cinder Landing (top) to Lastlight (bottom), one great central lake with Reedmere and
 ## Blackreed Isle (a high-level PvP island reached by ferry), safe towns ringing the lake and
 ## linked by coaches for fast travel, rock ridges in the north-east, a south-western desert, final-boss lairs, and the Hollow Reach endgame zone
@@ -9,7 +9,7 @@ extends SceneTree
 ## It refuses to overwrite an existing overworld unless --force is given: once the map has
 ## been edited in Godot, that scene is the source of truth. Run the sprite import first.
 
-const SIZE: Vector2i = Vector2i(768, 768)
+const SIZE: Vector2i = Vector2i(384, 384)
 const TILE: int = 32
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILESET_PATH: String = "res://game/maps/terrain.tres"
@@ -22,6 +22,11 @@ const QUEST_SCRIPT: Script = preload("res://game/maps/markers/quest_giver.gd")
 const TOWNSFOLK_SCRIPT: Script = preload("res://game/maps/markers/townsfolk.gd")
 ## Paints the Hollow Reach endgame zone over the generated south-east corner.
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
+## Paints the instanced dungeon copies right of the overworld and their stairways.
+const DungeonPainter = preload("res://tools/generators/dungeons.gd")
+## Turns trees and grass inside the desert into cacti, scrub, and sand.
+const DesertPainter = preload("res://tools/generators/desert.gd")
+const TownPainter = preload("res://tools/generators/towns.gd")
 ## Quest NPCs: node name, display name, place, cell. The Relic keeper trades boss trophies.
 ## Quest givers: id, name, place, cell, task (game/data/quests.gd; "" for the Relic keeper).
 ## Town task givers are added on their town plaza (TASK_GIVERS).
@@ -34,23 +39,29 @@ const TASK_GIVERS: Array = [
 	["ashford", "captain_ardo", "Captain Ardo", "outlaw_bounty"],
 	["emberfall", "marshal_venn", "Marshal Venn", "hollow_purge"],
 ]
-## Every town has a vendor and a banker: dock id ("cinder" for Cinder Crossing) -> [vendor, banker].
+## Every town has a vendor; only Reedmere, the coach and ferry hub, has a banker (the one bank
+## and depot in the world): dock id ("cinder" for Cinder Crossing) -> [vendor, (banker)].
 const TOWNSFOLK: Dictionary = {
-	"cinder": ["Merchant Tobin", "Banker Hesk"], "cinder_landing": ["Merchant Coll", "Banker Wynne"],
-	"lastlight": ["Merchant Esra", "Banker Dov"], "reedmere": ["Merchant Lise", "Banker Orrin"],
-	"ashford": ["Merchant Garrow", "Banker Tamsin"], "emberfall": ["Merchant Kesh", "Banker Ivo"],
-	"dunmere": ["Merchant Saba", "Banker Holt"], "highmoor": ["Merchant Rook", "Banker Elda"],
+	"cinder": ["Merchant Tobin"], "cinder_landing": ["Merchant Coll"],
+	"lastlight": ["Merchant Esra"], "reedmere": ["Merchant Lise", "Banker Orrin"],
+	"ashford": ["Merchant Garrow"], "emberfall": ["Merchant Kesh"],
+	"dunmere": ["Merchant Saba"], "highmoor": ["Merchant Rook"],
 }
-## Cinder Crossing's vendor and banker flank the south road.
+## Stairways down into the instanced dungeons, inside a house of their town: Cinder Crossing's
+## north-east house, an Ashford house (the chapel), and a Highmoor house.
+const DUNGEON_ENTRANCES: Dictionary = {"cinder_cellar": Vector2i(18, 4)}
+## Coach-town dungeons: dungeon id -> [town dock id, offset from the plaza centre].
+const TOWN_DUNGEONS: Dictionary = {"ashford_crypt": ["ashford", Vector2i(-9, 10)], "highmoor_mine": ["highmoor", Vector2i(9, -10)]}
+## Cinder Crossing's vendor (and a spare spot) flank the south road.
 const CINDER_TOWNSFOLK: Array[Vector2i] = [Vector2i(9, 13), Vector2i(14, 16)]
 ## Palette order in terrain_palette.png; the tile set stores each as custom data "terrain".
-const TERRAINS: Array[String] = [".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D"]
+const TERRAINS: Array[String] = [".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K"]
 const WALKABLE: String = ".,:=b"
 ## The great lake is the old one scaled by LAKE_SCALE around LAKE_CENTER.
-const LAKE_SCALE: float = 1.6
-const LAKE_CENTER: Vector2 = Vector2(400, 380)
-const ISLAND_CENTER: Vector2 = Vector2(416, 388)
-const ISLAND_RADIUS: float = 29.0
+const LAKE_SCALE: float = 0.8
+const LAKE_CENTER: Vector2 = Vector2(200, 190)
+const ISLAND_CENTER: Vector2 = Vector2(208, 194)
+const ISLAND_RADIUS: float = 15.0
 ## The original starting town, now with east and south gates.
 const CINDER: Array[String] = [
 	"########################",
@@ -85,15 +96,15 @@ const STARTER_ITEMS: Array = [
 ## The coast has one ferry, top to bottom: id, ferryman, town, row.
 const PORTS: Array = [
 	["cinder_landing", "Ferryman Ostrel", "Cinder Landing", 46],
-	["lastlight", "Ferryman Odo", "Lastlight", 700],
+	["lastlight", "Ferryman Odo", "Lastlight", 350],
 ]
 ## Inland towns with a coach station: id, coachman, town, plaza centre. They ring the central
 ## lake (Reedmere is on its west shore), far from the Hollow Reach; Highmoor is an outpost.
 const COACH_TOWNS: Array = [
-	["ashford", "Coachman Merrit", "Ashford", Vector2i(400, 235)],
-	["emberfall", "Coachman Rusk", "Emberfall", Vector2i(575, 392)],
-	["dunmere", "Coachwoman Fenna", "Dunmere", Vector2i(395, 532)],
-	["highmoor", "Coachwoman Dalla", "Highmoor", Vector2i(655, 175)],
+	["ashford", "Coachman Merrit", "Ashford", Vector2i(200, 116)],
+	["emberfall", "Coachman Rusk", "Emberfall", Vector2i(290, 196)],
+	["dunmere", "Coachwoman Fenna", "Dunmere", Vector2i(196, 268)],
+	["highmoor", "Coachwoman Dalla", "Highmoor", Vector2i(330, 86)],
 ]
 ## Towns are safe zones: no PvP, and monsters (which never cross zone borders) stay out.
 ## Cinder Crossing's zone reaches east over its coach stop.
@@ -112,13 +123,17 @@ const MAINLAND_MONSTERS: Array = [
 	[18, "bog_lurker"], [23, "outlaw_archer"], [28, "stone_golem"], [32, "cinder_wraith"], [35, "hollow_knight"],
 	[39, "mire_stalker"], [42, "reedfang"], [45, "bog_hulk"],
 ]
-const MAINLAND_SPAWNS: int = 260
-const STARTER_SPAWNS: int = 12
-const STARTER_RADIUS: float = 55.0
-const LEVEL_TILES: float = 20.0
+## Spawns are dense on the compact overworld and at least SPAWN_SPACING tiles
+## apart (STARTER_SPACING near Cinder Crossing).
+const MAINLAND_SPAWNS: int = 280
+const STARTER_SPAWNS: int = 14
+const SPAWN_SPACING: float = 10.0
+const STARTER_SPACING: float = 6.0
+const STARTER_RADIUS: float = 48.0
+const LEVEL_TILES: float = 10.0
 const MAINLAND_MAX_LEVEL: int = 45
 ## Spawns keep this many tiles from roads so travel between towns stays safe.
-const ROAD_CLEARANCE: int = 7
+const ROAD_CLEARANCE: int = 5
 const ISLAND_ZONE: Dictionary = {"name": "Blackreed Isle", "pvp": true, "min_level": 40, "max_level": 50}
 ## Placeholder high-level monsters for the island: id, level.
 const ISLAND_MONSTERS: Array = [
@@ -126,7 +141,7 @@ const ISLAND_MONSTERS: Array = [
 	["reedfang", 47], ["bog_hulk", 48], ["blackreed_warden", 50],
 ]
 
-## Vendors and bankers in every town and the hunting-task givers, on open plaza tiles: in a
+## Vendors (and Reedmere's banker) and the hunting-task givers, on open plaza tiles: in a
 ## coach town either side of the coachman, in a shore town on the landward side of the plaza.
 func _people() -> void:
 	for giver: Array in QUEST_GIVERS:
@@ -142,7 +157,7 @@ func _people() -> void:
 			else:
 				var back: Vector2i = dock["plaza"] - dock["facing"] * 3
 				cells = [back + Vector2i(0, -4), back + Vector2i(0, 4)]
-		for index: int in 2:
+		for index: int in TOWNSFOLK[town].size():
 			var role: String = ["vendor", "banker"][index]
 			people.append(["%s_%s" % [town, role], TOWNSFOLK[town][index], place, cells[index], role, "townsfolk"])
 	for giver: Array in TASK_GIVERS:
@@ -154,7 +169,7 @@ func _people() -> void:
 
 ## Final-boss lairs near these targets (moved to the nearest open, off-road tile): monster id,
 ## target. Morvain's lair is found at the far east end of Blackreed Isle.
-const BOSS_TARGETS: Array = [["kharzul", Vector2i(705, 95)], ["sylvaine", Vector2i(600, 700)]]
+const BOSS_TARGETS: Array = [["kharzul", Vector2i(352, 48)], ["sylvaine", Vector2i(296, 352)]]
 
 var grid: PackedByteArray
 var rng := RandomNumberGenerator.new()
@@ -162,6 +177,8 @@ var docks: Dictionary = {}
 ## Tiles of the sea and the lake (not the town ponds), used for beaches.
 var big_water: Dictionary = {}
 var monster_spawns: Array = []
+## Blackreed Isle's land and pier, grown by a tile: its PvP zone.
+var island_rect: Rect2i
 ## Placed NPCs: [id, name, place, cell, role or task, kind ("townsfolk" or "quest")].
 var people: Array = []
 
@@ -223,15 +240,15 @@ func _noise(seed_value: int, frequency: float) -> FastNoiseLite:
 
 
 func _terrain() -> void:
-	var forest: FastNoiseLite = _noise(11, 0.035)
+	var forest: FastNoiseLite = _noise(11, 0.07)
 	for y: int in SIZE.y:
 		for x: int in SIZE.x:
 			var n: float = forest.get_noise_2d(x, y)
 			if n > 0.28 or (n > 0.1 and rng.randf() < 0.3) or rng.randf() < 0.012:
 				put(Vector2i(x, y), "T")
-	for ruin: int in 45:
+	for ruin: int in 12:
 		var corner := Vector2i(rng.randi_range(30, SIZE.x - 40), rng.randi_range(30, SIZE.y - 40))
-		if Vector2(corner).distance_to(LAKE_CENTER) < 120.0 or corner.x < 60:
+		if Vector2(corner).distance_to(LAKE_CENTER) < 60.0 or corner.x < 40:
 			continue
 		for x: int in 7:
 			for y: int in 6:
@@ -246,7 +263,7 @@ func _water(cell: Vector2i) -> void:
 
 ## The western sea: an irregular coast that starts below Cinder Crossing.
 func _ocean() -> void:
-	var shape: FastNoiseLite = _noise(31, 0.03)
+	var shape: FastNoiseLite = _noise(31, 0.06)
 	for y: int in SIZE.y:
 		var ramp: float = clampf((y - 26) / 14.0, 0.0, 1.0)
 		var width: float = ramp * (20.0 + 8.0 * shape.get_noise_1d(y) + 4.0 * shape.get_noise_1d(y * 3.0 + 500.0))
@@ -256,7 +273,7 @@ func _ocean() -> void:
 
 ## One irregular lake: a stretched, noisy main body plus a north-east lobe and a southern bay.
 func _lake() -> void:
-	var shape: FastNoiseLite = _noise(37, 0.025)
+	var shape: FastNoiseLite = _noise(37, 0.05)
 	for y: int in SIZE.y:
 		for x: int in SIZE.x:
 			var point := Vector2(x, y)
@@ -270,7 +287,7 @@ func _lake() -> void:
 func _beaches() -> void:
 	for water: Vector2i in big_water:
 		var reach: int = 3 if water.x < 60 else 2
-		if water.x >= 60 and Vector2(water).distance_to(LAKE_CENTER) > 220.0:
+		if water.x >= 60 and Vector2(water).distance_to(LAKE_CENTER) > 110.0:
 			continue
 		for dy: int in range(-reach, reach + 1):
 			for dx: int in range(-reach, reach + 1):
@@ -336,7 +353,7 @@ func _shore_town(id: String, npc_name: String, place: String, start: Vector2i, o
 
 ## Blackreed Isle: dense forest, ruins, crossing trails, and a pier facing Reedmere.
 func _island() -> void:
-	var shape: FastNoiseLite = _noise(41, 0.12)
+	var shape: FastNoiseLite = _noise(41, 0.2)
 	var center := Vector2i(ISLAND_CENTER)
 	var reach: int = ceili(ISLAND_RADIUS * 1.25) + 5
 	for y: int in range(center.y - reach, center.y + reach + 1):
@@ -346,7 +363,7 @@ func _island() -> void:
 				var inner: bool = distance < ISLAND_RADIUS - 2.5
 				big_water.erase(Vector2i(x, y))
 				put(Vector2i(x, y), ("T" if rng.randf() < 0.4 else ".") if inner else ":")
-	for ruin: Vector2i in [center + Vector2i(-9, -7), center + Vector2i(6, 4)]:
+	for ruin: Vector2i in [center + Vector2i(-7, -6), center + Vector2i(4, 3)]:
 		for x: int in 5:
 			for y: int in 4:
 				if (x == 0 or y == 0 or x == 4 or y == 3) and rng.randf() < 0.7:
@@ -360,13 +377,19 @@ func _island() -> void:
 	while at(shore + Vector2i.LEFT) != "~":
 		shore += Vector2i.LEFT
 	var ferryman: Vector2i = _pier(shore + Vector2i.LEFT, Vector2i.LEFT, 5)
+	island_rect = Rect2i(ferryman, Vector2i.ONE)
+	for y: int in range(center.y - reach, center.y + reach + 1):
+		for x: int in range(center.x - reach, center.x + reach + 1):
+			if at(Vector2i(x, y)) not in ["~", ""] and Vector2(x, y).distance_to(ISLAND_CENTER) <= reach:
+				island_rect = island_rect.expand(Vector2i(x, y))
+	island_rect = island_rect.grow(1)
 	docks["blackreed_isle"] = {"name": "Old Marra", "place": "Blackreed Isle", "cell": ferryman, "facing": Vector2i.RIGHT}
 	var cells: Array = _flood(center, _blocked()).keys()
 	cells.sort()
 	var placed: int = 0
 	while placed < ISLAND_MONSTERS.size():
 		var cell: Vector2i = cells[rng.randi_range(0, cells.size() - 1)]
-		if at(cell) in [".", ","] and Vector2(cell).distance_to(Vector2(ferryman)) > 8.0:
+		if at(cell) in [".", ","] and Vector2(cell).distance_to(Vector2(ferryman)) > 6.0:
 			monster_spawns.append([cell] + ISLAND_MONSTERS[placed])
 			placed += 1
 
@@ -414,10 +437,10 @@ func _routes() -> void:
 
 ## Grey rock ridges across the north-east: thin walls with passes, read as cliffs.
 func _ridges() -> void:
-	var ridge: FastNoiseLite = _noise(53, 0.018)
+	var ridge: FastNoiseLite = _noise(53, 0.036)
 	ridge.fractal_type = FastNoiseLite.FRACTAL_RIDGED
-	for y: int in range(20, 340):
-		for x: int in range(470, SIZE.x - 6):
+	for y: int in range(10, 170):
+		for x: int in range(235, SIZE.x - 6):
 			var value: float = ridge.get_noise_2d(x, y)
 			if value > 0.72 and at(Vector2i(x, y)) in [".", "T"] and rng.randf() < 0.92:
 				put(Vector2i(x, y), "#")
@@ -425,12 +448,12 @@ func _ridges() -> void:
 
 ## The Dunmere desert: sand instead of most trees, with scattered survivors.
 func _desert() -> void:
-	var shape: FastNoiseLite = _noise(59, 0.02)
-	var centre := Vector2(235, 600)
-	for y: int in range(centre.y - 120, centre.y + 120):
-		for x: int in range(maxi(70, centre.x - 160), centre.x + 160):
+	var shape: FastNoiseLite = _noise(59, 0.04)
+	var centre := Vector2(118, 300)
+	for y: int in range(int(centre.y) - 60, int(centre.y) + 60):
+		for x: int in range(maxi(35, int(centre.x) - 80), int(centre.x) + 80):
 			var cell := Vector2i(x, y)
-			var inside: float = ((Vector2(x, y) - centre) / Vector2(150.0, 105.0)).length() + 0.25 * shape.get_noise_2d(x, y)
+			var inside: float = ((Vector2(x, y) - centre) / Vector2(75.0, 52.0)).length() + 0.25 * shape.get_noise_2d(x, y)
 			if inside < 1.0 and at(cell) in [".", "T"]:
 				put(cell, "T" if at(cell) == "T" and rng.randf() < 0.08 else ":")
 
@@ -479,7 +502,7 @@ func _boss_lairs() -> void:
 	var near_roads: Dictionary = _near_roads()
 	for target: Array in BOSS_TARGETS:
 		var best: Vector2i = Vector2i(-1, -1)
-		for radius: int in range(0, 60):
+		for radius: int in range(0, 30):
 			for dy: int in range(-radius, radius + 1):
 				for dx: int in range(-radius, radius + 1):
 					var cell: Vector2i = target[1] + Vector2i(dx, dy)
@@ -532,13 +555,13 @@ func _items() -> Array:
 	var cells: Array = land.keys()
 	cells.sort()
 	var placed: int = 0
-	while placed < 160:
+	while placed < 80:
 		var cell: Vector2i = cells[rng.randi_range(0, cells.size() - 1)]
 		if (cell.x < 30 and cell.y < 24) or at(cell) not in [".", ",", ":"] or EndgameZone.AREA.grow(6).has_point(cell):
 			continue
 		var near_town: bool = false
 		for id: String in docks:
-			near_town = near_town or Vector2(cell).distance_to(Vector2(docks[id]["cell"])) < 22.0
+			near_town = near_town or Vector2(cell).distance_to(Vector2(docks[id]["cell"])) < 18.0
 		if near_town:
 			continue
 		var forest: bool = at(cell + Vector2i.UP) == "T" or at(cell + Vector2i.LEFT) == "T"
@@ -594,10 +617,10 @@ func _mainland_spawns(items: Array) -> void:
 			continue
 		var clear: bool = true
 		for id: String in docks:
-			var clearance: float = 10.0 if docks[id].get("stop", false) else 22.0
+			var clearance: float = 8.0 if docks[id].get("stop", false) else 19.0
 			clear = clear and Vector2(cell).distance_to(Vector2(docks[id]["cell"])) > clearance
 		for other: Vector2i in taken:
-			clear = clear and Vector2(cell).distance_to(Vector2(other)) > (8.0 if starter else 16.0)
+			clear = clear and Vector2(cell).distance_to(Vector2(other)) > (STARTER_SPACING if starter else SPAWN_SPACING)
 		for item: Array in items:
 			clear = clear and item[0] != cell
 		if not clear:
@@ -644,6 +667,11 @@ func _validate(items: Array) -> bool:
 		if not land.has(item[0]) and not island.has(item[0]):
 			printerr("Item at %s is not reachable" % item[0])
 			ok = false
+	var entrances: Dictionary = dungeon_entrances()
+	for id: String in entrances:
+		if not land.has(entrances[id]) or at(entrances[id]) not in ["=", "."]:
+			printerr("The %s stairway at %s is not on a reachable floor" % [id, entrances[id]])
+			ok = false
 	for person: Array in people:
 		var reachable: bool = false
 		for step: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
@@ -670,21 +698,21 @@ func _save(items: Array) -> void:
 		source.get_tile_data(Vector2i(index, 0), 0).set_custom_data("terrain", TERRAINS[index])
 	ResourceSaver.save(tileset, TILESET_PATH)
 	tileset.take_over_path(TILESET_PATH)
-	var root := Node2D.new()
-	root.name = "Overworld"
+	var scene_root := Node2D.new()
+	scene_root.name = "Overworld"
 	var layer := TileMapLayer.new()
 	layer.name = "Terrain"
 	layer.tile_set = tileset
-	_add(root, layer)
+	_add(scene_root, layer)
 	for y: int in SIZE.y:
 		for x: int in SIZE.x:
 			layer.set_cell(Vector2i(x, y), 0, Vector2i(TERRAINS.find(at(Vector2i(x, y))), 0))
-	var spawns: Node2D = _add(root, _named(Node2D.new(), "Spawns"))
+	var spawns: Node2D = _add(scene_root, _named(Node2D.new(), "Spawns"))
 	for index: int in SPAWNS.size():
 		var marker: Marker2D = _named(Marker2D.new(), "Spawn%d" % (index + 1))
 		marker.position = _centre(SPAWNS[index])
-		_add(spawns, marker, root)
-	var ferrymen: Node2D = _add(root, _named(Node2D.new(), "Ferrymen"))
+		_add(spawns, marker, scene_root)
+	var ferrymen: Node2D = _add(scene_root, _named(Node2D.new(), "Ferrymen"))
 	for id: String in ROUTES:
 		var dock: Dictionary = docks[id]
 		var marker: Marker2D = _named(Marker2D.new(), id)
@@ -701,24 +729,23 @@ func _save(items: Array) -> void:
 			fares[destination] = ISLAND_FARE if "blackreed_isle" in [id, destination] \
 				else (5 + 5 * roundi(distance / 60.0) if id in COACHES else 10 + 5 * roundi(distance / 60.0))
 		marker.set("routes", fares)
-		_add(ferrymen, marker, root)
-	var item_root: Node2D = _add(root, _named(Node2D.new(), "Items"))
+		_add(ferrymen, marker, scene_root)
+	var item_root: Node2D = _add(scene_root, _named(Node2D.new(), "Items"))
 	for index: int in items.size():
 		var marker: Marker2D = _named(Marker2D.new(), "%s%d" % [String(items[index][1]).to_pascal_case(), index + 1])
 		marker.set_script(ITEM_SCRIPT)
 		marker.position = _centre(items[index][0])
 		marker.set("item", items[index][1])
-		_add(item_root, marker, root)
-	var zones: Node2D = _add(root, _named(Node2D.new(), "Zones"))
+		_add(item_root, marker, scene_root)
+	var zones: Node2D = _add(scene_root, _named(Node2D.new(), "Zones"))
 	var zone: Node2D = _named(Node2D.new(), "BlackreedIsle")
 	zone.set_script(ZONE_SCRIPT)
-	var half := Vector2i(ceili(ISLAND_RADIUS * 1.25) + 5, ceili(ISLAND_RADIUS) + 5)
-	zone.position = Vector2((Vector2i(ISLAND_CENTER) - half) * TILE)
-	zone.set("size_tiles", half * 2 + Vector2i.ONE)
+	zone.position = Vector2(island_rect.position * TILE)
+	zone.set("size_tiles", island_rect.size + Vector2i.ONE)
 	for key: String in ["min_level", "max_level", "pvp"]:
 		zone.set(key, ISLAND_ZONE[key])
 	zone.set("zone_name", ISLAND_ZONE["name"])
-	_add(zones, zone, root)
+	_add(zones, zone, scene_root)
 	var towns: Array = [["Cinder Crossing", CINDER_TOWN]]
 	for id: String in docks:
 		if docks[id].has("town"):
@@ -730,8 +757,8 @@ func _save(items: Array) -> void:
 		safe.set("size_tiles", town[1].size)
 		safe.set("zone_name", town[0])
 		safe.set("town", true)
-		_add(zones, safe, root)
-	var monster_root: Node2D = _add(root, _named(Node2D.new(), "MonsterSpawns"))
+		_add(zones, safe, scene_root)
+	var monster_root: Node2D = _add(scene_root, _named(Node2D.new(), "MonsterSpawns"))
 	for index: int in monster_spawns.size():
 		var marker: Marker2D = _named(Marker2D.new(), "%s%d" % [String(monster_spawns[index][1]).to_pascal_case(), index + 1])
 		marker.set_script(MONSTER_SCRIPT)
@@ -742,10 +769,12 @@ func _save(items: Array) -> void:
 			else (3 if monster_spawns[index][2] < 50 else 1))
 		if monster_spawns[index].size() > 4:
 			marker.set("radius", monster_spawns[index][4])
-		_add(monster_root, marker, root)
-	EndgameZone.apply(root)
-	var quest_root: Node2D = _add(root, _named(Node2D.new(), "QuestGivers"))
-	var folk_root: Node2D = _add(root, _named(Node2D.new(), "Townsfolk"))
+		_add(monster_root, marker, scene_root)
+	EndgameZone.apply(scene_root)
+	DesertPainter.apply(scene_root)
+	DungeonPainter.apply(scene_root, dungeon_entrances())
+	var quest_root: Node2D = _add(scene_root, _named(Node2D.new(), "QuestGivers"))
+	var folk_root: Node2D = _add(scene_root, _named(Node2D.new(), "Townsfolk"))
 	for person: Array in people:
 		var marker: Marker2D = _named(Marker2D.new(), person[0])
 		marker.set_script(QUEST_SCRIPT if person[5] == "quest" else TOWNSFOLK_SCRIPT)
@@ -753,12 +782,20 @@ func _save(items: Array) -> void:
 		marker.set("npc_name", person[1])
 		marker.set("place", person[2])
 		marker.set("task" if person[5] == "quest" else "role", person[4])
-		_add(quest_root if person[5] == "quest" else folk_root, marker, root)
+		_add(quest_root if person[5] == "quest" else folk_root, marker, scene_root)
+	TownPainter.apply(scene_root)
 	var packed := PackedScene.new()
-	packed.pack(root)
+	packed.pack(scene_root)
 	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
 	print("Saved %s (%s)" % [SCENE_PATH, error_string(error)])
-	root.free()
+	scene_root.free()
+
+
+func dungeon_entrances() -> Dictionary:
+	var entrances: Dictionary = DUNGEON_ENTRANCES.duplicate()
+	for id: String in TOWN_DUNGEONS:
+		entrances[id] = docks[TOWN_DUNGEONS[id][0]]["plaza"] + TOWN_DUNGEONS[id][1]
+	return entrances
 
 
 func _named(node: Node, node_name: String) -> Node:

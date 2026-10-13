@@ -76,7 +76,7 @@ def main():
 
     try:
         launch("host")
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + (40 if args.dedicated else 30)
         passed = set()
         exited = set()
         while time.monotonic() < deadline:
@@ -92,7 +92,7 @@ def main():
                     if args.host_loss:
                         print("PASS: host loss is reported and stale client state is cleared")
                     elif args.dedicated:
-                        print("PASS: dedicated ENet movement/equipment/inventory, level-gated ring, ferry travel, combat, relic quest, vendor/potion/bank/depot/task RPCs and disconnect cleanup")
+                        print("PASS: dedicated ENet movement/equipment/inventory, level-gated ring, ferry travel, combat, relic quest, vendor/potion/bank/depot/task RPCs, a private dungeon copy, hunting weapon equip/unequip and disconnect cleanup")
                     else:
                         print("PASS: real ENet host/client/late-join movement, authority, "
                               "collision, cooldown, equip/unequip, inventory/ground sync, party invite/join and disconnect cleanup")

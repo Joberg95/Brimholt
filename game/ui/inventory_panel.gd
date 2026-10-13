@@ -10,6 +10,7 @@ const Items = preload("res://game/data/items.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Layout = preload("res://game/ui/layout.gd")
+const ItemSlot = preload("res://game/ui/item_slot.gd")
 const SLOT_STEP: float = 36.0
 ## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/cape/ring,
 ## and the charm below.
@@ -88,6 +89,8 @@ func redraw_slots() -> void:
 		if slot.get_meta("shown", "") != key:
 			slot.set_meta("shown", key)
 			slot.tooltip_text = LOCKED_TOOLTIP if _locked(location) else item_tooltip(kind)
+			var grade: Array = Items.rarity(World.ITEMS.get(kind, {})) if not _locked(location) else []
+			slot.rarity_color = grade[1] if not grade.is_empty() else Color.TRANSPARENT
 			if World.count_of(entry) > 1:
 				slot.tooltip_text += "\nStack of %d" % World.count_of(entry)
 			slot.queue_redraw()
@@ -110,12 +113,12 @@ func _build_stat_sheet(layer: CanvasLayer) -> void:
 	grid.add_theme_constant_override("v_separation", 0)
 	layer.add_child(grid)
 	for stat: String in ["vocation", "level", "experience", "gold"] + Array(Balance.STATS):
-		var name := Label.new()
-		name.text = {"vocation": "Vocation", "level": "Level", "experience": "Experience", "gold": "Gold"}.get(stat,
+		var stat_label := Label.new()
+		stat_label.text = {"vocation": "Vocation", "level": "Level", "experience": "Experience", "gold": "Gold"}.get(stat,
 			STAT_LABELS.get(stat, stat))
-		name.modulate = Color("#a7b0b8")
-		name.add_theme_font_size_override("font_size", 13)
-		grid.add_child(name)
+		stat_label.modulate = Color("#a7b0b8")
+		stat_label.add_theme_font_size_override("font_size", 13)
+		grid.add_child(stat_label)
 		var value := Label.new()
 		value.add_theme_font_size_override("font_size", 13)
 		grid.add_child(value)
@@ -193,10 +196,13 @@ func item_tooltip(kind: String) -> String:
 				names.append(Balance.VOCATIONS[vocation]["name"] + "s")
 			who = " and ".join(names)
 		if item.has("glow"):
-			lines.append("Relic  ·  %s  ·  level %d+  ·  %s" % [item["slot"].capitalize(), item["level"], who])
+			lines.append("Relic %s  ·  level %d+  ·  %s" % [item["slot"].capitalize().to_lower(), item["level"], who])
 			lines.append("Quest reward for slaying %s; bound to you (never dropped or lost)" % _relic_source(kind))
 		else:
-			lines.append("%s  ·  tier %d  ·  level %d+  ·  %s" % [item["slot"].capitalize(), item["level"], item["level"], who])
+			var grade: Array = Items.rarity(item)
+			var slot_name: String = item["slot"].capitalize().to_lower()
+			lines.append("%s  ·  tier %d  ·  level %d+  ·  %s" % [
+				"%s %s" % [grade[0], slot_name] if not grade.is_empty() else slot_name.capitalize(), item["level"], item["level"], who])
 	for stat: String in item["stats"]:
 		lines.append("%+d %s%s" % [item["stats"][stat], STAT_LABELS[stat], "%" if stat == "critical" else ""])
 	if not item["slot"].is_empty():
@@ -205,6 +211,13 @@ func item_tooltip(kind: String) -> String:
 			lines.append("✗ " + refused)
 	if item.has("gold"):
 		lines.append("Worth %d gold; picked up into your purse" % item["gold"])
+	if item.get("loot_only", false):
+		var sources: PackedStringArray = []
+		for monster: String in Monsters.LOOT:
+			for entry: Array in Monsters.LOOT[monster]:
+				if entry[0] == kind:
+					sources.append(Monsters.MONSTERS[monster]["name"])
+		lines.append("Hunting drop: %s" % ", ".join(sources))
 	if item.has("value"):
 		lines.append("Monster material; vendors buy it for %d gold" % item["value"])
 	if item.has("drink"):
@@ -235,7 +248,7 @@ func _add_slot(layer: CanvasLayer, location: Dictionary, at: Vector2) -> void:
 
 ## A drag-and-drop item slot for a location; freed slots are dropped from the redraw list.
 func make_slot(location: Dictionary) -> Control:
-	var slot := Control.new()
+	var slot := ItemSlot.new()
 	slot.size = Vector2.ONE * World.TILE_SIZE
 	slot.custom_minimum_size = slot.size
 	slot.set_meta("location", location)
@@ -279,11 +292,8 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 		var usable: bool = item.get("slot", "").is_empty() or requirement_for(kind).is_empty()
 		var now: float = game._now()
 		SpriteArt.draw_item_glow(slot, slot.size / 2.0, kind, 0.6 + 0.25 * sin(now * 2.6))
+		# Rarity is shown in the tooltip; an item you cannot use yet is tinted red.
 		SpriteArt.draw_item(slot, slot.size / 2.0, kind, Color.WHITE if usable else Color(1.0, 0.55, 0.55))
-		if not item.get("slot", "").is_empty():
-			# Tier (or relic glow) colour along the bottom edge; red when you cannot use the item yet.
-			var edge: Color = Items.item_color(item) if usable else Color("#e04a3a")
-			slot.draw_rect(Rect2(Vector2(2, slot.size.y - 3), Vector2(slot.size.x - 4, 2)), edge)
 		if World.count_of(entry) > 1:
 			SpriteArt.draw_count(slot, slot.size - Vector2(3, 3), World.count_of(entry))
 	elif location["type"] == "equipment":

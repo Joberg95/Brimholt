@@ -4,16 +4,65 @@ const CAPES: Array[String] = ["silverleaf_cape", "cobalt_cape", "ember_cape", "d
 
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
+const Combat = preload("res://game/core/combat.gd")
 const WorldViewScript = preload("res://game/render/world_view.gd")
 const WorldOverlay = preload("res://game/render/world_overlay.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
+const Dungeons = preload("res://game/data/dungeons.gd")
+const Weather = preload("res://game/render/weather.gd")
+const Biomes = preload("res://game/data/biomes.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 var game: Node2D
 ## The game renders offscreen into this buffer; the real window only needs to exist.
 var screen: SubViewport
 var finished: bool = false
 var elapsed: float = 0.0
+
+
+class WardrobeStrip extends Node2D:
+	const OUTFITS: Array[Dictionary] = [
+		{}, {"armor": "moss_coat"}, {"cape": "silverleaf_cape"},
+		{"armor": "moss_coat", "cape": "silverleaf_cape"},
+	]
+	const BACKGROUND: Color = Color("#414637")
+
+	func _draw() -> void:
+		draw_rect(Rect2(0, 0, 768, 256), BACKGROUND)
+		for row: int in OUTFITS.size():
+			for facing: int in SpriteArt.DIRECTIONS.size():
+				for pose: int in 3:
+					var center: Vector2 = Vector2((facing * 3 + pose) * 64, row * 64) + SpriteArt.FRAME_ANCHOR
+					SpriteArt.draw_actor(self, center, {"id": 1, "facing": SpriteArt.DIRECTIONS[facing],
+						"equipment": OUTFITS[row]}, false, [0.0, 0.25, 0.75][pose])
+
+
+class WeaponStudy extends Node2D:
+	const CARD := Vector2i(360, 292)
+	var weapons: Array[String] = []
+	var equipped: bool = true
+
+	func _draw() -> void:
+		var font: Font = ThemeDB.fallback_font
+		draw_rect(Rect2(0, 0, CARD.x * 3, CARD.y * 5), Color("#171c22"))
+		for index: int in weapons.size():
+			var kind: String = weapons[index]
+			var item: Dictionary = World.ITEMS[kind]
+			var origin := Vector2(index % 3 * CARD.x, index / 3 * CARD.y)
+			draw_rect(Rect2(origin + Vector2(4, 4), Vector2(CARD) - Vector2(8, 8)), Color("#272e33"))
+			draw_string(font, origin + Vector2(12, 24), item["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#d8ceb4"))
+			draw_string(font, origin + Vector2(12, 43), "Level %d | %s" % [item["level"], item["vocations"][0]],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a4b0b4"))
+			SpriteArt.draw_item(self, origin + Vector2(30, 70), kind)
+			draw_set_transform(origin + Vector2(96, 70), 0.0, Vector2(2, 2))
+			SpriteArt.draw_item(self, Vector2.ZERO, kind)
+			draw_set_transform(Vector2.ZERO)
+			for pose: int in 3:
+				for facing: int in 4:
+					var corner: Vector2 = origin + Vector2(20 + facing * 80, 100 + pose * 60)
+					SpriteArt.draw_actor(self, corner + SpriteArt.FRAME_ANCHOR, {"id": 1,
+						"facing": SpriteArt.DIRECTIONS[facing], "equipment": {"main_hand": kind} if equipped else {}},
+						false, [0.0, 0.25, 0.75][pose])
 
 
 func _initialize() -> void:
@@ -51,10 +100,16 @@ func _run() -> void:
 	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
 	game.port = 0
 	game.host_game()
-	# Pixel checks compare against sprite texels, so pin bright noon; night is checked at the end.
+	# Pixel checks compare against sprite texels, so pin bright noon and clear skies; night and
+	# weather are checked near the end.
 	game._world_view.lighting.time_override = 0.5
+	Weather.override = "clear"
 	if not game.connected:
 		quit(1)
+		return
+	if not await _check_cape_layers():
+		return
+	if not await _check_weapon_study():
 		return
 	# Remove the map's monsters so pixel checks are deterministic; combat is checked at the end.
 	game.world.monsters.clear()
@@ -74,8 +129,8 @@ func _run() -> void:
 		game.world.players[id]["level"] = 20 + 5 * (id - 1)
 		game.world.players[id]["backpack"][5] = CAPES[id - 1]
 		for slot: String in SpriteArt.VISIBLE_SLOTS:
-			var result: Dictionary = game.world.toggle_equipment(id, slot, float(id) + SpriteArt.VISIBLE_SLOTS.find(slot))
-			if not result["ok"]:
+			var toggled: Dictionary = game.world.toggle_equipment(id, slot, float(id) + SpriteArt.VISIBLE_SLOTS.find(slot))
+			if not toggled["ok"]:
 				push_error("Visual test equipment setup failed")
 				quit(1)
 				return
@@ -131,11 +186,12 @@ func _run() -> void:
 	if not _expect(_matches_texel(image, SpriteArt.ITEM_ICONS, SpriteArt.item_region("iron_coif"), icon_origin),
 			"Ground item sprite is not drawn on its tile"):
 		return
-	# Wall (8, 7) has open ground to its north/west; its raised top must cover tile (7, 6).
+	# Wall (8, 7) has open ground to its north/west; its raised top must reach over tile (7, 6).
 	var wall_origin: Vector2 = Vector2(8, 7) * World.TILE_SIZE - Vector2.ONE * SpriteArt.WALL_RAISE
 	var wall_region: Rect2 = SpriteArt.wall_region(Vector2i(8, 7))
-	if not _expect(_matches_texel(image, SpriteArt.WALLS, Rect2(wall_region.position + Vector2(2, 6), Vector2(4, 4)),
-			wall_origin + Vector2(2, 6)), "Oblique wall top is not raised over the tile behind it"):
+	# Thin walls: the centre post's top (sprite 12..16) lies over tile (7, 6), up-left of the wall's own tile.
+	if not _expect(_matches_texel(image, SpriteArt.WALLS, Rect2(wall_region.position + Vector2(12, 12), Vector2(4, 4)),
+			wall_origin + Vector2(12, 12)), "Oblique wall top is not raised over the tile behind it"):
 		return
 	if unequipped.save_png("res://.tools/visual-unequipped.png") != OK:
 		push_error("Cannot save unequipped capture")
@@ -169,16 +225,91 @@ func _run() -> void:
 		return
 	if not await _check_town_services():
 		return
+	if not await _check_roofs_and_signs():
+		return
+	if not await _check_dungeons():
+		return
+	if not await _check_weather_and_desert():
+		return
 	if not await _check_hollow_reach():
 		return
 	if not await _check_night_and_particles():
 		return
-	print("BRIMHOLT_VISUAL_PASS four facings, visible unequip, panel slots, ground items, oblique walls, "
+	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, Hollow Reach gate and throne room, night lighting and particles")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles")
 	finished = true
 	await game.leave_game()
 	quit()
+
+
+func _check_cape_layers() -> bool:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(768, 256)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+	root.add_child(viewport)
+	viewport.add_child(WardrobeStrip.new())
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var image: Image = viewport.get_texture().get_image()
+	var body: Image = SpriteArt.BODY.get_image()
+	var cloth: Image = SpriteArt.CLOTH.get_image()
+	var cape: Image = SpriteArt.GEAR["silverleaf_cape"].get_image()
+	var valid: bool = true
+	for facing: int in 4:
+		for pose: int in 3:
+			var bare_at := Vector2i((facing * 3 + pose) * 64, 0)
+			var source_at := Vector2i(pose * 64, facing * 64)
+			var visible_cape: int = 0
+			for y: int in 64:
+				for x: int in 64:
+					var pixel := Vector2i(x, y)
+					if body.get_pixelv(source_at + pixel).a == 0.0 and cloth.get_pixelv(source_at + pixel).a == 0.0:
+						valid = valid and image.get_pixelv(bare_at + pixel).is_equal_approx(WardrobeStrip.BACKGROUND)
+						if cape.get_pixelv(source_at + pixel).a > 0.0:
+							visible_cape += 1
+			valid = valid and visible_cape > 0
+			for armor_row: int in 2:
+				var naked: Image = image.get_region(Rect2i(bare_at + Vector2i(0, armor_row * 64), Vector2i(64, 64)))
+				var dressed: Image = image.get_region(Rect2i(bare_at + Vector2i(0, (armor_row + 2) * 64), Vector2i(64, 64)))
+				valid = valid and naked.get_data() != dressed.get_data()
+	var saved: Error = image.save_png("res://.tools/visual-wardrobe.png")
+	viewport.queue_free()
+	return _expect(valid, "Capes must be visible when worn, with no default cape or silhouette when empty") \
+		and _expect(saved == OK, "Could not save wardrobe capture")
+
+
+func _check_weapon_study() -> bool:
+	var viewport := SubViewport.new()
+	viewport.size = WeaponStudy.CARD * Vector2i(3, 5)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+	root.add_child(viewport)
+	var study := WeaponStudy.new()
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind].get("loot_only", false):
+			study.weapons.append(kind)
+	viewport.add_child(study)
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var dressed: Image = viewport.get_texture().get_image()
+	var saved: Error = dressed.save_png("res://.tools/visual-weapons.png")
+	study.equipped = false
+	study.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var bare: Image = viewport.get_texture().get_image()
+	var visible: bool = study.weapons.size() == 15
+	for index: int in study.weapons.size():
+		var origin: Vector2i = Vector2i(index % 3, index / 3) * WeaponStudy.CARD
+		for pose: int in 3:
+			for facing: int in 4:
+				var region := Rect2i(origin + Vector2i(20 + facing * 80, 100 + pose * 60), Vector2i(64, 60))
+				visible = visible and dressed.get_region(region).get_data() != bare.get_region(region).get_data()
+	viewport.queue_free()
+	return _expect(visible, "Every new weapon must remain visible in four facings and three animation poses") \
+		and _expect(saved == OK, "Could not save the weapon study")
 
 
 func _push_mouse(at: Vector2, button: MouseButton, pressed: bool) -> void:
@@ -281,11 +412,16 @@ func _open_service(npc: String, service: String) -> bool:
 func _move_beside(npc: String) -> void:
 	var player: Dictionary = game.world.players[1]
 	var cell: Vector2i = World.npc(npc)["cell"]
-	for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
-		if World.walkable(cell + step):
-			player["cell"] = cell + step
-			player["from"] = cell + step
-			break
+	# The nearest free tile in talking range on the keeper's side of any wall (counters may be between).
+	var best: Vector2i = cell
+	for dy: int in range(-World.TALK_RANGE, World.TALK_RANGE + 1):
+		for dx: int in range(-World.TALK_RANGE, World.TALK_RANGE + 1):
+			var spot: Vector2i = cell + Vector2i(dx, dy)
+			if World.walkable(spot) and World.in_talk_range(spot, cell) and (best == cell
+					or absi(dx) + absi(dy) < absi(best.x - cell.x) + absi(best.y - cell.y)):
+				best = spot
+	player["cell"] = best
+	player["from"] = best
 	game._publish_actor(1)
 	await process_frame
 	await process_frame
@@ -327,6 +463,31 @@ func _check_town_services() -> bool:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-trade.png")
+	# Gear rarity lives in the hover tooltip (coloured name and frame), not on the slot.
+	var rated: Control = null
+	for slot: Control in game.inventory._slots:
+		if is_instance_valid(slot) and slot.rarity_color.a > 0.0 and rated == null:
+			rated = slot
+	if not _expect(rated != null, "No equipped item has a rarity tooltip"):
+		return false
+	var tip: Control = rated._make_custom_tooltip(rated.tooltip_text)
+	var frame := PanelContainer.new()
+	frame.add_theme_stylebox_override("panel", rated.theme.get_stylebox("panel", "TooltipPanel"))
+	frame.add_child(tip)
+	frame.position = Vector2(game.VIEW_ORIGIN) + Vector2(20, 40)
+	var on_top := CanvasLayer.new()
+	on_top.layer = 100
+	on_top.add_child(frame)
+	game.add_child(on_top)
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-tooltip.png")
+	var title: Label = tip.get_child(0)
+	var colour: Color = title.get_theme_color("font_color")
+	on_top.queue_free()
+	if not _expect(colour == rated.rarity_color and tip.get_child(1).text.split(" ")[0] in ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Relic"],
+			"The tooltip must name the rarity in its colour (%s)" % tip.get_child(1).text):
+		return false
 	if not _expect(player["backpack"][0] == "health_potion#10" and player["gold"] == 500 - 10 * World.ITEMS["health_potion"]["price"]
 			and game._travel_list.get_child(1).text.contains(str(player["gold"])), "Buying potions did not update the trade window"):
 		return false
@@ -339,8 +500,8 @@ func _check_town_services() -> bool:
 		return false
 	game._close_travel()
 	await create_timer(World.ITEM_SECONDS + 0.05).timeout
-	await _move_beside("cinder_banker")
-	if not await _open_service("cinder_banker", "Bank") or not _expect(game.dialogs.banking(), "The bank dialog is not open"):
+	await _move_beside("reedmere_banker")
+	if not await _open_service("reedmere_banker", "Bank") or not _expect(game.dialogs.banking(), "The bank dialog is not open"):
 		return false
 	var slot_center: Vector2 = game.slot_position({"type": "backpack", "index": 0}) + Vector2.ONE * World.TILE_SIZE / 2.0
 	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, true)
@@ -376,7 +537,7 @@ func _centred(cell: Vector2) -> bool:
 
 
 ## Compares the screen with the first opaque texel nearest the centre of a sprite region.
-func _matches_texel(screen: Image, texture: Texture2D, region: Rect2, map_origin: Vector2) -> bool:
+func _matches_texel(image: Image, texture: Texture2D, region: Rect2, map_origin: Vector2) -> bool:
 	var sheet: Image = texture.get_image()
 	var best: Vector2i = Vector2i(-1, -1)
 	var center: Vector2 = region.size / 2.0
@@ -389,7 +550,7 @@ func _matches_texel(screen: Image, texture: Texture2D, region: Rect2, map_origin
 		return false
 	var expected: Color = sheet.get_pixelv(Vector2i(region.position) + best)
 	var at: Vector2 = game.map_to_screen(map_origin + Vector2(best) + Vector2(0.5, 0.5))
-	return screen.get_pixelv(Vector2i(at)).is_equal_approx(expected)
+	return image.get_pixelv(Vector2i(at)).is_equal_approx(expected)
 
 
 ## A tree whose canopy no tree, wall, or ferryman in front covers, and a free tile beside or
@@ -485,12 +646,12 @@ func _check_ferry_and_maps() -> bool:
 	await RenderingServer.frame_post_draw
 	var world_map: Image = screen.get_texture().get_image()
 	world_map.save_png("res://.tools/visual-map.png")
-	var map_size := Vector2(World.width(), World.height())
+	var map_size := Vector2(World.OVERWORLD.size)
 	var fit: float = minf(game.VIEW_SIZE.x / map_size.x, (game.VIEW_SIZE.y - 32.0) / map_size.y)
 	var scale: float = floorf(fit) if fit >= 1.0 else fit
 	var origin: Vector2 = ((game.VIEW_SIZE - map_size * scale) / 2.0).floor() + Vector2(0, 12)
 	# A tile a little inside the south-east border (forest), sampled at its scaled centre.
-	var corner: Vector2i = Vector2i(World.width() - 2, World.height() - 2)
+	var corner: Vector2i = World.OVERWORLD.end - Vector2i(2, 2)
 	var pixel: Vector2 = game.VIEW_ORIGIN + origin + (Vector2(corner) + Vector2(0.5, 0.5)) * scale
 	if not _expect(game._world_map.visible and world_map.get_pixelv(Vector2i(pixel)).is_equal_approx(
 			game.MAP_COLORS[World.terrain(corner)]), "The world map key did not open the world map"):
@@ -570,7 +731,28 @@ func _check_combat() -> bool:
 	var hit: bool = false
 	for effect: Dictionary in game.effects:
 		hit = hit or effect["kind"] == "text"
-	return _expect(hit and game.world.monsters[spawned[0]]["health"] < 1000, "The locked monster was not attacked")
+	if not _expect(hit and game.world.monsters[spawned[0]]["health"] < 1000, "The locked monster was not attacked"):
+		return false
+	# The weapon swings: the drawn character changes between the wind-up and the strike, toward the target.
+	var me: Dictionary = game.actors[1]
+	var centre: Vector2 = game.map_to_screen((me["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE)
+	var body := Rect2i(Vector2i(centre) - Vector2i(48, 72), Vector2i(96, 104))
+	var frames: Array[Image] = []
+	# Drawn-only: show the swing with a sword in hand (the server's equipment is untouched).
+	var worn: Dictionary = me["state"]["equipment"]
+	me["state"]["equipment"] = worn.merged({"main_hand": "ashford_arming_sword"}, true)
+	for age: float in [0.05, 0.25, 1.0]:
+		me["attack_born"] = Time.get_ticks_msec() / 1000.0 - age
+		me["attack_facing"] = Combat.facing_toward(player["cell"], target_cell)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var full: Image = screen.get_texture().get_image()
+		if age == 0.25:
+			full.save_png("res://.tools/visual-swing.png")
+		frames.append(full.get_region(body))
+	me["state"]["equipment"] = worn
+	return _expect(frames[0].get_data() != frames[1].get_data() and frames[1].get_data() != frames[2].get_data(),
+		"The weapon must visibly wind up and strike")
 
 
 ## Claims a relic through Ysolde's real right-click Quests window, then checks that the additive
@@ -673,6 +855,171 @@ func _check_relics() -> bool:
 
 
 ## The endgame zone: its gate from the forest, and Vaelith in the Sanctum's throne room.
+## Steps down the Cinder Crossing stairway through the client's move request, then captures the Rat
+## King's room in the private cellar copy and the cave-rock Highmoor mine.
+func _check_dungeons() -> bool:
+	game.world.monsters.clear()
+	game.monsters.clear()
+	game.world.ground.clear()
+	game.ground_view.clear()
+	var player: Dictionary = game.world.players[1]
+	var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
+	var step: Vector2i = Vector2i.ZERO
+	for candidate: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
+		if step == Vector2i.ZERO and World.walkable(stairway + candidate):
+			step = -candidate
+	player["cell"] = stairway - step
+	player["from"] = player["cell"]
+	player["next_move"] = 0.0
+	game._publish_actor(1)
+	await process_frame
+	# Held movement keys are polled from the OS keyboard, so step through the same client request.
+	game.move_local(step)
+	await create_timer(0.3).timeout
+	var place: Array = World.dungeon_at(player["cell"])
+	if not _expect(place.size() == 2 and place[0] == "cinder_cellar" and game.last_action_message.contains("Cinder cellar")
+			and game.monsters.size() > 3, "The cellar stairway did not open a copy with rats: %s %s '%s' %d" % [
+				player["cell"], place, game.last_action_message, game.monsters.size()]):
+		return false
+	var king: Vector2i = Dungeons.origin("cinder_cellar", place[1]) + Dungeons.cells("cinder_cellar", "K")[0]
+	for id: int in game.world.monsters:
+		game.world.monsters[id]["next_move"] = INF
+		game.world.monsters[id]["next_attack"] = INF
+	player["cell"] = king + Vector2i(-3, 0)
+	player["from"] = player["cell"]
+	player["facing"] = Vector2i.RIGHT
+	game._publish_actor(1)
+	await create_timer(0.4).timeout
+	await RenderingServer.frame_post_draw
+	var cellar: Image = screen.get_texture().get_image()
+	cellar.save_png("res://.tools/visual-cellar.png")
+	var king_seen: bool = game.monsters.values().any(func(monster: Dictionary) -> bool: return monster["state"]["kind"] == "rat_king")
+	if not _expect(king_seen and game._zone_label.text.contains("Cinder cellar"), "The Rat King's copy is not drawn"):
+		return false
+	player["cell"] = Dungeons.origin("highmoor_mine", 0) + Dungeons.cells("highmoor_mine", "@")[0]
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.4).timeout
+	await RenderingServer.frame_post_draw
+	var mine: Image = screen.get_texture().get_image()
+	mine.save_png("res://.tools/visual-mine.png")
+	return _expect(_colours(mine, Rect2(game.VIEW_ORIGIN + Vector2(260, 220), Vector2(160, 120))) > 20, "The mine caves are blank")
+
+
+## Ashford's shop from the plaza (roof over the merchant, sign by the door, no name through
+## the roof), then from inside (the roof has faded and the merchant shows).
+func _check_roofs_and_signs() -> bool:
+	var player: Dictionary = game.world.players[1]
+	var keeper: Vector2i = World.npc("ashford_vendor")["cell"]
+	var building: Dictionary = World.BUILDINGS[World.ROOM_AT.get(keeper, 0)]
+	var door: Vector2i = building["doors"][0]
+	var sign: Dictionary = {}
+	for entry: Dictionary in World.SIGNS:
+		if World.ROOF_AT.get(entry["cell"], -1) == World.ROOM_AT.get(keeper, -2):
+			sign = entry
+	if not _expect(World.ROOM_AT.has(keeper) and not sign.is_empty(), "Ashford's merchant has no shop with a sign"):
+		return false
+	player["cell"] = door + building["outward"][door] * 2
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var outside: Image = screen.get_texture().get_image()
+	outside.save_png("res://.tools/visual-roofs.png")
+	var named_outside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
+	player["cell"] = keeper + Vector2i.DOWN * 2
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var inside: Image = screen.get_texture().get_image()
+	inside.save_png("res://.tools/visual-shop-inside.png")
+	var named_inside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
+	var spot: Vector2 = game.map_to_screen((Vector2(keeper) + Vector2(0.5, 0.2)) * World.TILE_SIZE)
+	var keeper_area := Rect2i(Vector2i(spot) - Vector2i(10, 10), Vector2i(20, 20))
+	var sign_centre: Vector2 = game.map_to_screen(Vector2(sign["cell"]) * World.TILE_SIZE + SpriteArt.SIGN_OFFSETS[sign["outward"]])
+	return _expect(not named_outside and named_inside, "The merchant's name must hide under the roof and show inside (%s, %s)"
+			% [named_outside, named_inside]) \
+		and _expect(not game._world_view.covered(keeper) and game._world_view.inside_building() == World.ROOM_AT[keeper],
+			"The roof must fade while you are inside") \
+		and _expect(_colours(inside, Rect2(sign_centre - Vector2(16, 12), Vector2(32, 24))) > 8, "The shop sign is not drawn (%d colours at %s)"
+			% [_colours(inside, Rect2(sign_centre - Vector2(16, 12), Vector2(32, 24))), sign_centre]) \
+		and _expect(outside.get_region(keeper_area).get_data() != inside.get_region(keeper_area).get_data(),
+			"The roof must cover the merchant from outside")
+
+
+## A storm at noon over Cinder Crossing (rain drawn, light dimmed), the same rain at night (the
+## lantern lights up), and the desert in a storm: dry, with cacti on sand.
+func _check_weather_and_desert() -> bool:
+	game.world.monsters.clear()
+	game.monsters.clear()
+	var player: Dictionary = game.world.players[1]
+	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	# Floor chunks around a new spot build one per frame; let them finish before comparing.
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var clear: Image = screen.get_texture().get_image()
+	Weather.override = "rain"
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var rainy: Image = screen.get_texture().get_image()
+	rainy.save_png("res://.tools/visual-rain.png")
+	var centre := Rect2i(Vector2i(game.VIEW_ORIGIN + game.VIEW_SIZE / 2.0) - Vector2i(140, 100), Vector2i(280, 200))
+	if not _expect(game._view.rain.visible and _brightness(rainy, centre) < _brightness(clear, centre) - 0.02
+			and rainy.get_region(centre).get_data() != clear.get_region(centre).get_data(),
+			"Rain must draw drops and dim the light (visible %s, brightness %.3f -> %.3f)" % [game._view.rain.visible,
+				_brightness(clear, centre), _brightness(rainy, centre)]):
+		return false
+	game._world_view.lighting.time_override = 0.02
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var night: Image = screen.get_texture().get_image()
+	night.save_png("res://.tools/visual-rain-night.png")
+	# Carried lights brighten the centre at night, so compare the whole game window.
+	var view := Rect2i(Vector2i(game.VIEW_ORIGIN), Vector2i(game.VIEW_SIZE))
+	if not _expect(_brightness(night, view) < _brightness(rainy, view) - 0.05, "Night rain should be darker than day rain (%.3f -> %.3f)"
+			% [_brightness(rainy, view), _brightness(night, view)]):
+		return false
+	game._world_view.lighting.time_override = 0.5
+	var plant: Vector2i = Vector2i(-1, -1)
+	for y: int in range(Biomes.DESERT_AREA.position.y + 20, Biomes.DESERT_AREA.end.y - 20):
+		for x: int in range(Biomes.DESERT_AREA.position.x + 20, Biomes.DESERT_AREA.end.x - 20):
+			if plant.x < 0 and World.terrain(Vector2i(x, y)) == "K" and World.walkable(Vector2i(x - 2, y)) \
+					and Biomes.desert_distance(Vector2i(x, y)) < 0.6:
+				plant = Vector2i(x, y)
+	if not _expect(plant.x >= 0, "No cactus found inside the desert"):
+		return false
+	player["cell"] = plant + Vector2i(-2, 0)
+	player["from"] = player["cell"]
+	Weather.override = "storm"
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var desert: Image = screen.get_texture().get_image()
+	desert.save_png("res://.tools/visual-desert.png")
+	var plant_drawn: bool = false
+	var origin: Vector2 = game.map_to_screen((Vector2(plant) + Vector2(0.5, 0.5)) * World.TILE_SIZE)
+	var sand: Color = desert.get_pixelv(Vector2i(game.map_to_screen((Vector2(plant) + Vector2(-1.0, 0.5)) * World.TILE_SIZE)))
+	for dy: int in range(-40, 0, 2):
+		var pixel: Color = desert.get_pixelv(Vector2i(origin) + Vector2i(0, dy))
+		plant_drawn = plant_drawn or (pixel.g > pixel.r and pixel.g > pixel.b + 0.05)
+	Weather.override = "clear"
+	return _expect(not game._view.rain.visible, "It must not rain in the desert") \
+		and _expect(plant_drawn and sand.r > sand.b + 0.1, "Desert plants must stand on sand")
+
+
+func _brightness(image: Image, area: Rect2i) -> float:
+	var total: float = 0.0
+	var samples: int = 0
+	for y: int in range(area.position.y, area.end.y, 4):
+		for x: int in range(area.position.x, area.end.x, 4):
+			total += image.get_pixel(x, y).get_luminance()
+			samples += 1
+	return total / maxf(1.0, samples)
+
+
 func _check_hollow_reach() -> bool:
 	game.world.monsters.clear()
 	game.monsters.clear()

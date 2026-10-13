@@ -48,6 +48,7 @@ const MIN_TANKS: int = 2
 const RANKS: Dictionary = {
 	"normal": {"health": 1.0, "damage": 1.0, "experience": 1.0},
 	"elite": {"health": 4.0, "damage": 1.5, "experience": 5.0},
+	"champion": {"health": 10.0, "damage": 1.8, "experience": 25.0},
 	"boss": {"health": 0.0, "damage": 2.5, "experience": 100.0},
 }
 const STATS: Array[String] = ["health", "mana", "attack", "defense", "critical", "regen", "healing"]

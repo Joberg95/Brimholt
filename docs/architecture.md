@@ -10,12 +10,16 @@ game/
   core/                  Server-authoritative simulation shared by every peer (no nodes)
     world.gd             Map loading, item catalog, movement, inventory and depot, packs, travel
     combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
-    economy.gd           Vendors (stock, buying, selling) and bankers (gold accounts)
+    economy.gd           Vendors (stock, buying, selling) and the banker (gold accounts)
+    instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
     items.json           Item catalog (also read by the sprite generator)
     items.gd             Loads items.json; derives tier and relic stats and vendor prices
     quests.gd            Town hunting tasks and the packs they award
+    dungeons.gd          Instanced dungeon layouts, copies, levels, and monsters
+    biomes.gd            Climate regions (the desert: no rain, cactus scrub)
+    buildings.gd         Finds buildings (rooms, doors, roof footprints) from walls
     monsters.gd          Monster catalog, loot tables, bosses and their relics
     spells.gd            Spell catalog and cooldown groups
   persistence/           Host-side saves and the client identity
@@ -24,9 +28,10 @@ game/
   input/keybinds.gd      Rebindable keys and the spells-only action bar
   ui/                    UI components; each gets the main node and builds controls into its UI layer
     layout.gd            Shared screen layout constants (game window, panel origin, zoom, bar slot)
-    game_window.gd       Game window: world SubViewport, vignette, overlay; forwards map input to main
+    game_window.gd       Game window: world SubViewport, rain, vignette, overlay; forwards map input to main
     hud.gd               Title row, status line, action message, zone banner, vitals, Controls menu
     inventory_panel.gd   Paperdoll and backpack slots, drag-and-drop, stat sheet, item tooltips
+    item_slot.gd         An item slot whose hover tooltip shows the rarity colour
     action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation
     world_maps.gd        Minimap and world map drawn from one terrain texture
     npc_dialogs.gd       NPC service menu; travel, trade, bank (depot), and quest dialogs; player party menu
@@ -37,7 +42,11 @@ game/
     water.gdshader       Animated water and pier chunks, no redraw needed
     world_view.gd        Depth-ordered walls, trees, NPCs, items and actors (sparse, cached)
     world_overlay.gd     Unlit layer: nameplates, NPC names, target square, floating numbers
-    lighting.gd          Day/night and zone ambient (CanvasModulate), pooled point lights
+    lighting.gd          Day/night, zone ambient, and weather tint (CanvasModulate), pooled point lights
+    weather.gd           Deterministic weather from the host clock (clear/overcast/rain/storm, lightning)
+    roof_art.gd          Pitched building roofs rasterized from material swatches
+    cell_index.gd        Chunked spatial index: monsters and ground stacks near the camera
+    rain_layer.gd        Rain over the game window (rain.gdshader: drops, splashes, veil)
     fx.gd                One-shot particle bursts (CC0 Kenney textures)
     glow_layer.gd        Additive pass: relic and boss halos, sparks
     vignette.gdshader    Soft dark edge around the game window
@@ -45,7 +54,7 @@ game/
   maps/
     overworld.tscn       The world, painted in Godot's TileMap editor
     terrain.tres         Editor tile set (terrain custom data)
-    markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, zone, monster markers
+    markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster markers
 assets/sprites/          Original generated sprite sheets (+ Godot .import files)
 assets/third_party/      CC0 textures with their licenses (CREDITS.md)
 tests/
@@ -53,8 +62,8 @@ tests/
   integration/           Real ENet peers and the two-bot playthrough
   visual/                Offscreen rendering checks
 tools/
-  generators/            make_sprites.py, make_map.gd, endgame_zone.gd, balance_table.gd, gear_table.gd
-  testing/               Python runners that supervise Godot processes and write reports
+  generators/            make_sprites.py, make_map.gd, endgame_zone.gd, dungeons.gd, desert.gd, towns.gd, balance_table.gd, gear_table.gd
+  testing/               Python runners that supervise Godot processes and write reports; lint.gd
 docs/                    Gameplay, world editing, art, balance, testing, this file
 .tools/                  Ignored: test reports, captures, downloads
 ```
@@ -96,7 +105,12 @@ sprite-sheet regions. Floors are not redrawn per frame: `floor_layer.gd` draws e
 water is a separate chunk animated by `water.gdshader`. `world_view.gd` caches the walls,
 trees, and NPCs around the view and each frame visits only cells with content, sorted by
 depth. On the host, monster steps share one occupied-tile set per tick
-(`World.occupied_cells`). Backpack and ground entries are strings: an item id, or
+(`World.occupied_cells`) and monsters sleep at home unless a player is in a nearby 16-tile chunk.
+Instanced dungeon copies live outside `World.OVERWORLD`; `game/core/instances.gd` assigns a
+party a copy, spawns its monsters only then, and resets it after it has been empty for 60 s.
+Clients receive monsters and combat effects only within 24 tiles in the same space (the
+overworld or the same copy); `main.gd` tracks what each peer knows and sends arrivals and
+departures every 0.25 s. Backpack and ground entries are strings: an item id, or
 `"id#count"` for a stack (`World.kind_of`, `World.count_of`, `World.make_entry`).
 Peer 1 keeps gameplay authority; clients request actions,
 never positions, item contents, or appearance.
@@ -122,3 +136,26 @@ cannot bind its UDP port or the supplied join address is empty.
   the network also gets a scenario in `tests/integration/peer_test.gd`.
 - Generated content (`assets/sprites`, the first map draft) has its generator in
   `tools/generators/`; once a file is hand-edited, it is the source of truth.
+- `make lint` must pass: warnings in `project.godot` (unused, shadowing, unreachable, narrowing)
+  are errors. Never name locals `name`, `owner`, `visible`, `root`, or after a member function.
+
+## Performance and memory
+
+The host holds every monster (about 640) and every ground stack, so per-frame and per-tick
+code must not scan them all:
+
+- Rendering asks `main.monsters_in(area)` and `main.ground_in(area)` (chunked
+  `game/render/cell_index.gd`) for what is near the camera; keep the index current when adding
+  ways to create or remove monsters or ground stacks on the client.
+- `World.terrain` reads a byte grid (`World.GRID`); `ROWS` is for whole-row passes.
+- Monster steps use `Combat._occupancy`, built once per tick and updated as monsters move;
+  invalidate it (`_taken_at = NAN`) when monsters are created or removed.
+- Static per-cell drawing is cached (tall objects per view area, floors per chunk, roofs per
+  building); rebuild caches on area change, never per frame.
+- Pools are bounded: point lights are reused in request order (`Lighting.MAX_LIGHTS`),
+  particle bursts are capped (`Fx.MAX_BURSTS`) and free themselves, effects expire after a
+  second.
+- Long-lived dictionaries keyed by players, peers, monsters, or cells must have a removal
+  path: peer data is dropped on disconnect, monster fight records die with the monster or its
+  reset, aggressor entries are pruned when they expire, and ground stacks decay
+  (`World.decay_ground`). `make soak` checks that nothing keeps growing.

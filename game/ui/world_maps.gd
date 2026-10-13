@@ -4,6 +4,7 @@ extends Node
 
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")
+const Dungeons = preload("res://game/data/dungeons.gd")
 const MINIMAP_SCALE: float = 2.0
 const PVP_TINT: Color = Color("#c43c32")
 ## Map markers: ferrymen teal, quest givers gold, vendors green, bankers pale blue.
@@ -12,6 +13,8 @@ const MAP_COLORS: Dictionary = {
 	".": Color("#4e693b"), ",": Color("#a08a6a"), "~": Color("#2d5a78"), "#": Color("#9196a0"),
 	"T": Color("#26401f"), ":": Color("#d8c48a"), "=": Color("#b0aca4"), "b": Color("#8a5a34"),
 	"d": Color("#3a2c4a"), "o": Color("#2c2438"), "O": Color("#6a5a88"), "D": Color("#1e1626"),
+	"c": Color("#5a534c"), "C": Color("#85766a"), "v": Color("#f0d070"), "^": Color("#f0d070"),
+	"K": Color("#7c8450"),
 }
 
 var game: Node
@@ -85,6 +88,10 @@ func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2) 
 		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#ffcf6a"))
+	for cell: Vector2i in World.DUNGEON_ENTRANCES:
+		var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
+		if area.has_point(at):
+			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#c9884a"))
 	for id: String in World.TOWNSFOLK:
 		var at: Vector2 = origin + (Vector2(World.TOWNSFOLK[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
@@ -105,7 +112,12 @@ func _draw_minimap() -> void:
 	var tiles: Vector2 = minimap.size / MINIMAP_SCALE
 	var focus: Vector2 = game.camera_focus()
 	var region := Rect2(focus / World.TILE_SIZE - tiles / 2.0, tiles)
-	var visible := region.intersection(Rect2(0, 0, World.width(), World.height()))
+	var shown := Rect2(World.OVERWORLD)
+	var place: Array = World.dungeon_at(Vector2i(focus / World.TILE_SIZE))
+	if not place.is_empty():
+		# Underground, show only your own copy, never the copies next to it.
+		shown = Rect2(Dungeons.rect(place[0], place[1]))
+	var visible := region.intersection(shown)
 	if visible.has_area():
 		minimap.draw_texture_rect_region(_texture,
 			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE), visible)
@@ -115,21 +127,27 @@ func _draw_minimap() -> void:
 
 func _draw_world_map() -> void:
 	var view_size: Vector2 = Layout.VIEW_SIZE
-	var map_size := Vector2(World.width(), World.height())
-	# Whole pixels per tile when the map fits; otherwise shrink it (768 tiles into the view).
+	# The overworld only: dungeon copies right of it are reached by stairways.
+	var map_size := Vector2(World.OVERWORLD.size)
+	# Whole pixels per tile when the map fits; otherwise shrink it.
 	var fit: float = minf(view_size.x / map_size.x, (view_size.y - 32.0) / map_size.y)
 	var scale: float = floorf(fit) if fit >= 1.0 else fit
 	var origin: Vector2 = ((view_size - map_size * scale) / 2.0).floor() + Vector2(0, 12)
 	world_map.draw_rect(Rect2(Vector2.ZERO, view_size), Color(0.03, 0.04, 0.05))
-	world_map.draw_texture_rect(_texture, Rect2(origin, map_size * scale), false)
-	_draw_markers(world_map, origin, scale, Rect2(Vector2.ZERO, view_size))
+	var shown := Rect2(origin, map_size * scale)
+	world_map.draw_texture_rect_region(_texture, shown, Rect2(Vector2.ZERO, map_size))
+	_draw_markers(world_map, origin, scale, shown)
 	var font: Font = ThemeDB.fallback_font
 	var labels: Array = [[World.WORLD_NAME, Vector2(World.SPAWNS[0]) + Vector2(4, -3)]]
 	for id: String in World.FERRYMEN:
 		var place: String = World.FERRYMEN[id]["place"]
 		if World.zone_at(World.FERRYMEN[id]["cell"]).get("name", "") != place:
 			labels.append([place, Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0, -3)])
+	for dungeon: String in World.ENTRANCE_OF:
+		labels.append([Dungeons.DUNGEONS[dungeon]["name"], Vector2(World.ENTRANCE_OF[dungeon]) + Vector2(0, 4), Color("#e0a870")])
 	for zone: Dictionary in World.ZONES:
+		if zone.get("underground", false):
+			continue
 		var text: String = "%s (%s, level %d-%d)" % [zone["name"], "PvP" if zone["pvp"] else "safe",
 			zone["min_level"], zone["max_level"]]
 		labels.append([text, Vector2(zone["rect"].get_center().x, zone["rect"].end.y + 3), PVP_TINT.lightened(0.35)])
@@ -138,5 +156,5 @@ func _draw_world_map() -> void:
 		world_map.draw_string_outline(font, at, label[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color.BLACK)
 		world_map.draw_string(font, at, label[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
 			label[2] if label.size() > 2 else Color("#f4ecd8"))
-	world_map.draw_string(font, Vector2(12, 22), "World map: gold = you, cyan = ferrymen, red = PvP. Click to close.",
+	world_map.draw_string(font, Vector2(12, 22), "World map: gold = you, cyan = ferrymen, orange = dungeons, red = PvP. Click to close.",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))

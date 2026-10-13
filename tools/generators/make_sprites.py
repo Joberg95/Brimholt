@@ -2,7 +2,8 @@
 """Generate Brimholt's original pixel-art sprite sheets (Python standard library only).
 
 Writes assets/sprites/*.png. Character, cloth, marker, and gear sheets use 64x64 frames:
-three columns (stand, step A, step B) and four rows (down, up, left, right), with the
+five columns (stand, step A, step B, attack wind-up, strike; monsters only the first three)
+and four rows (down, up, left, right), with the
 tile centre at frame pixel (32, 40). Items and floor tiles are 32x32 cells; walls are
 48x48 cells drawn 16 pixels up and left of their tile, indexed by open sides
 (1 north, 2 west, 4 south, 8 east). objects.png holds 64x96 trees whose trunk base sits on
@@ -14,6 +15,7 @@ Aseprite), treat that PNG as the source of truth and stop regenerating it.
 
 import argparse
 import json
+import math
 import random
 import struct
 import zlib
@@ -30,7 +32,7 @@ ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
 VISIBLE_SLOTS = ("helmet", "cape", "armor", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
-TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D")
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K")
 
 
 def rgba(value, alpha=255):
@@ -42,11 +44,21 @@ def scale(color, factor):
     return tuple(max(0, min(255, round(channel * factor))) for channel in color[:3]) + (color[3],)
 
 
-OUTLINE = rgba("1a1612")
-SHADOW = (0, 0, 0, 72)
-MARKER = rgba("f2cf6a")
+def blend(first, second, weight):
+    return tuple(round(a * (1 - weight) + b * weight) for a, b in zip(first[:3], second[:3])) + (first[3],)
 
-PALETTES = {kind: tuple(rgba(color) for color in item["colors"]) for kind, item in ITEMS.items()}
+
+OUTLINE = rgba("26251f")
+SHADOW = (0, 0, 0, 72)
+MARKER = rgba("bca878", 200)
+
+def pigment(color):
+    """Keep tier hues, but mix in neutral pigment instead of neon-flat colour."""
+    grey = round(color[0] * 0.3 + color[1] * 0.5 + color[2] * 0.2)
+    return tuple(round(channel * 0.78 + grey * 0.22) for channel in color[:3]) + (color[3],)
+
+
+PALETTES = {kind: tuple(pigment(rgba(color)) for color in item["colors"]) for kind, item in ITEMS.items()}
 
 
 def look(kind):
@@ -207,6 +219,21 @@ def thick(points, offsets):
     return {(x + dx, y + dy) for x, y in points for dx, dy in offsets}
 
 
+def polygon(vertices):
+    """Filled pixel centres, used for tapered blades and forged faces."""
+    points = set()
+    for y in range(math.floor(min(p[1] for p in vertices)), math.ceil(max(p[1] for p in vertices))):
+        for x in range(math.floor(min(p[0] for p in vertices)), math.ceil(max(p[0] for p in vertices))):
+            inside = False
+            px, py = x + 0.5, y + 0.5
+            for a, b in zip(vertices, vertices[1:] + vertices[:1]):
+                if (a[1] > py) != (b[1] > py) and px < (b[0] - a[0]) * (py - a[1]) / (b[1] - a[1]) + a[0]:
+                    inside = not inside
+            if inside:
+                points.add((x, y))
+    return points
+
+
 def sheet(frames, columns, cell):
     rows = (len(frames) + columns - 1) // columns
     result = Image(columns * cell, rows * cell)
@@ -224,27 +251,84 @@ def sheet_row(frames):
     return result
 
 
-def character_sheet(builder):
+def compact_humanoid(image):
+    """Bake the same pixel-grid rig into every body/gear layer, with feet kept at y=53.
+
+    No runtime scaling: silhouettes, grips, masks and cape holes all use this mapping;
+    halos are generated afterwards. Monsters and the ground marker keep their own anatomy.
+    """
+    result = Image(FRAME, FRAME)
+    for y in range(FRAME):
+        source_y = round(53 + (y - 53) / 0.8)
+        for x in range(FRAME):
+            result.set(x, y, image.get(x, source_y))
+    return result
+
+
+def character_sheet(builder, compact=False, columns=3):
+    """Rows: down, up, left, right. Monsters have 3 columns (stand, step A, step B); humanoid
+    layers add the attack wind-up and strike (POSE_COLUMNS)."""
     frames = []
     for direction in DIRECTIONS:
-        for frame in range(3):
+        for frame in range(columns):
             if direction == "right":
-                frames.append(builder("left", frame).mirrored())
+                image = builder("left", frame).mirrored()
             else:
-                frames.append(builder(direction, frame))
-    return sheet(frames, 3, FRAME)
+                image = builder(direction, frame)
+            frames.append(compact_humanoid(image) if compact else image)
+    return sheet(frames, columns, FRAME)
 
 
 # ---------------------------------------------------------------- characters
 # 64x64 frames; the tile centre is frame pixel (32, 40) and feet rest near y 53, so
-# characters stand about 1.3 tiles tall and overlap the tile behind them.
+# Geometry is authored in a shared rig, then baked to a compact ~36-pixel silhouette.
+
+POSE_COLUMNS = 5
+WIND_UP, STRIKE = 3, 4
+
 
 def swing(frame):
-    return (0, 1, -1)[frame]
+    return (0, 1, -1, 0, 0)[frame]
 
 
 def side_arm_x(frame):
-    return (30, 33, 27)[frame]
+    return (30, 33, 27, 31, 29)[frame]
+
+
+# The weapon hand: the screen-right arm facing down or up, the near arm facing left. Walking it
+# hangs at the side; attacking it rises (wind-up) and then swings out (strike).
+WEAPON_SHOULDER = {"down": (41, 25), "up": (41, 25)}
+ATTACK_HANDS = {
+    WIND_UP: {"down": (45, 17), "up": (45, 17), "left": (27, 20)},
+    STRIKE: {"down": (35, 36), "up": (37, 15), "left": (21, 31)},
+}
+
+
+def weapon_shoulder(direction, frame):
+    return WEAPON_SHOULDER.get(direction, (side_arm_x(frame) + 1, 25))
+
+
+def weapon_hand(direction, frame):
+    if frame in ATTACK_HANDS:
+        return ATTACK_HANDS[frame][direction]
+    if direction in ("down", "up"):
+        return (41, 39 - swing(frame))
+    return (side_arm_x(frame) + 1, 39)
+
+
+def reaching_arm(shoulder, hand):
+    """An arm from shoulder to hand at any angle: a 3-pixel sleeve to the elbow, a 2-pixel
+    forearm, a cuff, and a 3x3 fist centred on the hand."""
+    sx, sy = shoulder
+    hx, hy = hand
+    ex, ey = round(sx + (hx - sx) * 0.55), round(sy + (hy - sy) * 0.55)
+    sleeve = thick(line(sx, sy, ex, ey), box(-1, -1, 3, 3))
+    fore = thick(line(ex, ey, hx, hy), box(0, 0, 2, 2)) - box(hx - 1, hy - 1, 3, 3)
+    image = layer(sleeve | fore, LINEN, False)
+    cx, cy = round(hx - (hx - sx) * 0.2), round(hy - (hy - sy) * 0.2)
+    image.set(cx, cy, LINEN[2])
+    image.over(layer(box(hx - 1, hy - 1, 3, 3), SKIN_TONES, False))
+    return image
 
 
 def steps(points, x, y, dx, dy, limit=3):
@@ -255,20 +339,20 @@ def steps(points, x, y, dx, dy, limit=3):
 
 
 def shade(image, points, tones, dither=True):
-    """Soft top-left lighting with checkerboard dithering at the tone boundaries."""
+    """Directional clusters: small lit edges, broad midtones, and a shaded lower-right."""
     light, main, dark = tones
     for x, y in points:
         near_light = min(steps(points, x, y, 0, -1), steps(points, x, y, -1, 0))
         near_dark = min(steps(points, x, y, 0, 1), steps(points, x, y, 1, 0))
-        checker = (x + y) % 2 == 0
-        if near_light == 0:
+        fleck = (x * 7 + y * 11) % 9
+        if near_light == 0 and near_dark > 0:
             color = light
         elif near_dark == 0:
             color = dark
         elif dither and near_dark == 1:
-            color = dark if checker else main
+            color = dark if fleck < 3 else main
         elif dither and near_light == 1:
-            color = light if checker else main
+            color = light if fleck == 0 else main
         else:
             color = main
         image.set(x, y, color)
@@ -278,17 +362,17 @@ def grey(*values):
     return tuple((value, value, value, 255) for value in values)
 
 
-SKIN_TONES = (rgba("ebc4a0"), rgba("d9a982"), rgba("b8835f"))
+SKIN_TONES = (rgba("d6b998"), rgba("bb9475"), rgba("896750"))
 HAIR_TONES = (rgba("6b4a33"), rgba("4b3324"), rgba("33221a"))
-LINEN = (rgba("cdbd9c"), rgba("b3a283"), rgba("8c7d63"))
+LINEN = (rgba("b7ad96"), rgba("928974"), rgba("6b6454"))
 TROUSERS = (rgba("5e554a"), rgba("4d453c"), rgba("38322b"))
 TROUSERS_FAR = (rgba("443d35"), rgba("3a342d"), rgba("2c2722"))
 BOOT_TONES = (rgba("54402f"), rgba("3a2a1f"), rgba("261b14"))
 BELT_TONE, BUCKLE_TONE = rgba("5e432d"), rgba("c9a24a")
 # Greyscale cloth is tinted per player at runtime; every value here is unique to cloth.
-TABARD = grey(240, 210, 162)
-HOOD = grey(198, 172, 130)
-CLOAK = grey(178, 146, 106)
+TABARD = grey(222, 185, 142)
+HOOD = grey(191, 158, 116)
+CLOAK = grey(169, 137, 98)
 CLOAK_FOLD = grey(90)[0]
 EMBLEM = grey(252)[0]
 CLOTH_COLORS = set(TABARD) | set(HOOD) | {EMBLEM}
@@ -302,9 +386,9 @@ HEADS = {
         "hhhhhhhhhH",
         "hhssssssHH",
         "hsssssssSH",
-        "hsesssseSH",
-        "hsssssssSH",
-        ".sssmmssS.",
+        "hseskseSH",
+        "hsskssSS.",
+        ".sssmsSS.",
         "..sssssS..",
     ],
     "up": [
@@ -326,8 +410,8 @@ HEADS = {
         "hhhhhhhhhH",
         ".ssssshhHH",
         "sssssShhHH",
-        "sesssShhHH",
-        "ssssSShhHH",
+        "seksSShhHH",
+        "skssSShhHH",
         ".smssShhH.",
         "..sssShH..",
     ],
@@ -391,13 +475,14 @@ def side_leg(hip_x, stride, far):
 
 
 def arm_layer(x, top):
-    image = layer(box(x, top, 3, 14), LINEN)
+    sleeve = box(x, top + 1, 3, 8) | box(x + 1, top + 9, 2, 5)
+    image = layer(sleeve, LINEN, False)
     image.rect(x, top + 13, 3, 1, LINEN[2])
     image.over(layer(box(x, top + 14, 3, 3), SKIN_TONES, False))
     return image
 
 
-TORSO_FRONT = box(24, 23, 16, 4) - {(24, 23), (39, 23)} | box(25, 27, 14, 8) | box(26, 35, 12, 2)
+TORSO_FRONT = box(24, 23, 16, 4) - {(24, 23), (39, 23)} | box(25, 27, 14, 6) | box(26, 33, 12, 4)
 TORSO_SIDE = box(27, 23, 10, 14) - {(27, 23), (36, 23)}
 HOOD_FRONT = box(28, 21, 8, 1) | box(26, 22, 12, 1) | box(25, 23, 14, 2) | box(26, 25, 12, 1)
 HOOD_SIDE = box(29, 21, 8, 1) | box(28, 22, 10, 3)
@@ -405,18 +490,23 @@ TABARD_FRONT = box(28, 25, 8, 16) | box(29, 41, 6, 1) | box(30, 42, 4, 1)
 TABARD_SIDE = box(27, 25, 3, 16) | box(27, 41, 2, 1)
 
 
-def body_layers(direction, frame):
+def body_layers(direction, frame, with_cloak=False):
     """Ordered (image, outlined) layers, plus masks that worn armour must not cover."""
     layers = []
     covers = Image(FRAME, FRAME)
     if direction in ("down", "up"):
         left_lift, right_lift = swing(frame) == 1, swing(frame) == -1
-        cloak = cloak_layer(cloak_points(23, 44, 9, 14), (22, 26, 37, 41))
-        if direction == "down":
+        cloak = cloak_layer(cloak_points(23, 43, 9, 11), (25, 28, 35, 38))
+        if direction == "down" and with_cloak:
             layers.append((cloak, True))
         layers.append((front_legs(left_lift, right_lift), True))
         torso = layer(TORSO_FRONT, LINEN)
-        torso.over(arm_layer(21, 24 + swing(frame))).over(arm_layer(40, 24 - swing(frame)))
+        torso.over(arm_layer(21, 24 + swing(frame)))
+        attacking = frame in ATTACK_HANDS
+        if not attacking:
+            torso.over(arm_layer(40, 24 - swing(frame)))
+        elif direction == "up":
+            torso.over(reaching_arm(weapon_shoulder(direction, frame), weapon_hand(direction, frame)))
         layers.append((torso, True))
         if direction == "down":
             tabard = layer(TABARD_FRONT, TABARD)
@@ -427,7 +517,11 @@ def body_layers(direction, frame):
             belt.rect(25, 35, 14, 2, BELT_TONE)
             belt.rect(31, 35, 2, 2, BUCKLE_TONE)
             layers.append((belt, False))
-        else:
+            if attacking:
+                arm = reaching_arm(weapon_shoulder(direction, frame), weapon_hand(direction, frame))
+                layers.append((arm, True))
+                covers.over(arm.outlined())
+        elif with_cloak:
             layers.append((cloak, True))
         hood = layer(HOOD_FRONT, HOOD)
         layers.append((hood, True))
@@ -437,12 +531,13 @@ def body_layers(direction, frame):
         layers.append((head, True))
     else:
         # Stand: legs together; steps: the near and far leg scissor forward and back.
-        near, far = ((0, 1), (-5, 5), (5, -5))[frame]
+        near, far = ((0, 1), (-4, 4), (4, -4), (0, 1), (-3, 2))[frame]
         cloak = set(box(31, 22, 7, 2))
         for y in range(24, 45):
-            cloak |= box(33, y, 6 + (y - 24) * 4 // 20, 1)
+            cloak |= box(33, y, 5 + (y - 24) * 3 // 20, 1)
         cloak = cloak_layer(cloak, (37, 40))
-        layers.append((cloak, True))
+        if with_cloak:
+            layers.append((cloak, True))
         layers.append((side_leg(31, far, True), True))
         layers.append((side_leg(30, near, False), True))
         layers.append((layer(TORSO_SIDE, LINEN), True))
@@ -460,7 +555,10 @@ def body_layers(direction, frame):
         head = Image(FRAME, FRAME)
         head.template(27, 11, HEADS["left"], HEAD_PALETTE)
         layers.append((head, True))
-        arm = arm_layer(side_arm_x(frame), 24)
+        if frame in ATTACK_HANDS:
+            arm = reaching_arm(weapon_shoulder(direction, frame), weapon_hand(direction, frame))
+        else:
+            arm = arm_layer(side_arm_x(frame), 24)
         layers.append((arm, True))
         covers.over(arm.outlined())
     return layers, covers
@@ -470,17 +568,17 @@ def body_covers(direction, frame):
     return body_layers(direction, frame)[1]
 
 
-def full_body(direction, frame):
+def full_body(direction, frame, with_cloak=False):
     image = Image(FRAME, FRAME)
     for x, y in ellipse(32, 53.5, 11, 3):
         image.set(x, y, SHADOW)
-    for part, outlined in body_layers(direction, frame)[0]:
+    for part, outlined in body_layers(direction, frame, with_cloak)[0]:
         image.over(part.outlined() if outlined else part)
     return image
 
 
 def split_body(part):
-    """"body" (untinted), "cloth" (hood and tabard), or "cloak": only pixels left visible."""
+    """Base body/cloth are cape-free; "cloak" is the visible mask for equippable capes."""
     def keep(color):
         if part == "cloth":
             return color in CLOTH_COLORS
@@ -489,7 +587,7 @@ def split_body(part):
         return color not in CLOTH_COLORS and color not in CLOAK_COLORS
 
     def build(direction, frame):
-        image = full_body(direction, frame)
+        image = full_body(direction, frame, with_cloak=part == "cloak")
         for y in range(FRAME):
             for x in range(FRAME):
                 if not keep(image.pixels[y][x]):
@@ -503,7 +601,7 @@ def marker(direction, frame):
     for y in range(FRAME):
         for x in range(FRAME):
             distance = ((x + 0.5 - 32) / 14.5) ** 2 + ((y + 0.5 - 53.5) / 5.2) ** 2
-            if 0.66 <= distance <= 1.0:
+            if 0.83 <= distance <= 1.0:
                 image.set(x, y, MARKER if y >= 53 else scale(MARKER, 0.78))
     return image
 
@@ -512,11 +610,32 @@ def marker(direction, frame):
 
 def tones(kind):
     main, light, accent = PALETTES[kind]
+    shape, _ = look(kind)
+    if shape == "book":
+        main = blend(main, LEATHER, 0.45)
+        light = scale(main, 1.25)
+    elif shape == "bow":
+        main = blend(WOOD[1], main, 0.24)
+        light = scale(main, 1.25)
     return (light, main, scale(main, 0.7)), accent
 
 
 WOOD = (rgba("8a6440"), rgba("6e4a2e"), rgba("4f3420"))
 BONE = (rgba("f0e6cc"), rgba("d8c8a4"), rgba("a8946c"))
+
+
+def armor_surface(image, points, shape, palette):
+    """Small overlapping scales or paired rivets; shared by the icon and worn layers."""
+    light, main, dark = palette
+    for x, y in sorted(points):
+        if shape == "scale":
+            column = (x + (y // 3 % 2) * 2) % 4
+            if y % 3 == 2 and column in (1, 2):
+                image.set(x, y, dark)
+            elif y % 3 == 1 and column == 0:
+                image.set(x, y, light)
+        elif shape == "brigandine" and y % 4 == 0 and x % 4 in (0, 1):
+            image.set(x, y, blend(main, rgba("b6afa0"), 0.5))
 
 
 def armor_builder(kind):
@@ -528,11 +647,6 @@ def armor_builder(kind):
     def build(direction, frame):
         covers = body_covers(direction, frame)
         pauldron = shape == "plate"
-        if direction == "up":
-            if tunic:
-                return layer(box(24, 44, 16, 3), palette).outlined()
-            shoulders = box(20, 21, 8, 6) | box(36, 21, 8, 6) if pauldron else box(22, 22, 6, 5) | box(36, 22, 6, 5)
-            return layer(shoulders, palette).outlined()
         side = direction == "left"
         if tunic:
             body = box(27, 24, 10, 18) | box(26, 41, 12, 3) if side else box(25, 24, 14, 18) | box(24, 41, 16, 3)
@@ -544,21 +658,28 @@ def armor_builder(kind):
             image.rect(26 if not side else 27, 36, 12 if not side else 10, 1, accent)
         elif shape == "mail":
             for x, y in body:
-                if (x + y) % 2 == 0 and y % 2 == 1 and image.get(x, y) == main:
-                    image.set(x, y, light)
-            image.rect(25 if not side else 27, 35, 14 if not side else 10, 2, accent)
+                if (x + y // 2) % 3 == 0 and y % 2 == 1 and image.get(x, y) == main:
+                    image.set(x, y, scale(main, 1.12))
+            image.rect(25 if not side else 27, 35, 14 if not side else 10, 1, LEATHER)
+        elif shape in ("scale", "brigandine"):
+            armor_surface(image, body, shape, palette)
+            image.rect(27 if side else 25, 35, 10 if side else 14, 1, LEATHER)
+            if shape == "brigandine":
+                image.rect(31, 25, 1, 10, dark)
         elif shape == "plate":
             for y in (28, 31, 34):
                 for x, row in body:
                     if row == y:
                         image.set(x, y, dark)
-            if not side:
-                image.rect(30, 23, 4, 4, accent)
+            if not side and direction != "up":
+                image.rect(31, 25, 2, 2, accent)
             else:
                 image.rect(27, 23, 3, 3, accent)
-        elif not side:
+        elif not side and direction != "up":
             for y in range(27, 38, 3):
-                image.rect(31, y, 2, 1, accent)
+                image.set(31, y, dark)
+        if direction == "up":
+            image.rect(31, 27, 1, 8, dark)
         image = image.outlined().cut(covers)
         extra = Image(FRAME, FRAME)
         if side:
@@ -566,11 +687,11 @@ def armor_builder(kind):
             if tunic:
                 extra = layer(box(arm_x, 24, 3, 4), palette)
             else:
-                extra = layer(box(arm_x - 2, 21, 7, 6) if pauldron else box(arm_x - 1, 22, 5, 5), palette)
+                extra = layer(ellipse(arm_x + 1, 24, 3.5, 3) if pauldron else ellipse(arm_x + 1, 24, 2.5, 2.5), palette)
         elif tunic:
             extra = layer(box(21, 24 + swing(frame), 3, 4), palette).over(layer(box(40, 24 - swing(frame), 3, 4), palette))
         elif pauldron:
-            extra = layer(box(19, 21, 8, 6), palette).over(layer(box(37, 21, 8, 6), palette))
+            extra = layer(ellipse(23, 24, 3.5, 3), palette).over(layer(ellipse(41, 24, 3.5, 3), palette))
         else:
             extra = layer(box(21, 22, 6, 5), palette).over(layer(box(37, 22, 6, 5), palette))
         return image.over(extra.outlined())
@@ -584,8 +705,8 @@ CAP = [
     ".mlmmmmmmdd.",
     ".mmmmmmmmdd.",
     ".mmmmmmmmdd.",
-    "llllllllllll",
-    ".dddddddddd.",
+    ".llmmmmmddd.",
+    "..dddddddd..",
 ]
 DOME = box(29, 8, 6, 1) | box(27, 9, 10, 1) | box(26, 10, 12, 1) | box(25, 11, 14, 6)
 
@@ -627,7 +748,7 @@ def helmet_builder(kind):
             else:
                 shell |= box(25, 17, 3, 4) | box(36, 17, 3, 4)
         shade(image, shell, palette)
-        image.rect(25, 14, 14, 1, light)
+        image.rect(26, 14, 12, 1, main)
         if shape == "kettle":
             shade(image, box(22, 15, 20, 2), (light, main, dark), False)
         if shape == "helm" and direction != "up":
@@ -645,7 +766,7 @@ def helmet_builder(kind):
                     image.set(x, 19, OUTLINE)
         if "plume" in extras:
             plume = box(33, 2, 2, 6) | box(35, 4, 2, 5) | box(37, 7, 2, 3) if side else box(31, 1, 2, 8)
-            shade(image, plume, (scale(accent, 1.25), accent, scale(accent, 0.7)), False)
+            shade(image, plume, (scale(accent, 1.1), accent, scale(accent, 0.7)), False)
         if "crest" in extras:
             crest = box(29, 5, 10, 3) if side else box(30, 4, 4, 5)
             shade(image, crest, (scale(accent, 1.25), accent, scale(accent, 0.7)), False)
@@ -658,106 +779,214 @@ def helmet_builder(kind):
     return build
 
 
-def held_builder(kind):
-    """Main-hand weapons: sword, greatsword, axe, mace, bow, crossbow, wand, rod."""
+WEAPON_SHAPES = {"sword", "greatsword", "axe", "mace", "hammer", "bow", "crossbow", "wand", "rod"}
+WEAPON_GRIP = (32, 42)
+
+
+def weapon_model(kind):
+    """Original weapon construction about a shared grip, reused for icons and worn poses."""
+    shape, extras = look(kind)
     palette, accent = tones(kind)
     light, main, dark = palette
+    steel = blend(rgba("929fa1"), main, 0.28)
+    steel_light = blend(rgba("e1e4d8"), light, 0.25)
+    metal = (steel_light, steel, scale(steel, 0.58))
+    wood = (WOOD[0], blend(WOOD[1], main, 0.18), WOOD[2])
+    brass = (scale(accent, 1.12), accent, scale(accent, 0.55))
+    image = Image(FRAME, FRAME)
+
+    def place(points, colors):
+        shade(image, {(x + 32, y + 42) for x, y in points}, colors, False)
+
+    def dot(x, y, color):
+        image.set(x + 32, y + 42, color)
+
+    def rod(points, colors, width=2):
+        place(thick(points, tuple((i, 0) for i in range(width))), colors)
+
+    if shape in ("sword", "greatsword"):
+        length = 19 if "short" in extras else (30 if shape == "greatsword" else 24 if ITEMS[kind]["level"] < 10 else 27)
+        width = 3 if shape == "greatsword" else 2
+        if "estoc" in extras:
+            blade = polygon([(0, -29), (1.5, -8), (1.5, -5), (-1.5, -5), (-1.5, -8)])
+        elif "curved" in extras:
+            blade = polygon([(7, -27), (5, -20), (3, -12), (2, -5), (-1, -5), (0, -15), (3, -23)])
+        elif "cleaver" in extras:
+            blade = polygon([(-1, -24), (4, -23), (5, -18), (3, -6), (-2, -6), (-2, -21)])
+        else:
+            blade = polygon([(0, -length), (width, -length + 5), (width, -7),
+                             (width - 1, -5), (-width, -5), (-width, -length + 5)])
+        place(blade, metal)
+        for x, y in sorted(blade):
+            if (x - 1, y) not in blade:
+                dot(x, y, steel_light)
+            elif (x + 1, y) not in blade:
+                dot(x, y, metal[2])
+            elif x == 0 and "curved" not in extras and "cleaver" not in extras:
+                dot(x, y, metal[2] if "fuller" in extras and -length + 6 < y < -8 else steel)
+        if not extras.intersection({"curved", "cleaver", "estoc"}):
+            dot(0, -length, steel_light)
+        guard = polygon([(-6, -5), (-2, -6), (3, -6), (6, -4), (6, -2), (2, -4), (-3, -4), (-6, -3)])
+        if "curved" in extras:
+            guard |= line(4, -3, 4, 3) | line(4, 3, 1, 5)
+        place(guard, brass)
+        place(box(-1, -3, 2, 7), (rgba("98816a"), LEATHER, scale(LEATHER, 0.6)))
+        for y in (-2, 0, 2):
+            dot(0, y, rgba("3c3029"))
+        place(ellipse(0, 5, 2, 1.5), metal if "estoc" in extras else brass)
+    elif shape == "hammer":
+        # A slim haft, a neck/socket and distinct striking face and peen, not a single block.
+        rod(line(-1, -16, 0, 6), wood)
+        place(box(-1, -1, 2, 5), (rgba("97856a"), LEATHER, WOOD[2]))
+        place(box(-1, -15, 3, 5), metal)
+        maul = "maul" in extras or kind == "starforged_maul"
+        if maul:
+            head = polygon([(-7, -20), (-5, -22), (5, -22), (7, -20), (7, -16),
+                            (5, -14), (-5, -14), (-7, -16)])
+            place(head, metal)
+            place(box(-1, -21, 2, 6), brass)
+            place(polygon([(-7, -20), (-5, -19), (-5, -15), (-7, -16)]), (steel, metal[2], scale(steel, 0.4)))
+        else:
+            head = polygon([(-6, -20), (-4, -21), (-2, -20), (-1, -19), (3, -19),
+                            (3, -16), (-2, -16), (-4, -15), (-6, -16)])
+            place(head, metal)
+            place(polygon([(-6, -20), (-4, -19), (-4, -16), (-6, -16)]), (steel_light, steel, metal[2]))
+            if "pick" in extras:
+                place(polygon([(2, -19), (6, -19), (10, -15), (5, -17), (2, -16)]), metal)
+            elif "peen" in extras:
+                place(ellipse(4, -17.5, 2.5, 2), metal)
+            else:
+                place(polygon([(2, -19), (7, -18), (8, -16), (3, -17)]), metal)
+            dot(0, -18, metal[2])
+        for y in (0, 3):
+            dot(0, y, wood[0])
+    elif shape == "axe":
+        rod(line(-1, -19, 0, 6), wood)
+        blade = polygon([(-2, -19), (4, -22), (7, -23), (7, -17), (5, -12), (0, -14), (-2, -14)])
+        place(blade, metal)
+        rod(line(-1, -19, -1, -14), brass, 1)
+    elif shape == "mace":
+        rod(line(-1, -16, 0, 6), wood)
+        place(ellipse(0, -18, 4, 5), metal)
+        for x in (-3, 0, 3):
+            rod(line(x, -21, x, -15), (steel_light, steel, metal[2]), 1)
+        place(box(-1, -12, 2, 2), brass)
+    elif shape == "bow":
+        half = 16 if "flat" in extras else 18
+        points = set()
+        for y in range(-half, half + 1):
+            bend = round(6 * (1 - (y / half) ** 2))
+            if "recurve" in extras and abs(y) > half - 5:
+                bend -= 2
+            points.add((bend, y))
+        rod(points, wood)
+        rod(line(0 if "recurve" not in extras else -2, -half, 0 if "recurve" not in extras else -2, half),
+            (LINEN[1], LINEN[1], LINEN[2]), 1)
+        place(box(5, -3, 2, 6), (wood[0], LEATHER, wood[2]))
+        for y in (-half + 1, half - 1):
+            dot(-1 if "recurve" in extras else 1, y, accent)
+    elif shape == "crossbow":
+        wide = "arbalest" in extras
+        place(polygon([(-1, -20), (2, -20), (2, -1), (3, 6), (0, 7), (-2, 3)]), wood)
+        span = 11 if wide else 8
+        for side in (-1, 1):
+            rod(line(side, -14, side * span, -10), metal if wide else wood)
+            rod(line(side * span, -10, 0, -6), (LINEN[1], LINEN[1], LINEN[2]), 1)
+        rod(line(0, -21, 0, -5), metal, 1)
+        place(box(-1, -4, 3, 2), brass)
+        if wide:
+            rod(line(-4, 1, 4, 1), metal, 1)
+            place(box(4, 0, 2, 3), wood)
+    elif shape == "wand":
+        rod(line(-1, 5, 0, -13), wood)
+        place(box(-1, -7, 3, 2), brass)
+        if "fork" in extras:
+            for side in (-1, 1):
+                rod(line(0, -12, side * 4, -19) | line(side * 4, -19, side * 3, -22), metal, 1)
+            place(polygon([(0, -22), (2, -19), (0, -16), (-2, -19)]), brass)
+        elif "cage" in extras:
+            place(ellipse(0, -18, 3, 4), (scale(accent, 1.1), accent, scale(accent, 0.6)))
+            for side in (-1, 1):
+                rod(line(0, -23, side * 4, -18) | line(side * 4, -18, 0, -12), metal, 1)
+            rod(line(-4, -18, 4, -18), metal, 1)
+        else:
+            place(polygon([(0, -22), (3, -18), (2, -14), (-2, -14), (-3, -18)]), brass)
+            dot(-1, -18, scale(accent, 1.3))
+    elif shape == "rod":
+        rod(line(0, 7, -1, -17), wood)
+        if "crook" in extras:
+            curve = set()
+            for degree in range(-175, 100, 8):
+                angle = math.radians(degree)
+                curve.add((round(3 + 5 * math.cos(angle)), round(-21 + 5 * math.sin(angle))))
+            rod(curve, wood)
+            place(box(2, -18, 2, 2), brass)
+        elif "root" in extras:
+            for a, b in [((-1, -13), (-5, -22)), ((-1, -17), (4, -25)), ((-4, -19), (-7, -19)),
+                         ((2, -22), (6, -21))]:
+                rod(line(*a, *b), wood)
+            place(ellipse(0, -20, 2, 3), brass)
+        else:
+            rod(line(-1, -16, -3, -20) | line(-3, -20, -1, -25) | line(1, -25, 3, -20), wood)
+            place(ellipse(0, -22, 2.5, 3), brass)
+        place(box(-1, -8, 2, 2), brass)
+    else:
+        raise ValueError(f"Unsupported weapon shape: {shape}")
+    return image
+
+
+def pose_weapon(model, size, grip, angle, scale_factor=1.0):
+    """Inverse nearest-neighbour rasterization keeps rotated metal faces solid."""
+    image = Image(size, size)
+    cosine, sine = math.cos(angle), math.sin(angle)
+    for y in range(size):
+        for x in range(size):
+            dx, dy = (x - grip[0]) / scale_factor, (y - grip[1]) / scale_factor
+            u = round(dx * cosine + dy * sine + WEAPON_GRIP[0])
+            v = round(-dx * sine + dy * cosine + WEAPON_GRIP[1])
+            image.set(x, y, model.get(u, v))
+    return image.outlined(rgba("302d27"))
+
+
+def weapon_icon(kind):
+    shape, extras = look(kind)
+    grip = (11, 23)
+    size = 0.88
+    if shape == "bow":
+        grip, size = (14, 15), 0.87
+    elif shape == "crossbow":
+        grip, size = (12, 22), 0.9
+    elif shape == "greatsword":
+        grip, size = (9, 25), 0.86
+    elif shape == "rod":
+        grip, size = (10, 23), 0.85
+    elif "curved" in extras:
+        grip, size = (8, 24), 0.83
+    return pose_weapon(weapon_model(kind), TILE, grip, math.pi / 4, size)
+
+
+# Weapon angle in degrees, clockwise from blade-up, by grip style, direction ("side" is facing
+# left), and pose column (stand, step A, step B, wind-up, strike). Melee weapons rest tilted
+# forward, are raised back, then cut down across the body; staves are raised and thrust;
+# bows are carried tilted and pushed out upright to shoot; crossbows are raised and aimed level.
+WEAPON_ANGLES = {
+    "melee": {"down": (12, 8, 16, 40, -135), "up": (12, 8, 16, 40, -20), "side": (-25, -35, -15, 45, -100)},
+    "staff": {"down": (6, 4, 8, 15, -25), "up": (6, 4, 8, 15, -15), "side": (-12, -18, -6, 10, -55)},
+    "bow": {"down": (0, 0, 0, 0, 0), "up": (0, 0, 0, 0, 0), "side": (-18, -24, -12, 0, 0)},
+    "crossbow": {"down": (0, 0, 0, 0, 0), "up": (0, 0, 0, 0, 0), "side": (-20, -26, -14, -60, -90)},
+}
+GRIP_STYLE = {"wand": "staff", "rod": "staff", "bow": "bow", "crossbow": "crossbow"}
+
+
+def held_builder(kind):
+    model = weapon_model(kind)
     shape, _ = look(kind)
-    grip = PALETTES[kind][1]
+    style = GRIP_STYLE.get(shape, "melee")
 
     def build(direction, frame):
-        image = Image(FRAME, FRAME)
-        if direction in ("down", "up"):
-            top = 24 - swing(frame)
-            if shape == "axe":
-                image.rect(41, top - 2, 2, 20, grip)
-                image.rect(42, top - 2, 1, 20, accent)
-                shade(image, box(43, top - 2, 2, 4) | box(45, top - 4, 3, 8) | box(48, top - 3, 1, 6), palette)
-            elif shape in ("sword", "greatsword"):
-                reach = 14 if shape == "greatsword" else 5
-                image.rect(41, top - reach, 1, 18 + reach - 5, main)
-                image.rect(42, top - reach, 1, 18 + reach - 5, dark)
-                image.clear(42, top - reach)
-                width = 10 if shape == "greatsword" else 8
-                image.rect(42 - width // 2 + 1, top + 13, width, 1, grip)
-                image.rect(41, top + 14, 2, 3, accent)
-                image.rect(41, top + 17, 2, 1, grip)
-            elif shape == "mace":
-                image.rect(41, top + 1, 2, 17, WOOD[1])
-                image.rect(42, top + 1, 1, 17, WOOD[2])
-                head = ellipse(42, top - 2, 3.5, 3.5)
-                shade(image, head, palette, False)
-                for x, y in ((42, top - 6), (38, top - 2), (45, top - 2)):
-                    image.set(x, y, accent)
-            elif shape == "bow":
-                for y in range(top - 2, top + 27):
-                    bend = round(3.5 * (1 - ((y - (top + 12)) / 14.5) ** 2))
-                    image.set(44 + bend, y, main)
-                    image.set(45 + bend, y, dark)
-                    if y in (top - 2, top + 26):
-                        image.set(44 + bend, y, accent)
-                image.rect(43, top - 1, 1, 27, light)
-                image.rect(43, top + 11, 3, 3, accent)
-            elif shape == "crossbow":
-                image.rect(41, top + 6, 2, 13, WOOD[1])
-                image.rect(42, top + 6, 1, 13, WOOD[2])
-                for x in range(35, 50):
-                    image.set(x, top + 6 + abs(x - 42) // 3, main)
-                    image.set(x, top + 7 + abs(x - 42) // 3, dark)
-                image.rect(41, top + 4, 2, 2, accent)
-            elif shape == "wand":
-                image.rect(41, top + 6, 2, 11, main)
-                image.rect(42, top + 6, 1, 11, dark)
-                image.rect(41, top + 3, 2, 3, accent)
-                image.set(41, top + 3, scale(accent, 1.3))
-            else:  # rod
-                image.rect(41, top - 9, 2, 30, main)
-                image.rect(42, top - 9, 1, 30, dark)
-                orb = ellipse(42, top - 12, 3, 3)
-                shade(image, orb, (scale(accent, 1.35), accent, scale(accent, 0.7)), False)
-                image.set(41, top - 13, (255, 255, 255, 255))
-            return image.outlined()
-        hand_x = side_arm_x(frame) + 1
-        if shape == "axe":
-            for x, y in thick(line(hand_x, 40, hand_x - 12, 25), ((0, 0), (1, 0))):
-                image.set(x, y, grip)
-            shade(image, box(hand_x - 14, 23, 3, 3) | box(hand_x - 17, 20, 3, 8) | box(hand_x - 18, 21, 1, 6), palette)
-        elif shape in ("sword", "greatsword"):
-            tip = 20 if shape == "greatsword" else 15
-            for x, y in line(hand_x - 1, 37, hand_x - tip, 38 - tip):
-                image.set(x, y, main)
-                image.set(x + 1, y, dark)
-            for x, y in line(hand_x - 3, 39, hand_x + 1, 35):
-                image.set(x, y, grip)
-            image.set(hand_x, 40, accent)
-            image.set(hand_x + 1, 41, accent)
-        elif shape == "mace":
-            for x, y in thick(line(hand_x, 40, hand_x - 9, 29), ((0, 0), (1, 0))):
-                image.set(x, y, WOOD[1])
-            shade(image, ellipse(hand_x - 11, 27, 3.5, 3.5), palette, False)
-            image.set(hand_x - 15, 26, accent)
-            image.set(hand_x - 11, 23, accent)
-        elif shape == "bow":
-            for y in range(26, 55):
-                bend = round(3 * (1 - ((y - 40) / 14.5) ** 2))
-                image.set(hand_x - 3 - bend, y, main)
-                image.set(hand_x - 4 - bend, y, dark)
-            image.rect(hand_x - 2, 27, 1, 27, light)
-        elif shape == "crossbow":
-            for x, y in thick(line(hand_x + 2, 40, hand_x - 10, 38), ((0, 0), (0, 1))):
-                image.set(x, y, WOOD[1])
-            image.rect(hand_x - 11, 32, 2, 14, main)
-            image.rect(hand_x - 10, 32, 1, 14, dark)
-            image.set(hand_x - 12, 38, accent)
-        elif shape == "wand":
-            for x, y in thick(line(hand_x, 40, hand_x - 7, 33), ((0, 0), (1, 0))):
-                image.set(x, y, main)
-            image.rect(hand_x - 9, 31, 2, 2, accent)
-        else:  # rod
-            image.rect(hand_x - 1, 20, 2, 33, main)
-            image.rect(hand_x, 20, 1, 33, dark)
-            shade(image, ellipse(hand_x, 17, 3, 3), (scale(accent, 1.35), accent, scale(accent, 0.7)), False)
-        return image.outlined()
+        angle = WEAPON_ANGLES[style]["side" if direction == "left" else direction][frame]
+        size = 0.85 if style == "bow" else 1.0
+        return pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle), size)
     return build
 
 
@@ -770,7 +999,7 @@ def shield_face(image, disc, palette, rim, boss):
                 image.set(px, py, palette[2])
     for x, y in disc:
         if any((x + dx, y + dy) not in disc for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-            image.set(x, y, rim)
+            image.set(x, y, scale(rim, 0.8))
     for x, y in boss:
         image.set(x, y, scale(rim, 1.25) if (x + y) % 2 == 0 else rim)
 
@@ -868,7 +1097,7 @@ def cape_builder(kind):
 
 
 # Halo alpha by distance from the sprite: inside (0) brightens the item, then a soft falloff.
-HALO_ALPHA = {0: 60, 1: 170, 2: 110, 3: 55, 4: 20}
+HALO_ALPHA = {0: 18, 1: 96, 2: 58, 3: 28, 4: 10}
 
 
 def halo(image):
@@ -915,7 +1144,7 @@ GEAR_BUILDERS = {"helmet": helmet_builder, "armor": armor_builder, "main_hand": 
 # Same 64x64 frame layout and tile centre (32, 40) as characters; feet near y 53.
 
 MONSTER_TONES = grey(236, 186, 128)
-EYE = rgba("fff2b0")
+EYE = rgba("d2bf87")
 EYE_DARK = rgba("1a1612")
 
 
@@ -931,27 +1160,29 @@ def quadruped(direction, frame):
     if direction in ("down", "up"):
         legs = [(25, 45 + (1 if swing(frame) == 1 else 0)), (35, 45 + (1 if swing(frame) == -1 else 0))]
         for x, y in legs:
-            shade(shape, box(x, y, 4, 8 - (y - 45)), MONSTER_TONES, False)
-        shade(shape, ellipse(32, 40, 10, 8), MONSTER_TONES)
+            shade(shape, box(x, y, 3, 8 - (y - 45)), MONSTER_TONES, False)
+        shade(shape, ellipse(32, 40, 9, 9), MONSTER_TONES)
         if direction == "down":
-            shade(shape, ellipse(32, 36, 7, 6) | box(25, 29, 3, 4) | box(37, 29, 3, 4), MONSTER_TONES)
-            detail.rect(29, 35, 2, 2, EYE_DARK)
-            detail.rect(34, 35, 2, 2, EYE_DARK)
-            detail.set(29, 35, EYE)
-            detail.set(34, 35, EYE)
-            detail.rect(31, 40, 3, 1, EYE_DARK)
+            shade(shape, ellipse(32, 35, 6, 6) | ellipse(26, 29, 2, 3) | ellipse(37, 29, 2, 3), MONSTER_TONES)
+            shade(shape, ellipse(32, 40, 3.5, 4), grey(208, 164, 116), False)
+            detail.set(28, 35, EYE_DARK)
+            detail.set(35, 35, EYE_DARK)
+            detail.rect(31, 42, 2, 1, EYE_DARK)
         else:
             shade(shape, box(31, 30, 3, 6), MONSTER_TONES, False)
     else:
         front, back = ((22, 38), (20, 40), (24, 36))[frame]
         for x in (front, front + 5, back, back - 5):
-            shade(shape, box(x, 44, 4, 9), MONSTER_TONES, False)
+            leg = thick(line(x + 1, 44, x, 51), ((0, 0), (1, 0)))
+            shade(shape, leg | box(x - 1, 52, 4, 1), MONSTER_TONES, False)
         shade(shape, ellipse(32, 40, 14, 7), MONSTER_TONES)
-        shade(shape, ellipse(20, 35, 7, 6) | box(17, 27, 3, 4) | box(21, 27, 3, 4), MONSTER_TONES)
-        shade(shape, box(45, 36, 5, 2), MONSTER_TONES, False)
-        detail.rect(17, 34, 2, 2, EYE_DARK)
-        detail.set(17, 34, EYE)
-        detail.rect(13, 38, 3, 1, EYE_DARK)
+        shade(shape, ellipse(20, 35, 6, 5) | ellipse(13, 38, 5, 2.5) | ellipse(20, 28, 2, 3), MONSTER_TONES)
+        shade(shape, thick(line(44, 37, 52, 42), ((0, 0), (0, 1))), MONSTER_TONES, False)
+        detail.set(17, 34, EYE_DARK)
+        detail.rect(8, 38, 2, 1, EYE_DARK)
+    for x, y in sorted(ellipse(32, 39, 8, 5)):
+        if (x * 11 + y * 7) % 13 == 0 and shape.get(x, y) == MONSTER_TONES[1]:
+            shape.set(x, y, (162, 162, 162, 255))
     body.over(shape.outlined())
     return body, detail
 
@@ -969,10 +1200,8 @@ def blob(direction, frame):
     if direction != "up":
         eyes = [(27, 39), (34, 39)] if direction == "down" else ([(23, 40)] if direction == "left" else [(39, 40)])
         for x, y in eyes:
-            detail.rect(x, y - squash, 3, 3, EYE)
-            detail.set(x + 1, y + 1 - squash, EYE_DARK)
-        if direction == "down":
-            detail.rect(28, 45 - squash, 8, 1, EYE_DARK)
+            detail.rect(x, y - squash, 2, 1, EYE_DARK)
+            detail.set(x, y - squash, rgba("b9b18a"))
     return body, detail
 
 
@@ -983,25 +1212,28 @@ def golem(direction, frame):
     shape = Image(FRAME, FRAME)
     side = direction in ("left", "right")
     lift = (0, 1, -1)[frame]
-    shade(shape, box(24, 44 - max(lift, 0), 6, 10) | box(34, 44 - max(-lift, 0), 6, 10), MONSTER_TONES, False)
-    shade(shape, box(21, 24, 22, 21) - {(21, 24), (42, 24)}, MONSTER_TONES)
-    shade(shape, box(26, 13, 12, 11), MONSTER_TONES)
+    plates = [
+        ellipse(27, 48 - max(lift, 0), 4, 6),
+        ellipse(37, 48 - max(-lift, 0), 4, 6),
+        ellipse(32, 38, 9, 8),
+        ellipse(32, 29, 12, 9),
+        ellipse(32, 18, 6, 7),
+    ]
     if not side:
-        shade(shape, box(14, 25 + lift, 7, 17), MONSTER_TONES)
-        shade(shape, box(43, 25 - lift, 7, 17), MONSTER_TONES)
+        plates += [ellipse(18, 28 + lift, 5, 6), ellipse(17, 37 + lift, 4, 6),
+                   ellipse(46, 28 - lift, 5, 6), ellipse(47, 37 - lift, 4, 6)]
     else:
-        shade(shape, box(28 + lift * 2, 26, 8, 17), MONSTER_TONES)
-    rng = random.Random(77)
-    for _ in range(18):
-        x, y = rng.randrange(22, 42), rng.randrange(25, 44)
-        if shape.get(x, y) == MONSTER_TONES[1]:
-            shape.set(x, y, MONSTER_TONES[2])
+        plates += [ellipse(31 + lift * 2, 28, 5, 6), ellipse(29 + lift * 2, 38, 4, 6)]
+    for index, points in enumerate(plates):
+        stone_surface(shape, points, MONSTER_TONES, index)
+    for x, y in line(35, 25, 31, 36) | line(31, 36, 34, 40):
+        shape.set(x, y, (94, 94, 94, 255))
     body.over(shape.outlined())
     if direction == "down":
-        detail.rect(28, 17, 3, 2, EYE)
-        detail.rect(33, 17, 3, 2, EYE)
+        detail.rect(28, 18, 2, 1, EYE)
+        detail.rect(33, 18, 2, 1, EYE)
     elif direction != "up":
-        detail.rect(27 if direction == "left" else 34, 17, 3, 2, EYE)
+        detail.rect(27 if direction == "left" else 34, 18, 2, 1, EYE)
     return body, detail
 
 
@@ -1118,33 +1350,35 @@ def material_icon(image, shape, palette, accent):
 
 
 def item_icon(kind):
-    main, light, accent = PALETTES[kind]
-    dark = scale(main, 0.7)
+    palette, accent = tones(kind)
+    light, main, dark = palette
     shape, extras = look(kind)
+    if shape in WEAPON_SHAPES:
+        return weapon_icon(kind)
     image = Image(TILE, TILE)
-    gem = (scale(accent, 1.5), accent, scale(accent, 0.65))
+    gem = (scale(accent, 1.12), accent, scale(accent, 0.65))
     if shape == "cap":
-        bevel(image, {p for p in ellipse(16, 16, 9, 8) if p[1] <= 15}, main, light, dark)
-        bevel(image, box(5, 16, 22, 3), light, scale(light, 1.1), main)
-        bevel(image, box(15, 6, 2, 3), accent, accent, scale(accent, 0.8))
+        shade(image, {p for p in ellipse(16, 17, 8, 7) if p[1] <= 17}, (light, main, dark))
+        image.rect(8, 18, 16, 1, dark)
+        image.set(18, 11, accent)
     elif shape == "coif":
         hood = ellipse(16, 15, 9, 10) - ellipse(16, 18, 5, 6)
         hood = {p for p in hood if p[1] <= 24}
-        bevel(image, hood, main, light, dark)
+        shade(image, hood, (light, main, dark))
         for x, y in hood:
             if (x + y) % 2 == 0 and y % 2 == 1 and image.get(x, y) == main:
-                image.set(x, y, light)
+                image.set(x, y, scale(main, 1.1))
     elif shape in ("helm", "kettle", "greathelm"):
         dome = {p for p in ellipse(16, 17, 9, 9) if p[1] <= 17}
         if shape == "greathelm":
             dome = ellipse(16, 16, 8.5, 10)
         elif shape == "helm":
             dome |= box(8, 17, 4, 7) | box(20, 17, 4, 7)
-        bevel(image, dome, main, light, dark)
+        shade(image, dome, (light, main, dark))
         if shape == "kettle":
-            bevel(image, box(3, 17, 26, 3), light, scale(light, 1.1), main)
+            bevel(image, box(5, 17, 22, 2), main, light, dark)
         if shape == "helm":
-            image.rect(15, 14, 2, 8, light)
+            image.rect(15, 14, 1, 8, main)
         if shape == "greathelm":
             image.rect(10, 15, 12, 1, OUTLINE)
             for x in (12, 15, 18):
@@ -1156,105 +1390,71 @@ def item_icon(kind):
         if "horns" in extras:
             for x, y in thick({(6, 9), (5, 7), (4, 5), (4, 3)} | {(25, 9), (26, 7), (27, 5), (27, 3)}, ((0, 0), (1, 0))):
                 image.set(x, y, BONE[0])
-    elif shape in ("coat", "tunic", "mail", "plate"):
+    elif shape in ("coat", "tunic", "mail", "scale", "brigandine", "plate"):
         tunic = shape == "tunic"
-        body = box(10, 9, 12, 15 if tunic else 16)
+        body = box(11, 9, 10, 15 if tunic else 16)
         if tunic:
-            body |= box(8, 22, 16, 4)
-        sleeves = box(6, 9, 4, 6 if tunic else 11) | box(22, 9, 4, 6 if tunic else 11)
-        bevel(image, body | sleeves, main, light, dark)
+            body |= box(10, 22, 12, 3)
+        sleeves = box(7, 10, 4, 6 if tunic else 9) | box(21, 10, 4, 6 if tunic else 9)
+        silhouette = (body | sleeves) - {(7, 10), (24, 10), (11, 24), (20, 24)}
+        shade(image, silhouette, (light, main, dark))
         if tunic:
-            image.rect(10, 17, 12, 1, accent)
+            image.rect(11, 18, 10, 1, LEATHER)
         elif shape == "coat":
-            bevel(image, box(5, 7, 7, 3) | box(20, 7, 7, 3), light, light, main)
-            image.rect(15, 10, 2, 15, accent)
+            image.rect(15, 11, 1, 13, dark)
+            for y in (13, 16, 19):
+                image.set(16, y, accent)
         elif shape == "mail":
-            for x, y in body | sleeves:
-                if (x + y) % 2 == 0 and y % 2 == 1:
-                    image.set(x, y, light)
-            image.rect(10, 20, 12, 2, accent)
+            for x, y in silhouette:
+                if (x + y // 2) % 3 == 0 and y % 2 == 1:
+                    image.set(x, y, scale(main, 1.12))
+            image.rect(11, 20, 10, 1, LEATHER)
+        elif shape in ("scale", "brigandine"):
+            armor_surface(image, silhouette, shape, palette)
+            image.rect(11, 20, 10, 1, LEATHER)
+            if shape == "brigandine":
+                image.rect(15, 11, 1, 9, dark)
         else:
-            bevel(image, ellipse(8, 10, 4.5, 3.5) | ellipse(24, 10, 4.5, 3.5), light, scale(light, 1.1), main)
-            for y in (14, 18, 22):
-                image.rect(10, y, 12, 1, dark)
-            image.rect(14, 9, 4, 3, accent)
+            shade(image, ellipse(9, 11, 3, 3) | ellipse(23, 11, 3, 3), (light, main, dark))
+            for y in (18, 22):
+                image.rect(11, y, 10, 1, dark)
+            image.rect(15, 12, 1, 4, light)
+            image.set(17, 12, accent)
         for x in range(14, 18):
             for y in range(9, 11):
                 if shape != "plate":
                     image.clear(x, y)
-    elif shape in ("sword", "greatsword"):
-        long = shape == "greatsword"
-        for x, y in line(11, 20, 27 if long else 25, 4 if long else 6):
-            image.set(x, y, main)
-            image.set(x + 1, y + 1, dark)
-            image.set(x + 1, y, main)
-        for x, y in line(7, 18, 13, 24):
-            image.set(x, y, light)
-        for x, y in line(6, 25, 9, 22):
-            image.set(x, y, accent)
-            image.set(x + 1, y, accent)
-        image.set(5, 26, light)
-    elif shape == "axe":
-        for x, y in thick(line(8, 26, 20, 10), ((0, 0), (1, 0))):
-            image.set(x, y, light)
-        bevel(image, box(17, 5, 8, 8) | box(25, 6, 2, 6), main, scale(main, 1.2), dark)
-    elif shape == "mace":
-        for x, y in thick(line(7, 27, 17, 14), ((0, 0), (1, 0))):
-            image.set(x, y, WOOD[1])
-        bevel(image, ellipse(20, 11, 5.5, 5.5), main, light, dark)
-        for x, y in ((20, 4), (27, 11), (13, 11), (20, 18), (25, 6), (25, 16)):
-            image.set(x, y, accent)
-    elif shape == "bow":
-        for y in range(3, 29):
-            bend = round(9 * (1 - ((y - 16) / 13.0) ** 2))
-            image.set(9 + bend, y, main)
-            image.set(10 + bend, y, dark)
-        image.rect(9, 4, 1, 24, light)
-        image.rect(16, 14, 3, 4, accent)
-    elif shape == "crossbow":
-        for x, y in thick(line(7, 26, 22, 11), ((0, 0), (1, 0))):
-            image.set(x, y, WOOD[1])
-        for x, y in thick(line(12, 6, 27, 21), ((0, 0), (0, 1))):
-            image.set(x, y, main)
-        image.rect(20, 12, 3, 3, accent)
-    elif shape == "wand":
-        for x, y in thick(line(8, 25, 20, 12), ((0, 0), (1, 0))):
-            image.set(x, y, main)
-        shade(image, ellipse(22.5, 9.5, 3, 3), gem, False)
-        image.set(22, 8, (255, 255, 255, 255))
-    elif shape == "rod":
-        for x, y in thick(line(7, 28, 21, 9), ((0, 0), (1, 0))):
-            image.set(x, y, main)
-        shade(image, ellipse(23.5, 6.5, 4, 4), gem, False)
-        image.set(22, 5, (255, 255, 255, 255))
     elif shape == "buckler":
-        shield_face(image, ellipse(16, 16, 11, 11), (light, main, dark), accent, box(15, 15, 3, 3))
+        shield_face(image, ellipse(16, 17, 8.5, 9), (light, main, dark), accent, box(15, 16, 2, 2))
     elif shape == "heater":
-        plate_face(image, heater_points(7, 4, 19, 25), (light, main, dark), accent, box(15, 8, 3, 12) | box(11, 12, 11, 3))
+        plate_face(image, heater_points(9, 6, 15, 21), (light, main, dark), dark, box(16, 11, 1, 8))
     elif shape == "tower":
-        plate_face(image, box(7, 3, 18, 26), (light, main, dark), accent, box(14, 8, 4, 16))
+        plate_face(image, heater_points(9, 5, 15, 23), (light, main, dark), dark, box(15, 11, 2, 10))
     elif shape == "book":
-        bevel(image, box(8, 5, 16, 22), main, light, dark)
-        image.rect(8, 5, 3, 22, dark)
-        image.rect(22, 6, 2, 20, rgba("efe6cf"))
-        shade(image, ellipse(16.5, 15.5, 3.5, 3.5), gem, False)
+        bevel(image, box(9, 7, 14, 19), main, light, dark)
+        image.rect(9, 7, 2, 19, dark)
+        image.rect(21, 9, 1, 15, rgba("b9af93"))
+        for y in (10, 22):
+            image.rect(12, y, 8, 1, dark)
+        image.rect(20, 15, 3, 2, accent)
+        if ITEMS[kind].get("level", 1) >= 15:
+            for x, y in line(14, 14, 17, 17) | line(17, 17, 15, 19):
+                image.set(x, y, accent)
     elif shape == "cape":
         cape = set()
-        for y in range(6, 28):
-            half = 5 + (y - 6) * 6 // 21
+        for y in range(7, 26):
+            half = 4 + (y - 7) * 4 // 18
             cape |= box(16 - half, y, half * 2, 1)
         shade(image, cape, (light, main, dark))
-        for x in range(16 - 11, 16 + 11):
-            image.set(x, 27, accent)
-        for x in (11, 16, 21):
-            for y in range(12, 26, 2):
+        for x in (12, 16, 20):
+            for y in range(12, 25):
                 image.set(x, y, dark)
-        image.rect(14, 5, 4, 3, accent)
+        image.rect(15, 7, 2, 1, accent)
     elif shape == "ring":
-        band = ellipse(16, 19, 8, 7) - ellipse(16, 19, 5, 4)
+        band = ellipse(16, 19, 6, 5) - ellipse(16, 19, 4, 3)
         shade(image, band, (light, main, dark), False)
-        shade(image, ellipse(16, 11, 4, 4), gem, False)
-        image.rect(14, 9, 2, 1, (255, 235, 235, 255))
+        shade(image, ellipse(16, 14, 2.5, 2), gem, False)
+        image.set(15, 13, light)
     elif shape == "amulet":
         for chain in (line(6, 5, 15, 17), line(26, 5, 17, 17)):
             for index, (x, y) in enumerate(sorted(chain)):
@@ -1284,36 +1484,38 @@ def item_icon(kind):
             image.rect(x, y, 2, 2, light)
     else:
         material_icon(image, shape, (light, main, dark), accent)
-    return image.outlined()
+    return image.outlined(scale(main, 0.42))
 
 
 # ---------------------------------------------------------------- terrain
 
-GRASS = (rgba("4e693b"), rgba("5a7745"), rgba("445d33"), rgba("6d8b4f"), rgba("3d532d"))
-DIRT = (rgba("8a7458"), rgba("7d6950"), rgba("a08a6a"), rgba("655440"))
-WATER = (rgba("2d5a78"), rgba("3f7394"), rgba("9fd0de"), rgba("234860"), rgba("29546f"))
-FLOWERS = (rgba("f1e7c4"), rgba("e8c45a"), rgba("c98fd0"))
+GRASS = (rgba("505d3b"), rgba("5d6944"), rgba("465437"), rgba("707951"), rgba("3d4933"))
+DIRT = (rgba("80725c"), rgba("766851"), rgba("92816a"), rgba("625944"))
+WATER = (rgba("354b50"), rgba("49666a"), rgba("688281"), rgba("293e44"), rgba("30464b"))
+FLOWERS = (rgba("beb793"), rgba("b3a56b"), rgba("a9999b"))
 
 
 def grass_tile(variant):
     rng = random.Random(100 + variant)
     image = Image(TILE, TILE)
     image.rect(0, 0, TILE, TILE, GRASS[0])
-    for _ in range(90):
-        image.set(rng.randrange(TILE), rng.randrange(TILE), GRASS[rng.choice((1, 2, 2))])
-    for _ in range(5):
-        x, y = rng.randrange(2, 28), rng.randrange(4, 30)
-        image.rect(x, y - 2, 1, 3, GRASS[3])
-        image.rect(x + 1, y - 3, 1, 4, GRASS[1])
-        image.rect(x + 2, y - 2, 1, 3, GRASS[3])
-        image.rect(x, y + 1, 3, 1, GRASS[4])
+    for _ in range(30):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        tone = GRASS[rng.choice((1, 2, 2))]
+        for px, py in ellipse(x, y, rng.randrange(2, 5), rng.randrange(1, 3)):
+            image.set(px % TILE, py % TILE, tone)
+    for _ in range(30):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        length = rng.choice((1, 2, 2, 3))
+        image.set(x, y, GRASS[4])
+        for step in range(length):
+            image.set((x + step // 2) % TILE, (y - step - 1) % TILE, GRASS[1 if step < 2 else 3])
     if variant == 3:
-        for _ in range(3):
+        for _ in range(2):
             x, y = rng.randrange(3, 28), rng.randrange(3, 28)
             petal = rng.choice(FLOWERS)
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                image.set(x + dx, y + dy, petal)
-            image.set(x, y, FLOWERS[1] if petal != FLOWERS[1] else FLOWERS[0])
+            image.set(x, y, petal)
+            image.set(x + 1, y, FLOWERS[1])
     return image
 
 
@@ -1321,12 +1523,14 @@ def dirt_tile(variant):
     rng = random.Random(200 + variant)
     image = Image(TILE, TILE)
     image.rect(0, 0, TILE, TILE, DIRT[0])
-    for _ in range(70):
-        image.set(rng.randrange(TILE), rng.randrange(TILE), DIRT[rng.choice((1, 1, 3))])
+    for _ in range(22):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        for px, py in ellipse(x, y, rng.randrange(2, 6), rng.randrange(1, 3)):
+            image.set(px % TILE, py % TILE, DIRT[1])
     for _ in range(6):
         x, y = rng.randrange(1, 29), rng.randrange(1, 29)
         size = rng.choice((2, 2, 3))
-        bevel(image, box(x, y, size, size - 1), DIRT[2], scale(DIRT[2], 1.12), DIRT[3])
+        shade(image, ellipse(x, y, size / 2, 1), (DIRT[2], DIRT[0], DIRT[3]), False)
     return image
 
 
@@ -1338,21 +1542,34 @@ def water_tile(frame):
         image.set(rng.randrange(TILE), rng.randrange(TILE), WATER[4])
     for wave in range(6):
         x, y = rng.randrange(TILE), 3 + wave * 5
-        x = (x + frame * 8 * (1 if wave % 2 else -1)) % TILE
-        for dx in range(6):
-            image.set((x + dx) % TILE, y, WATER[1])
-        image.set((x + 2) % TILE, y - 1, WATER[2])
-        image.set((x + 3) % TILE, y - 1, WATER[2])
+        x = (x + frame * 2 * (1 if wave % 2 else -1)) % TILE
+        for dx in range(rng.randrange(5, 12)):
+            image.set((x + dx) % TILE, (y + dx // 5) % TILE, WATER[1])
+        if wave % 3 == 0:
+            image.set((x + 2) % TILE, y, WATER[2])
     return image
 
 
 def edge_overlay(kind):
     """North-edge overlay; rotated for the other sides."""
-    rng = random.Random(400 if kind == "shore" else 500)
+    rng = random.Random({"shore": 400, "sand": 450}.get(kind, 500))
     image = Image(TILE, TILE)
+    if kind == "sand":
+        # Dry grass creeping onto sand: a ragged sun-bleached fringe with a few loose blades.
+        dry = (blend(GRASS[3], SAND[0], 0.35), blend(GRASS[0], SAND[1], 0.3), blend(GRASS[2], SAND[3], 0.25))
+        depth = 2
+        for x in range(TILE):
+            depth = max(1, min(4, depth + rng.choice((-1, 0, 0, 1))))
+            for y in range(depth):
+                image.set(x, y, dry[1] if y < depth - 1 else dry[2])
+            if rng.random() < 0.18:
+                for y in range(depth, depth + rng.choice((1, 2, 3))):
+                    image.set(x, y, dry[0])
+            image.set(x, depth, SAND[3][:3] + (90,))
+        return image
     for x in range(TILE):
         if kind == "shore":
-            image.set(x, 0, WATER[2] if rng.random() < 0.85 else WATER[1])
+            image.set(x, 0, WATER[1] if rng.random() < 0.85 else WATER[2])
             image.set(x, 1, WATER[3][:3] + (190,))
             image.set(x, 2, WATER[3][:3] + (110,))
             image.set(x, 3, WATER[3][:3] + (50,))
@@ -1372,12 +1589,12 @@ def edge_set(kind):
     return [north, east, south, west]
 
 
-SAND = (rgba("c8b27a"), rgba("b59e68"), rgba("dcc896"), rgba("9c8656"))
-COBBLE = (rgba("85827b"), rgba("9d9a92"), rgba("6b6862"), rgba("4f4c47"))
-PLANK = (rgba("8a6a44"), rgba("a1805a"), rgba("6c5034"), rgba("3e2c1e"))
-LEAF = (rgba("6a9a4c"), rgba("4a733d"), rgba("2f4a2b"))
-PINE = (rgba("4f7d50"), rgba("35593c"), rgba("213a29"))
-BARK = (rgba("7a5a3c"), rgba("5c4230"), rgba("3e2c20"))
+SAND = (rgba("ac9c76"), rgba("9d8e6b"), rgba("c0ae86"), rgba("837759"))
+COBBLE = (rgba("787971"), rgba("97988b"), rgba("63665f"), rgba("484e47"))
+PLANK = (rgba("76634b"), rgba("948063"), rgba("5e513f"), rgba("3d382c"))
+LEAF = (rgba("798054"), rgba("525f3a"), rgba("303f2a"))
+PINE = (rgba("617555"), rgba("425d42"), rgba("293c2d"))
+BARK = (rgba("84725a"), rgba("62513d"), rgba("40382b"))
 
 
 def sand_tile(variant):
@@ -1395,6 +1612,8 @@ def sand_tile(variant):
 
 DUSK = (rgba("2e2438"), rgba("362a44"), rgba("251d2e"), rgba("43355a"), rgba("8a5ad0"))
 OBSIDIAN = (rgba("221c2e"), rgba("2c2540"), rgba("15111d"), rgba("3a3150"), rgba("9a6ae0"))
+# Dungeon cave floor: rough grey-brown rock with pebbles and cracks.
+CAVE = (rgba("5a534c"), rgba("675f57"), rgba("4a443e"), rgba("7a7168"), rgba("3a3530"))
 
 
 def dusk_tile(variant):
@@ -1434,17 +1653,68 @@ def obsidian_tile(variant):
     return image
 
 
+def cave_tile(variant):
+    """Rough cave floor of the crypt and mine: uneven rock, pebbles, and hairline cracks."""
+    rng = random.Random(1000 + variant)
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, CAVE[0])
+    for _ in range(140):
+        image.set(rng.randrange(TILE), rng.randrange(TILE), CAVE[rng.choice((1, 1, 2))])
+    for _ in range(3 + variant % 2):
+        x, y = rng.randrange(3, 27), rng.randrange(3, 27)
+        bevel(image, box(x, y, rng.randrange(2, 4), 2), CAVE[3], CAVE[3], CAVE[4])
+    x, y = rng.randrange(2, 28), rng.randrange(2, 12)
+    for step in range(rng.randrange(6, 14)):
+        image.set(x, y, CAVE[4])
+        x, y = max(0, min(31, x + rng.choice((-1, 0, 1)))), min(31, y + 1)
+    return image
+
+
+def stairs_tile(down):
+    """A stairway set in a stone frame: steps descend into darkness ("v") or rise toward the
+    light ("^")."""
+    image = Image(TILE, TILE)
+    bevel(image, box(0, 0, TILE, TILE), COBBLE[1], COBBLE[0], COBBLE[3])
+    for step in range(6):
+        y = 4 + step * 4
+        shade = (5 - step) / 5 if down else (step + 1) / 6
+        tread = scale(COBBLE[1], 0.25 + 0.75 * shade)
+        riser = scale(COBBLE[2], 0.2 + 0.6 * shade)
+        image.rect(4, y, 24, 3, tread)
+        image.rect(4, y + 3, 24, 1, riser)
+    for y in range(4, 28):
+        image.set(3, y, OUTLINE)
+        image.set(28, y, OUTLINE)
+    image.rect(3, 3, 26, 1, OUTLINE)
+    image.rect(3, 28, 26, 1, OUTLINE)
+    return image
+
+
+def stone_surface(image, points, palette, seed):
+    """Weathered stone with a shallow bevel, broad mottling and occasional worn flecks."""
+    light, main, dark = palette
+    shade(image, points, (light, main, dark), False)
+    for x, y in sorted(points):
+        fleck = (x * 71 + y * 131 + seed * 197) % 37
+        if image.get(x, y) == main:
+            if fleck < 3:
+                image.set(x, y, scale(main, 0.91))
+            elif fleck == 7:
+                image.set(x, y, scale(main, 1.08))
+
+
 def cobble_tile(variant):
     rng = random.Random(800 + variant)
     image = Image(TILE, TILE)
     image.rect(0, 0, TILE, TILE, COBBLE[3])
     for row in range(4):
-        shift = 4 if row % 2 else 0
+        shift = (row % 2) * 4 + variant
         for column in range(-1, 4):
-            x = column * 8 + shift + rng.randrange(0, 2)
-            stone = {(px, py) for px, py in box(x + 1, row * 8 + 1, 6, 6) if 0 <= px < TILE}
-            tone = rng.choice((1.0, 1.0, 0.92, 1.08))
-            bevel(image, stone, scale(COBBLE[0], tone), scale(COBBLE[1], tone), scale(COBBLE[2], tone))
+            x = column * 10 + shift
+            y = row * 8 + rng.randrange(0, 2)
+            stone = box(x + 1, y, 9, 7) - {(x + 1, y), (x + 9, y + 6), (x + 1, y + 6)}
+            tone = rng.choice((0.92, 1.0, 1.04))
+            stone_surface(image, stone, (scale(COBBLE[1], tone), scale(COBBLE[0], tone), COBBLE[2]), variant)
     return image
 
 
@@ -1461,8 +1731,13 @@ def plank_tile(vertical, variant):
             image.set(seam, y, PLANK[3])
         for nail in (2, 29):
             image.set(nail, board * 8 + 3, PLANK[3])
-        for _ in range(6):
-            image.set(rng.randrange(TILE), board * 8 + rng.randrange(1, 6), scale(PLANK[0], 0.85 * tone))
+        for _ in range(3):
+            start, y = rng.randrange(TILE), board * 8 + rng.randrange(1, 6)
+            for x in range(start, start + rng.randrange(5, 13)):
+                image.set(x % TILE, y, scale(PLANK[0], 0.88 * tone))
+        if board == variant + 1:
+            image.set(17, board * 8 + 3, PLANK[3])
+            image.rect(15, board * 8 + 2, 5, 1, PLANK[2])
     return image.rotated() if vertical else image
 
 
@@ -1493,6 +1768,58 @@ def dead_tree(variant):
     return image
 
 
+CACTUS = (rgba("8e9a64"), rgba("6b7a49"), rgba("4a5636"))
+SPINE = rgba("d4cca4")
+THORN_WOOD = (rgba("a28c6c"), rgba("7c6852"), rgba("554638"))
+
+
+def desert_plant(variant):
+    """Original desert flora in the 64x96 tree cell, base on the tile centre at (32, 80):
+    0 a ribbed columnar cactus with two arms, 1 a clump of barrel cacti, 2 a dry thorn shrub."""
+    image = Image(FRAME, 96)
+    for x, y in ellipse(32, 81, 10 if variant != 1 else 13, 3):
+        image.set(x, y, SHADOW)
+    plant = Image(FRAME, 96)
+    if variant == 0:
+        points = box(29, 44, 7, 37) | ellipse(32, 44, 3.5, 3)
+        arms = (box(22, 56, 7, 4) | box(22, 46, 4, 12) | ellipse(24, 46, 2, 2)
+                | box(36, 51, 6, 4) | box(39, 40, 4, 13) | ellipse(41, 40, 2, 2))
+        points |= arms
+        shade(plant, points, CACTUS, False)
+        for x, y in sorted(points):
+            if x % 2 == 0 and (x - 1, y) in points and (x + 1, y) in points and y % 5 != 0:
+                plant.set(x, y, CACTUS[2] if x > 32 else CACTUS[1])
+            if (x * 7 + y * 3) % 23 == 0 and ((x - 1, y) not in points or (x + 1, y) not in points):
+                plant.set(x + (-1 if (x - 1, y) not in points else 1), y, SPINE)
+    elif variant == 1:
+        for cx, cy, rx, ry in ((27, 74, 6, 7), (37, 76, 5, 5), (31, 79, 4, 3)):
+            barrel = ellipse(cx, cy, rx, ry)
+            shade(plant, barrel, CACTUS, False)
+            for x, y in sorted(barrel):
+                if (x - cx) % 2 == 0 and abs(x - cx) < rx - 1 and y > cy - ry + 1:
+                    plant.set(x, y, CACTUS[2])
+                if (x * 5 + y * 11) % 19 == 0 and (x, y - 1) not in barrel:
+                    plant.set(x, y - 1, SPINE)
+        plant.set(27, 66, rgba("b4806a"))
+        plant.set(28, 66, rgba("c99a7e"))
+    else:
+        rng = random.Random(1300)
+        twigs = set(box(31, 70, 2, 11))
+        for a, b in [((32, 74), (22, 60)), ((32, 72), (43, 58)), ((32, 76), (21, 70)), ((32, 75), (44, 68)),
+                     ((32, 70), (31, 56))]:
+            twigs |= line(*a, *b)
+            end = b
+            for _ in range(2):
+                tip = (end[0] + rng.randrange(-5, 6), end[1] - rng.randrange(2, 7))
+                twigs |= line(*end, *tip)
+        shade(plant, twigs, THORN_WOOD, False)
+        for _ in range(9):
+            x, y = rng.choice(sorted(p for p in twigs if p[1] < 70))
+            plant.set(x + rng.choice((-1, 1)), y, CACTUS[1] if rng.random() < 0.6 else CACTUS[0])
+    image.over(plant.outlined(scale(CACTUS[2] if variant < 2 else THORN_WOOD[2], 0.75)))
+    return image
+
+
 def tree(variant):
     """64x96 cell; the trunk base sits on the tile centre at (32, 80)."""
     rng = random.Random(1000 + variant)
@@ -1500,27 +1827,42 @@ def tree(variant):
     for x, y in ellipse(32, 82, 15, 4):
         image.set(x, y, SHADOW)
     trunk = Image(FRAME, 96)
-    shade(trunk, box(29, 56, 6, 26) | box(27, 79, 10, 3), BARK, False)
-    image.over(trunk.outlined())
+    wood = box(29, 44, 6, 37)
+    for a, b in [((31, 60), (19, 38)), ((32, 54), (46, 36)), ((31, 76), (24, 82)), ((33, 77), (42, 83))]:
+        wood |= thick(line(*a, *b), ((0, 0), (1, 0)))
+    shade(trunk, wood, BARK, False)
+    for x, y in sorted(wood):
+        if (x * 13 + y // 5) % 5 == 0:
+            trunk.set(x, y, BARK[2])
+    image.over(trunk.outlined(BARK[2]))
     crown = Image(FRAME, 96)
     if variant < 2:
-        points = set()
-        for cx, cy, rx, ry in ((32, 38, 20, 18), (20, 50, 13, 11), (44, 50, 13, 11), (32, 24, 13, 11),
-                               (25 + variant * 6, 32, 12, 10)):
-            points |= ellipse(cx + rng.randrange(-1, 2), cy, rx, ry)
-        shade(crown, points, LEAF)
-        for _ in range(40):
-            x, y = rng.choice(sorted(points))
-            if crown.get(x, y) == LEAF[1]:
-                crown.set(x, y, LEAF[0] if y < 40 else LEAF[2])
+        lobes = [(19, 51, 12, 9), (42, 53, 12, 10), (30, 44, 20, 18),
+                 (20, 33, 12, 11), (45, 35, 10, 13), (33, 22, 13, 12)]
+        for cx, cy, rx, ry in lobes:
+            cx += rng.randrange(-2, 3)
+            cy += rng.randrange(-2, 3)
+            points = ellipse(cx, cy, rx, ry)
+            for x, y in sorted(points):
+                edge = any((x + dx, y + dy) not in points for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+                if edge and (x * 13 + y * 7) % 5 == 0:
+                    continue
+                lighting = (cx - x) / rx * 0.35 + (cy - y) / ry * 0.55
+                patch = ((x // 3 * 7 + y // 2 * 11 + variant * 3) % 7 - 3) * 0.06
+                tone = LEAF[0] if lighting + patch > 0.35 else (LEAF[2] if lighting + patch < -0.32 else LEAF[1])
+                if (x * 17 + y * 31) % 11 < 2:
+                    tone = scale(tone, 1.13)
+                crown.set(x, y, tone)
     else:
         points = set()
-        for tier, (top, half) in enumerate(((8, 7), (20, 12), (33, 16), (46, 20))):
-            for y in range(top, top + 16):
-                width = round(half * (y - top + 3) / 18)
-                points |= box(32 - width, y, width * 2, 1)
-        shade(crown, points, PINE)
-    image.over(crown.outlined())
+        for y in range(9, 66):
+            width = max(1, round((y - 8) * 0.35) - (y % 7) // 3)
+            points |= box(32 - width, y, width * 2, 1)
+        for x, y in sorted(points):
+            branch = (y + abs(x - 32) // 2) % 7
+            tone = PINE[2] if branch > 4 else (PINE[0] if x < 32 and branch < 2 else PINE[1])
+            crown.set(x, y, tone)
+    image.over(crown.outlined(LEAF[2] if variant < 2 else PINE[2]))
     return image
 
 
@@ -1534,29 +1876,36 @@ def terrain_palette():
         if any((x + dx, y + dy) not in ellipse(16, 15, 12, 11) for dx, dy in ((1, 0), (0, 1))):
             tree_tile.set(x, y, LEAF[2])
     wall_tile = wall(0).crop(0, 0, TILE, TILE)
+    cactus_tile = sand_tile(0)
+    cactus_tile.over(desert_plant(0).crop(16, 52, TILE, TILE))
     dead_tile = dusk_tile(1)
     dead_tile.over(dead_tree(0).crop(16, 48, TILE, TILE))
     tiles = {".": grass_tile(0), ",": dirt_tile(0), "~": water_tile(0), "#": wall_tile, "T": tree_tile,
              ":": sand_tile(0), "=": cobble_tile(0), "b": plank_tile(False, 0), "d": dusk_tile(0),
-             "o": obsidian_tile(0), "O": wall(0, OBSIDIAN_STONE).crop(0, 0, TILE, TILE), "D": dead_tile}
+             "o": obsidian_tile(0), "O": wall(0, OBSIDIAN_STONE).crop(0, 0, TILE, TILE), "D": dead_tile,
+             "c": cave_tile(0), "C": wall(0, CAVE_STONE).crop(0, 0, TILE, TILE),
+             "v": stairs_tile(True), "^": stairs_tile(False), "K": cactus_tile}
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
-WALL_TOP = (rgba("7b8087"), rgba("9196a0"), rgba("62676f"), rgba("555a61"))
-WALL_SOUTH = (rgba("4e535c"), rgba("393d45"), rgba("5d626b"))
-WALL_EAST = (rgba("3c4048"), rgba("2d3037"), rgba("464a53"))
+WALL_TOP = (rgba("797970"), rgba("939185"), rgba("64685f"), rgba("555b53"))
+WALL_SOUTH = (rgba("56594f"), rgba("42473f"), rgba("676a5d"))
+WALL_EAST = (rgba("434a43"), rgba("343b35"), rgba("545b50"))
 STONE = (WALL_TOP, WALL_SOUTH, WALL_EAST)
 # Obsidian walls of the Hollow Sanctum: the same oblique shape in violet-black glassy stone.
 OBSIDIAN_STONE = ((rgba("3d3352"), rgba("4c4066"), rgba("2e2640"), rgba("5e4f80")),
                   (rgba("231c31"), rgba("17121f"), rgba("33294a")),
                   (rgba("1a1524"), rgba("110d18"), rgba("2a2238")))
+# Raw rock walls of the deep mine.
+CAVE_STONE = ((rgba("6e6156"), rgba("85766a"), rgba("54493f"), rgba("948476")),
+              (rgba("43392f"), rgba("2f2821"), rgba("51463b")),
+              (rgba("352d25"), rgba("251f19"), rgba("40372d")))
 HEIGHT = 16
 
 
 def wall(mask, stone=None):
     WALL_TOP, WALL_SOUTH, WALL_EAST = stone or STONE
     open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
-    rng = random.Random(600)
     image = Image(WALL, WALL)
     if open_east:
         for y in range(FRAME):
@@ -1564,13 +1913,15 @@ def wall(mask, stone=None):
                 depth = 48 - (x + 0.5)
                 if 16 - depth <= y + 0.5 < 48 - depth:
                     level = y + 0.5 + depth - 16
-                    course = int(level // (32 / 6))
-                    joint = (depth + (4 if course % 2 else 0)) % 8
+                    course = int(level // 8)
+                    joint = (depth + (5 if course % 2 else 0)) % 12
                     color = WALL_EAST[0]
-                    if level % (32 / 6) < 1.0 or joint < 1.0:
+                    if level % 8 < 1.0 or joint < 1.0:
                         color = WALL_EAST[1]
-                    elif level % (32 / 6) < 2.0:
+                    elif level % 8 < 2.0 and joint > 2:
                         color = WALL_EAST[2]
+                    elif (x * 13 + y * 7) % 19 < 3:
+                        color = scale(color, 0.92)
                     if level < 1.0 or x == 47:
                         color = OUTLINE
                     image.set(x, y, color)
@@ -1579,24 +1930,26 @@ def wall(mask, stone=None):
             rise = 48 - (y + 0.5)
             for x in range(0, 48):
                 if 16 - rise <= x + 0.5 < 48 - rise:
-                    course = int(rise // (16 / 3))
-                    along = x + 0.5 + rise - 16 + (8 if course % 2 else 0)
+                    course = int(rise // 8)
+                    along = x + 0.5 + rise - 16 + (7 if course % 2 else 0)
                     color = WALL_SOUTH[0]
-                    if rise % (16 / 3) < 1.0 or along % 16 < 1.0:
+                    if rise % 8 < 1.0 or along % 15 < 1.0:
                         color = WALL_SOUTH[1]
-                    elif (16 / 3) - rise % (16 / 3) < 1.0:
+                    elif 8 - rise % 8 < 1.0 and along % 15 > 2:
                         color = WALL_SOUTH[2]
+                    elif (x * 13 + y * 7) % 19 < 3:
+                        color = scale(color, 0.92)
                     if y == 47 or x + 0.5 < 16 - rise + 1.0:
                         color = OUTLINE
                     image.set(x, y, color)
     top = box(0, 0, 32, 32)
     bevel(image, top, WALL_TOP[0], WALL_TOP[0], WALL_TOP[0])
-    for row, offset in ((0, 0), (1, 10)):
-        for start in range(-offset, 32, 20):
-            slab = {(x, y) for x, y in box(start + 1, row * 16 + 1, 19, 15) if 0 <= x < 32}
-            bevel(image, slab, WALL_TOP[0], WALL_TOP[1], WALL_TOP[2])
-    for _ in range(26):
-        image.set(rng.randrange(32), rng.randrange(32), WALL_TOP[rng.choice((1, 2, 3))])
+    for row in range(3):
+        offset = (row % 2) * 7
+        for start in range(-offset, 32, 16):
+            slab = {(x, y) for x, y in box(start + 1, row * 11, 15, 10) if 0 <= x < 32 and y < 32}
+            slab -= {(start + 1, row * 11), (start + 15, row * 11 + 9)}
+            stone_surface(image, slab, (WALL_TOP[1], WALL_TOP[0], WALL_TOP[2]), row)
     for x in range(32):
         if open_north:
             image.set(x, 0, OUTLINE)
@@ -1610,6 +1963,354 @@ def wall(mask, stone=None):
     return image
 
 
+
+THIN_BAND = (11, 21)  # a thin wall's masonry band across its tile
+
+
+def thin_wall(mask, stone=None):
+    """A thin wall (town houses and walls): a 10-pixel masonry band through the tile centre,
+    reaching the tile edge toward each connected side (1 N, 2 W, 4 S, 8 E: a wall or a doorway
+    there), raised 16 px like the thick walls with its south and east faces showing."""
+    top_tones, south, east = stone or STONE
+    lo, hi = THIN_BAND
+    shape = set(box(lo, lo, hi - lo, hi - lo))
+    for bit, area in ((1, box(lo, 0, hi - lo, lo)), (2, box(0, lo, lo, hi - lo)),
+                      (4, box(lo, hi, hi - lo, TILE - hi)), (8, box(hi, lo, TILE - hi, hi - lo))):
+        if mask & bit:
+            shape |= set(area)
+    image = Image(WALL, WALL)
+    raise_ = WALL - TILE
+    for k in range(raise_, 0, -1):
+        height = raise_ - k
+        for x, y in shape:
+            px, py = x + k, y + k
+            if (x, y + 1) not in shape:
+                along = x + (7 if (height // 8) % 2 else 0)
+                color = south[0]
+                if height % 8 == 7 or along % 15 == 0:
+                    color = south[1]
+                elif height % 8 == 6 and along % 15 > 2:
+                    color = south[2]
+                if k == raise_:
+                    color = OUTLINE
+            else:
+                along = y + (5 if (height // 8) % 2 else 0)
+                color = east[0]
+                if height % 8 == 7 or along % 12 == 0:
+                    color = east[1]
+                if k == raise_ or (x + 1, y) in shape:
+                    color = OUTLINE if k == raise_ else color
+            if (x + 1, y) in shape and (x, y + 1) in shape:
+                continue
+            image.set(px, py, color)
+    for x, y in shape:
+        course = y // 6 if mask & 5 and not mask & 10 else x // 6
+        color = top_tones[0]
+        if (x + y * 3 + course * 5) % 11 == 0:
+            color = top_tones[2]
+        elif (x * 7 + y) % 13 == 0:
+            color = top_tones[1]
+        edge = ((x, y - 1) not in shape and y > 0) or ((x - 1, y) not in shape and x > 0) \
+            or ((x, y + 1) not in shape and y < TILE - 1) or ((x + 1, y) not in shape and x < TILE - 1)
+        if edge:
+            color = top_tones[3]
+        image.set(x, y, color)
+    for x, y in shape:
+        for dx, dy in ((0, -1), (-1, 0)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < TILE and 0 <= ny < TILE and (nx, ny) not in shape and image.get(nx, ny) is None:
+                image.set(nx, ny, OUTLINE)
+    return image
+
+
+# ---------------------------------------------------------------- furniture
+# 32x48 cells; the tile is the bottom 32x32 (drawn 16 px above it), so pieces may stand taller
+# than a tile. Order: FURNITURE_KINDS (SpriteArt.FURNITURE must match).
+
+FURNITURE_KINDS = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel", "crate",
+                   "strongbox"]
+OAK = (rgba("a07a4c"), rgba("82603a"), rgba("5f4429"), rgba("3f2c1b"))
+IRON = (rgba("8c8e8c"), rgba("5d605f"), rgba("3a3c3c"))
+
+
+def plank_block(image, x, y, width, height, top_depth, wood=OAK):
+    """A wooden block in 3/4 view: a lit top `top_depth` deep and a front face below it."""
+    light, base, dark, deep = wood
+    for py in range(y, y + top_depth):
+        for px in range(x, x + width):
+            image.set(px, py, light if (px - x) % 9 else base)
+    for py in range(y + top_depth, y + height):
+        for px in range(x, x + width):
+            color = base if (py - y - top_depth) % 5 else dark
+            if px in (x, x + width - 1):
+                color = dark
+            image.set(px, py, color)
+    for px in range(x, x + width):
+        image.set(px, y + top_depth, deep)
+        image.set(px, y + height - 1, deep)
+
+
+def furniture(kind):
+    image = Image(TILE, 48)
+    light, base, dark, deep = OAK
+    if kind.startswith("counter"):
+        plank_block(image, 1, 22, 30, 24, 8)
+        if kind == "counter_shop":
+            for x, color in ((5, rgba("a3332b")), (11, rgba("3f62a8")), (17, rgba("a3332b"))):
+                image.template(x, 16, [".o.", "ogo", "occ", "occ", "ooo"], {"o": OUTLINE, "g": rgba("9fb7bf"), "c": color})
+            image.template(22, 21, ["oooooo", "owwwwo", "oooooo"], {"o": OUTLINE, "w": rgba("d9cfb4")})
+        else:
+            gold, shine, shade = rgba("d4a73c"), rgba("f3d77a"), rgba("8f6a1e")
+            for cx, cy in ((7, 25), (7, 23), (11, 25)):
+                image.rect(cx - 2, cy - 1, 5, 2, gold)
+                image.set(cx - 1, cy - 1, shine)
+                image.rect(cx - 2, cy + 1, 5, 1, shade)
+            image.rect(19, 11, 1, 13, IRON[1])
+            image.rect(15, 12, 9, 1, IRON[0])
+            for side in (15, 23):
+                image.rect(side - 2, 16, 5, 1, IRON[1])
+                image.set(side, 13, IRON[2])
+                image.set(side, 14, IRON[2])
+                image.set(side, 15, IRON[2])
+            image.rect(17, 23, 5, 1, IRON[2])
+    elif kind.startswith("shelf"):
+        for x in (2, 29):
+            image.rect(x, 4, 2, 42, dark)
+        for y in (4, 15, 26, 37):
+            image.rect(2, y, 29, 2, base)
+            image.rect(2, y + 2, 29, 1, deep)
+        image.rect(4, 6, 25, 40, rgba("2b231b"))
+        for y in (15, 26, 37):
+            image.rect(2, y, 29, 2, base)
+            image.rect(2, y + 2, 29, 1, deep)
+        image.rect(2, 45, 29, 2, deep)
+        for row, top in enumerate((7, 18, 29)):
+            for slot in range(5):
+                x = 5 + slot * 5
+                seed = hash_cell(slot, row + (7 if kind == "shelf_books" else 0))
+                if kind == "shelf_potions":
+                    color = (rgba("a3332b"), rgba("3f62a8"), rgba("5a8a3a"), rgba("a3332b"))[seed % 4]
+                    image.template(x, top + 1, [".o.", "ogo", "occ", "occ", "ooo"],
+                                   {"o": OUTLINE, "g": rgba("9fb7bf"), "c": color})
+                else:
+                    color = (rgba("6b2f2a"), rgba("2f4a6b"), rgba("4f5a2c"), rgba("6b5a2f"))[seed % 4]
+                    height = 6 + seed % 3
+                    image.rect(x, top + 8 - height, 4, height, color)
+                    image.rect(x, top + 8 - height, 1, height, scale(color, 1.3))
+                    image.rect(x + 1, top + 9 - height, 2, 1, rgba("c9a24a"))
+    elif kind == "weapon_rack":
+        image.rect(3, 40, 26, 6, dark)
+        image.rect(3, 40, 26, 2, base)
+        image.rect(3, 14, 26, 3, base)
+        image.rect(3, 16, 26, 1, deep)
+        for x in (4, 27):
+            image.rect(x, 14, 2, 32, dark)
+        for x, blade in ((9, rgba("c9cfd2")), (16, rgba("aab3b8")), (23, rgba("c9cfd2"))):
+            image.rect(x, 4, 2, 30, blade)
+            image.set(x, 3, blade)
+            image.rect(x + 1, 4, 1, 30, scale(blade, 0.8))
+            image.rect(x - 2, 33, 6, 2, rgba("c9a24a"))
+            image.rect(x, 35, 2, 5, rgba("5a3f25"))
+    elif kind == "barrel":
+        for y in range(16, 46):
+            bulge = 2 if 22 <= y <= 40 else (1 if 18 <= y <= 43 else 0)
+            for x in range(7 - bulge, 26 + bulge):
+                stave = (x - 4) % 5
+                color = base if stave else dark
+                if x == 7 - bulge or x == 25 + bulge:
+                    color = deep
+                image.set(x, y, color)
+        for y in (20, 40):
+            image.rect(5, y, 23, 2, IRON[1])
+            image.rect(5, y, 23, 1, IRON[0])
+        for x, y in ellipse(16, 16, 9, 3):
+            image.set(x, y, light if (x + y) % 4 else base)
+    elif kind == "crate":
+        plank_block(image, 4, 20, 25, 26, 7)
+        for y in range(28, 45):
+            image.set(4 + (y - 28) * 24 // 17, y, deep)
+        image.rect(12, 6, 2, 16, rgba("aab3b8"))
+        image.rect(10, 18, 6, 2, rgba("c9a24a"))
+        image.rect(19, 9, 2, 13, rgba("6b4a2c"))
+        image.rect(17, 8, 6, 3, IRON[0])
+    elif kind == "strongbox":
+        plank_block(image, 4, 24, 25, 22, 7, (rgba("6b5a46"), rgba("54473a"), rgba("3d342b"), rgba("2a241e")))
+        for x in (6, 26):
+            image.rect(x, 24, 2, 22, IRON[1])
+        image.rect(4, 31, 25, 2, IRON[1])
+        image.rect(14, 33, 5, 5, IRON[0])
+        image.set(16, 35, OUTLINE)
+        image.set(16, 36, OUTLINE)
+    return image.outlined()
+
+
+# ---------------------------------------------------------------- roofs and signs
+
+# Roof materials: (light, base, dark, deep) for clay tiles, slate, and wooden shingles.
+ROOF_MATERIALS = [
+    tuple(rgba(c) for c in ("a0573b", "86472f", "673424", "46231a")),
+    tuple(rgba(c) for c in ("67707a", "525a64", "3e444d", "2a2f36")),
+    tuple(rgba(c) for c in ("8a6a45", "715436", "573f27", "3c2b1b")),
+]
+
+
+def roof_swatches(material):
+    """Four 32x32 swatches the game rasterizes onto each building's roof (game/render/roof_art.gd):
+    the near (south) slope, the far slope, the timber gable, and trim (ridge cap in rows 0-5,
+    eave board in rows 8-12, chimney stone in rows 16-31). Slope courses and joints are 8 px."""
+    light, base, dark, deep = ROOF_MATERIALS[material]
+
+    def slope(shade):
+        """8-px courses whose lower edge throws a shadow: barrel clay tiles, staggered slates,
+        or grained wooden shingles."""
+        image = Image(TILE, TILE)
+        for y in range(TILE):
+            course, level = y // 8, y % 8
+            for x in range(TILE):
+                if material == 0:  # clay: rounded barrel tiles in columns
+                    along = x % 8
+                    color = (dark, base, light, light, base, base, dark, deep)[along]
+                    if level == 7:
+                        color = deep
+                    elif level == 6:
+                        color = scale(color, 0.82)
+                    elif level == 0:
+                        color = scale(color, 1.1)
+                    color = scale(color, 1.0 + ((hash_cell(x // 8, course) % 5) - 2) * 0.03)
+                elif material == 1:  # slate: staggered rectangles with thin gaps
+                    along = (x + (4 if course % 2 else 0)) % 8
+                    color = base
+                    if level == 7 or along == 0:
+                        color = deep
+                    elif level == 6:
+                        color = dark
+                    elif level == 0 or along == 1:
+                        color = light
+                    color = scale(color, 1.0 + ((hash_cell((x + (4 if course % 2 else 0)) // 8, course) % 5) - 2) * 0.04)
+                else:  # wooden shingles: staggered, grain lines, ragged ends
+                    offset = 3 if course % 2 else 0
+                    along = (x + offset) % 8
+                    ragged = hash_cell((x + offset) // 8, course) % 3
+                    color = base
+                    if along == 0:
+                        color = deep
+                    elif level >= 7 - (1 if ragged == 0 else 0):
+                        color = deep
+                    elif level == 6:
+                        color = dark
+                    elif along in (3, 6) and level % 3 != 1:
+                        color = scale(base, 0.9)
+                    elif level <= 1:
+                        color = light
+                image.set(x, y, scale(color, shade))
+        return image
+
+    gable = Image(TILE, TILE)
+    wood = SIGN_WOOD
+    for y in range(TILE):
+        for x in range(TILE):
+            board = x % 6
+            color = wood[1]
+            if board == 0:
+                color = wood[2]
+            elif board == 1:
+                color = wood[0]
+            if hash_cell(x // 6, y // 9) % 4 == 0 and y % 9 == 0:
+                color = wood[2]
+            gable.set(x, y, scale(color, 0.82))
+    trim = Image(TILE, TILE)
+    for x in range(TILE):
+        cap = x % 6
+        for y, color in enumerate((deep, dark if cap == 0 else scale(light, 1.1), dark if cap == 0 else light,
+                                   dark if cap == 0 else base, dark, deep)):
+            trim.set(x, y, color)
+        for y, color in zip(range(8, 13), (deep, scale(dark, 0.9), scale(dark, 0.8), deep, OUTLINE)):
+            trim.set(x, y, color)
+    for y in range(16, 32):  # chimney stone: courses of 4 px, joints of 6
+        for x in range(TILE):
+            joint = (x + (3 if (y // 4) % 2 else 0)) % 6 == 0
+            color = WALL_TOP[2] if y % 4 == 3 or joint else WALL_TOP[0]
+            if (x * 5 + y * 3) % 17 == 0:
+                color = WALL_TOP[1]
+            trim.set(x, y, color)
+    return [slope(1.0), slope(0.72), gable, trim]
+
+
+def hash_cell(x, y):
+    value = (x * 73856093) ^ (y * 19349663) ^ 0x5F3759DF
+    return value & 0x7FFFFFFF
+
+
+def roof_sheet():
+    return sheet([swatch for material in range(len(ROOF_MATERIALS)) for swatch in roof_swatches(material)], 4, TILE)
+
+
+SIGN_WOOD = (rgba("9a7348"), rgba("7d5a36"), rgba("5a3f25"))
+SIGN_IRON = rgba("3b3a38")
+
+
+def sign(kind):
+    """A hanging board on an iron bracket (32x32, board centred), painted with what is
+    sold inside: a red flask and a sword for a merchant, a coin stack for a banker."""
+    light, base, dark = SIGN_WOOD
+    image = Image(TILE, TILE)
+    for x in range(4, 28):  # bracket
+        image.set(x, 5, SIGN_IRON)
+    image.set(4, 4, SIGN_IRON)
+    image.set(27, 4, SIGN_IRON)
+    for chain_x in (8, 23):
+        for y in range(6, 10):
+            image.set(chain_x, y, SIGN_IRON if y % 2 else rgba("5c5a55"))
+    image.rect(4, 10, 24, 16, OUTLINE)
+    image.rect(5, 11, 22, 14, dark)
+    image.rect(6, 12, 20, 12, base)
+    for y in range(12, 24, 3):  # plank seams and grain
+        for x in range(6, 26):
+            if (x * 7 + y * 3) % 11 == 0:
+                image.set(x, y, light)
+    for x in range(6, 26):
+        image.set(x, 12, light)
+        image.set(x, 23, dark)
+    if kind == "vendor":
+        image.template(8, 13, [
+            "..ooo..",
+            "..oco..",
+            "..ogo..",
+            ".oogoo.",
+            "orrhrro",
+            "orrrrro",
+            "orrrrro",
+            ".ooooo.",
+        ], {"o": OUTLINE, "c": rgba("b08a5a"), "g": rgba("9fb7bf"), "r": rgba("a3332b"), "h": rgba("e07a62")})
+        image.template(17, 12, [
+            "...o.",
+            "..owo",
+            "..oso",
+            "..oso",
+            "..oso",
+            "..oso",
+            "ooooo",
+            ".obo.",
+            ".obo.",
+            ".opo.",
+        ], {"o": OUTLINE, "w": rgba("e2e6e8"), "s": rgba("aab3b8"), "b": rgba("6b4a2c"), "p": rgba("c9a24a")})
+    else:
+        gold, shine, shade = rgba("d4a73c"), rgba("f3d77a"), rgba("8f6a1e")
+        for index, (cx, cy) in enumerate(((11, 20), (11, 17), (11, 14), (20, 20), (20, 17))):
+            image.rect(cx - 4, cy - 1, 9, 3, OUTLINE)
+            image.rect(cx - 3, cy - 1, 7, 2, gold)
+            image.set(cx - 2, cy - 1, shine)
+            image.set(cx - 1, cy - 1, shine)
+            image.rect(cx - 3, cy + 1, 7, 1, shade)
+        image.template(17, 12, [
+            ".ooo.",
+            "oyyyo",
+            "oyoyo",
+            "oyyyo",
+            ".ooo.",
+        ], {"o": OUTLINE, "y": rgba("f3d77a")})
+    return image
+
 # ---------------------------------------------------------------- output
 
 def main():
@@ -1618,21 +2319,28 @@ def main():
     args = parser.parse_args()
     root = ROOT / "assets" / "sprites"
     outputs = {
-        "body.png": character_sheet(split_body("body")),
-        "cloth.png": character_sheet(split_body("cloth")),
-        "cloak.png": character_sheet(split_body("cloak")),
-        "marker.png": character_sheet(marker),
+        "body.png": character_sheet(split_body("body"), compact=True, columns=POSE_COLUMNS),
+        "cloth.png": character_sheet(split_body("cloth"), compact=True, columns=POSE_COLUMNS),
+        "marker.png": character_sheet(marker, columns=POSE_COLUMNS),
         "items.png": sheet([item_icon(kind) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
         "tiles.png": sheet([grass_tile(v) for v in range(4)] + [dirt_tile(v) for v in range(4)]
                            + [water_tile(f) for f in range(4)] + edge_set("dirt") + edge_set("shore")
                            + [sand_tile(v) for v in range(4)] + [cobble_tile(v) for v in range(4)]
                            + [plank_tile(False, 0), plank_tile(False, 1), plank_tile(True, 0), plank_tile(True, 1)]
-                           + [dusk_tile(v) for v in range(4)] + [obsidian_tile(v) for v in range(4)],
+                           + [dusk_tile(v) for v in range(4)] + [obsidian_tile(v) for v in range(4)]
+                           + [cave_tile(v) for v in range(4)] + [stairs_tile(True), stairs_tile(False)]
+                           + edge_set("sand"),
                            4, TILE),
-        "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]),
+        "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
+                                 + [desert_plant(v) for v in range(3)]),
+        "roofs.png": roof_sheet(),
+        "signs.png": sheet_row([sign("vendor"), sign("banker")]),
         "terrain_palette.png": terrain_palette(),
-        "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)], 16, WALL),
-        **{f"gear/{kind}.png": character_sheet(GEAR_BUILDERS[item["slot"]](kind))
+        "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)]
+                           + [wall(mask, CAVE_STONE) for mask in range(16)] + [thin_wall(mask) for mask in range(16)],
+                           16, WALL),
+        "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
+        **{f"gear/{kind}.png": character_sheet(GEAR_BUILDERS[item["slot"]](kind), compact=True, columns=POSE_COLUMNS)
            for kind, item in ITEMS.items() if item.get("slot") in VISIBLE_SLOTS},
         **{f"gear/{kind}_glow.png": None for kind, item in ITEMS.items()
            if item.get("glow") and item.get("slot") in VISIBLE_SLOTS},
@@ -1678,13 +2386,14 @@ def dressed(outputs, equipment, direction, column, tint):
         put(f"gear/{shield}.png")
     put("body.png")
     put("cloth.png", tint)
-    if equipment.get("cape"):
+    if equipment.get("cape") and direction != "up":
         put(f"gear/{equipment['cape']}.png")
-    else:
-        put("cloak.png", tint)
-    for slot in ("armor", "helmet"):
-        if equipment.get(slot):
-            put(f"gear/{equipment[slot]}.png")
+    if equipment.get("armor"):
+        put(f"gear/{equipment['armor']}.png")
+    if equipment.get("cape") and direction == "up":
+        put(f"gear/{equipment['cape']}.png")
+    if equipment.get("helmet"):
+        put(f"gear/{equipment['helmet']}.png")
     if shield and direction in ("down", "up"):
         put(f"gear/{shield}.png")
     if held and direction != "up":
@@ -1708,7 +2417,8 @@ def write_preview(outputs, path):
             equipment = {}
             for kind, item in ITEMS.items():
                 slot = item.get("slot")
-                if slot in VISIBLE_SLOTS and item["level"] == tier and vocation in item.get("vocations", [vocation]):
+                if slot in VISIBLE_SLOTS and item["level"] == tier and vocation in item.get("vocations", [vocation]) \
+                        and not item.get("loot_only"):
                     equipment[slot] = kind
             preview.over(dressed(outputs, equipment, direction, 0, tint).scaled(2), column * 2 * FRAME, row * 2 * FRAME)
     for index in range(len(ITEM_ORDER)):

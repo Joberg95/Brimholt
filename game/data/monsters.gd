@@ -35,6 +35,26 @@ const MONSTERS: Dictionary = {
 		"rank": "elite", "range": 1, "step": 0.4,
 		"gear": {"helmet": "duskiron_visor", "armor": "duskiron_plate", "cape": "dusk_cape", "main_hand": "duskiron_cleaver",
 			"off_hand": "duskiron_bulwark"}},
+	# Dungeon monsters (game/data/dungeons.gd): instanced, spawned when a party enters a copy.
+	# Each dungeon ends in a "champion": a mini-boss that always drops gear of its tier.
+	"sewer_rat": {"name": "Sewer rat", "look": "quadruped", "color": Color("#7a6a5e"), "size": 0.5,
+		"rank": "normal", "range": 1, "step": 0.4},
+	"giant_rat": {"name": "Giant rat", "look": "quadruped", "color": Color("#5e5046"), "size": 0.75,
+		"rank": "normal", "range": 1, "step": 0.38},
+	"rat_king": {"name": "The Rat King", "look": "quadruped", "color": Color("#8a6a52"), "size": 1.35,
+		"rank": "champion", "range": 1, "step": 0.4},
+	"crypt_skeleton": {"name": "Crypt skeleton", "look": "humanoid", "color": Color("#d8d0bc"), "size": 1.0,
+		"rank": "normal", "range": 1, "step": 0.45, "gear": {"helmet": "iron_coif", "main_hand": "flint_hatchet"}},
+	"grave_ghoul": {"name": "Grave ghoul", "look": "humanoid", "color": Color("#6f7d62"), "size": 1.05,
+		"rank": "normal", "range": 1, "step": 0.4},
+	"abbot_morrow": {"name": "Abbot Morrow", "look": "humanoid", "color": Color("#3a3048"), "size": 1.3,
+		"rank": "champion", "range": 4, "step": 0.45, "gear": {"armor": "steel_hauberk", "main_hand": "spark_wand"}},
+	"cave_crawler": {"name": "Cave crawler", "look": "quadruped", "color": Color("#4a4038"), "size": 0.9,
+		"rank": "normal", "range": 1, "step": 0.3},
+	"ember_golem": {"name": "Ember golem", "look": "golem", "color": Color("#a0522d"), "size": 1.1,
+		"rank": "normal", "range": 1, "step": 0.6},
+	"forgemaw": {"name": "Forgemaw", "look": "golem", "color": Color("#6a3020"), "size": 1.7,
+		"rank": "champion", "range": 1, "step": 0.6, "glow": Color("#ff7a2a")},
 	# Final bosses: level 50 "boss" rank (Balance: a ten-player raid), slow respawn. Each kill
 	# gives every participant a trophy, traded at the Relic keeper for one of the boss's four
 	# glowing "relics". Raid mechanics (enrage, raid-wide damage, tank swaps) come later.
@@ -57,19 +77,20 @@ const MONSTERS: Dictionary = {
 }
 ## Loot tables: each [item, chance] entry rolls independently when the monster dies. Gold piles
 ## and tiered equipment (Combat.GEAR_DROP_CHANCE, from the monster's level tier) are added on
-## top by Combat. Materials sell to shops (World "value"). Add new rows here.
+## top by Combat. Named hunting weapons are additional rolls, gated by the monster's level,
+## and are excluded from the generic gear pool. Materials sell to shops (World "value").
 const LOOT: Dictionary = {
 	"field_vole": [["vole_tail", 0.5], ["glowcap", 0.08]],
 	"marsh_toad": [["toad_slime", 0.45], ["glowcap", 0.1]],
 	"thornback_boar": [["boar_tusk", 0.4]],
-	"road_bandit": [["bandit_badge", 0.35]],
-	"grey_wolf": [["wolf_pelt", 0.35]],
-	"bog_lurker": [["lurker_eye", 0.3], ["glowcap", 0.15]],
-	"outlaw_archer": [["waxed_bowstring", 0.3]],
-	"stone_golem": [["golem_core", 0.25]],
-	"cinder_wraith": [["wraith_ash", 0.3]],
+	"road_bandit": [["bandit_badge", 0.35], ["watchmans_shortsword", 0.035]],
+	"grey_wolf": [["wolf_pelt", 0.35], ["poachers_flatbow", 0.025]],
+	"bog_lurker": [["lurker_eye", 0.3], ["glowcap", 0.15], ["alder_crook", 0.035]],
+	"outlaw_archer": [["waxed_bowstring", 0.3], ["reedsteel_sabre", 0.025], ["ridgewind_recurve", 0.04]],
+	"stone_golem": [["golem_core", 0.25], ["stonebreak_pickhammer", 0.035]],
+	"cinder_wraith": [["wraith_ash", 0.3], ["cinder_spindle", 0.035]],
 	"hollow_knight": [["hollow_sigil", 0.25]],
-	"mire_stalker": [["stalker_fang", 0.25]],
+	"mire_stalker": [["stalker_fang", 0.25], ["duskroot_branch", 0.035]],
 	"reedfang": [["reedfang_scale", 0.25]],
 	"bog_hulk": [["bog_heart", 0.2]],
 	"blackreed_warden": [["warden_crest", 0.5]],
@@ -78,7 +99,16 @@ const LOOT: Dictionary = {
 	"kharzul": [],
 	"sylvaine": [],
 	"void_wraith": [["void_shard", 0.3]],
-	"obsidian_golem": [["obsidian_chunk", 0.4]],
+	"sewer_rat": [["rat_tail", 0.5]],
+	"giant_rat": [["rat_pelt", 0.4], ["quarry_handhammer", 0.02]],
+	"rat_king": [["rat_crown", 1.0], ["rat_pelt", 1.0], ["quarry_handhammer", 0.12], ["burrow_falchion", 0.18]],
+	"crypt_skeleton": [["bone_shard", 0.35], ["ashford_arming_sword", 0.035]],
+	"grave_ghoul": [["grave_cloth", 0.3]],
+	"abbot_morrow": [["abbot_censer", 1.0], ["grave_cloth", 1.0], ["mourning_estoc", 0.12], ["reliquary_focus", 0.12]],
+	"cave_crawler": [["crawler_chitin", 0.3]],
+	"ember_golem": [["ember_ore", 0.25]],
+	"forgemaw": [["forge_heart", 1.0], ["ember_ore", 1.0], ["forgemaw_arbalest", 0.14]],
+	"obsidian_golem": [["obsidian_chunk", 0.4], ["sanctum_warhammer", 0.055]],
 	"vaelith": [],
 }
 ## Monsters notice players within this many tiles and never chase beyond LEASH from home.

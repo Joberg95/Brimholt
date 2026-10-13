@@ -135,18 +135,20 @@ func _update_zone() -> void:
 	var actors: Dictionary = game.actors
 	var self_id: int = game.self_id
 	var zone: Dictionary = World.zone_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else {}
-	var name: String = zone.get("name", "")
+	var zone_name: String = zone.get("name", "")
 	var message: String = game.last_action_message
 	# Announce the zone unless a newer message (such as a death report) is still showing.
-	if name != _zone_name and not name.is_empty() and (message.is_empty() or game._now() - _message_since > 2.0):
-		game.last_action_message = "Entering %s." % name
-	_zone_name = name
+	if zone_name != _zone_name and not zone_name.is_empty() and (message.is_empty() or game._now() - _message_since > 2.0):
+		game.last_action_message = "Entering %s." % zone_name
+	_zone_name = zone_name
 	zone_label.visible = not zone.is_empty()
 	if not zone.is_empty():
 		var rule: String = "PvP zone: other players can attack you" if zone["pvp"] else "safe zone"
+		if zone.get("underground", false):
+			rule = "your party's private copy; the stairs up lead back"
 		if zone.get("full_loot", false):
 			rule = "HIGH-RISK PvP: you drop all your gear if you die"
-		zone_label.text = "%s  —  %s  ·  monsters level %d-%d" % [name, rule, zone["min_level"], zone["max_level"]]
+		zone_label.text = "%s  —  %s  ·  monsters level %d-%d" % [zone_name, rule, zone["min_level"], zone["max_level"]]
 		if zone.get("town", false):
-			zone_label.text = "%s  —  safe town: no PvP, and monsters cannot enter" % name
+			zone_label.text = "%s  —  safe town: no PvP, and monsters cannot enter" % zone_name
 		zone_label.add_theme_color_override("font_color", Color("#9fe0a0") if zone.get("town", false) else Color("#ff8a7a"))

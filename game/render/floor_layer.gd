@@ -37,9 +37,9 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	var visible: Rect2i = view.visible_cells()
-	var first := Vector2i(visible.position.x / CHUNK, visible.position.y / CHUNK) - Vector2i.ONE * KEEP_MARGIN
-	var last := Vector2i((visible.end.x - 1) / CHUNK, (visible.end.y - 1) / CHUNK) + Vector2i.ONE * KEEP_MARGIN
+	var shown: Rect2i = view.visible_cells()
+	var first := Vector2i(shown.position.x / CHUNK, shown.position.y / CHUNK) - Vector2i.ONE * KEEP_MARGIN
+	var last := Vector2i((shown.end.x - 1) / CHUNK, (shown.end.y - 1) / CHUNK) + Vector2i.ONE * KEEP_MARGIN
 	var wanted := Rect2i(first, last - first + Vector2i.ONE)
 	for key: Vector2i in _chunks.keys():
 		if not wanted.has_point(key):
@@ -54,7 +54,7 @@ func _process(_delta: float) -> void:
 				var area := Rect2i(key * CHUNK, Vector2i.ONE * CHUNK).intersection(Rect2i(0, 0, World.width(), World.height()))
 				if _chunks.has(key) or not area.has_area():
 					continue
-				if pass_index == 0 and not area.intersects(visible):
+				if pass_index == 0 and not area.intersects(shown):
 					continue
 				if built >= BUILDS_PER_FRAME and pass_index == 1:
 					return

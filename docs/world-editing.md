@@ -29,9 +29,12 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
    `game/data/quests.gd` id). The node name is the id; `relic_keeper` is Ysolde (no task),
    who trades boss trophies for relics. Like ferrymen, they block their tile and answer
    within 2 tiles.
-8. **Townsfolk**: vendors and bankers, nodes under `Townsfolk` with a name, place, facing,
-   and `role` (`vendor` or `banker`). Every town zone should have one of each; the rules
-   check verifies it. The generator places them on each town plaza.
+9. **Dungeon entrances**: nodes under `DungeonEntrances`, with `dungeon` set to a
+   `game/data/dungeons.gd` id. Keep them inside a town zone.
+8. **Townsfolk**: vendors and the banker, nodes under `Townsfolk` with a name, place, facing,
+   and `role` (`vendor` or `banker`). Every town zone has a vendor; only Reedmere has a
+   banker (`towns.gd` `BANK_PLACE`). The rules check verifies both. `make towns` moves them
+   into buildings.
 
 A marker belongs to the tile its position falls in. Save the scene and run the rules
 check: it verifies terrain, markers, routes, zone and spawn levels, and that every
@@ -45,5 +48,30 @@ it repaints only the zone rectangle in the existing scene (terrain, its monster 
 the `HollowReach` zone node) and keeps every other edit. Edit the layout constants there
 (area, gate row, Sanctum rooms, spawns) and re-run it, or paint over the zone by hand in
 Godot afterwards; once you do, the scene is the source of truth for the zone too.
-`make_map.gd` applies the same painter to a freshly generated map. The map is 768×768, so the
-scene file is large (about 9 MB); `make map-force` regenerates it in a few seconds.
+`make_map.gd` applies the same painter to a freshly generated map. The overworld is
+384×384; `make map-force` regenerates it in a few seconds.
+
+**Instanced dungeons** are defined in `game/data/dungeons.gd`: an ASCII layout (walls, floor,
+one arrival `@`, one stairs up `^`, and monster symbols), its monster legend, its number of
+copies, and light. `tools/generators/dungeons.gd` (`make dungeons`) repaints every copy in
+the band right of the overworld and the stairway under each `DungeonEntrances` marker, keeping
+other edits. Move a `DungeonEntrance` marker in Godot to move a stairway, then run
+`make dungeons` and the rules check. Never paint gameplay into the dungeon band by hand: the
+painter replaces it.
+
+**The south-western desert** is defined by `game/data/biomes.gd` (an ellipse) and painted by
+`tools/generators/desert.gd` (`make desert`): inside it, grass (`.`) and trees (`T`) where
+most of the surroundings are sand become sand (`:`) or cactus scrub (`K`, a blocking plant on
+sand). It repeats until nothing changes, so re-running it is harmless, and it never touches
+water, walls, roads, towns, spawns, or items. Paint `K` by hand for single cacti. Sand next to
+grass draws a dry-grass fringe automatically.
+
+**Buildings** are found from the walls: a room of at most 48 tiles in a town zone, enclosed
+by `#` walls and doors (an open tile between two walls in a line). They get a roof, and
+nobody inside can be dealt with from outside. Paint houses at least three tiles wide inside.
+`tools/generators/towns.gd` (`make towns`) builds the shops and banks a town lacks (its
+`PATCHES`), removes bankers outside `BANK_PLACE`, and moves every vendor and the banker to the
+back of a free building, facing the door: vendors to the first (north-west) building, the
+banker to the last, skipping buildings with stairs or other NPCs. A sign and furniture
+(`World.FURNISHINGS`) are added automatically at load. Re-run it after moving
+houses; a second run changes nothing, and it refuses to wall in any marker.

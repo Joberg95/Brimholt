@@ -12,6 +12,10 @@ const Economy = preload("res://game/core/economy.gd")
 const Quests = preload("res://game/data/quests.gd")
 const CharacterStore = preload("res://game/persistence/character_store.gd")
 const Identity = preload("res://game/persistence/identity.gd")
+const Dungeons = preload("res://game/data/dungeons.gd")
+const Instances = preload("res://game/core/instances.gd")
+const Weather = preload("res://game/render/weather.gd")
+const Biomes = preload("res://game/data/biomes.gd")
 const SpriteArtSheets = preload("res://game/render/sprite_art.gd")
 var failures: int = 0
 var checks: int = 0
@@ -45,6 +49,10 @@ func _run() -> void:
 	_gear_tier_checks()
 	_town_checks()
 	_persistence_checks()
+	_dungeon_checks()
+	_climate_checks()
+	_building_checks()
+	_hardening_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -265,10 +273,10 @@ func _stacking_checks() -> void:
 	player["from"] = here
 	for index: int in World.BACKPACK_SIZE:
 		backpack[index] = ""
-	var clock: Array[float] = [10.0]
+	var ticks: Array[float] = [10.0]
 	var move := func(source: Dictionary, target: Dictionary) -> Dictionary:
-		clock[0] += World.ITEM_SECONDS
-		return bag.move_item(1, source, target, clock[0])
+		ticks[0] += World.ITEM_SECONDS
+		return bag.move_item(1, source, target, ticks[0])
 	var tile: Dictionary = {"type": "ground", "cell": here}
 	var auto: Dictionary = {"type": "backpack"}
 	backpack[2] = "wolf_pelt#5"
@@ -310,9 +318,23 @@ func _stacking_checks() -> void:
 
 
 func _sprite_checks() -> void:
-	var sheet_size: Vector2 = Vector2(3, 4) * SpriteArt.FRAME
+	check(World.ITEMS["bronze_scale_coat"]["look"] == "scale" and World.ITEMS["steel_hauberk"]["look"] == "mail",
+		"scale armour and chainmail use distinct construction")
+	check(World.ITEMS["cobalt_brigandine"]["look"] == "brigandine"
+		and World.ITEMS["cobalt_warhammer"]["look"] == "hammer" and World.ITEMS["starforged_maul"]["look"] == "hammer",
+		"brigandine and hammers have dedicated icon and worn shapes")
+	# Five poses (stand, two steps, attack wind-up, strike) by four facings.
+	var sheet_size: Vector2 = Vector2(5, 4) * SpriteArt.FRAME
 	for texture: Texture2D in [SpriteArt.BODY, SpriteArt.CLOTH, SpriteArt.MARKER]:
-		check(texture.get_size() == sheet_size, "character sheet uses 3x4 frames")
+		check(texture.get_size() == sheet_size, "character sheet uses 5x4 frames")
+	check(SpriteArt.frame_region(Vector2i.LEFT, 0.0, 0.05).position == Vector2(3, 2) * SpriteArt.FRAME
+		and SpriteArt.frame_region(Vector2i.LEFT, 0.0, 0.3).position == Vector2(4, 2) * SpriteArt.FRAME
+		and SpriteArt.frame_region(Vector2i.LEFT, 0.3, SpriteArt.ATTACK_SECONDS).position == Vector2(1, 2) * SpriteArt.FRAME,
+		"attacks play the wind-up then the strike, then walking resumes")
+	var view: Dictionary = {"state": {"facing": Vector2i.DOWN}, "attack_born": 10.0, "attack_facing": Vector2i.RIGHT}
+	check(SpriteArt.posed(view, 10.1)["facing"] == Vector2i.RIGHT and SpriteArt.posed(view, 10.1)["attack"] > 0.0
+		and SpriteArt.posed(view, 11.0) == view["state"] and view["state"]["facing"] == Vector2i.DOWN,
+		"an attack turns only the drawn pose toward the target")
 	check(SpriteArt.ITEM_ICONS.get_width() == SpriteArt.ITEM_ORDER.size() * SpriteArt.TILE, "one icon per item")
 	check(SpriteArt.WALLS.get_width() == 16 * SpriteArt.WALL_SIZE, "one wall sprite per open-side mask")
 	for kind: String in World.ITEMS:
@@ -320,6 +342,52 @@ func _sprite_checks() -> void:
 		if World.ITEMS[kind]["slot"] in SpriteArt.VISIBLE_SLOTS:
 			check(SpriteArt.GEAR.has(kind) and SpriteArt.GEAR[kind].get_size() == sheet_size,
 				"equippable item has a worn sprite sheet")
+	var body: Image = SpriteArt.BODY.get_image()
+	for facing: int in 4:
+		for pose: int in 3:
+			var bounds := Rect2i()
+			var pixels: int = 0
+			for y: int in 64:
+				for x: int in 64:
+					if body.get_pixel(pose * 64 + x, facing * 64 + y).a < 0.9:
+						continue
+					var pixel := Vector2i(x, y)
+					bounds = Rect2i(pixel, Vector2i.ONE) if pixels == 0 else bounds.merge(Rect2i(pixel, Vector2i.ONE))
+					pixels += 1
+			check(pixels > 150 and bounds.size.y >= 33 and bounds.size.y <= 37,
+				"compact character height is 33-37 pixels in every pose")
+			check(bounds.end.y >= 53 and bounds.end.y <= 55 and bounds.size.x <= 26,
+				"compact characters keep their foot anchor without a baked-in cape silhouette")
+	var weapon_masks: Dictionary = {}
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind]["slot"] != "main_hand":
+			continue
+		var icon: Image = SpriteArt.ITEM_ICONS.get_image().get_region(Rect2i(SpriteArt.item_region(kind)))
+		var used: Rect2i = icon.get_used_rect()
+		check(used.has_area() and used.position.x > 0 and used.position.y > 0 and used.end.x < 32 and used.end.y < 32,
+			"%s icon has transparent padding and no clipped tip" % kind)
+		var opaque: int = 0
+		var colours: Dictionary = {}
+		var mask := PackedByteArray()
+		for y: int in 32:
+			for x: int in 32:
+				var pixel: Color = icon.get_pixel(x, y)
+				mask.append(1 if pixel.a > 0.0 else 0)
+				if pixel.a > 0.0:
+					opaque += 1
+					colours[pixel] = true
+		check(opaque >= 40 and colours.size() >= 5, "%s retains readable material surfaces at native 32px size" % kind)
+		if World.ITEMS[kind].get("loot_only", false):
+			var key: String = mask.hex_encode()
+			check(not weapon_masks.has(key), "%s has a silhouette distinct from the other hunting weapons" % kind)
+			weapon_masks[key] = true
+	for kind: String in SpriteArt.GEAR:
+		var sheet: Image = SpriteArt.GEAR[kind].get_image()
+		for facing: int in 4:
+			for pose: int in 3:
+				var bounds: Rect2i = sheet.get_region(Rect2i(pose * 64, facing * 64, 64, 64)).get_used_rect()
+				check(bounds.has_area() and bounds.position.x > 0 and bounds.end.x < 64
+					and bounds.position.y > 0 and bounds.end.y < 64, "%s stays visible and unclipped in every compact pose" % kind)
 
 
 func _slot_and_stat_checks() -> void:
@@ -658,7 +726,7 @@ func _zone_checks() -> void:
 		if zone["town"]:
 			towns += 1
 			check(not zone["pvp"] and not zone["full_loot"], "%s is safe" % zone["name"])
-			check(Vector2(zone["rect"].get_center()).distance_to(Vector2(hollow.get_center())) > 200.0,
+			check(Vector2(zone["rect"].get_center()).distance_to(Vector2(hollow.get_center())) > 100.0,
 				"%s is far from the Hollow Reach" % zone["name"])
 			for spawn: Dictionary in World.MONSTER_SPAWNS:
 				check(not zone["rect"].has_point(spawn["cell"]), "no monsters spawn in %s" % zone["name"])
@@ -689,7 +757,7 @@ func _zone_checks() -> void:
 			elif id not in ["reedmere", "blackreed_isle"]:
 				check(not World.FERRYMEN[id]["routes"].has("blackreed_isle") and World.FERRYMEN[id]["cell"].x < 64,
 					"coastal ports sail the western sea only")
-		check(World.width() == 768 and World.height() == 768, "the world is 768 by 768 tiles")
+		check(World.OVERWORLD.size == Vector2i(384, 384), "the overworld is 384 by 384 tiles")
 		check(coaches.size() >= 6, "coach stations link the inland towns")
 		for id: String in coaches:
 			var routes: Dictionary = World.FERRYMEN[id]["routes"]
@@ -900,8 +968,9 @@ func _gear_tier_checks() -> void:
 			if level >= Items.ACCESSORY_LEVEL:
 				slots.append_array(Items.ACCESSORY_SLOTS)
 			for slot: String in slots:
-				check(by_key.get("%s/%s/%d" % [slot, vocation, level], []).size() == 1,
-					"exactly one %s for a level-%d %s" % [slot, level, vocation])
+				var pieces: Array = by_key.get("%s/%s/%d" % [slot, vocation, level], [])
+				var regular: Array = pieces.filter(func(kind: String) -> bool: return not World.ITEMS[kind].get("loot_only", false))
+				check(regular.size() == 1, "exactly one regular %s for a level-%d %s plus optional hunting sidegrades" % [slot, level, vocation])
 	# Each tier is an upgrade, and weapons keep a geared player near six hits per same-level kill.
 	for vocation: String in Balance.VOCATIONS:
 		var previous: Dictionary = {}
@@ -965,6 +1034,93 @@ func _gear_tier_checks() -> void:
 	for kind: String in Monsters.MONSTERS:
 		for slot: String in Monsters.MONSTERS[kind].get("gear", {}):
 			check(World.fits(Monsters.MONSTERS[kind]["gear"][slot], slot), "%s wears catalog gear" % kind)
+	_hunting_weapon_checks()
+
+
+func _hunting_weapon_checks() -> void:
+	var weapons: Array[String] = []
+	var vocations: Dictionary = {}
+	var tiers: Dictionary = {}
+	var sources: Dictionary = {}
+	var world := World.new()
+	world.add_player(1, 0.0, "knight")
+	var player: Dictionary = world.players[1]
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if not item.get("loot_only", false):
+			continue
+		weapons.append(kind)
+		tiers[item["level"]] = true
+		var vocation: String = item["vocations"][0]
+		vocations[vocation] = vocations.get(vocation, 0) + 1
+		check(item["slot"] == "main_hand" and item["stats"] == Items.tier_stats(item),
+			"%s uses the shared balance budget, not hand-tuned bonuses" % kind)
+		check(not World.bound(kind) and not item.has("glow") and not World.stackable(kind),
+			"%s is ordinary nonstacking loot, not a relic" % kind)
+		check(not Economy.stock().has(kind) and Economy.sell_price(kind) > 0,
+			"%s must be hunted but vendors accept it for sale" % kind)
+		var rolled: Array[String] = Combat.new(world, 110).roll_loot("field_vole", 1)
+		check(not rolled.has(kind), "%s is not a starter-monster reward" % kind)
+		for other: String in Balance.VOCATIONS:
+			check(World.requirement_error(kind, item["level"], other).is_empty() == (other == vocation),
+				"%s keeps its vocation restriction" % kind)
+		player["vocation"] = vocation
+		player["equipment"].clear()
+		player["backpack"][0] = kind
+		player["next_item"] = 0.0
+		player["level"] = maxi(1, item["level"] - 1)
+		if item["level"] > 1:
+			check(not world.move_item(1, {"type": "backpack", "index": 0},
+				{"type": "equipment", "slot": "main_hand"}, 1.0)["ok"], "%s rejects below-tier equipment" % kind)
+		player["level"] = item["level"]
+		check(world.move_item(1, {"type": "backpack", "index": 0},
+			{"type": "equipment", "slot": "main_hand"}, 2.0)["ok"], "%s equips at its tier" % kind)
+		check(world.move_item(1, {"type": "equipment", "slot": "main_hand"},
+			{"type": "backpack", "index": 0}, 3.0)["ok"] and player["backpack"][0] == kind,
+			"%s unequips without loss" % kind)
+		check(CharacterStore.valid_entry(kind), "%s survives character save validation" % kind)
+	check(weapons.size() == 15 and vocations == {"knight": 8, "paladin": 3, "sorcerer": 2, "druid": 2},
+		"fifteen hunting weapons cover all four vocations")
+	check(tiers.size() == 10, "hunting weapons span every ordinary gear tier")
+	var combat := Combat.new(world, 906)
+	var spawns: Array = World.MONSTER_SPAWNS.duplicate()
+	for dungeon: String in Dungeons.DUNGEONS:
+		for spawn: Array in Dungeons.spawns(dungeon):
+			spawns.append({"monster": spawn[1], "level": spawn[2]})
+	for monster: String in Monsters.LOOT:
+		var targets: Dictionary = {}
+		var level: int = 1
+		for entry: Array in Monsters.LOOT[monster]:
+			if not World.ITEMS[entry[0]].get("loot_only", false):
+				continue
+			targets[entry[0]] = float(entry[1])
+			level = maxi(level, World.ITEMS[entry[0]]["level"])
+			sources[entry[0]] = true
+			var reachable: bool = false
+			for spawn: Dictionary in spawns:
+				reachable = reachable or (spawn["monster"] == monster and spawn["level"] >= World.ITEMS[entry[0]]["level"])
+			check(reachable, "%s has a live overworld or dungeon source at an eligible level" % entry[0])
+		if targets.is_empty():
+			continue
+		var counts: Dictionary = {}
+		for roll: int in 4000:
+			for entry: String in combat.roll_loot(monster, level):
+				if targets.has(entry):
+					counts[entry] = counts.get(entry, 0) + 1
+		for kind: String in targets:
+			var expected: float = targets[kind] * 4000
+			check(absf(counts.get(kind, 0) - expected) < maxf(20.0, expected * 0.4),
+				"%s actually drops %s near its declared chance" % [monster, kind])
+		for roll: int in 80:
+			for entry: String in combat.roll_loot(monster, maxi(1, level - 1)):
+				check(World.ITEMS[World.kind_of(entry)]["level"] <= maxi(1, level - 1),
+					"named drops cannot bypass the monster's level")
+	for kind: String in weapons:
+		check(sources.has(kind), "%s has a reachable loot-table source" % kind)
+	for tier: int in Items.TIER_LEVELS:
+		for roll: int in 100:
+			check(not World.ITEMS[combat.gear_drop(tier)].get("loot_only", false),
+				"hunting weapons do not dilute the existing generic gear pool")
 
 
 ## Glowing relics: level-50 gear that only final bosses drop, one boss per relic.
@@ -1263,15 +1419,18 @@ func _relic_quest_checks() -> void:
 ## A free walkable tile next to an NPC (within talking range).
 func _beside(npc: String) -> Vector2i:
 	var cell: Vector2i = World.npc(npc)["cell"]
-	for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT, Vector2i(1, 1), Vector2i(-1, 1)]:
-		if World.walkable(cell + step):
-			return cell + step
+	for distance: int in range(1, World.TALK_RANGE + 1):
+		for dy: int in range(-distance, distance + 1):
+			for dx: int in range(-distance, distance + 1):
+				var spot: Vector2i = cell + Vector2i(dx, dy)
+				if World.walkable(spot) and World.in_talk_range(spot, cell):
+					return spot
 	return cell
 
 
 ## Vendors, bankers and the depot, town hunting tasks and packs, and potions.
 func _town_checks() -> void:
-	# Every town has a vendor and a banker; NPCs block their tile and can be reached.
+	# Every town has a vendor; one town (Reedmere) has the only banker; NPCs block their tile and can be reached.
 	var towns: Dictionary = {}
 	for zone: Dictionary in World.ZONES:
 		if zone["town"]:
@@ -1284,15 +1443,19 @@ func _town_checks() -> void:
 		check(World.NPC_CELLS.get(person["cell"], "") == id and not World.walkable(person["cell"]), "%s blocks its tile" % id)
 		check(_beside(id) != person["cell"], "%s can be reached" % id)
 		check(person["services"] == (["bank"] if person["role"] == "banker" else ["trade"]), "%s offers its service" % id)
+	var banks: Array = []
 	for town: String in towns:
-		check("vendor" in towns[town] and "banker" in towns[town], "%s has a vendor and a banker" % town)
+		check("vendor" in towns[town], "%s has a vendor" % town)
+		if "banker" in towns[town]:
+			banks.append(town)
+	check(banks == ["Reedmere"] and World.bank_place() == "Reedmere", "Reedmere is the only bank town (%s)" % [banks])
 	var givers: Dictionary = {}
 	for id: String in World.QUEST_GIVERS:
-		var task: String = World.QUEST_GIVERS[id]["task"]
-		if not task.is_empty():
-			check(Quests.TASKS.has(task), "%s gives a known task" % id)
+		var giver_task: String = World.QUEST_GIVERS[id]["task"]
+		if not giver_task.is_empty():
+			check(Quests.TASKS.has(giver_task), "%s gives a known task" % id)
 			check(World.zone_at(World.QUEST_GIVERS[id]["cell"]).get("town", false), "%s stands in a town" % id)
-			givers[task] = id
+			givers[giver_task] = id
 	for task: String in Quests.TASKS:
 		check(givers.has(task), "%s has a quest giver" % task)
 		var monster: String = Quests.TASKS[task]["monster"]
@@ -1340,12 +1503,12 @@ func _town_checks() -> void:
 	var player: Dictionary = world.players[1]
 	var backpack: Array = player["backpack"]
 	var vendor: String = "cinder_vendor"
-	var banker: String = "cinder_banker"
-	check(World.TOWNSFOLK.has(vendor) and World.TOWNSFOLK.has(banker), "Cinder Crossing has a vendor and a banker")
-	var clock: Array[float] = [10.0]
+	var banker: String = "reedmere_banker"
+	check(World.TOWNSFOLK.has(vendor) and World.TOWNSFOLK.has(banker), "Cinder Crossing has a vendor and Reedmere a banker")
+	var ticks: Array[float] = [10.0]
 	var tick := func() -> float:
-		clock[0] += 1.0
-		return clock[0]
+		ticks[0] += 1.0
+		return ticks[0]
 	for index: int in backpack.size():
 		backpack[index] = ""
 	player["gold"] = 1000
@@ -1361,7 +1524,7 @@ func _town_checks() -> void:
 	check(player["gold"] == 1000 and backpack.count("") == backpack.size(), "rejected purchases change nothing")
 	var bought: Dictionary = economy.buy(1, vendor, "health_potion", 10, tick.call())
 	check(bought["ok"] and backpack[0] == "health_potion#10" and player["gold"] == 800, "buying potions")
-	check(economy.buy(1, vendor, "health_potion", 5, clock[0] + 0.01)["reason"] == "Item cooldown", "trading has the item cooldown")
+	check(economy.buy(1, vendor, "health_potion", 5, ticks[0] + 0.01)["reason"] == "Item cooldown", "trading has the item cooldown")
 	check(economy.buy(1, vendor, "health_potion", 5, tick.call())["ok"] and backpack[0] == "health_potion#15"
 		and backpack[1] == "", "potions merge into one stack")
 	check(economy.buy(1, vendor, "copper_blade", 1, tick.call())["ok"] and backpack[1] == "copper_blade"
@@ -1429,10 +1592,10 @@ func _town_checks() -> void:
 	check(world.export_player(1, 0.0, true)["depot"] == player["depot"] and not world.export_player(1, 0.0).has("depot"),
 		"the depot is private")
 	_place(world, 1, Vector2i(5, 6))
-	check(world.move_item(1, depot0, slot0, tick.call())["reason"] == "Your depot is kept by the town bankers", "depot needs a banker")
-	_place(world, 1, _beside("ashford_banker"))
+	check(world.move_item(1, depot0, slot0, tick.call())["reason"] == "Your depot is kept at the bank in Reedmere", "depot needs a banker")
+	_place(world, 1, _beside(banker))
 	check(world.move_item(1, depot0, {"type": "backpack"}, tick.call())["ok"] and player["depot"][0] == ""
-		and backpack.has("abyssal_greathelm"), "every banker opens the same depot")
+		and backpack.has("abyssal_greathelm"), "the depot hands items back at the bank")
 
 	# Death keeps the bank, the depot, and bound packs.
 	var victim: Dictionary = world.players[2]
@@ -1472,7 +1635,7 @@ func _town_checks() -> void:
 	_place(world, 2, field + Vector2i(-1, 0))
 	world.players[2]["tasks"][task] = 0
 	var kill := func(kind: String) -> void:
-		var monster: int = combat.spawn_monster(kind, 6, field, clock[0])
+		var monster: int = combat.spawn_monster(kind, 6, field, ticks[0])
 		combat._damage(1, monster, 9999999, "damage", tick.call(), [])
 	kill.call("field_vole")
 	check(player["tasks"][task] == 0, "other monsters do not count")
@@ -1510,7 +1673,7 @@ func _town_checks() -> void:
 	var drunk: Dictionary = combat.drink(1, 0, tick.call())
 	check(drunk["ok"] and player["health"] == 1 + roundi(limits["health"] * 0.2) and backpack[0] == "health_potion",
 		"a health potion restores a fifth of your health")
-	check(combat.drink(1, 0, clock[0] + 0.5)["reason"] == "Potion cooldown", "potions share a cooldown")
+	check(combat.drink(1, 0, ticks[0] + 0.5)["reason"] == "Potion cooldown", "potions share a cooldown")
 	player["mana"] = 0
 	check(combat.drink(1, 1, tick.call())["ok"] and player["mana"] == roundi(limits["mana"] * 0.25) and backpack[1] == "",
 		"a mana potion restores a quarter of your mana and the last one is used up")
@@ -1518,6 +1681,174 @@ func _town_checks() -> void:
 	for bad: Variant in [2, 1, -1, "0", 0.0, null, backpack.size()]:
 		check(not combat.drink(1, bad, tick.call())["ok"], "drinking needs a potion")
 	check(player["active_at"] == -INF, "drinking is not combat activity")
+
+
+func _dungeon_checks() -> void:
+	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
+	check(Dungeons.ORDER.size() == Dungeons.DUNGEONS.size() and World.ENTRANCE_OF.size() == Dungeons.DUNGEONS.size(),
+		"every dungeon has one stairway")
+	for dungeon: String in Dungeons.DUNGEONS:
+		var definition: Dictionary = Dungeons.DUNGEONS[dungeon]
+		var stairs: Vector2i = World.ENTRANCE_OF[dungeon]
+		check(World.OVERWORLD.has_point(stairs) and World.terrain(stairs) == "v" and World.zone_at(stairs).get("town", false),
+			"%s starts from a town stairway" % dungeon)
+		check(Dungeons.cells(dungeon, "^").size() == 1 and Dungeons.cells(dungeon, "@").size() == 1
+			and Dungeons.cells(dungeon, definition["boss"]).size() == 1, "%s has one exit, arrival, and champion" % dungeon)
+		var boss: String = Dungeons.DUNGEONS[dungeon]["monsters"][definition["boss"]][0]
+		check(Monsters.MONSTERS[boss]["rank"] == "champion" and Monsters.LOOT[boss].size() >= 2, "%s ends with a champion" % dungeon)
+		for spawn: Array in Dungeons.spawns(dungeon):
+			check(Monsters.MONSTERS.has(spawn[1]) and spawn[2] >= definition["min_level"] and spawn[2] <= definition["max_level"],
+				"%s monster levels fit the dungeon" % dungeon)
+		for copy: int in definition["copies"]:
+			var rect: Rect2i = Dungeons.rect(dungeon, copy)
+			check(not rect.intersects(World.OVERWORLD) and World.dungeon_at(rect.position + Vector2i.ONE) == [dungeon, copy],
+				"%s copy %d sits outside the overworld" % [dungeon, copy])
+			for other_copy: int in range(copy + 1, definition["copies"]):
+				check(not rect.intersects(Dungeons.rect(dungeon, other_copy)), "dungeon copies do not overlap")
+			var origin: Vector2i = Dungeons.origin(dungeon, copy)
+			check(World.terrain(origin + Dungeons.cells(dungeon, "^")[0]) == "^"
+				and World.walkable(origin + Dungeons.cells(dungeon, "@")[0]), "%s copy %d is painted" % [dungeon, copy])
+	var monster_count: int = 0
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		check(World.OVERWORLD.has_point(spawn["cell"]), "overworld spawns stay out of dungeon copies")
+		monster_count += spawn["count"]
+	check(monster_count > 550, "the smaller overworld is densely populated")
+
+	var world := World.new()
+	var combat := Combat.new(world, 31)
+	var instances := Instances.new(world, combat)
+	world.monsters.clear()
+	for id: int in [1, 2, 3]:
+		check(world.add_player(id, 0.0, ["knight", "druid", "paladin"][id - 1]), "dungeon player %d" % id)
+	var entrance: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
+	_place(world, 1, entrance)
+	var events: Array = instances.after_move(1, 1.0)
+	var place: Array = World.dungeon_at(world.players[1]["cell"])
+	check(place == ["cinder_cellar", 0] and instances.copies["cinder_cellar"][0]["owner"] == 1
+		and world.monsters.size() == Dungeons.spawns("cinder_cellar").size(), "the stairway opens a private cellar copy")
+	check(events.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("Cinder cellar")),
+		"entering a dungeon explains where you are")
+	check(events.filter(func(event: Dictionary) -> bool: return event["kind"] == "monster").size() == Dungeons.spawns("cinder_cellar").size(),
+		"a claimed copy publishes its monsters")
+	combat.party_action(1, "invite", 2, 1.0)
+	combat.party_action(2, "join", 1, 1.0)
+	_place(world, 2, entrance)
+	instances.after_move(2, 2.0)
+	check(World.dungeon_at(world.players[2]["cell"]) == place and world.monsters.size() == Dungeons.spawns("cinder_cellar").size(),
+		"party members share their leader's copy")
+	_place(world, 3, entrance)
+	instances.after_move(3, 3.0)
+	check(World.dungeon_at(world.players[3]["cell"]) == ["cinder_cellar", 1]
+		and world.monsters.size() == 2 * Dungeons.spawns("cinder_cellar").size(), "another player gets another copy")
+	for id: int in world.monsters:
+		check(World.dungeon_at(world.monsters[id]["cell"]) == World.dungeon_at(world.monsters[id]["home"]),
+			"dungeon monsters stay in their copy")
+	var exit: Vector2i = Dungeons.origin("cinder_cellar", 1) + Dungeons.cells("cinder_cellar", "^")[0]
+	_place(world, 3, exit)
+	instances.after_move(3, 4.0)
+	check(World.OVERWORLD.has_point(world.players[3]["cell"]) and Combat.distance(world.players[3]["cell"], entrance) <= 3
+		and world.players[3]["cell"] != entrance, "the stairs up return beside the town stairway")
+	var copy_rect: Rect2i = Dungeons.rect("cinder_cellar", 1)
+	world.ground[copy_rect.position + Vector2i(2, 2)] = ["rat_tail"]
+	instances.tick(5.0)
+	check(instances.copies["cinder_cellar"][1]["owner"] == 3, "an emptied copy waits before resetting")
+	events = instances.tick(5.0 + Dungeons.RESET_SECONDS)
+	check(instances.copies["cinder_cellar"][1]["owner"] == 0 and not world.ground.has(copy_rect.position + Vector2i(2, 2))
+		and world.monsters.size() == Dungeons.spawns("cinder_cellar").size(), "an empty copy resets its monsters and items")
+	check(events.any(func(event: Dictionary) -> bool: return event["kind"] == "monster_gone"), "a reset removes its monsters")
+	for copy: int in range(1, Dungeons.DUNGEONS["cinder_cellar"]["copies"]):
+		instances.copies["cinder_cellar"][copy]["owner"] = 100 + copy
+	_place(world, 3, entrance)
+	events = instances.after_move(3, 10.0)
+	check(World.OVERWORLD.has_point(world.players[3]["cell"]) and world.players[3]["cell"] != entrance
+		and events.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("in use")),
+		"a full dungeon keeps the player outside")
+	var restored := World.new()
+	var restored_combat := Combat.new(restored, 1)
+	var restored_instances := Instances.new(restored, restored_combat)
+	restored.add_player(4, 0.0)
+	_place(restored, 4, Dungeons.origin("ashford_crypt", 2) + Dungeons.cells("ashford_crypt", "@")[0])
+	restored_instances.evacuate(4, 0.0)
+	check(Combat.distance(restored.players[4]["cell"], World.ENTRANCE_OF["ashford_crypt"]) <= 3,
+		"a character saved in an expired dungeon returns to its stairway")
+
+	var outside: int = combat.spawn_monster("field_vole", 1, Vector2i(World.OVERWORLD.end.x - 3, 5), 0.0)
+	_place(world, 2, Dungeons.origin("cinder_cellar", 0) + Vector2i(1, 4))
+	check(not combat.hostile(outside, 2) and not combat.hostile(2, outside), "the overworld and a dungeon copy never fight")
+	# Sleeping monsters: an untouched monster far from players does not act.
+	var quiet := World.new()
+	var quiet_combat := Combat.new(quiet, 2)
+	quiet.monsters.clear()
+	quiet.add_player(1, 0.0)
+	_place(quiet, 1, Vector2i(10, 10))
+	var far: int = quiet_combat.spawn_monster("field_vole", 1, Vector2i(200, 200), 0.0)
+	var near: int = quiet_combat.spawn_monster("field_vole", 1, Vector2i(14, 10), 0.0)
+	quiet_combat.tick(1.0)
+	check(quiet.monsters[far]["target"] == 0 and quiet.monsters[near]["target"] == 1, "only monsters near players wake")
+
+
+## The desert's plants and sand, and weather derived from the shared host clock.
+func _climate_checks() -> void:
+	check(load("res://tools/generators/desert.gd").TERRAINS == World.TERRAINS, "the desert painter uses the map terrains")
+	check("K" in World.TREES and "K" in World.TERRAINS and not "K" in World.WALKABLE, "desert plants block like trees")
+	var plants: int = 0
+	var leafy: int = 0
+	var grass: int = 0
+	var sand: int = 0
+	for y: int in range(Biomes.DESERT_AREA.position.y, Biomes.DESERT_AREA.end.y):
+		for x: int in range(Biomes.DESERT_AREA.position.x, Biomes.DESERT_AREA.end.x):
+			var cell := Vector2i(x, y)
+			var tile: String = World.terrain(cell)
+			if tile == "K":
+				plants += 1
+				check(Biomes.desert_distance(cell) <= 1.25, "desert plants grow only in the desert")
+			if Biomes.desert_distance(cell) < 0.85:
+				leafy += 1 if tile == "T" else 0
+				grass += 1 if tile == "." else 0
+				sand += 1 if tile == ":" or tile == "K" else 0
+	check(plants > 40, "the desert has cacti and thorn scrub")
+	check(leafy == 0 and grass == 0 and sand > 8000, "no leafy trees or grass patches inside the desert")
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		check(World.walkable(spawn["cell"]), "monster spawns stay on walkable ground after the desert pass")
+	for entry: Array in World.GROUND_ITEMS:
+		check(World.walkable(entry[0]), "ground items stay on walkable ground after the desert pass")
+	# Weather: the same clock gives the same weather on every peer, it changes smoothly, and
+	# every kind occurs over a long session.
+	Weather.override = ""
+	var seen: Dictionary = {}
+	var smooth: bool = true
+	var bounded: bool = true
+	var previous: Dictionary = Weather.at(0.0)
+	for step: int in range(1, 24000):
+		var ticks: float = step * 5.0
+		var now: Dictionary = Weather.at(ticks)
+		seen[now["kind"]] = true
+		for key: String in ["cloud", "rain", "storm"]:
+			bounded = bounded and now[key] >= 0.0 and now[key] <= 1.0
+			smooth = smooth and absf(now[key] - previous[key]) <= 5.0 / Weather.BLEND_SECONDS * 1.6 + 0.001
+		bounded = bounded and now["flash"] >= 0.0 and now["flash"] <= 1.0
+		previous = now
+	check(seen.size() == 4, "clear, overcast, rain, and storm all occur")
+	check(smooth and bounded, "weather values stay in 0..1 and blend smoothly between slots")
+	check(Weather.at(12345.6) == Weather.at(12345.6), "weather is a pure function of the host clock")
+	var flashes: int = 0
+	for step: int in 4000:
+		flashes += 1 if Weather._flash(step * 0.05) > 0.5 else 0
+	check(flashes > 0 and flashes < 400, "storms flash lightning briefly, not constantly")
+	var rainy: float = -1.0
+	for step: int in 2000:
+		if Weather.at(step * 60.0)["rain"] > 0.6:
+			rainy = step * 60.0
+			break
+	check(rainy >= 0.0, "it rains at some point")
+	var cellar: Vector2i = Dungeons.origin("cinder_cellar", 0) + Dungeons.cells("cinder_cellar", "@")[0]
+	check(Weather.local(rainy, cellar)["rain"] == 0.0 and Weather.local(rainy, cellar)["cloud"] == 0.0,
+		"no weather underground")
+	check(Weather.local(rainy, Vector2i(Biomes.DESERT_CENTRE))["rain"] == 0.0, "it never rains in the desert")
+	check(Weather.local(rainy, World.SPAWNS[0])["rain"] > 0.6, "it rains in Cinder Crossing when the sky rains")
+	Weather.override = "storm"
+	check(Weather.tint(Weather.at(0.0)).v < 0.95 or Weather.at(0.0)["flash"] > 0.0, "storms darken the light")
+	Weather.override = ""
 
 
 func _remove_tree(path: String) -> void:
@@ -1655,6 +1986,175 @@ func _persistence_checks() -> void:
 	_remove_tree(dir)
 	_remove_tree(dir + "-other")
 	check(not DirAccess.dir_exists_absolute(dir), "test saves are cleaned up")
+
+
+## Town buildings: roofs, the shops and banks with their signs, and no dealing through walls.
+func _building_checks() -> void:
+	var Buildings: GDScript = load("res://game/data/buildings.gd")
+	var Painter: GDScript = load("res://tools/generators/towns.gd")
+	check(Painter.TERRAINS == World.TERRAINS, "the town painter uses the map terrains")
+	var scene: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
+	check(Painter.apply(scene) == 0, "the town painter has already furnished the map (a re-run changes nothing)")
+	scene.free()
+	# Doors: an open tile between two walls in one line only.
+	var tiny: Dictionary = {}
+	for y: int in 4:
+		for x: int in 5:
+			tiny[Vector2i(x, y)] = "#" if x == 0 or y == 0 or x == 4 or y == 3 else "="
+	var lookup := func(cell: Vector2i) -> String: return tiny.get(cell, ".")
+	check(Buildings.find(lookup, Rect2i(-2, -2, 9, 8)).is_empty(), "a closed room without a door is not a building")
+	tiny[Vector2i(2, 3)] = "="
+	check(Buildings.is_door(lookup, Vector2i(2, 3)) and not Buildings.is_door(lookup, Vector2i(0, 0))
+		and not Buildings.is_door(lookup, Vector2i(2, 2)) and not Buildings.is_door(lookup, Vector2i(6, 6)),
+		"doors sit between two walls in a line")
+	var hut: Array = Buildings.find(lookup, Rect2i(-2, -2, 9, 8))
+	check(hut.size() == 1 and hut[0]["doors"].size() == 1 and hut[0]["doors"][0] == Vector2i(2, 3)
+		and hut[0]["outward"][Vector2i(2, 3)] == Vector2i.DOWN and hut[0]["rect"] == Rect2i(0, 0, 5, 4)
+		and hut[0]["interior"].size() == 6 and hut[0]["footprint"].size() == 20, "a one-door hut is found with its roof footprint")
+	check(Buildings.find(lookup, Rect2i(0, 0, 5, 3)).is_empty(), "a room reaching the search edge is not a building")
+	# Every town: at least two buildings; its vendor (and Reedmere's banker) each keep one, with a sign.
+	var towns: Dictionary = {}
+	for zone: Dictionary in World.ZONES:
+		if zone["town"]:
+			towns[zone["name"]] = 0
+	for building: Dictionary in World.BUILDINGS:
+		for zone: Dictionary in World.ZONES:
+			if zone["town"] and zone["rect"].grow(1).encloses(building["rect"]):
+				towns[zone["name"]] += 1
+		for cell: Vector2i in building["interior"] + building["doors"]:
+			check(World.walkable(cell) or World.NPC_CELLS.has(cell) or World.FURNITURE.has(cell) or World.terrain(cell) == "v",
+				"building rooms and doors are open")
+		for door: Vector2i in building["doors"]:
+			check(World.terrain(door + building["outward"][door]) in World.LAND and not World.ROOM_AT.has(door + building["outward"][door]),
+				"every door opens onto land outside")
+	for town: String in towns:
+		check(towns[town] >= 2, "%s has at least two buildings" % town)
+	check(World.SIGNS.size() == World.TOWNSFOLK.size(), "every vendor and banker has a sign")
+	var used: Dictionary = {}
+	for id: String in World.TOWNSFOLK:
+		var keeper: Dictionary = World.TOWNSFOLK[id]
+		var room: int = World.ROOM_AT.get(keeper["cell"], -1)
+		check(room >= 0 and not used.has(room), "%s works inside a building of their own" % keeper["name"])
+		used[room] = true
+		var signs: Array = World.SIGNS.filter(func(sign: Dictionary) -> bool: return World.ROOF_AT.get(sign["cell"], -1) == room)
+		check(signs.size() == 1 and signs[0]["kind"] == keeper["role"] and World.terrain(signs[0]["cell"]) in World.WALLS
+			and SpriteArt.SIGN_KINDS.has(keeper["role"]) and SpriteArt.SIGN_OFFSETS.has(signs[0]["outward"]),
+			"%s's building has a %s sign on the wall beside its door" % [keeper["name"], keeper["role"]])
+		var building: Dictionary = World.BUILDINGS[maxi(room, 0)]
+		check(keeper["facing"] == building["outward"].get(building["doors"][0], Vector2i.ZERO), "%s faces the door" % keeper["name"])
+		var inside: bool = false
+		var through_wall: bool = false
+		for dy: int in range(-World.TALK_RANGE, World.TALK_RANGE + 1):
+			for dx: int in range(-World.TALK_RANGE, World.TALK_RANGE + 1):
+				var cell: Vector2i = keeper["cell"] + Vector2i(dx, dy)
+				if not World.walkable(cell):
+					continue
+				var service: String = keeper["services"][0]
+				if World.ROOM_AT.get(cell, -1) == room:
+					inside = inside or World.serves(id, service, cell)
+				else:
+					through_wall = through_wall or World.serves(id, service, cell) or World.npc_near(cell, service) == id
+		check(inside and not through_wall, "%s serves only customers inside the building" % keeper["name"])
+	# Furniture: only inside keepers' buildings, blocking, and never cutting a room off.
+	check(World.FURNITURE.size() >= World.TOWNSFOLK.size() * 3, "shops and the bank are furnished (%d pieces)" % World.FURNITURE.size())
+	for cell: Vector2i in World.FURNITURE:
+		check(World.ROOM_AT.has(cell) and not World.walkable(cell) and SpriteArt.FURNITURE.has(World.FURNITURE[cell]),
+			"furniture stands inside a building and blocks")
+	for id: String in World.TOWNSFOLK:
+		var building: Dictionary = World.BUILDINGS[World.ROOM_AT[World.TOWNSFOLK[id]["cell"]]]
+		var door: Vector2i = building["doors"][0]
+		check(World._room_open(building, door - building["outward"][door], World.TOWNSFOLK[id]["cell"]),
+			"%s's room stays open around the furniture" % World.TOWNSFOLK[id]["name"])
+	# Rarity grades replace the slot edge colour; only wearables have one.
+	check(Items.rarity(World.ITEMS["copper_blade"])[0] == "Common" and Items.rarity(World.ITEMS["health_potion"]).is_empty()
+		and Items.rarity(World.ITEMS["traveler_pack"]).is_empty(), "rarity grades for gear only")
+	var grades: Array = []
+	for level: int in Items.TIER_LEVELS:
+		var grade: String = Items.rarity({"slot": "helmet", "level": level})[0]
+		if grades.is_empty() or grades[-1] != grade:
+			grades.append(grade)
+	check(grades == ["Common", "Uncommon", "Rare", "Epic", "Legendary"], "tiers climb through every rarity (%s)" % [grades])
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind].has("glow"):
+			check(Items.rarity(World.ITEMS[kind])[0] == "Relic", "relics are their own rarity")
+	# The server refuses trade through a wall.
+	var world := World.new()
+	var economy := Economy.new(world)
+	check(world.add_player(1, 0.0, "knight"), "a shopper")
+	world.players[1]["gold"] = 1000
+	var landing: Vector2i = World.npc("cinder_landing_vendor")["cell"]
+	var behind: Vector2i = Vector2i(-1, -1)
+	for dy: int in range(-2, 3):
+		for dx: int in range(-2, 3):
+			var cell: Vector2i = landing + Vector2i(dx, dy)
+			if World.walkable(cell) and not World.ROOM_AT.has(cell):
+				behind = cell
+	check(behind.x >= 0, "there is open ground behind the Cinder Landing shop wall")
+	_place(world, 1, behind)
+	check(economy.buy(1, "cinder_landing_vendor", "health_potion", 1, 10.0)["reason"] == "Walk closer to a vendor",
+		"no trading through a shop wall")
+	_place(world, 1, landing + Vector2i.DOWN)
+	check(economy.buy(1, "cinder_landing_vendor", "health_potion", 1, 11.0)["ok"], "trading inside the shop")
+
+
+## Long-session safety: ground decay, the client spatial index, and per-tick occupancy.
+func _hardening_checks() -> void:
+	var world := World.new()
+	var start: Vector2i = World.GROUND_ITEMS[0][0] if not World.GROUND_ITEMS.is_empty() else Vector2i(-1, -1)
+	var junk := Vector2i(30, 30)
+	var relic: String = ""
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind].has("glow") and relic.is_empty():
+			relic = kind
+	world.ground[junk] = ["vole_tail#2"]
+	world.ground[junk + Vector2i.RIGHT] = [relic]
+	check(world.decay_ground(0.0).is_empty(), "a first sweep only notes the ground")
+	check(world.decay_ground(World.GROUND_DECAY_SECONDS - 1.0).is_empty() and world.ground.has(junk), "fresh stacks stay")
+	world.ground[junk] = ["vole_tail#2", "rat_tail"]
+	check(world.decay_ground(World.GROUND_DECAY_SECONDS + 20.0).is_empty() and world.ground.has(junk), "a changed stack restarts its timer")
+	var events: Array = world.decay_ground(World.GROUND_DECAY_SECONDS * 2.0 + 40.0)
+	check(not world.ground.has(junk) and events.size() == 1 and events[0]["cells"].size() == 1 and events[0]["cells"][0] == junk, "an untouched stack decays and is announced")
+	check(world.ground.has(junk + Vector2i.RIGHT), "bound items (relics) never decay")
+	check(start.x < 0 or world.ground.has(start), "starting map items never decay")
+	check(world.decay_ground(World.GROUND_DECAY_SECONDS * 2.0 + 41.0).is_empty(), "sweeps are rate-limited")
+	# The spatial index answers by chunk, moves keys, and forgets removed ones.
+	var index: RefCounted = load("res://game/render/cell_index.gd").new()
+	index.put(-5, Vector2i(3, 3))
+	index.put(-6, Vector2i(40, 40))
+	check(index.query(Rect2i(0, 0, 10, 10)) == [-5] and index.query(Rect2i(-20, -20, 5, 5)).is_empty(), "index finds keys by area")
+	index.put(-5, Vector2i(41, 41))
+	check(index.query(Rect2i(0, 0, 10, 10)).is_empty() and index.query(Rect2i(32, 32, 16, 16)).size() == 2, "index moves keys")
+	index.remove(-6)
+	index.remove(-6)
+	check(index.size() == 1 and index.query(Rect2i(32, 32, 16, 16)) == [-5], "index removes keys")
+	# Monsters stepping in one tick never share a tile (occupancy is kept current within the tick).
+	var crowd := World.new()
+	var combat := Combat.new(crowd, 11)
+	check(crowd.add_player(1, 0.0, "knight"), "crowd target")
+	var open: Vector2i = Vector2i(-1, -1)
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var ring: int = 0
+		for dy: int in range(-3, 4):
+			for dx: int in range(-3, 4):
+				ring += 1 if World.walkable(spawn["cell"] + Vector2i(dx, dy)) else 0
+		if ring == 49 and open.x < 0:
+			open = spawn["cell"]
+	check(open.x >= 0, "an open field for the crowd")
+	_place(crowd, 1, open)
+	crowd.players[1]["health"] = 999999
+	var spawned: Array = []
+	for offset: Vector2i in [Vector2i(-3, -3), Vector2i(3, -3), Vector2i(-3, 3), Vector2i(3, 3), Vector2i(0, -3), Vector2i(0, 3)]:
+		spawned.append(combat.spawn_monster("field_vole", 1, open + offset, 0.0, -1, []))
+	var overlap: bool = false
+	for step: int in 40:
+		var now: float = 1.0 + step * Combat.TICK_SECONDS
+		combat.tick(now)
+		var seen: Dictionary = {crowd.players[1]["cell"]: true}
+		for id: int in spawned:
+			if crowd.monsters.has(id):
+				overlap = overlap or seen.has(crowd.monsters[id]["cell"])
+				seen[crowd.monsters[id]["cell"]] = true
+	check(not overlap, "monsters closing in never share a tile")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

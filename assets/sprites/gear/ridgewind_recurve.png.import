@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dwsluqjn16u7"
-path="res://.godot/imported/cloak.png-4c643839a386fb1c57ecffa3db1ec43d.ctex"
+uid="uid://sfo10ectvv1s"
+path="res://.godot/imported/ridgewind_recurve.png-8158977dd4b3d431ecaa9a671577e906.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/cloak.png"
-dest_files=["res://.godot/imported/cloak.png-4c643839a386fb1c57ecffa3db1ec43d.ctex"]
+source_file="res://assets/sprites/gear/ridgewind_recurve.png"
+dest_files=["res://.godot/imported/ridgewind_recurve.png-8158977dd4b3d431ecaa9a671577e906.ctex"]
 
 [params]
 

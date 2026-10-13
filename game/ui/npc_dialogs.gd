@@ -64,8 +64,8 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 func refresh() -> void:
 	var actors: Dictionary = game.actors
 	var self_id: int = game.self_id
-	if not talking_to.is_empty() and (not actors.has(self_id) or World.chebyshev(
-			actors[self_id]["state"]["cell"], World.npc(talking_to)["cell"]) > World.TALK_RANGE):
+	if not talking_to.is_empty() and (not actors.has(self_id) or not World.in_talk_range(
+			actors[self_id]["state"]["cell"], World.npc(talking_to)["cell"])):
 		close()
 	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests"] and _state_key() != _shown_state:
 		_open(mode, talking_to)
@@ -179,7 +179,7 @@ func talk_to(ferryman: String) -> void:
 	if not actors.has(self_id) or not World.FERRYMEN.has(ferryman):
 		return
 	var npc: Dictionary = World.FERRYMEN[ferryman]
-	if World.chebyshev(actors[self_id]["state"]["cell"], npc["cell"]) > World.TALK_RANGE:
+	if not World.in_talk_range(actors[self_id]["state"]["cell"], npc["cell"]):
 		game.last_action_message = "Walk closer to %s." % npc["name"]
 		return
 	for child: Node in list.get_children():
@@ -210,7 +210,7 @@ func _begin(npc: String) -> bool:
 	var self_id: int = game.self_id
 	if not actors.has(self_id) or World.npc(npc).is_empty():
 		return false
-	if World.chebyshev(actors[self_id]["state"]["cell"], World.npc(npc)["cell"]) > World.TALK_RANGE:
+	if not World.in_talk_range(actors[self_id]["state"]["cell"], World.npc(npc)["cell"]):
 		game.last_action_message = "Walk closer to %s." % World.npc(npc)["name"]
 		return false
 	for child: Node in list.get_children():
@@ -283,13 +283,13 @@ func open_trade(npc: String) -> void:
 			continue
 		var row := HBoxContainer.new()
 		rows.add_child(row)
-		var name := Label.new()
-		name.text = "%s  %d gold" % [item["name"], item["price"]] if World.stackable(kind) \
+		var item_label := Label.new()
+		item_label.text = "%s  %d gold" % [item["name"], item["price"]] if World.stackable(kind) \
 			else "%s (level %d)  %d gold" % [item["name"], item["level"], item["price"]]
-		name.tooltip_text = game.inventory.item_tooltip(kind)
-		name.mouse_filter = Control.MOUSE_FILTER_PASS
-		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(name)
+		item_label.tooltip_text = game.inventory.item_tooltip(kind)
+		item_label.mouse_filter = Control.MOUSE_FILTER_PASS
+		item_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(item_label)
 		var picture := TextureRect.new()
 		picture.texture = icon(kind)
 		row.add_child(picture)
@@ -316,11 +316,11 @@ func open_trade(npc: String) -> void:
 		var picture := TextureRect.new()
 		picture.texture = icon(kind)
 		row.add_child(picture)
-		var name := Label.new()
+		var item_label := Label.new()
 		var count: int = World.count_of(backpack[index])
-		name.text = "%s%s  %d gold" % [World.ITEMS[kind]["name"], " ×%d" % count if count > 1 else "", price * count]
-		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(name)
+		item_label.text = "%s%s  %d gold" % [World.ITEMS[kind]["name"], " ×%d" % count if count > 1 else "", price * count]
+		item_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(item_label)
 		_button("Sell", true, func() -> void: game.sell_local(npc, index), row)
 	if materials > 0:
 		_button("Sell all materials  (+%d gold)" % materials, true, func() -> void: game.sell_local(npc, -1), rows)
@@ -341,7 +341,7 @@ func open_bank(npc: String) -> void:
 	var state: Dictionary = game.actors[game.self_id]["state"]
 	var gold: int = state.get("gold", 0)
 	var balance: int = state.get("bank", 0)
-	_label("%s, %s\n\"Your gold and goods are safe with any banker.\"" % [banker["name"], banker["place"]])
+	_label("%s, %s\n\"The only bank in the land: your gold and goods are safe here.\"" % [banker["name"], banker["place"]])
 	_label("Purse: %d gold    Bank: %d gold" % [gold, balance], Color("#ffcf6a"))
 	var row := HBoxContainer.new()
 	list.add_child(row)
@@ -409,7 +409,7 @@ func open_quests(npc: String) -> void:
 		_open_task(npc)
 		return
 	var keeper: Dictionary = World.QUEST_GIVERS[npc]
-	if World.chebyshev(actors[self_id]["state"]["cell"], keeper["cell"]) > World.TALK_RANGE:
+	if not World.in_talk_range(actors[self_id]["state"]["cell"], keeper["cell"]):
 		game.last_action_message = "Walk closer to %s." % keeper["name"]
 		return
 	for child: Node in list.get_children():

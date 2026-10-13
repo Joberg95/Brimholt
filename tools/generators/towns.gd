@@ -1,0 +1,144 @@
+extends SceneTree
+## Puts every town's vendor (and the one banker, in BANK_PLACE) inside a building of their own,
+## in the existing overworld scene, and removes bankers from other towns. Buildings are found
+## from the walls (game/data/buildings.gd); the patches below add the buildings a town lacks:
+## Cinder Crossing's shop and a second house, and Reedmere's bank. Each keeper stands at the back of their building, facing the door; the
+## game hangs a sign beside that door (World.SIGNS) and draws roofs over every building.
+##
+##   godot --headless --path . --script res://tools/generators/towns.gd
+##
+## tools/generators/make_map.gd applies the same painter to a freshly generated map. Running
+## it again changes nothing.
+
+const Buildings = preload("res://game/data/buildings.gd")
+## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
+## because its static map loading needs the scene this tool is editing.
+const TERRAINS: String = ".,~#T:=bdoODcCv^K"
+const SCENE_PATH: String = "res://game/maps/overworld.tscn"
+## The only town with a banker (and so the only bank and depot).
+const BANK_PLACE: String = "Reedmere"
+const TILE: int = 32
+## Terrain patches: top-left cell and rows; a space keeps the cell as it is.
+const PATCHES: Array = [
+	# Cinder Crossing's shop in the south-west corner of the town walls, door to the east.
+	[Vector2i(0, 11), [
+		"#######",
+		"#=====#",
+		"#=====#",
+		"#======",
+		"#=====#",
+		"#=====#",
+		"#######",
+	]],
+	# A house in Cinder Crossing's south-east corner (its bank before banking moved to Reedmere).
+	[Vector2i(17, 13), [
+		"##=####",
+		"#=====#",
+		"#=====#",
+		"#=====#",
+		"#######",
+	]],
+	# Reedmere's bank on the south side of the plaza, east of the coachman.
+	[Vector2i(148, 197), [
+		"##=##",
+		"#===#",
+		"#===#",
+		"#===#",
+		"#####",
+	]],
+]
+## Marker groups that must never end up inside a wall.
+const MARKER_GROUPS: Array[String] = ["Spawns", "Items", "Ferrymen", "QuestGivers", "DungeonEntrances", "MonsterSpawns"]
+
+
+func _initialize() -> void:
+	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var changed: int = apply(scene_root)
+	var error: Error = OK
+	if changed >= 0:
+		var packed := PackedScene.new()
+		packed.pack(scene_root)
+		error = ResourceSaver.save(packed, SCENE_PATH)
+	print("Painted the towns into %s: %d changes (%s)" % [SCENE_PATH, changed, error_string(error)])
+	scene_root.free()
+	quit(0 if error == OK and changed >= 0 else 1)
+
+
+## Paints the patches and moves the keepers in an overworld scene root; returns the number of
+## changed cells and markers, or -1 (with an error) when a town cannot be furnished.
+static func apply(scene_root: Node) -> int:
+	var layer: TileMapLayer = scene_root.get_node("Terrain")
+	var blocked: Dictionary = {}
+	for group: String in MARKER_GROUPS:
+		if scene_root.has_node(group):
+			for marker: Node2D in scene_root.get_node(group).get_children():
+				blocked[_cell_of(marker)] = String(marker.name)
+	var changed: int = 0
+	for patch: Array in PATCHES:
+		for y: int in patch[1].size():
+			var row: String = patch[1][y]
+			for x: int in row.length():
+				var cell: Vector2i = patch[0] + Vector2i(x, y)
+				if row[x] == " " or _terrain(layer, cell) == row[x]:
+					continue
+				if row[x] == "#" and blocked.has(cell):
+					push_error("Town patch would wall in %s at %s" % [blocked[cell], cell])
+					return -1
+				layer.set_cell(cell, 0, Vector2i(TERRAINS.find(row[x]), 0))
+				changed += 1
+	var terrain: Callable = func(cell: Vector2i) -> String: return _terrain(layer, cell)
+	var keepers: Array = []
+	if scene_root.has_node("Townsfolk"):
+		for keeper: Node2D in scene_root.get_node("Townsfolk").get_children():
+			if String(keeper.get("role")) == "banker" and String(keeper.get("place")) != BANK_PLACE:
+				keeper.get_parent().remove_child(keeper)
+				keeper.free()
+				changed += 1
+			else:
+				keepers.append(keeper)
+	var others: Dictionary = {}
+	for group: String in ["QuestGivers", "Ferrymen"]:
+		if scene_root.has_node(group):
+			for marker: Node2D in scene_root.get_node(group).get_children():
+				others[_cell_of(marker)] = true
+	for zone: Node2D in scene_root.get_node("Zones").get_children():
+		if not bool(zone.get("town")):
+			continue
+		var rect := Rect2i(_cell_of_corner(zone), zone.get("size_tiles"))
+		var free: Array = []
+		for building: Dictionary in Buildings.find(terrain, rect.grow(1)):
+			if not building["interior"].any(func(cell: Vector2i) -> bool: return _terrain(layer, cell) == "v" or others.has(cell)):
+				free.append(building)
+		free.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			return a["rect"].position.y < b["rect"].position.y or (a["rect"].position.y == b["rect"].position.y
+				and a["rect"].position.x < b["rect"].position.x))
+		var here: Array = keepers.filter(func(keeper: Node2D) -> bool: return rect.has_point(_cell_of(keeper)))
+		for keeper: Node2D in here:
+			if free.size() < here.size():
+				push_error("%s needs a free building for each of its keepers" % zone.get("zone_name"))
+				return -1
+			var building: Dictionary = free[0] if String(keeper.get("role")) == "vendor" else free[-1]
+			var door: Vector2i = building["doors"][0]
+			var outward: Vector2i = building["outward"][door]
+			var spot: Vector2i = door - outward
+			while building["interior"].has(spot - outward):
+				spot -= outward
+			var position := Vector2((Vector2(spot) + Vector2(0.5, 0.5)) * TILE)
+			if keeper.position != position or keeper.get("facing") != outward:
+				keeper.position = position
+				keeper.set("facing", outward)
+				changed += 1
+	return changed
+
+
+static func _terrain(layer: TileMapLayer, cell: Vector2i) -> String:
+	var coords: Vector2i = layer.get_cell_atlas_coords(cell)
+	return TERRAINS[coords.x] if coords.x >= 0 and coords.x < TERRAINS.length() else ""
+
+
+static func _cell_of(marker: Node2D) -> Vector2i:
+	return Vector2i((marker.position / TILE).floor())
+
+
+static func _cell_of_corner(zone: Node2D) -> Vector2i:
+	return Vector2i((zone.position / TILE).round())

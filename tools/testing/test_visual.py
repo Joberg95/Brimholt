@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 
 CAPTURES = (
+    ("visual-weapons.png", "15 hunting weapons: native and 2x icons, four facings, stand and both walk poses"),
+    ("visual-wardrobe.png", "Cape-free base, armor only, cape only, armor + cape; four facings and three poses each"),
     ("visual.png", "Equipped: four facings, gear layers, ground item, oblique walls"),
     ("visual-unequipped.png", "Unequipped: gear layers removed, items back in the backpack"),
     ("visual-forest.png", "Forest: trees drawn in depth order around a character"),
@@ -21,6 +23,15 @@ CAPTURES = (
     ("visual-isle.png", "Blackreed Isle: PvP zone banner, action bar, red minimap"),
     ("visual-map.png", "World map (M) with the PvP island"),
     ("visual-combat.png", "Combat: locked target, nameplates, health/mana bars, floating damage"),
+    ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
+    ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),
+    ("visual-roofs.png", "Ashford from the plaza: roofs over the houses, a hanging shop sign, no names through roofs"),
+    ("visual-shop-inside.png", "Inside Ashford's shop: its roof fades away and the merchant shows"),
+    ("visual-cellar.png", "Cinder cellar: entered by the town stairway; rats and the Rat King in a private copy"),
+    ("visual-mine.png", "Highmoor deep mine: cave rock walls and floor"),
+    ("visual-rain.png", "Rain at noon over Cinder Crossing: pixel drops, splashes, dimmer light"),
+    ("visual-rain-night.png", "Rain at night: lanterns light the wet street"),
+    ("visual-desert.png", "The Dunmere desert in a storm elsewhere: dry sand, cacti, and thorn scrub"),
     ("visual-hollow-gate.png", "The Hollow Reach: obsidian wall, gate, dusk soil, dead trees"),
     ("visual-hollow-throne.png", "The Hollow Sanctum: Vaelith on the obsidian throne room floor"),
     ("visual-night.png", "Night: darker world, the player's lantern, unlit names and UI"),

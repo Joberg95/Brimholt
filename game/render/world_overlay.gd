@@ -23,7 +23,7 @@ func _draw() -> void:
 	var font: Font = ThemeDB.fallback_font
 	for entry: Array in view.npc_names:
 		var width: float = font.get_string_size(entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
-		var at: Vector2 = entry[0] + Vector2(-width / 2.0, -SpriteArt.FRAME_ANCHOR.y + 6)
+		var at: Vector2 = entry[0] + Vector2(-width / 2.0, -SpriteArt.FRAME_ANCHOR.y + 10)
 		draw_string_outline(font, at, entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, SpriteArt.OUTLINE)
 		draw_string(font, at, entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, entry[2])
 
@@ -48,31 +48,31 @@ func _party_mark(id: int, state: Dictionary) -> String:
 ## Target square, nameplates, missiles, and floating numbers, drawn above the world.
 func _draw_overlays(area: Rect2i, time: float) -> void:
 	var target: int = game.own_target()
-	var view: Dictionary = game.creature_view(target)
-	if not view.is_empty():
-		var corner: Vector2 = view["visual"] * World.TILE_SIZE
+	var target_view: Dictionary = game.creature_view(target)
+	if not target_view.is_empty():
+		var corner: Vector2 = target_view["visual"] * World.TILE_SIZE
 		draw_rect(Rect2(corner + Vector2.ONE, Vector2.ONE * (World.TILE_SIZE - 2)), TARGET_COLOR, false, 2.0)
 	var shown := Rect2(Vector2(area.position) * World.TILE_SIZE, Vector2(area.size) * World.TILE_SIZE)
-	for id: int in game.monsters:
+	for id: int in game.monsters_in(area):
 		var monster: Dictionary = game.monsters[id]
 		var center: Vector2 = _center_of(monster)
-		if shown.has_point(center):
+		if shown.has_point(center) and not view.covered(Vector2i(monster["visual"].round())):
 			var definition: Dictionary = Monsters.MONSTERS.get(monster["state"]["kind"], {"name": "?", "size": 1.0})
 			var own_level: int = game.actors[game.self_id]["state"].get("level", 1) if game.actors.has(game.self_id) else 1
 			var title: String = "%s %d%s" % [definition["name"], monster["state"]["level"],
 				"  ENRAGED" if monster["state"].get("enraged", false) else ""]
 			SpriteArt.draw_nameplate(self, center, title,
 				monster["state"]["health"], monster["state"]["max_health"], definition["size"], "",
-				SpriteArt.danger_color(monster["state"]["level"], own_level))
+				SpriteArt.danger_color(monster["state"]["level"], own_level), "", definition.get("look", "") == "humanoid")
 	for id: int in game.actors:
 		var actor: Dictionary = game.actors[id]
 		var center: Vector2 = _center_of(actor)
-		if shown.has_point(center) and actor["state"].has("health"):
+		if shown.has_point(center) and actor["state"].has("health") and not view.covered(Vector2i(actor["visual"].round())):
 			var state: Dictionary = actor["state"]
 			var title: String = "%s %d" % [Balance.VOCATIONS.get(state.get("vocation", ""), {"name": "Player"})["name"],
 				state.get("level", 1)]
 			SpriteArt.draw_nameplate(self, center, title, state["health"], state["max_health"], 1.0, state.get("skull", ""),
-				Color.TRANSPARENT, _party_mark(id, state))
+				Color.TRANSPARENT, _party_mark(id, state), true)
 	var font: Font = ThemeDB.fallback_font
 	for effect: Dictionary in game.effects:
 		var age: float = time - effect["born"]

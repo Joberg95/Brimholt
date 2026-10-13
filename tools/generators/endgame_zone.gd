@@ -18,7 +18,7 @@ const ZONE_NAME: String = "The Hollow Reach"
 ## Perpetual violet gloom: the zone's light multiplies the time of day.
 const AMBIENT: Color = Color(0.58, 0.48, 0.78)
 ## Zone rectangle (tiles), including its outer wall, in the south-east corner of the map.
-const ORIGIN: Vector2i = Vector2i(700, 690)
+const ORIGIN: Vector2i = Vector2i(318, 312)
 const AREA: Rect2i = Rect2i(ORIGIN, Vector2i(58, 64))
 const GATE_Y: int = ORIGIN.y + 32
 ## The Hollow Sanctum: outer box, then three rooms along the corridor row GATE_Y.
@@ -44,13 +44,13 @@ const SPAWNS: Array = [
 
 
 func _initialize() -> void:
-	var root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
-	apply(root)
+	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	apply(scene_root)
 	var packed := PackedScene.new()
-	packed.pack(root)
+	packed.pack(scene_root)
 	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
 	print("Painted %s into %s (%s)" % [ZONE_NAME, SCENE_PATH, error_string(error)])
-	root.free()
+	scene_root.free()
 	quit(0 if error == OK else 1)
 
 
@@ -101,8 +101,8 @@ static func layout() -> Dictionary:
 
 
 ## Paints the zone into an overworld scene root (TileMapLayer "Terrain" plus marker nodes).
-static func apply(root: Node) -> void:
-	var layer: TileMapLayer = root.get_node("Terrain")
+static func apply(scene_root: Node) -> void:
+	var layer: TileMapLayer = scene_root.get_node("Terrain")
 	var source: TileSetAtlasSource = layer.tile_set.get_source(0)
 	for index: int in World.TERRAINS.length():
 		if not source.has_tile(Vector2i(index, 0)):
@@ -118,7 +118,7 @@ static func apply(root: Node) -> void:
 			var coords: Vector2i = layer.get_cell_atlas_coords(Vector2i(x, y))
 			if coords.x >= 0 and World.TERRAINS[coords.x] in World.TREES:
 				layer.set_cell(Vector2i(x, y), 0, Vector2i(World.TERRAINS.find("."), 0))
-	var spawns: Node = root.get_node("MonsterSpawns")
+	var spawns: Node = scene_root.get_node("MonsterSpawns")
 	for marker: Node in spawns.get_children():
 		if AREA.has_point(Vector2i((marker as Node2D).position / World.TILE_SIZE)):
 			spawns.remove_child(marker)
@@ -134,8 +134,8 @@ static func apply(root: Node) -> void:
 		marker.set("count", spawn[2])
 		marker.set("radius", spawn[3])
 		spawns.add_child(marker)
-		marker.owner = root
-	var zones: Node = root.get_node("Zones")
+		marker.owner = scene_root
+	var zones: Node = scene_root.get_node("Zones")
 	if zones.has_node("HollowReach"):
 		var old: Node = zones.get_node("HollowReach")
 		zones.remove_child(old)
@@ -152,4 +152,4 @@ static func apply(root: Node) -> void:
 	zone.set("min_level", 45)
 	zone.set("max_level", 50)
 	zones.add_child(zone)
-	zone.owner = root
+	zone.owner = scene_root

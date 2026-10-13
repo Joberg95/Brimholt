@@ -1,6 +1,7 @@
 extends SceneTree
 
 const World = preload("res://game/core/world.gd")
+const Combat = preload("res://game/core/combat.gd")
 const Items = preload("res://game/data/items.gd")
 ## The druid client drops its spare armor for the late-joining paladin to pick up and wear.
 const DROPPED: String = "moss_coat"
@@ -31,6 +32,9 @@ var saw_relic: bool = false
 var relic_at: float = -1.0
 var errand: String = ""
 var saw_task: bool = false
+var saw_dungeon: bool = false
+var hunting_weapon_given: bool = false
+var saw_hunting_weapon: bool = false
 var finishing: bool = false
 ## Persistence: whether the host has seen a character in the world.
 var had_player: bool = false
@@ -53,7 +57,8 @@ func _process(_delta: float) -> bool:
 	if game == null or finishing:
 		return false
 	var now: float = Time.get_ticks_msec() / 1000.0
-	if now - started > 20.0:
+	var deadline: float = 32.0 if role.begins_with("dedicated") else 20.0
+	if now - started > deadline:
 		fail("Timeout stage %d feedback='%s' peers=%s equipped=%s unequipped=%s late_move=%s drop=%s pickup=%s" % [
 			stage, game.last_action_message, game.actors.keys(),
 			saw_equipped, saw_unequipped, saw_late_move, saw_drop, saw_pickup,
@@ -282,9 +287,10 @@ func _late_tick(now: float) -> void:
 			if not _others_hide_backpacks() or state(game.self_id)["backpack"].slice(0, kit.size()) != kit:
 				fail("Late join backpack snapshot is wrong")
 				return
-			if game.monsters.size() != game.monsters.keys().filter(func(id: int) -> bool: return id < 0).size() \
-					or game.monsters.size() != World.MONSTER_SPAWNS.reduce(func(sum: int, spawn: Dictionary) -> int: return sum + spawn["count"], 0):
-				fail("Late join did not receive every monster")
+			var own_cell: Vector2i = state(game.self_id)["cell"]
+			if game.monsters.is_empty() or game.monsters.keys().any(func(id: int) -> bool:
+					return id >= 0 or Combat.distance(game.monsters[id]["state"]["cell"], own_cell) > game.INTEREST_RADIUS):
+				fail("Late join did not receive only its nearby monsters")
 				return
 			print("BRIMHOLT_LATE_SNAPSHOT_OK")
 			game.move_item_local({"type": "ground", "cell": Vector2i(8, 6)}, {"type": "backpack"})
@@ -375,21 +381,38 @@ func _dedicated_host_tick() -> void:
 			relic_at = game._now()
 		saw_relic = saw_relic or player["backpack"].has("cinderheart_bow")
 		saw_task = saw_task or player["tasks"].has("boar_cull")
-		# Test-only: carry the client to the vendor (hurt, to test potions), then the banker, then
+		# Test-only: carry the client to the vendor (hurt, to test potions), then Reedmere's banker, then
 		# Warden Brask, each once the client has finished its business with the previous one.
 		var next: String = ""
 		if errand.is_empty() and relic_at >= 0.0 and game._now() - relic_at > 1.5:
 			next = "cinder_vendor"
 		elif errand == "cinder_vendor" and player["backpack"].has("health_potion#2"):
-			next = "cinder_banker"
-		elif errand == "cinder_banker" and player["depot"].has("health_potion#2"):
+			next = "reedmere_banker"
+		elif errand == "reedmere_banker" and player["depot"].has("health_potion#2"):
 			next = "warden_brask"
+		elif errand == "warden_brask" and player["tasks"].has("boar_cull"):
+			next = "cinder_cellar"
+		saw_dungeon = saw_dungeon or World.dungeon_at(player["cell"]) == ["cinder_cellar", 0]
+		if saw_dungeon and World.OVERWORLD.has_point(player["cell"]) and not hunting_weapon_given:
+			var free: int = player["backpack"].find("")
+			if free < 0:
+				fail("No room for the hunting weapon fixture")
+				return
+			player["backpack"][free] = "alder_crook"
+			hunting_weapon_given = true
+			game._publish_actor(id)
+		saw_hunting_weapon = saw_hunting_weapon or player["equipment"].get("main_hand", "") == "alder_crook"
 		if not next.is_empty():
-			var cell: Vector2i = World.npc(next)["cell"]
-			for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
-				if World.walkable(cell + step):
-					cell += step
-					break
+			var cell: Vector2i = World.ENTRANCE_OF[next] if next == "cinder_cellar" else World.npc(next)["cell"]
+			var goal: Vector2i = cell
+			# A free tile beside the stairs, or in talking range on the keeper's side of a counter.
+			for distance: int in range(1, World.TALK_RANGE + 1):
+				for dy: int in range(-distance, distance + 1):
+					for dx: int in range(-distance, distance + 1):
+						var spot: Vector2i = goal + Vector2i(dx, dy)
+						if cell == goal and World.walkable(spot) and (next == "cinder_cellar"
+								and absi(dx) + absi(dy) == 1 or next != "cinder_cellar" and World.in_talk_range(spot, goal)):
+							cell = spot
 			player["cell"] = cell
 			player["from"] = cell
 			if next == "cinder_vendor":
@@ -398,7 +421,7 @@ func _dedicated_host_tick() -> void:
 			game._publish_actor(id)
 			errand = next
 	if saw_late_move and saw_drop and saw_pickup and saw_ring and saw_voyage and sparring != 0 and saw_relic \
-			and saw_task and not game.world.monsters.has(sparring) and game.actors.is_empty():
+			and saw_task and saw_dungeon and saw_hunting_weapon and not game.world.monsters.has(sparring) and game.actors.is_empty():
 		finish()
 
 
@@ -526,12 +549,12 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		25:
 			if state(own)["backpack"].has("health_potion#2") and state(own)["health"] > 1 \
-					and World.chebyshev(state(own)["cell"], World.npc("cinder_banker")["cell"]) <= World.TALK_RANGE:
-				game.bank_local("cinder_banker", "deposit", 10)
+					and World.chebyshev(state(own)["cell"], World.npc("reedmere_banker")["cell"]) <= World.TALK_RANGE:
+				game.bank_local("reedmere_banker", "deposit", 10)
 				advance()
 		26:
 			if state(own).get("bank", 0) == 10 and now - stage_since > 0.2:
-				game.request_bank.rpc_id(1, "cinder_banker", "withdraw", 999)
+				game.request_bank.rpc_id(1, "reedmere_banker", "withdraw", 999)
 				advance()
 		27:
 			if game.last_action_message == "You only have 10 gold in the bank":
@@ -544,6 +567,38 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		29:
 			if state(own)["tasks"].get("boar_cull", -1) == 0 and game.last_action_message.begins_with("Boar cull"):
+				advance()
+		30:
+			var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
+			if World.chebyshev(state(own)["cell"], stairway) == 1 and now - stage_since > 0.2:
+				game.move_local(stairway - state(own)["cell"])
+				advance()
+		31:
+			var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
+			if World.dungeon_at(state(own)["cell"]) == ["cinder_cellar", 0] and _only_dungeon_monsters(state(own)["cell"]) \
+					and now - stage_since > World.MOVE_SECONDS + 0.05:
+				game.move_local(Vector2i.LEFT)
+				advance()
+			elif now - stage_since > 4.0:
+				var cells: Array = game.monsters.values().map(func(monster: Dictionary) -> Vector2i: return monster["state"]["cell"])
+				fail("Stuck entering the cellar at %s (%s), message '%s', monsters %s" % [state(own)["cell"],
+					World.dungeon_at(state(own)["cell"]), game.last_action_message, cells])
+			elif World.chebyshev(state(own)["cell"], stairway) == 1 and now - stage_since > 0.5:
+				# The first step may hit the movement cooldown; try again.
+				game.move_local(stairway - state(own)["cell"])
+				stage_since = now
+		32:
+			if World.OVERWORLD.has_point(state(own)["cell"]) and game.last_action_message.contains("Cinder Crossing") \
+					and not _has_dungeon_monster() and state(own)["backpack"].has("alder_crook"):
+				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("alder_crook")},
+					{"type": "equipment", "slot": "main_hand"})
+				advance()
+		33:
+			if state(own)["equipment"].get("main_hand", "") == "alder_crook" and now - stage_since > World.ITEM_SECONDS + 0.05:
+				game.move_item_local({"type": "equipment", "slot": "main_hand"}, {"type": "backpack"})
+				advance()
+		34:
+			if not state(own)["equipment"].has("main_hand") and state(own)["backpack"].has("alder_crook"):
 				finish()
 
 
@@ -597,6 +652,23 @@ func _persist_return_tick(now: float) -> void:
 		1:
 			if now - stage_since > 2.5:
 				finish()
+
+
+func _only_dungeon_monsters(own_cell: Vector2i) -> bool:
+	if game.monsters.is_empty():
+		return false
+	for id: int in game.monsters:
+		var cell: Vector2i = game.monsters[id]["state"]["cell"]
+		if World.dungeon_at(cell) != World.dungeon_at(own_cell) or World.chebyshev(cell, own_cell) > game.INTEREST_RADIUS:
+			return false
+	return true
+
+
+func _has_dungeon_monster() -> bool:
+	for id: int in game.monsters:
+		if not World.dungeon_at(game.monsters[id]["state"]["cell"]).is_empty():
+			return true
+	return false
 
 
 func _loss_host_tick() -> void:

@@ -3,24 +3,34 @@ extends RefCounted
 const Balance = preload("res://game/data/balance.gd")
 const Items = preload("res://game/data/items.gd")
 const Quests = preload("res://game/data/quests.gd")
+const Dungeons = preload("res://game/data/dungeons.gd")
+const Buildings = preload("res://game/data/buildings.gd")
 
 const TILE_SIZE: int = 32
 const WORLD_NAME: String = "Cinder Crossing"
 ## The world is painted in Godot's TileMap editor; see docs/world-editing.md.
 const MAP_SCENE: String = "res://game/maps/overworld.tscn"
 ## Terrain characters: grass, dirt road, water, stone wall, tree, sand, cobblestone, pier/bridge,
-## and the Hollow Reach's dusk soil, obsidian floor, obsidian wall, and dead tree.
-const TERRAINS: String = ".,~#T:=bdoOD"
-const WALKABLE: String = ".,:=bdo"
-const LAND: String = ".,:=do"
+## the Hollow Reach's dusk soil, obsidian floor, obsidian wall, and dead tree, and the
+## dungeons' cave floor, cave wall, stairs down (a dungeon entrance), and stairs up (its exit),
+## and the desert's cacti and thorn scrub (on sand).
+const TERRAINS: String = ".,~#T:=bdoODcCv^K"
+const WALKABLE: String = ".,:=bdocv^"
+const LAND: String = ".,:=docv^"
 ## Drawn as oblique walls / as trees; both block movement and line of sight.
-const WALLS: String = "#O"
-const TREES: String = "TD"
+const WALLS: String = "#OC"
+const TREES: String = "TDK"
 ## Loaded from MAP_SCENE: terrain rows (" " for unpainted cells), spawn cells, starting
 ## ground items, and ferrymen {id: {name, place, cell, facing, routes: {id: fare}}}.
 static var ROWS: PackedStringArray
+## The same terrain as one byte per cell (row-major), for per-cell lookups: indexing ROWS copies
+## a whole row string, so terrain() reads GRID and returns a cached one-character string.
+static var GRID: PackedByteArray
+static var GRID_SIZE: Vector2i = Vector2i.ZERO
+static var _CHARS: Array[String] = []
 static var SPAWNS: Array[Vector2i] = []
 static var GROUND_ITEMS: Array = []
+static var _STARTING_CELLS: Dictionary = {}
 static var FERRYMEN: Dictionary = {}
 ## Quest NPCs by node name: name, place, cell, facing, services (["quests"]), and task (a
 ## Quests.TASKS id, or "" for the Relic keeper).
@@ -31,13 +41,35 @@ static var TOWNSFOLK: Dictionary = {}
 static var NPC_CELLS: Dictionary = {}
 ## Gameplay zones {name, rect (tiles), pvp, min_level, max_level}; the first match wins.
 static var ZONES: Array = []
-## Future monster spawns {monster, level, count, radius, cell}; not used in play yet.
+## Overworld monster spawns {monster, level, count, radius, cell}; Combat.populate fills them.
 static var MONSTER_SPAWNS: Array = []
+## Dungeon stairways down: cell -> dungeon id, and dungeon id -> cell.
+static var DUNGEON_ENTRANCES: Dictionary = {}
+static var ENTRANCE_OF: Dictionary = {}
+## The walkable world players reach on foot; dungeon copies lie right of it.
+static var OVERWORLD: Rect2i = Rect2i()
+## Town buildings (game/data/buildings.gd), found from the walls: {rect, interior, doors,
+## footprint, outward}. ROOF_AT maps each footprint cell to its building's index, ROOM_AT each
+## interior or doorway cell. Someone inside a building is only reached from inside it.
+static var BUILDINGS: Array = []
+static var ROOF_AT: Dictionary = {}
+static var ROOM_AT: Dictionary = {}
+## A sign hangs on the wall beside the door of each vendor's and banker's building:
+## {cell (that wall), outward (door direction), kind (the keeper's role)}.
+static var SIGNS: Array = []
+## Shop and bank furniture: cell -> kind (SpriteArt.FURNITURE). It blocks movement like an NPC.
+static var FURNITURE: Dictionary = {}
+## Furniture around a keeper, standing at the back of their building facing the door:
+## [steps toward the door, steps across, kind]. Pieces that would block the room are skipped.
+const FURNISHINGS: Dictionary = {
+	"vendor": [[1, 0, "counter_shop"], [0, 1, "shelf_potions"], [0, -1, "weapon_rack"], [0, 2, "barrel"], [0, -2, "crate"]],
+	"banker": [[1, 0, "counter_bank"], [0, 1, "shelf_books"], [0, -1, "strongbox"], [0, 2, "shelf_books"], [0, -2, "strongbox"]],
+}
 static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 const MAX_PLAYERS: int = 12
 const PORT: int = 1234
-const PROTOCOL: int = 7
+const PROTOCOL: int = 8
 const START_GOLD: int = 100
 ## Players must stand within this many tiles (in any direction) of a ferryman to sail.
 const TALK_RANGE: int = 2
@@ -62,9 +94,13 @@ const START_KITS: Dictionary = {
 ## Backpack slots without a pack; a worn pack adds its "slots", up to BACKPACK_MAX.
 const BACKPACK_SIZE: int = 8
 const BACKPACK_MAX: int = 20
-## Item depot slots, kept by every town banker (one depot per player, shared across towns).
+## Item depot slots, kept by the banker (one depot per player, at the one bank in Reedmere).
 const DEPOT_SIZE: int = 24
 const GROUND_STACK_MAX: int = 6
+## Ground stacks left alone this long decay (Tibia-style), so a long session does not pile up
+## every unlooted drop. Starting map items and bound items (relics) never decay.
+const GROUND_DECAY_SECONDS: float = 900.0
+const GROUND_SWEEP_SECONDS: float = 10.0
 ## Stackable items (materials, glowcaps, gold piles) share one backpack slot or ground entry,
 ## stored as "kind#count" (a plain "kind" is one). Equipment never stacks.
 const STACK_MAX: int = 100
@@ -74,6 +110,9 @@ var players: Dictionary = {}
 ## Live monsters by negative id; game/core/combat.gd owns their behaviour.
 var monsters: Dictionary = {}
 var ground: Dictionary = {}
+## Per ground cell: [when its stack last changed (as seen by a sweep), the stack it had then].
+var _ground_seen: Dictionary = {}
+var _next_ground_sweep: float = 0.0
 
 
 static func _static_init() -> void:
@@ -87,18 +126,23 @@ static func _static_init() -> void:
 			continue
 		for tile: int in source.get_tiles_count():
 			var coords: Vector2i = source.get_tile_id(tile)
-			var terrain: Variant = source.get_tile_data(coords, 0).get_custom_data("terrain")
-			if typeof(terrain) == TYPE_STRING and terrain.length() == 1 and terrain in TERRAINS:
-				lookup[Vector3i(source_id, coords.x, coords.y)] = terrain
+			var kind: Variant = source.get_tile_data(coords, 0).get_custom_data("terrain")
+			if typeof(kind) == TYPE_STRING and kind.length() == 1 and kind in TERRAINS:
+				lookup[Vector3i(source_id, coords.x, coords.y)] = kind
 	var size: Vector2i = layer.get_used_rect().end
 	var grid := PackedByteArray()
 	grid.resize(size.x * size.y)
 	grid.fill(32)
 	for cell: Vector2i in layer.get_used_cells():
 		var coords: Vector2i = layer.get_cell_atlas_coords(cell)
-		var terrain: String = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), " ")
+		var kind: String = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), " ")
 		if cell.x >= 0 and cell.y >= 0:
-			grid[cell.y * size.x + cell.x] = terrain.unicode_at(0)
+			grid[cell.y * size.x + cell.x] = kind.unicode_at(0)
+	GRID = grid
+	GRID_SIZE = size
+	_CHARS.clear()
+	for code: int in 256:
+		_CHARS.append(String.chr(code) if code > 0 else "")
 	ROWS = PackedStringArray()
 	for y: int in size.y:
 		ROWS.append(grid.slice(y * size.x, (y + 1) * size.x).get_string_from_ascii())
@@ -106,6 +150,7 @@ static func _static_init() -> void:
 		SPAWNS.append(_cell_of(marker))
 	for marker: Node2D in scene.get_node("Items").get_children():
 		GROUND_ITEMS.append([_cell_of(marker), String(marker.get("item"))])
+		_STARTING_CELLS[_cell_of(marker)] = true
 	for marker: Node2D in scene.get_node("Ferrymen").get_children():
 		var routes: Dictionary = {}
 		var fares: Dictionary = marker.get("routes")
@@ -144,6 +189,21 @@ static func _static_init() -> void:
 			})
 			if marker.get("ambient") is Color and marker.get("ambient") != Color.WHITE:
 				ZONES[-1]["ambient"] = marker.get("ambient")
+	if scene.has_node("DungeonEntrances"):
+		for marker: Node2D in scene.get_node("DungeonEntrances").get_children():
+			var dungeon: String = String(marker.get("dungeon"))
+			if Dungeons.DUNGEONS.has(dungeon):
+				DUNGEON_ENTRANCES[_cell_of(marker)] = dungeon
+				ENTRANCE_OF[dungeon] = _cell_of(marker)
+	# Every dungeon copy is an underground zone: a fixed dim light, and monsters stay inside.
+	for dungeon: String in Dungeons.DUNGEONS:
+		var definition: Dictionary = Dungeons.DUNGEONS[dungeon]
+		for copy: int in definition["copies"]:
+			ZONES.append({
+				"name": definition["name"], "rect": Dungeons.rect(dungeon, copy), "pvp": false, "full_loot": false,
+				"town": false, "underground": true, "ambient": definition["ambient"], "dungeon": dungeon, "copy": copy,
+				"min_level": definition["min_level"], "max_level": definition["max_level"],
+			})
 	if scene.has_node("MonsterSpawns"):
 		for marker: Node2D in scene.get_node("MonsterSpawns").get_children():
 			MONSTER_SPAWNS.append({
@@ -151,8 +211,97 @@ static func _static_init() -> void:
 				"count": int(marker.get("count")), "radius": int(marker.get("radius")), "cell": _cell_of(marker),
 			})
 	scene.free()
+	_find_buildings()
+	OVERWORLD = Rect2i(0, 0, mini(size.x, Dungeons.BAND_X - Dungeons.COPY_GAP), size.y)
 	MAP_HASH = ("".join(ROWS) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK) + str(ZONES)
-		+ str(MONSTER_SPAWNS)).sha256_text()
+		+ str(MONSTER_SPAWNS) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS)).sha256_text()
+
+
+## Buildings in town zones, and the signs of the shops and banks among them.
+static func _find_buildings() -> void:
+	var known: Dictionary = {}
+	for zone: Dictionary in ZONES:
+		if not zone["town"]:
+			continue
+		for building: Dictionary in Buildings.find(terrain, zone["rect"].grow(1)):
+			if known.has(building["rect"]):
+				continue
+			known[building["rect"]] = true
+			var index: int = BUILDINGS.size()
+			BUILDINGS.append(building)
+			for cell: Vector2i in building["footprint"]:
+				ROOF_AT[cell] = index
+			for cell: Vector2i in building["interior"] + building["doors"]:
+				ROOM_AT[cell] = index
+	var ids: Array = TOWNSFOLK.keys()
+	ids.sort()
+	for id: String in ids:
+		var keeper: Dictionary = TOWNSFOLK[id]
+		if not ROOM_AT.has(keeper["cell"]):
+			continue
+		var building: Dictionary = BUILDINGS[ROOM_AT[keeper["cell"]]]
+		var door: Vector2i = building["doors"][0]
+		var outward: Vector2i = building["outward"][door]
+		var across := Vector2i(absi(outward.y), absi(outward.x))
+		for side: Vector2i in [across, -across] if outward.y != 0 else [-across, across]:
+			if terrain(door + side) in WALLS:
+				SIGNS.append({"cell": door + side, "outward": outward, "kind": keeper["role"]})
+				break
+		_furnish(building, keeper)
+
+
+## Places a keeper's furniture, skipping any piece on a marker or one that would cut a room
+## cell (or every cell in talking range of the keeper) off from the entrance.
+static func _furnish(building: Dictionary, keeper: Dictionary) -> void:
+	var toward: Vector2i = keeper["facing"]
+	var across := Vector2i(absi(toward.y), absi(toward.x))
+	var door: Vector2i = building["doors"][0]
+	var entrance: Vector2i = door - building["outward"][door]
+	var taken: Dictionary = {}
+	for spawn: Vector2i in SPAWNS:
+		taken[spawn] = true
+	for entry: Array in GROUND_ITEMS:
+		taken[entry[0]] = true
+	for piece: Array in FURNISHINGS.get(keeper["role"], []):
+		var cell: Vector2i = keeper["cell"] + toward * int(piece[0]) + across * int(piece[1])
+		if cell == entrance or taken.has(cell) or NPC_CELLS.has(cell) or FURNITURE.has(cell) \
+				or not building["interior"].has(cell) or terrain(cell) != "=":
+			continue
+		FURNITURE[cell] = piece[2]
+		if not _room_open(building, entrance, keeper["cell"]):
+			FURNITURE.erase(cell)
+
+
+static func _room_open(building: Dictionary, entrance: Vector2i, keeper: Vector2i) -> bool:
+	var reached: Dictionary = {entrance: true}
+	var queue: Array[Vector2i] = [entrance]
+	var talk: bool = false
+	while not queue.is_empty():
+		var cell: Vector2i = queue.pop_back()
+		talk = talk or chebyshev(cell, keeper) <= TALK_RANGE
+		for side: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+			var next: Vector2i = cell + side
+			if not reached.has(next) and building["interior"].has(next) and walkable(next):
+				reached[next] = true
+				queue.append(next)
+	for cell: Vector2i in building["interior"]:
+		if walkable(cell) and not reached.has(cell):
+			return false
+	return talk
+
+
+## Whether `cell` and `other` are on the same side of every building wall: both outside, or
+## both inside (or in the doorway of) the same building.
+static func same_room(cell: Vector2i, other: Vector2i) -> bool:
+	return ROOM_AT.get(cell, -1) == ROOM_AT.get(other, -1)
+
+
+## The town with the (one) bank and depot, or "".
+static func bank_place() -> String:
+	for id: String in TOWNSFOLK:
+		if TOWNSFOLK[id]["role"] == "banker":
+			return TOWNSFOLK[id]["place"]
+	return ""
 
 
 ## A ferryman, quest giver, vendor, or banker by id, or {}.
@@ -164,7 +313,7 @@ static func npc(id: String) -> Dictionary:
 static func npc_near(cell: Vector2i, service: String) -> String:
 	for group: Dictionary in [FERRYMEN, QUEST_GIVERS, TOWNSFOLK]:
 		for id: String in group:
-			if service in group[id]["services"] and chebyshev(cell, group[id]["cell"]) <= TALK_RANGE:
+			if service in group[id]["services"] and in_talk_range(cell, group[id]["cell"]):
 				return id
 	return ""
 
@@ -173,7 +322,12 @@ static func npc_near(cell: Vector2i, service: String) -> String:
 static func serves(npc_id: Variant, service: String, cell: Vector2i) -> bool:
 	if typeof(npc_id) != TYPE_STRING or not service in npc(npc_id).get("services", []):
 		return false
-	return chebyshev(cell, npc(npc_id)["cell"]) <= TALK_RANGE
+	return in_talk_range(cell, npc(npc_id)["cell"])
+
+
+## Within TALK_RANGE of an NPC and on the same side of any building wall.
+static func in_talk_range(cell: Vector2i, npc_cell: Vector2i) -> bool:
+	return chebyshev(cell, npc_cell) <= TALK_RANGE and same_room(cell, npc_cell)
 
 
 ## Relics and packs are bound to whoever earned them: never dropped, traded, or lost on death.
@@ -216,6 +370,14 @@ static func stack_onto(stack: Array, entry: String) -> bool:
 	return true
 
 
+## The dungeon copy containing a cell as [dungeon id, copy index], or [] in the overworld.
+static func dungeon_at(cell: Vector2i) -> Array:
+	if OVERWORLD.has_point(cell):
+		return []
+	var zone: Dictionary = zone_at(cell)
+	return [zone["dungeon"], zone["copy"]] if zone.has("dungeon") else []
+
+
 static func zone_at(cell: Vector2i) -> Dictionary:
 	for zone: Dictionary in ZONES:
 		if zone["rect"].has_point(cell):
@@ -228,17 +390,17 @@ static func _cell_of(marker: Node2D) -> Vector2i:
 
 
 static func width() -> int:
-	return ROWS[0].length() if not ROWS.is_empty() else 0
+	return GRID_SIZE.x
 
 
 static func height() -> int:
-	return ROWS.size()
+	return GRID_SIZE.y
 
 
 static func terrain(cell: Vector2i) -> String:
-	if cell.x < 0 or cell.y < 0 or cell.y >= ROWS.size() or cell.x >= ROWS[cell.y].length():
+	if cell.x < 0 or cell.y < 0 or cell.x >= GRID_SIZE.x or cell.y >= GRID_SIZE.y:
 		return ""
-	return ROWS[cell.y][cell.x]
+	return _CHARS[GRID[cell.y * GRID_SIZE.x + cell.x]]
 
 
 func _init() -> void:
@@ -251,7 +413,7 @@ func _init() -> void:
 
 static func walkable(cell: Vector2i) -> bool:
 	var tile: String = terrain(cell)
-	return not tile.is_empty() and tile != " " and tile in WALKABLE and not NPC_CELLS.has(cell)
+	return not tile.is_empty() and tile != " " and tile in WALKABLE and not NPC_CELLS.has(cell) and not FURNITURE.has(cell)
 
 
 static func signature() -> String:
@@ -383,6 +545,28 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 
 func remove_player(id: int) -> void:
 	players.erase(id)
+
+
+## Removes ground stacks unchanged for GROUND_DECAY_SECONDS, checking every GROUND_SWEEP_SECONDS.
+## A stack's timer restarts whenever a sweep finds it changed. Returns ground events.
+func decay_ground(now: float) -> Array:
+	if now < _next_ground_sweep:
+		return []
+	_next_ground_sweep = now + GROUND_SWEEP_SECONDS
+	var decayed: Array[Vector2i] = []
+	for cell: Vector2i in _ground_seen.keys():
+		if not ground.has(cell):
+			_ground_seen.erase(cell)
+	for cell: Vector2i in ground.keys():
+		var stack: Array = ground[cell]
+		var seen: Array = _ground_seen.get(cell, [])
+		if seen.is_empty() or seen[1] != stack:
+			_ground_seen[cell] = [now, stack.duplicate()]
+		elif now - seen[0] >= GROUND_DECAY_SECONDS and not _STARTING_CELLS.has(cell) and not stack.any(bound):
+			ground.erase(cell)
+			_ground_seen.erase(cell)
+			decayed.append(cell)
+	return [{"kind": "ground", "cells": decayed}] if not decayed.is_empty() else []
 
 
 ## Public state is visible to every peer; the backpack is only exported to its owner.
@@ -529,7 +713,7 @@ func move_item(id: int, source_value: Variant, target_value: Variant, now: float
 		if source["type"] not in ["backpack", "depot"] or target["type"] not in ["backpack", "depot"]:
 			return _item_error("Move items to and from your depot through your backpack")
 		if npc_near(player["cell"], "bank").is_empty():
-			return _item_error("Your depot is kept by the town bankers")
+			return _item_error("Your depot is kept at the bank in %s" % bank_place())
 	var entry: String = _item_at(player, source)
 	if entry.is_empty():
 		return _item_error("There is no item there")
@@ -723,7 +907,7 @@ func travel(id: int, ferryman: Variant, destination: Variant, now: float) -> Dic
 	if typeof(destination) != TYPE_STRING or not routes.has(destination) or not FERRYMEN.has(destination):
 		return {"ok": false, "reason": "That ferryman does not sail there"}
 	var player: Dictionary = players[id]
-	if chebyshev(player["cell"], FERRYMEN[ferryman]["cell"]) > TALK_RANGE:
+	if not in_talk_range(player["cell"], FERRYMEN[ferryman]["cell"]):
 		return {"ok": false, "reason": "Walk closer to the ferryman"}
 	if now < player["next_move"]:
 		return {"ok": false, "reason": "Stand still to board"}

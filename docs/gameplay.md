@@ -60,13 +60,42 @@ for three, and ×2 for all four.
 ## Loot
 
 Each monster has a loot table in `game/data/monsters.gd` (`Monsters.LOOT`): every `[item,
-chance]` row rolls independently. Rows are a material unique to the monster (vole tails,
+chance]` row rolls independently. Rows include materials unique to the monster (vole tails,
 toad slime, boar tusks, ... warden crests; 20–50% chance), which vendors will buy for its
 `value`. On top, gold piles drop as one stack (one pile per 10 levels plus a 60% chance of
 one more; elites and bosses +3), and a piece of **tiered gear** from the monster's level tier (4% from normal
 monsters, 25% from elites; 30% of those come from the tier below). Loot spills onto nearby
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
 needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
+
+### Hunting weapons
+
+Fifteen additional weapons are **source-specific drops**, not shop stock or additions to the
+generic tier pool. Existing equipment remains available. They use the same tier/vocation
+attack budget as the regular weapon at that level: these are visual alternatives to collect,
+not extra damage types or a new combat system. They can be equipped, sold, stored and saved
+normally; none is a glowing or bound relic. Tooltips name their hunting sources.
+
+Each chance below is an independent roll per kill, in addition to normal materials, gold and
+generic gear. A monster must be at least the weapon's required level for that roll to award it.
+
+| Weapon | Level | Vocation | Source and chance |
+| --- | ---: | --- | --- |
+| Quarry handhammer | 1 | Knight | Giant rat 2%; Rat King 12% |
+| Watchman's shortsword | 5 | Knight | Road bandit 3.5% |
+| Burrow falchion | 5 | Knight | Rat King 18% |
+| Poacher's flatbow | 10 | Paladin | Grey wolf 2.5% |
+| Alder crook | 10 | Druid | Bog lurker 3.5% |
+| Ashford arming sword | 15 | Knight | Crypt skeleton 3.5% |
+| Reedsteel sabre | 20 | Knight | Outlaw archer 2.5% |
+| Ridgewind recurve | 20 | Paladin | Outlaw archer 4% |
+| Reliquary focus | 20 | Sorcerer | Abbot Morrow 12% |
+| Stonebreak pickhammer | 25 | Knight | Stone golem 3.5% |
+| Mourning estoc | 25 | Knight | Abbot Morrow 12% |
+| Cinder spindle | 30 | Sorcerer | Cinder wraith 3.5% |
+| Duskroot branch | 35 | Druid | Mire stalker 3.5% |
+| Forgemaw arbalest | 40 | Paladin | Forgemaw 14% |
+| Sanctum warhammer | 45 | Knight | Obsidian golem 5.5% |
 
 ## Death and skulls
 
@@ -95,9 +124,15 @@ There is no typed dialogue: right-click a person to open their menu and pick an 
 Ferrymen and coachmen offer **Travel**, vendors **Trade**, bankers **Bank**, and quest givers
 (gold names) **Quests**. Stand within 2 tiles; a dialog closes when you walk away.
 
-## Vendors, potions, and bankers
+## Vendors, potions, and the bank
 
-Every town has a vendor and a banker on its plaza (green and pale blue on the maps).
+Every town has a vendor (green on the maps) in a furnished shop. There is only **one bank**:
+Banker Orrin in **Reedmere** (pale blue on the maps), the lakeside hub with the coach station
+and the ferry to Blackreed Isle. Plan trips to deposit gold and store gear there. A hanging
+sign beside each door shows what is inside: a flask and a sword for the shop, a coin stack for
+the bank. Step inside to deal with them; you cannot trade or bank through
+a wall. Town buildings have roofs that hide whoever is inside; the roof of the building you
+stand in fades away while you are there.
 
 **Vendors** sell health and mana potions (20 gold each, in ones or tens) and levelling gear:
 the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your vocation.
@@ -110,7 +145,7 @@ for a quarter of its price; they never buy potions, relics, or packs.
 potion 25% of your maximum mana; potions share a 1-second cooldown and are refused at full.
 Right-click one in the backpack, or press Q (health) or E (mana) to drink the first one.
 
-**Bankers** keep your gold and an item depot, the same at every banker in the world. Deposit
+**The banker** keeps your gold and an item depot. Deposit
 or withdraw any amount; banked gold and depot items are never lost on death. The depot has
 24 slots: drag items between it and your backpack, or right-click (backpack items go into the
 depot while the bank dialog is open, depot items come back). Stacks merge as usual. Items
@@ -133,7 +168,12 @@ drop, or get lost on death. Backpack slots beyond your pack are shown dark and l
 
 ## The world, towns, and travel
 
-The world is 768×768 tiles: walking straight across takes about three and a half minutes.
+The sky follows a 40-minute day and night and changing weather: clear, overcast, rain, and
+thunderstorms with lightning, the same for everyone in the session. Weather is only for looks.
+It never rains underground or in the desert.
+
+The overworld is 384×384 tiles: walking straight across takes about a minute and three
+quarters. Monster camps are dense (about 600 monsters), so levelling is close to town.
 **Cinder Crossing**, the starting town, sits in the north-west corner with gates to the east
 and south. A sea runs down the whole western edge with two ports: **Cinder Landing** at the
 top and **Lastlight** at the bottom, joined by one ferry. In the middle of the world lies a
@@ -160,6 +200,26 @@ tiles (Cinder Crossing to Reedmere is about 45), the coastal ferry from top to b
 65, and the island crossing 40 each way. Monsters grow from level 1-4 around Cinder
 Crossing to level 45 in the far east and south.
 
+## Instanced dungeons
+
+Some town buildings hold stairs down (orange on the world map). Step on them to enter a
+private copy of that dungeon for you and your party; the party leader's copy is shared by
+everyone in the party. Stairs up lead back beside the town stairway. A copy runs its monsters
+only while players are inside, and resets 60 seconds after the last player leaves: monsters
+come back and items left on its floor are gone. If every copy is in use, the stairway says so
+and leaves you in town.
+
+| Dungeon | Entrance | Levels | Monsters | Champion |
+| --- | --- | --- | --- | --- |
+| Cinder cellar | Cinder Crossing, north-east house | 3–9 | sewer rats, giant rats | The Rat King |
+| Ashford crypt | Ashford, south-west house | 19–25 | crypt skeletons, grave ghouls | Abbot Morrow |
+| Highmoor deep mine | Highmoor, north-east house | 33–40 | cave crawlers, ember golems | Forgemaw |
+
+Champions have ten times a normal monster's health, hit 1.8 times as hard, give 25 times the
+experience, and always drop gear of their tier plus a valuable trophy material. Dungeon copies
+are separate spaces: players and monsters in a copy cannot fight anyone outside it, even if
+the copy is close to the overworld on the host's map.
+
 ## Inventory
 
 The right-hand panel shows a Tibia-style paperdoll with ten slots (necklace, helmet, pack /
@@ -169,7 +229,7 @@ for everyone, plus a Copper blade and Oak buckler (Knight), a Willow shortbow an
 buckler (Paladin), a Kindling wand and Tattered primer (Sorcerer), or a Sapling rod and
 Tattered primer (Druid). Tier-5 gear for every vocation lies around Cinder Crossing. Rings
 fit either ring slot; right-clicking a ring fills an empty ring slot first. Helmets, capes,
-armor, and both hands are drawn on the character (a cape replaces your tinted cloak);
+armor, and both hands are drawn on the character (a cape appears only when equipped);
 rings, amulets, and charms are too small to show. Items can be dropped on any walkable
 tile, stacking up to six per tile, and the top item is picked up. Ground tiles must be
 your own tile or one of the eight around you.
@@ -179,7 +239,9 @@ free space, stack limit, and a 150 ms item cooldown. Dragging onto an occupied s
 items when both fit; a worn item displaced from the ground goes back to that tile.
 Equipped items are visible to everyone; backpack contents are sent only to their
 owner. Late joiners receive ground items in the snapshot. Items carried by a
-player who leaves disappear with them; ground items remain until the host stops.
+player who leaves disappear with them. Ground stacks left untouched for 15 minutes decay
+(any change to a stack restarts its timer); the map's starting items and bound relics never
+decay, and nothing on the ground survives a host restart.
 The backpack is flat: there are no nested containers or player trading.
 
 **Stacking.** Items without an equipment slot (monster materials, glowcaps, potions, gold piles)
@@ -189,6 +251,11 @@ with room, or uses a free slot. Dragging onto a matching stack merges; dropping 
 ground merges with a matching top entry (even on a tile already holding six entries). A
 stack always moves whole; there is no splitting yet. Loot and death drops merge the same
 way, and a dead player's purse becomes one gold stack. Equipment never stacks.
+
+Hover an item for its tooltip: wearable gear shows its rarity, from **Common** (tiers 1 and 5)
+through **Uncommon** (10, 15), **Rare** (20, 25), and **Epic** (30, 35) to **Legendary** (40, 45),
+with relics as **Relic**. The name and the tooltip's frame take the rarity's colour. Gear you
+cannot use yet is tinted red in its slot.
 
 ## Gear tiers
 

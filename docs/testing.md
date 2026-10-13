@@ -5,11 +5,13 @@ Run these through `make` (see `make help`) or directly. Every check uses Godot 4
 | Command | What it runs | Time |
 | --- | --- | --- |
 | `make import` | Headless import; parses every script and resource | ~10 s |
+| `make lint` | `tools/testing/lint.gd`: parses every script with the strict warnings in `project.godot` | ~5 s |
 | `make test-unit` | `tests/unit/rules_test.gd`: deterministic rule checks | ~5 s |
 | `make test-lan` | `tools/testing/test_lan.py`: five real ENet scenarios | ~1 min |
-| `make test` | Both of the above | ~1 min |
+| `make test` | Lint, unit, and LAN | ~1 min |
 | `make test-visual` | `tools/testing/test_visual.py`: offscreen graphical checks, `.tools/visual-report.html` | ~30 s |
-| `make check` | Import, unit, LAN, and visual | ~2 min |
+| `make soak` | `tests/integration/soak_test.gd`: busy hosted session, fails on growth (memory, objects, nodes, pools) | ~1 min |
+| `make check` | Import, lint, unit, LAN, visual, and soak | ~3 min |
 | `make playtest` | `tools/testing/playtest.py`: two-bot playthrough, `.tools/playtest/report.html` | ~5 min |
 
 Without `make`:
@@ -27,6 +29,27 @@ Tests live by kind: `tests/unit/` (pure rules, no networking or rendering),
 (offscreen rendering). The Python runners in `tools/testing/` start and supervise the
 Godot processes and write the reports.
 
+## Lint
+
+`project.godot` treats these GDScript warnings as errors: untyped declarations, unused
+variables, constants, parameters, private members, and signals, shadowing (locals, members,
+and base-class properties such as `name`, `owner`, `visible`), unreachable code and patterns,
+standalone expressions and ternaries, confusable local declarations, narrowing conversions,
+redundant awaits, and constant asserts. Prefix an intentionally unused parameter with `_`.
+The "unsafe" Variant warnings stay off: game state is dictionaries by design. `make lint`
+parses every script under `game/`, `tests/`, and `tools/`, so a file nothing loads still
+fails the check.
+
+## Soak
+
+`make soak` hosts a game offscreen (no saves) for 36 rounds. Each round moves the player to a
+monster camp or town, kills nearby monsters (loot spills, effects fire, respawns queue), drops
+a junk stack, and jumps the clock two minutes (`main.clock_skew`). It samples object, node,
+orphan-node, and static-memory counts plus pool sizes. After a warm-up third, the last third may
+not exceed the middle third by more than 3%. Orphan nodes, a light pool over its cap, ground
+stacks that never decay, or more monsters than spawn slots also fail it. Run it after changing
+anything that creates nodes, caches, or per-player/per-monster state.
+
 ## Unit rules
 
 The rules checks cover movement, reservations, collision, spawns, equipment slots and
@@ -34,7 +57,7 @@ ring swaps, item stats, the balance anchors and curves, sprite sheet layout and 
 and inventory moves (malformed locations, reach, slot types, swaps, full backpack,
 stack limit, cooldown boundary, and backpack privacy), item stacking (merging on pickup,
 drag, and drop, the 100-item limit and overflow, gold stacks, bound checks), town services
-(a vendor and banker in every town, stock and prices, buying, selling, and bad requests, bank
+(a vendor in every town and the one banker in Reedmere, stock and prices, buying, selling, and bad requests, bank
 deposits and withdrawals, the shared depot and its banker range, what survives death, hunting
 task credit and turn-in, pack upgrades and locked backpack slots, potions and their cooldown), and saved characters (identity tokens and profiles, a full save and
 restore including time-relative skull timers, `.bak` backups, refusing edited, swapped,
@@ -69,8 +92,21 @@ and reachable on foot from Cinder Crossing, obsidian blocking movement and sight
 loot on death inside it while relics stay and other zones keep the 10% rule), boss raid
 mechanics (engage warning, pulse timing, radius, and damage, wound stacks and their expiry,
 Challenge swaps, enrage time and damage, and the reset when the raid leaves), and the
-768×768 world (a single top-to-bottom coastal ferry, coach stations linking every town,
-towns as safe zones without spawns and far from the Hollow Reach).
+384×384 overworld (a single top-to-bottom coastal ferry, coach stations linking every town,
+towns as safe zones without spawns and away from the Hollow Reach, and more than 550 monsters),
+instanced dungeons (stairways in towns, copies outside the overworld, layouts with one arrival,
+exit, and champion, private and party-shared copies, a full dungeon, exits, delayed reset of
+monsters and items, return to a stairway after a restart, separate spaces), monster sleep, and climate (desert
+painter parity with the world terrains, cactus scrub blocks, no grass or trees left in the
+desert core, spawns and items still walkable, and weather that is deterministic, smooth,
+within range, reaches every kind, flashes only in storms, and is absent underground and dry
+in the desert), long-session safety (ground decay timing, restarts on change, rate limit, and
+exemptions for starting items and relics; the client spatial index; monsters closing in on a
+player in one tick never sharing a tile), and buildings (door and room detection, the town painter is a no-op on the
+map, two or more buildings per town, furniture inside keepers' buildings that blocks without
+cutting rooms off, rarity grades (Common to Legendary by tier, relics apart, none for potions or packs), every vendor and the banker inside a building of their own
+facing the door with a matching sign beside it, open rooms and doors, and no trading or banking
+through a wall).
 
 ## LAN integration
 
@@ -94,7 +130,11 @@ client is refused Morvain's Tidebreaker, claims the Cinderheart bow, and cannot 
 The server then carries the client (hurt, with 200 extra gold) to the Cinder Crossing
 vendor, banker, and Warden Brask: the client is refused an unstocked relic and the sale of
 its bound bow, buys three health potions, drinks one, deposits gold, is refused an
-overdraft, moves the potions into its depot, and accepts the boar task, all as RPCs.
+overdraft, moves the potions into its depot, and accepts the boar task, all as RPCs. Then it
+steps onto the cellar stairway, must receive only nearby monsters from its own copy, steps on
+the stairs up, and must forget the copy's monsters back in town. Clients receive monsters and
+combat effects only within 24 tiles in the same space; the late joiner checks it gets nearby
+monsters only.
 `--persistence` gives a dedicated host a temporary save folder: a druid joins with a fixed
 identity, steps off its spawn, equips its weapon, and leaves; the host process is restarted on
 the same folder; the same identity rejoins asking for a knight and must get its druid back on
@@ -105,13 +145,39 @@ Integration tests and the visual check never use your real saves or identity: ho
 clearing stale client state. `--occupied-port` checks an explicit hosting error
 and exit status 1 while another socket holds the port.
 
-Each peer has a 20-second deadline; multiplayer scenarios have a 30-second outer
+Each peer has a 20-second deadline (32 seconds in the longer dedicated-server scenario); multiplayer scenarios have a 30-second outer
 deadline. The occupied-port check has a 10-second deadline. The harness stops only
 its own processes and fails on unexpected Godot errors; only the exact expected
 disconnect message is accepted in the host-loss scenario. Inspect headless editor
 output for script/resource errors, not just its exit status.
 
 ## Visual
+
+Roof captures: `visual-roofs.png` (Ashford's shop from the plaza: the roof hides the merchant
+and their name; the sign hangs beside the door) and `visual-shop-inside.png` (inside, the roof
+has faded and the merchant shows).
+
+Weather and desert captures: `visual-rain.png` (rain draws drops and dims the light at noon),
+`visual-rain-night.png` (night rain is darker; carried lights still show), and
+`visual-desert.png` (a storm leaves the desert dry; cacti stand on sand).
+
+The weapon study (`visual-weapons.png`) renders all 15 hunting additions as native/2x icons
+and in four facings with stand/step-A/step-B poses (180 worn frames). Unit checks cover the
+five-column sheets, the wind-up then strike timing, and that a swing turns only the drawn pose;
+`visual-swing.png` shows a sword strike, and the frames before, during, and after must differ.
+`visual-tooltip.png` shows an item tooltip whose name and frame carry the rarity colour. Each must differ from
+the empty-hand render. Unit tests check all old and new weapon icon bounds and colours,
+unique hunting silhouettes, tier-derived stats, equip/unequip and vocation/level rejection,
+save eligibility, exclusion from shop stock and generic rolls, real source spawns, seeded
+drop frequencies, and below-tier loot rejection. The dedicated ENet scenario equips and
+unequips an Alder crook granted by its server fixture.
+
+The isolated wardrobe capture (`visual-wardrobe.png`) compares no gear, armour only,
+cape only, and armour plus cape in all four facings and all three animation poses.
+Pixels outside the base body/cloth must be background when the cape slot is empty;
+equipping a cape must change each pose. Unit checks also require a 33–37-pixel opaque
+base-character height, stable foot anchors, and nonempty, unclipped frames for every
+worn item.
 
 The graphical check renders the game into an offscreen buffer; Godot only opens a
 64×64 borderless window in the top-left corner, so nothing flashes over your work; it
@@ -132,7 +198,10 @@ player, a relic on the ground, Morvain, and Kharzul (`visual-relics.png`). Then 
 Cinder Crossing vendor's Trade window from the real menu, presses Buy 10 on health potions
 (`visual-trade.png`), drinks one with the potion key, opens the banker's Bank window,
 right-clicks the potions into the depot, wears a Pathfinder's pack, and checks the depot
-slot, the pack slot, and the unlocked twentieth backpack slot are drawn (`visual-bank.png`). It ends at the
+slot, the pack slot, and the unlocked twentieth backpack slot are drawn (`visual-bank.png`). It
+steps onto the Cinder cellar stairway, captures the Rat King in the private copy
+(`visual-cellar.png`, with only that copy on the minimap), and captures the Highmoor mine's
+cave rock (`visual-mine.png`). It ends at the
 Hollow Reach gate and in the throne room with Vaelith, checking the PvP banner and the
 obsidian floor texels (`visual-hollow-gate.png`, `visual-hollow-throne.png`). At night it
 checks that the world darkens, the player's lantern lights the ground, the UI panel is

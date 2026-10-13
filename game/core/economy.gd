@@ -28,7 +28,7 @@ static func stock() -> Array[String]:
 			result.append(kind)
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
-		if item["slot"] in GEAR_SLOTS and item["level"] <= MAX_TIER and item.has("price"):
+		if item["slot"] in GEAR_SLOTS and item["level"] <= MAX_TIER and item.has("price") and not item.get("loot_only", false):
 			result.append(kind)
 	return result
 

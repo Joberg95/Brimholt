@@ -1,7 +1,8 @@
 extends Node2D
 ## Draws the visible part of the world in map pixels, inside the lit world viewport. Floors
 ## come first; then each row is drawn west to east with ground items, characters, NPCs,
-## oblique walls, and trees so nearer objects cover what stands behind them. Children add
+## oblique walls, and trees so nearer objects cover what stands behind them; a building's roof
+## follows its southern wall row and fades out while you are inside. Children add
 ## ambient light and lights (lighting.gd), additive glow (glow_layer.gd), and particles
 ## (fx.gd). Names, bars, and floating numbers are drawn unlit by world_overlay.gd.
 
@@ -41,6 +42,12 @@ const TALL_MARGIN: int = 8
 var _tall: Dictionary = {}
 var _tall_area: Rect2i = Rect2i()
 var floor_layer: Node2D
+## Roof opacity by building index (World.BUILDINGS): the roof of the building you stand in
+## fades out, and everyone else's fades back in. Signs by building index.
+const ROOF_FADE_PER_SECOND: float = 5.0
+var _roof_alpha: Dictionary = {}
+var _signs_of: Dictionary = {}
+var _last_draw: float = 0.0
 
 
 func _ready() -> void:
@@ -67,9 +74,56 @@ func visible_cells() -> Rect2i:
 	return area.intersection(Rect2i(0, 0, World.width(), World.height()))
 
 
+## Whether a cell inside a building is hidden by its roof (anyone there is not shown).
+func covered(cell: Vector2i) -> bool:
+	return World.ROOM_AT.has(cell) and _roof_alpha.get(World.ROOM_AT[cell], 1.0) > 0.5
+
+
+## The building the local character stands in (or its doorway), or -1.
+func inside_building() -> int:
+	if not game.actors.has(game.self_id):
+		return -1
+	var visual: Vector2 = game.actors[game.self_id]["visual"]
+	return World.ROOM_AT.get(Vector2i(roundi(visual.x), roundi(visual.y)), -1)
+
+
+## Buildings in the area, fading their roofs; returns [bottom row, index] sorted by row.
+func _roofs_in(area: Rect2i, time: float) -> Array:
+	if _signs_of.is_empty():
+		for sign: Dictionary in World.SIGNS:
+			var building: int = World.ROOF_AT.get(sign["cell"], -1)
+			if not _signs_of.has(building):
+				_signs_of[building] = []
+			_signs_of[building].append(sign)
+	var step: float = clampf(time - _last_draw, 0.0, 0.1) * ROOF_FADE_PER_SECOND
+	_last_draw = time
+	var inside: int = inside_building()
+	var roofs: Array = []
+	for index: int in World.BUILDINGS.size():
+		var target: float = 0.0 if index == inside else 1.0
+		var rect: Rect2i = World.BUILDINGS[index]["rect"]
+		if not rect.intersects(area):
+			_roof_alpha[index] = target
+			continue
+		_roof_alpha[index] = move_toward(_roof_alpha.get(index, target), target, step)
+		roofs.append([rect.end.y - 1, index])
+	roofs.sort()
+	return roofs
+
+
+func _draw_roof(index: int) -> void:
+	var alpha: float = _roof_alpha.get(index, 1.0)
+	if alpha > 0.01:
+		SpriteArt.draw_roof(self, index, World.BUILDINGS[index], alpha)
+	for sign: Dictionary in _signs_of.get(index, []):
+		SpriteArt.draw_sign(self, sign)
+
+
 func _draw() -> void:
 	var time: float = Time.get_ticks_msec() / 1000.0
 	var area: Rect2i = visible_cells()
+	var roofs: Array = _roofs_in(area, time)
+	var next_roof: int = 0
 	if not _tall_area.encloses(area):
 		_cache_tall(area.grow(TALL_MARGIN).intersection(Rect2i(0, 0, World.width(), World.height())))
 	for effect: Dictionary in game.effects:
@@ -84,31 +138,38 @@ func _draw() -> void:
 	for cell: Vector2i in _tall:
 		if area.has_point(cell):
 			keys.append(cell.y * width + cell.x)
-	for group: Dictionary in [game.actors, game.monsters]:
-		for id: int in group:
-			var visual: Vector2 = group[id]["visual"]
-			# A stepping creature belongs to the further south/east of its two tiles.
-			var cell: Vector2i = Vector2i(ceili(visual.x - 0.001), ceili(visual.y - 0.001))
-			if not area.has_point(cell):
-				continue
-			if not occupants.has(cell):
-				occupants[cell] = []
-				if not (_tall.has(cell) and area.has_point(cell)):
-					keys.append(cell.y * width + cell.x)
-			occupants[cell].append(id)
-	for cell: Vector2i in game.ground_view:
-		if area.has_point(cell) and not _tall.has(cell) and not occupants.has(cell):
+	var nearby: Array = game.actors.keys()
+	nearby.append_array(game.monsters_in(area))
+	for id: int in nearby:
+		var visual: Vector2 = (game.actors[id] if id > 0 else game.monsters[id])["visual"]
+		# A stepping creature belongs to the further south/east of its two tiles.
+		var cell: Vector2i = Vector2i(ceili(visual.x - 0.001), ceili(visual.y - 0.001))
+		if not area.has_point(cell):
+			continue
+		if not occupants.has(cell):
+			occupants[cell] = []
+			if not _tall.has(cell):
+				keys.append(cell.y * width + cell.x)
+		occupants[cell].append(id)
+	for cell: Vector2i in game.ground_in(area):
+		if not _tall.has(cell) and not occupants.has(cell):
 			keys.append(cell.y * width + cell.x)
 	keys.sort()
 	var names: Array = []
 	for key: int in keys:
 		var cell := Vector2i(key % width, key / width)
+		# A roof covers everything in its building's rows, and is covered by what stands south of it.
+		while next_roof < roofs.size() and roofs[next_roof][0] < cell.y:
+			_draw_roof(roofs[next_roof][1])
+			next_roof += 1
 		var tile: String = _tall.get(cell, "")
 		if tile in World.WALLS and not tile.is_empty():
 			SpriteArt.draw_wall(self, cell)
 			continue
 		if game.ground_view.has(cell):
 			_draw_stack(cell, game.ground_view[cell])
+		if tile == "furniture":
+			SpriteArt.draw_furniture(self, cell, World.FURNITURE[cell])
 		if tile == "npc":
 			var npc: Dictionary = World.npc(World.NPC_CELLS[cell])
 			var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
@@ -116,7 +177,8 @@ func _draw() -> void:
 			var look: Array = TOWNSFOLK_LOOKS.get(npc.get("role", ""),
 				[QUEST_GIVER_GEAR, QUEST_GIVER_TINT] if keeper else [FERRYMAN_GEAR, SpriteArt.NPC_TINT])
 			SpriteArt.draw_actor(self, center, {"id": 0, "facing": npc["facing"], "equipment": look[0]}, false, 0.0, look[1])
-			names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME])
+			if not covered(cell):
+				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME])
 		for id: int in occupants.get(cell, []):
 			if id > 0:
 				_draw_actor(id)
@@ -124,6 +186,9 @@ func _draw() -> void:
 				_draw_monster(id)
 		if tile in World.TREES and not tile.is_empty():
 			SpriteArt.draw_tree(self, cell)
+	while next_roof < roofs.size():
+		_draw_roof(roofs[next_roof][1])
+		next_roof += 1
 	npc_names = names
 
 
@@ -140,6 +205,9 @@ func _cache_tall(area: Rect2i) -> void:
 	for cell: Vector2i in World.NPC_CELLS:
 		if area.has_point(cell):
 			_tall[cell] = "npc"
+	for cell: Vector2i in World.FURNITURE:
+		if area.has_point(cell):
+			_tall[cell] = "furniture"
 
 
 ## The top entry of a ground stack, with its stack count (or the number of entries beneath).
@@ -158,7 +226,7 @@ func _draw_actor(id: int) -> void:
 	var stride: float = 0.0
 	if actor["duration"] > 0.0 and actor["elapsed"] < actor["duration"]:
 		stride = actor["elapsed"] / actor["duration"]
-	SpriteArt.draw_actor(self, center, actor["state"], id == game.self_id, stride)
+	SpriteArt.draw_actor(self, center, SpriteArt.posed(actor, Time.get_ticks_msec() / 1000.0), id == game.self_id, stride)
 
 
 func _draw_monster(id: int) -> void:
@@ -167,7 +235,7 @@ func _draw_monster(id: int) -> void:
 	var stride: float = 0.0
 	if monster["duration"] > 0.0 and monster["elapsed"] < monster["duration"]:
 		stride = monster["elapsed"] / monster["duration"]
-	SpriteArt.draw_monster(self, center, monster["state"], stride)
+	SpriteArt.draw_monster(self, center, SpriteArt.posed(monster, Time.get_ticks_msec() / 1000.0), stride)
 
 
 func _center_of(view: Dictionary) -> Vector2:

@@ -20,16 +20,25 @@ const KINDS: Dictionary = {
 	"impact": {"texture": "flare", "amount": 3, "lifetime": 0.25, "speed": [0.0, 10.0], "size": 28.0, "gravity": 0.0, "spread": 180.0, "add": true},
 }
 
+## Bursts alive at once; more are skipped so a huge fight cannot flood the scene with nodes.
+const MAX_BURSTS: int = 96
 var _additive: CanvasItemMaterial
+## Every burst fades out the same way, so one gradient is shared.
+var _fade: Gradient
 
 
 func _ready() -> void:
 	_additive = CanvasItemMaterial.new()
 	_additive.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_fade = Gradient.new()
+	_fade.set_color(0, Color(1, 1, 1, 1))
+	_fade.set_color(1, Color(1, 1, 1, 0))
 
 
-## Emits a burst of `kind` at a map-pixel position, tinted `color`.
+## Emits a burst of `kind` at a map-pixel position, tinted `color`; null when MAX_BURSTS are alive.
 func burst(kind: String, at: Vector2, color: Color = Color.WHITE) -> CPUParticles2D:
+	if get_child_count() >= MAX_BURSTS:
+		return null
 	var spec: Dictionary = KINDS[kind]
 	var particles := CPUParticles2D.new()
 	var texture: Texture2D = TEXTURES[spec["texture"]]
@@ -48,10 +57,7 @@ func burst(kind: String, at: Vector2, color: Color = Color.WHITE) -> CPUParticle
 	particles.scale_amount_min = size * 0.6
 	particles.scale_amount_max = size
 	particles.color = color
-	var fade := Gradient.new()
-	fade.set_color(0, Color(1, 1, 1, 1))
-	fade.set_color(1, Color(1, 1, 1, 0))
-	particles.color_ramp = fade
+	particles.color_ramp = _fade
 	particles.local_coords = false
 	if spec["add"]:
 		particles.material = _additive

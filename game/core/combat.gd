@@ -6,7 +6,7 @@ extends RefCounted
 ## Experience is split by damage dealt (pooled within a sharing party); dying costs DEATH_PENALTY of
 ## total experience.
 ## tick() and the request functions return events for game/main.gd to replicate:
-##   {kind: "player"|"monster"|"monster_gone", id}, {kind: "hit", target, amount, style},
+##   {kind: "player"|"monster"|"monster_gone", id}, {kind: "hit", target, amount, style, source (the attacker, for damage)},
 ##   {kind: "missile", from, to, color}, {kind: "area", cells, color}, {kind: "ground", cells},
 ##   {kind: "message", id, text}.
 
@@ -64,7 +64,7 @@ const WOUND_SECONDS: float = 12.0
 const ENRAGE_MULTIPLIER: float = 10.0
 ## Chance per kill of one equipment piece from the monster's tier (Combat.gear_drop).
 ## Bosses drop relics from their loot table instead.
-const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.04, "elite": 0.25, "boss": 0.0}
+const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.04, "elite": 0.25, "champion": 1.0, "boss": 0.0}
 const GEAR_LOWER_TIER_CHANCE: float = 0.3
 ## Shared cooldown between potions.
 const POTION_SECONDS: float = 1.0
@@ -77,6 +77,10 @@ var rng := RandomNumberGenerator.new()
 var respawns: Array = []
 var _next_id: int = -1
 var _last_tick: float = -INF
+## Occupied tiles (cell -> number of creatures on or reserving it) for one moment, built once and
+## kept current as monsters step, instead of scanning every creature for each step.
+var _taken: Dictionary = {}
+var _taken_at: float = NAN
 
 
 func _init(owner: World, seed_value: int = 0) -> void:
@@ -187,6 +191,9 @@ func hostile(attacker: int, target: int) -> bool:
 		return false
 	if attacker < 0 and target < 0:
 		return false
+	# The overworld and each dungeon copy are separate spaces, even where they are close on the map.
+	if World.dungeon_at(creature(attacker)["cell"]) != World.dungeon_at(creature(target)["cell"]):
+		return false
 	if attacker > 0 and target > 0:
 		if same_party(attacker, target):
 			return false
@@ -236,12 +243,27 @@ func _spawn_at_marker(index: int, now: float, events: Array) -> bool:
 	return false
 
 
+## Removes a monster without a kill (an emptied dungeon copy): no loot, experience, or respawn.
+func despawn(id: int, events: Array) -> void:
+	if not world.monsters.has(id):
+		return
+	var cell: Vector2i = world.monsters[id]["cell"]
+	world.monsters.erase(id)
+	_taken_at = NAN
+	events.append({"kind": "monster_gone", "id": id, "cell": cell})
+	for player: int in world.players:
+		if world.players[player]["target"] == id:
+			world.players[player]["target"] = 0
+			events.append({"kind": "player", "id": player})
+
+
 ## Creates a monster; spawn -1 means it does not respawn.
 func spawn_monster(kind: String, level: int, cell: Vector2i, now: float, spawn: int = -1, events: Array = []) -> int:
 	var definition: Dictionary = Monsters.MONSTERS[kind]
 	var id: int = _next_id
 	_next_id -= 1
 	var health: int = Balance.mob_health(level, definition["rank"])
+	_taken_at = NAN
 	world.monsters[id] = {
 		"id": id, "kind": kind, "level": clampi(level, 1, Balance.MAX_LEVEL), "spawn": spawn, "home": cell,
 		"cell": cell, "from": cell, "next_move": now, "step": definition["step"], "facing": Vector2i.DOWN,
@@ -256,7 +278,7 @@ func spawn_monster(kind: String, level: int, cell: Vector2i, now: float, spawn: 
 
 # ---------------------------------------------------------------- requests
 
-func set_target(id: int, target: Variant, now: float) -> Dictionary:
+func set_target(id: int, target: Variant, _now: float) -> Dictionary:
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player"}
 	var player: Dictionary = world.players[id]
@@ -374,7 +396,7 @@ func _damage(attacker: int, target: int, amount: int, style: String, now: float,
 			world.players[id]["last_combat"] = now
 			world.players[id]["active_at"] = now
 	victim["health"] -= amount
-	events.append({"kind": "hit", "target": target, "amount": amount, "style": style})
+	events.append({"kind": "hit", "target": target, "cell": victim["cell"], "amount": amount, "style": style, "source": attacker})
 	if attacker < 0 and target > 0 and world.monsters.has(attacker):
 		world.monsters[attacker]["fought"][target] = true
 	if target < 0:
@@ -410,7 +432,11 @@ func _register_aggression(attacker: int, target: int, now: float, events: Array)
 		player["skull"] = "white"
 		player["skull_until"] = maxf(player["skull_until"], now + WHITE_SKULL_SECONDS)
 	# Only an unprovoked attack gives the victim the right to strike back.
-	world.players[target]["aggressors"][attacker] = now + AGGRESSION_SECONDS
+	var aggressors: Dictionary = world.players[target]["aggressors"]
+	for id: int in aggressors.keys():
+		if aggressors[id] <= now:
+			aggressors.erase(id)
+	aggressors[attacker] = now + AGGRESSION_SECONDS
 	events.append({"kind": "player", "id": attacker})
 
 
@@ -427,7 +453,7 @@ func _heal(id: int, amount: int, events: Array, healer: int = 0, now: float = 0.
 		for monster: int in world.monsters:
 			if world.monsters[monster]["fought"].has(id):
 				world.monsters[monster]["fought"][healer] = true
-	events.append({"kind": "hit", "target": id, "amount": healed, "style": "heal"})
+	events.append({"kind": "hit", "target": id, "cell": player["cell"], "amount": healed, "style": "heal"})
 	events.append({"kind": "player", "id": id})
 
 
@@ -456,7 +482,8 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 		_award_trophies(monster["kind"], monster["fought"], events)
 	_drop_loot(monster, events)
 	world.monsters.erase(id)
-	events.append({"kind": "monster_gone", "id": id})
+	_taken_at = NAN
+	events.append({"kind": "monster_gone", "id": id, "cell": monster["cell"]})
 	for player: int in world.players:
 		if world.players[player]["target"] == id:
 			world.players[player]["target"] = 0
@@ -527,14 +554,14 @@ static func relic_boss(relic: String) -> String:
 
 
 ## Trades one of the boss's trophies for a relic, in range of a quest giver, into the backpack.
-func claim_relic(id: int, npc: Variant, relic: Variant, now: float) -> Dictionary:
+func claim_relic(id: int, npc: Variant, relic: Variant, _now: float) -> Dictionary:
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player", "events": []}
 	if typeof(npc) != TYPE_STRING or not World.QUEST_GIVERS.has(npc) or not World.QUEST_GIVERS[npc]["task"].is_empty():
 		return {"ok": false, "reason": "Unknown quest giver", "events": []}
 	var player: Dictionary = world.players[id]
 	var keeper: Dictionary = World.QUEST_GIVERS[npc]
-	if distance(player["cell"], keeper["cell"]) > World.TALK_RANGE:
+	if not World.in_talk_range(player["cell"], keeper["cell"]):
 		return {"ok": false, "reason": "Walk closer to %s" % keeper["name"], "events": []}
 	var boss: String = relic_boss(relic) if typeof(relic) == TYPE_STRING else ""
 	if boss.is_empty():
@@ -557,7 +584,7 @@ func claim_relic(id: int, npc: Variant, relic: Variant, now: float) -> Dictionar
 
 ## Accepts ("accept") or turns in ("complete") the hunting task of a quest giver in range.
 ## Turning in a finished task replaces your pack with the next, bigger one.
-func task_action(id: int, npc: Variant, action: Variant, now: float) -> Dictionary:
+func task_action(id: int, npc: Variant, action: Variant, _now: float) -> Dictionary:
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player", "events": []}
 	var player: Dictionary = world.players[id]
@@ -637,7 +664,7 @@ func drink(id: int, index: Variant, now: float) -> Dictionary:
 		else:
 			var gained: int = mini(amount, limits[stat] - player[stat])
 			player[stat] += gained
-			events.append({"kind": "hit", "target": id, "amount": gained, "style": "mana"})
+			events.append({"kind": "hit", "target": id, "cell": player["cell"], "amount": gained, "style": "mana"})
 	events.append({"kind": "player", "id": id})
 	return {"ok": true, "events": events}
 
@@ -690,7 +717,7 @@ func describe(id: int) -> String:
 
 
 ## invite/revoke (by a leader or a player without a party), join (an inviting leader), and leave.
-func party_action(id: int, action: Variant, other: Variant, now: float) -> Dictionary:
+func party_action(id: int, action: Variant, other: Variant, _now: float) -> Dictionary:
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player", "events": []}
 	if typeof(action) != TYPE_STRING or action not in PARTY_ACTIONS or typeof(other) != TYPE_INT:
@@ -776,7 +803,8 @@ func leave_party(id: int, events: Array) -> void:
 func roll_loot(kind: String, level: int) -> Array[String]:
 	var loot: Array[String] = []
 	for entry: Array in Monsters.LOOT.get(kind, []):
-		if rng.randf() < float(entry[1]):
+		var item: Dictionary = World.ITEMS[entry[0]]
+		if rng.randf() < float(entry[1]) and (item["slot"].is_empty() or level >= item["level"]):
 			loot.append(entry[0])
 	if rng.randf() < GEAR_DROP_CHANCE.get(Monsters.MONSTERS[kind]["rank"], 0.0):
 		loot.append(gear_drop(level))
@@ -790,6 +818,7 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 
 ## A random equipment piece from the monster's level tier, or (GEAR_LOWER_TIER_CHANCE) the
 ## tier below. Accessories exist only from Items.ACCESSORY_LEVEL, so lower monsters never drop them.
+## Source-specific hunting weapons roll through Monsters.LOOT instead.
 func gear_drop(level: int) -> String:
 	var tier: int = Items.tier_for(level)
 	var index: int = Items.TIER_LEVELS.find(tier)
@@ -797,7 +826,8 @@ func gear_drop(level: int) -> String:
 		tier = Items.TIER_LEVELS[index - 1]
 	var choices: Array[String] = []
 	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["level"] == tier and not World.ITEMS[kind]["slot"].is_empty() and not World.bound(kind):
+		if World.ITEMS[kind]["level"] == tier and not World.ITEMS[kind]["slot"].is_empty() \
+				and not World.bound(kind) and not World.ITEMS[kind].get("loot_only", false):
 			choices.append(kind)
 	return choices[rng.randi_range(0, choices.size() - 1)]
 
@@ -860,7 +890,7 @@ func grant_experience(id: int, amount: int, events: Array) -> void:
 	var result: Array = level_from_total(total_experience(player["level"], player["experience"]) + maxi(amount, 0))
 	player["level"] = result[0]
 	player["experience"] = result[1]
-	events.append({"kind": "hit", "target": id, "amount": amount, "style": "experience"})
+	events.append({"kind": "hit", "target": id, "cell": player["cell"], "amount": amount, "style": "experience"})
 	if player["level"] > before:
 		events.append({"kind": "message", "id": id, "text": "You advanced to level %d." % player["level"]})
 	events.append({"kind": "player", "id": id})
@@ -960,11 +990,13 @@ func tick(now: float) -> Array:
 	if now - _last_tick < TICK_SECONDS:
 		return events
 	_last_tick = now
+	_taken_at = NAN
 	for id: int in world.players.keys():
 		if world.players.has(id):
 			_player_tick(id, now, events)
+	var awake: Dictionary = _awake_chunks()
 	for id: int in world.monsters.keys():
-		if world.monsters.has(id):
+		if world.monsters.has(id) and _awake(world.monsters[id], awake):
 			_monster_tick(id, now, events)
 	for index: int in range(respawns.size() - 1, -1, -1):
 		if now >= respawns[index][0]:
@@ -1005,6 +1037,26 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 
 func resting(id: int, now: float) -> bool:
 	return now - world.players[id].get("last_combat", -INF) >= RESTING_SECONDS
+
+
+## Monsters sleep at home with nobody near: no target search or AI runs for them. A monster
+## wakes when a player enters a nearby SLEEP_CHUNK, and stays awake while it fights or walks home.
+const SLEEP_CHUNK: int = 16
+
+
+func _awake_chunks() -> Dictionary:
+	var chunks: Dictionary = {}
+	for id: int in world.players:
+		var chunk: Vector2i = world.players[id]["cell"] / SLEEP_CHUNK
+		for dy: int in range(-1, 2):
+			for dx: int in range(-1, 2):
+				chunks[chunk + Vector2i(dx, dy)] = true
+	return chunks
+
+
+func _awake(monster: Dictionary, chunks: Dictionary) -> bool:
+	return monster["target"] != 0 or monster["cell"] != monster["home"] or monster["engaged_at"] >= 0.0 \
+		or chunks.has(monster["cell"] / SLEEP_CHUNK)
 
 
 func _player_near(cell: Vector2i, radius: int) -> bool:
@@ -1115,17 +1167,36 @@ func _reset_boss(monster: Dictionary) -> void:
 	monster["wounds"].clear()
 
 
+## World.occupied_cells as counts, built once per moment (see _taken).
+func _occupancy(now: float) -> Dictionary:
+	if _taken_at != now:
+		_taken.clear()
+		for group: Dictionary in [world.players, world.monsters]:
+			for id: int in group:
+				var body: Dictionary = group[id]
+				_taken[body["cell"]] = _taken.get(body["cell"], 0) + 1
+				if now < body["next_move"]:
+					_taken[body["from"]] = _taken.get(body["from"], 0) + 1
+		_taken_at = now
+	return _taken
+
+
 func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 	var monster: Dictionary = world.monsters[id]
 	var home: Vector2i = monster["home"]
-	var taken: Dictionary = world.occupied_cells(now, id)
+	var taken: Dictionary = _occupancy(now)
+	var own: Dictionary = {monster["cell"]: 1}
+	if now < monster["next_move"]:
+		own[monster["from"]] = own.get(monster["from"], 0) + 1
 	var home_zoned: bool = not World.zone_at(home).is_empty()
 	var step: Vector2i = path_step(monster["cell"], goal, func(cell: Vector2i) -> bool:
-		return taken.has(cell) or distance(cell, home) > Monsters.LEASH \
+		return taken.get(cell, 0) > own.get(cell, 0) or distance(cell, home) > Monsters.LEASH \
 			or World.zone_at(cell).is_empty() == home_zoned)
 	monster["next_move"] = now + monster["step"]
 	if step == Vector2i.ZERO:
 		return
+	# The old tile stays reserved (as "from") until the step ends; the new one is taken now.
+	taken[monster["cell"] + step] = taken.get(monster["cell"] + step, 0) + 1
 	monster["from"] = monster["cell"]
 	monster["cell"] += step
 	monster["facing"] = step

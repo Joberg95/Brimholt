@@ -8,8 +8,8 @@ PORT ?= 1234
 GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
-.PHONY: help run editor host join server import test test-unit test-lan test-visual playtest check \
-	sprites map map-force endgame-zone gear-table balance-table clean
+.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak playtest check \
+	sprites map map-force endgame-zone dungeons desert towns gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -34,7 +34,12 @@ server: ## Run a dedicated headless server for up to twelve clients
 import: ## Import assets and parse every script (run after a fresh clone or file moves)
 	$(GODOT) --headless --path . --editor --quit
 
-test: test-unit test-lan ## Unit rules and real-ENet scenarios (about 1 minute)
+lint: ## Parse every script with the strict warnings in project.godot
+	@out=$$($(GODOT) --headless --path . --script res://tools/testing/lint.gd 2>&1); \
+		echo "$$out" | grep -E '^LINT|Parse Error|at: GDScript::reload'; \
+		echo "$$out" | grep -q '^LINT [0-9]* scripts, 0 failed'
+
+test: lint test-unit test-lan ## Lint, unit rules, and real-ENet scenarios (about 1 minute)
 
 test-unit: ## Deterministic rule checks
 	@out=$$($(GODOT) --headless --path . --script res://tests/unit/rules_test.gd 2>&1); \
@@ -51,10 +56,22 @@ test-lan: ## Real ENet scenarios: playing host, dedicated, host loss, occupied p
 test-visual: ## Offscreen graphical checks; writes .tools/visual-report.html
 	$(PYTHON) tools/testing/test_visual.py --godot $(GODOT)
 
+soak: ## Busy hosted session with clock jumps; fails if objects, nodes, or memory keep growing (about 1 minute)
+	@out=$$($(GODOT) --position 99999,99999 --resolution 64x64 --path . --script res://tests/integration/soak_test.gd 2>&1); \
+		echo "$$out" | grep -E 'SOAK|SCRIPT ERROR'; \
+		echo "$$out" | grep -q 'BRIMHOLT_SOAK_PASS'
+
 playtest: ## Two-bot full-game playthrough (about 5 minutes); writes .tools/playtest/report.html
 	$(PYTHON) tools/testing/playtest.py --godot $(GODOT)
 
-check: import test test-visual ## Everything except the long playthrough
+check: import test test-visual soak ## Everything except the long playthrough
+
+# --------------------------------------------------------------------- release
+export-windows: import ## Build build/windows/Brimholt.exe (needs Godot 4.5.1 export templates)
+	@mkdir -p build/windows
+	$(GODOT) --headless --path . --export-release "Windows Desktop" build/windows/Brimholt.exe
+	@cp docs/windows.md build/windows/README.txt
+	@ls -lh build/windows
 
 # --------------------------------------------------------------------- content
 sprites: ## Regenerate the original sprite sheets in assets/sprites
@@ -68,6 +85,15 @@ endgame-zone: ## Repaint the Hollow Reach into the existing overworld (keeps oth
 
 map-force: ## Regenerate the overworld draft, overwriting game/maps/overworld.tscn
 	$(GODOT) --headless --path . --script res://tools/generators/make_map.gd -- --force
+
+towns: ## Build missing shops and banks and move vendors and bankers indoors (keeps other edits)
+	$(GODOT) --headless --path . --script res://tools/generators/towns.gd
+
+desert: ## Repaint the desert's plants and sand into the existing map (keeps other edits)
+	$(GODOT) --headless --path . --script res://tools/generators/desert.gd
+
+dungeons: ## Repaint instanced dungeon copies and stairways into the existing map
+	$(GODOT) --headless --path . --script res://tools/generators/dungeons.gd
 
 gear-table: ## Print the gear tier and relic tables (paste into docs/balance.md)
 	@$(GODOT) --headless --path . --script res://tools/generators/gear_table.gd 2>/dev/null | grep '^|'

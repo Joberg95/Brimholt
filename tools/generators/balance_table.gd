@@ -7,18 +7,19 @@ const Balance = preload("res://game/data/balance.gd")
 
 func _initialize() -> void:
 	var lines: PackedStringArray = [
-		"| Level | Player HP | Base atk | Geared atk | Mob HP | Elite HP | Boss HP | Mob hit | Elite hit | Boss hit | Mob XP | XP to next |",
-		"| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+		"| Level | Player HP | Base atk | Geared atk | Mob HP | Elite HP | Champion HP | Boss HP | Mob hit | Elite hit | Champion hit | Boss hit | Mob XP | Champion XP | XP to next |",
+		"| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	]
 	var total_kills: int = 0
 	for level: int in range(1, Balance.MAX_LEVEL + 1):
 		if level < Balance.MAX_LEVEL:
 			total_kills += Balance.kills_to_level(level)
-		lines.append("| %d | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % [
+		lines.append("| %d | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % [
 			level, _n(Balance.player_health(level)), _n(Balance.base_attack(level)), _n(Balance.geared_attack(level)),
-			_n(Balance.mob_health(level)), _n(Balance.mob_health(level, "elite")), _n(Balance.mob_health(level, "boss")),
-			_n(Balance.mob_damage(level)), _n(Balance.mob_damage(level, "elite")), _n(Balance.mob_damage(level, "boss")),
-			_n(Balance.mob_experience(level)), _n(Balance.experience_to_next(level)) if level < Balance.MAX_LEVEL else "max",
+			_n(Balance.mob_health(level)), _n(Balance.mob_health(level, "elite")), _n(Balance.mob_health(level, "champion")),
+			_n(Balance.mob_health(level, "boss")), _n(Balance.mob_damage(level)), _n(Balance.mob_damage(level, "elite")),
+			_n(Balance.mob_damage(level, "champion")), _n(Balance.mob_damage(level, "boss")), _n(Balance.mob_experience(level)),
+			_n(Balance.mob_experience(level, "champion")), _n(Balance.experience_to_next(level)) if level < Balance.MAX_LEVEL else "max",
 		])
 	lines.append("")
 	lines.append("| Vocation | Role | HP 1 / 50 | Mana 1 / 50 | Attack 1 / 50 | Healing/s 1 / 50 | Base def |")
