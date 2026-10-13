@@ -27,11 +27,25 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 
+## One assertion per call site: a check inside a loop (every item, spawn, tile, or pose) counts
+## once however many cases it covers. `cases` counts every evaluation; each failing case is a
+## failure, and the first few of each assertion are printed.
+var _assertions: Dictionary = {}
+var cases: int = 0
+
+
 func check(condition: bool, message: String) -> void:
-	checks += 1
+	var frames: Array = get_stack()
+	var site: String = "%s:%d" % [frames[1]["function"], frames[1]["line"]] if frames.size() > 1 else message
+	if not _assertions.has(site):
+		_assertions[site] = 0
+		checks += 1
+	cases += 1
 	if not condition:
 		failures += 1
-		push_error("FAIL: " + message)
+		_assertions[site] += 1
+		if _assertions[site] <= 3:
+			push_error("FAIL: " + message)
 
 
 func act(world: World, source: Variant, target: Variant) -> Dictionary:
@@ -135,7 +149,7 @@ func _run() -> void:
 	_sprite_checks()
 	_slot_and_stat_checks()
 	_balance_checks()
-	print("BRIMHOLT_RULES: %d checks, %d failures" % [checks, failures])
+	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
 
 
@@ -1842,10 +1856,6 @@ func _climate_checks() -> void:
 				sand += 1 if tile == ":" or tile == "K" else 0
 	check(plants > 40, "the desert has cacti and thorn scrub")
 	check(leafy == 0 and grass == 0 and sand > 8000, "no leafy trees or grass patches inside the desert")
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		check(World.walkable(spawn["cell"]), "monster spawns stay on walkable ground after the desert pass")
-	for entry: Array in World.GROUND_ITEMS:
-		check(World.walkable(entry[0]), "ground items stay on walkable ground after the desert pass")
 	# Weather: the same clock gives the same weather on every peer, it changes smoothly, and
 	# every kind occurs over a long session.
 	Weather.override = ""
@@ -2626,15 +2636,7 @@ func _hits_on(events: Array, target: int) -> int:
 
 
 func _combat_checks() -> void:
-	# Catalogs: every spawn names a known monster, every look can be drawn, spells are well formed.
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		check(Monsters.MONSTERS.has(spawn["monster"]), "map spawns name catalog monsters")
-	for kind: String in Monsters.MONSTERS:
-		var definition: Dictionary = Monsters.MONSTERS[kind]
-		check(definition["look"] == "humanoid" or SpriteArtSheets.MONSTER_SHEETS.has(definition["look"]), "monster look has a sprite")
-		check(definition["rank"] in Balance.RANKS and definition["range"] >= 1 and definition["step"] > 0.0, "monster definition is complete")
-		for slot: String in definition.get("gear", {}):
-			check(World.fits(definition["gear"][slot], slot), "monster gear fits its slot")
+	# Catalogs: spells are well formed (monsters: _monster_catalog_checks).
 	for spell: String in Spells.SPELLS:
 		var definition: Dictionary = Spells.SPELLS[spell]
 		check(Spells.GROUP_SECONDS.has(definition["group"]) and definition["mana"] > 0.0 and definition["cooldown"] > 0.0,

@@ -6,7 +6,7 @@ Run these through `make` (see `make help`) or directly. Every check uses Godot 4
 | --- | --- | --- |
 | `make import` | Headless import; parses every script and resource | ~10 s |
 | `make lint` | `tools/testing/lint.gd`: parses every script with the strict warnings in `project.godot` | ~5 s |
-| `make test-unit` | `tests/unit/rules_test.gd`: deterministic rule checks | ~5 s |
+| `make test-unit` | `tests/unit/rules_test.gd`: deterministic rule checks (about 780 assertions) | ~3 s |
 | `make test-lan` | `tools/testing/test_lan.py`: five real ENet scenarios | ~1 min |
 | `make test` | Lint, unit, and LAN | ~1 min |
 | `make test-visual` | `tools/testing/test_visual.py`: offscreen graphical checks, `.tools/visual-report.html` | ~30 s |
@@ -53,6 +53,12 @@ stacks that never decay, or more monsters than spawn slots also fail it. Run it 
 anything that creates nodes, caches, or per-player/per-monster state.
 
 ## Unit rules
+
+Each `check()` call site is one assertion, however many cases a loop feeds it (every item,
+spawn, tile, or pose): the summary reads `BRIMHOLT_RULES: <assertions> checks, <failures>
+failures (<cases> cases)`. Every failing case counts as a failure; the first three of each
+assertion are printed. Prefer one assertion over a loop to many near-identical ones, and do not
+re-check what another section already covers.
 
 The rules checks cover movement, reservations, collision, spawns, equipment slots and
 ring swaps, item stats, the balance anchors and curves, sprite sheet layout and coverage,
