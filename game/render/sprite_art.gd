@@ -36,6 +36,8 @@ static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
 const SIGN_KINDS: Array[String] = ["vendor", "banker"]
+## Wall torches (World.TORCHES): 16x24 frames, unlit then three flame frames.
+const TORCH: Texture2D = preload("res://assets/sprites/torch.png")
 ## Where a sign's centre hangs from its wall cell's corner, by the direction the door faces:
 ## on the visible south or east face, or standing on the roof edge for a north or west door.
 const SIGN_OFFSETS: Dictionary = {
@@ -301,6 +303,13 @@ static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
 	var centre: Vector2 = Vector2(sign["cell"]) * TILE + SIGN_OFFSETS[sign["outward"]]
 	var index: int = maxi(0, SIGN_KINDS.find(sign["kind"]))
 	canvas.draw_texture_rect_region(SIGNS, Rect2(centre - Vector2(16, 16), Vector2(32, 32)), Rect2(index * TILE, 0, TILE, TILE))
+
+
+
+## A wall torch on the south face of its wall cell; frame 0 is unlit, 1-3 flicker.
+static func draw_torch(canvas: CanvasItem, cell: Vector2i, frame: int) -> void:
+	var foot: Vector2 = Vector2(cell) * TILE + Vector2(16, 25)
+	canvas.draw_texture_rect_region(TORCH, Rect2(foot - Vector2(8, 24), Vector2(16, 24)), Rect2(frame * 16, 0, 16, 24))
 
 
 ## Character sheets have five columns per facing: stand, step A, step B, attack wind-up, and

@@ -2074,6 +2074,12 @@ func _building_checks() -> void:
 	for town: String in towns:
 		check(towns[town] >= 2, "%s has at least two buildings" % town)
 	check(World.SIGNS.size() == World.TOWNSFOLK.size(), "every vendor and banker has a sign")
+	var torch_towns: Dictionary = {}
+	for torch: Vector2i in World.TORCHES:
+		check(World.terrain(torch) in World.WALLS and World.ROOF_AT.has(torch)
+			and not World.terrain(torch + Vector2i.DOWN) in World.WALLS, "wall torches hang on the open south face of a town building")
+		torch_towns[World.zone_at(torch + Vector2i.DOWN).get("name", "")] = true
+	check(torch_towns.size() == towns.size(), "every town has wall torches")
 	var used: Dictionary = {}
 	for id: String in World.TOWNSFOLK:
 		var keeper: Dictionary = World.TOWNSFOLK[id]

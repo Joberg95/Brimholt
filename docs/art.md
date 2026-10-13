@@ -38,6 +38,7 @@ filtering:
 | `roofs.png` | Per material row (clay, slate, wooden shingle) four 32×32 swatches: near slope, far slope, timber gable, trim (ridge cap, eave board, chimney stone). `game/render/roof_art.gd` rasterizes each building's roof from them |
 | `furniture.png` | 32×48 shop and bank furniture drawn 16 px above their tile: shop counter, bank counter, potion shelf, bookshelf, weapon rack, barrel, crate, strongbox (`SpriteArt.FURNITURE` order) |
 | `signs.png` | 32×32 hanging signs on an iron bracket: shop (flask and sword), bank (coins) |
+| `torch.png` | 16×24 wall torches: unlit, then three flame frames; hung on the south faces of town buildings (`World.TORCHES`) |
 | `objects.png` | 64×96 trees (three living, two dead for the Hollow Reach, then three desert plants: a columnar cactus, a barrel-cactus clump, and a thorn shrub for terrain `K`, then the waystone, a carved standing stone with a cyan rune); trunk base on the tile centre at cell pixel (32, 80) |
 | `terrain_palette.png` | 32×32 map-editor palette, one tile per terrain |
 
@@ -130,7 +131,7 @@ The world renders into its own `SubViewport` (`game/ui/game_window.gd`), so ligh
 `game/render/lighting.gd` tints it with a `CanvasModulate`: a day and night cycle on the
 host's clock (a 40-minute day; sessions start in the morning; clients sync the clock in the
 welcome snapshot), multiplied by a zone's `ambient` colour (the Hollow Reach is a permanent
-violet dusk). Pooled `PointLight2D`s follow players (lanterns), NPCs, relic wearers, glowing
+violet dusk). Pooled `PointLight2D`s follow players (lanterns), NPCs, town wall torches (lit from dusk, flickering), relic wearers, glowing
 bosses and ground relics (coloured), missiles, and spell areas; lanterns fade in as the light
 fades. `game/render/fx.gd` emits one-shot `CPUParticles2D` bursts for hits, critical hits,
 heals, level-ups, monster deaths, spell areas, and missile impacts (sparks and magic blend

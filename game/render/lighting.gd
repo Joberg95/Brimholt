@@ -33,6 +33,11 @@ var weather: Dictionary = {"kind": "clear", "cloud": 0.0, "rain": 0.0, "storm": 
 ## ever shown at once (at most MAX_LIGHTS), so no node is created per creature or tile.
 const MAX_LIGHTS: int = 64
 const WAYSTONE_GLOW: Color = Color("#7fe8f0")
+const TORCH_GLOW: Color = Color(1.0, 0.66, 0.32)
+## Town wall torches burn once the darkness passes this (dusk onward).
+const TORCH_DARKNESS: float = 0.12
+## How dark the world is this frame, 0 by day to about 1 at night or in a dark zone.
+var darkness: float = 0.0
 var _pool: Array[PointLight2D] = []
 var _in_use: int = 0
 
@@ -78,7 +83,7 @@ func _process(_delta: float) -> void:
 	# Lamps follow nightfall and dark zones; clouds only add a little, so a rainy noon stays unlit.
 	var night: float = 1.0 - (clear_light.r + clear_light.g + clear_light.b) / 3.0
 	var gloom: float = (clear_light.r + clear_light.g + clear_light.b - light.r - light.g - light.b) / 3.0
-	var darkness: float = clampf(night + gloom * 0.25, 0.0, 1.0) / 0.55
+	darkness = clampf(night + gloom * 0.25, 0.0, 1.0) / 0.55
 	var game: Node = view.game
 	_in_use = 0
 	var area: Rect2i = view.visible_cells().grow(4)
@@ -92,6 +97,11 @@ func _process(_delta: float) -> void:
 		for cell: Vector2i in World.NPC_CELLS:
 			if area.has_point(cell) and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") != "waystone":
 				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness)
+	if darkness > TORCH_DARKNESS:
+		for cell: Vector2i in World.TORCHES:
+			if area.has_point(cell):
+				var flicker: float = 0.9 + 0.1 * sin(time * 9.0 + cell.x * 1.7) * sin(time * 5.3 + cell.y)
+				_light(Vector2(cell) * World.TILE_SIZE + Vector2(16, 20), TORCH_GLOW, 3.2 * flicker, 1.1 * darkness)
 	# Coloured light from relics, glowing bosses, and waystone runes, faint even by day.
 	var tint: float = maxf(darkness, 0.18)
 	for id: String in World.FERRYMEN:

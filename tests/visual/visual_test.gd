@@ -239,9 +239,11 @@ func _run() -> void:
 		return
 	if not await _check_night_and_particles():
 		return
+	if not await _check_town_torches():
+		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -921,6 +923,42 @@ func _check_waystone() -> bool:
 	screen.get_texture().get_image().save_png("res://.tools/visual-waystone.png")
 	var named: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == "Waystone")
 	return _expect(World.FERRYMEN["cinder_coach"]["vehicle"] == "waystone" and named, "The Cinder Crossing waystone is not drawn")
+
+
+## Wall torches: unlit by day, a flame and warm light on the wall at night.
+func _check_town_torches() -> bool:
+	var torch: Vector2i = World.TORCHES[0]
+	for cell: Vector2i in World.TORCHES:
+		if Vector2(cell).distance_to(Vector2(World.SPAWNS[0])) < Vector2(torch).distance_to(Vector2(World.SPAWNS[0])):
+			torch = cell
+	var player: Dictionary = game.world.players[1]
+	var stand: Vector2i = torch + Vector2i.DOWN
+	for offset: Vector2i in [Vector2i(3, 2), Vector2i(-3, 2), Vector2i(2, 3), Vector2i(-2, 3), Vector2i(0, 3), Vector2i(3, 1), Vector2i(-3, 1)]:
+		if World.walkable(torch + offset):
+			stand = torch + offset
+			break
+	player["cell"] = stand
+	player["from"] = stand
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	var lighting: Node2D = game._world_view.lighting
+	var flame: Vector2i = Vector2i(game.map_to_screen(Vector2(torch) * World.TILE_SIZE + Vector2(16, 8)))
+	var wall: Vector2i = Vector2i(game.map_to_screen(Vector2(torch) * World.TILE_SIZE + Vector2(4, 22)))
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var day: Image = screen.get_texture().get_image()
+	lighting.time_override = 0.0
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var night: Image = screen.get_texture().get_image()
+	night.save_png("res://.tools/visual-torches.png")
+	lighting.time_override = 0.5
+	var lit: Color = night.get_pixelv(flame)
+	if not _expect(lit.r > 0.75 and lit.r > lit.b + 0.3 and lit.get_luminance() > day.get_pixelv(flame).get_luminance(),
+			"A town wall torch does not burn at night (%s at %s)" % [lit, torch]):
+		return false
+	return _expect(night.get_pixelv(wall).r > night.get_pixelv(wall).b,
+		"A town wall torch does not cast warm light on its wall")
 
 
 ## The quest list: one task in progress and one ready to turn in, then hidden with its key.

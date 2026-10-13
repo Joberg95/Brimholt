@@ -59,6 +59,9 @@ static var ROOM_AT: Dictionary = {}
 ## A sign hangs on the wall beside the door of each vendor's and banker's building:
 ## {cell (that wall), outward (door direction), kind (the keeper's role)}.
 static var SIGNS: Array = []
+## Wall torches on the visible south faces of town buildings, lit at night: wall cells beside
+## each south door (where no sign hangs), or near the corners of a wall without a door.
+static var TORCHES: Array[Vector2i] = []
 ## Shop and bank furniture: cell -> kind (SpriteArt.FURNITURE). It blocks movement like an NPC.
 static var FURNITURE: Dictionary = {}
 ## Named regions (game/data/regions.gd) on a grid of REGION_BLOCK x REGION_BLOCK tiles (an index
@@ -263,6 +266,28 @@ static func _find_buildings() -> void:
 				SIGNS.append({"cell": door + side, "outward": outward, "kind": keeper["role"]})
 				break
 		_furnish(building, keeper)
+	_place_torches()
+
+
+static func _place_torches() -> void:
+	var signed: Dictionary = {}
+	for sign: Dictionary in SIGNS:
+		signed[sign["cell"]] = true
+	var placed: Dictionary = {}
+	for building: Dictionary in BUILDINGS:
+		var rect: Rect2i = building["rect"]
+		var wanted: Array[Vector2i] = []
+		for door: Vector2i in building["doors"]:
+			if building["outward"][door] == Vector2i.DOWN:
+				wanted.append_array([door + Vector2i.LEFT, door + Vector2i.RIGHT])
+		if wanted.is_empty():
+			var bottom: int = rect.end.y - 1
+			wanted.append_array([Vector2i(rect.position.x + 1, bottom), Vector2i(rect.end.x - 2, bottom)])
+		for cell: Vector2i in wanted:
+			if terrain(cell) in WALLS and not terrain(cell + Vector2i.DOWN) in WALLS \
+					and not signed.has(cell) and not placed.has(cell):
+				placed[cell] = true
+				TORCHES.append(cell)
 
 
 ## Places a keeper's furniture, skipping any piece on a marker or one that would cut a room

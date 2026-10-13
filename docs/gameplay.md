@@ -219,7 +219,7 @@ monsters placed in it, so they stay correct when spawns move.
 
 The sky follows a 40-minute day and night and changing weather: clear, overcast, rain, and
 thunderstorms with lightning, the same for everyone in the session. Weather is only for looks.
-It never rains underground or in the desert.
+It never rains underground or in the desert. At dusk the torches on the town walls are lit.
 
 The overworld is 384×384 tiles: walking straight across takes about a minute and three
 quarters. Monster camps are dense (about 600 monsters), so levelling is close to town.
