@@ -14,7 +14,11 @@ const GEARED_HITS_PER_KILL: float = 6.0
 ## Hits an ungeared damage-1.0 player needs; gear is expected to supply the difference.
 const BASE_HITS_PER_KILL: float = 8.0
 ## Same-level normal mob hits an ungeared paladin survives (from level 11; more before that).
-const HITS_TO_FALL: float = 15.0
+const HITS_TO_FALL: float = 18.0
+## Seconds per tile a monster takes while chasing (level 1 to MAX_LEVEL): always quicker than a
+## player's World.MOVE_SECONDS (0.18), so nobody outruns or kites a monster; it catches up.
+const CHASE_SECONDS_LEVEL_1: float = 0.14
+const CHASE_SECONDS_MAX_LEVEL: float = 0.11
 const EARLY_DAMAGE_LEVELS: float = 10.0
 const MOB_HEALTH_LEVEL_1: float = 30.0
 const PLAYER_HEALTH_LEVEL_1: float = 150.0
@@ -96,6 +100,12 @@ static func early_damage(level: int) -> float:
 
 static func mob_damage(level: int, rank: String = "normal") -> int:
 	return maxi(1, roundi(PLAYER_HEALTH_LEVEL_1 * _scale(level) / HITS_TO_FALL * RANKS[rank]["damage"] * early_damage(level)))
+
+
+## A monster's step time while chasing a target (its own, slower pace is for idling and going home).
+static func chase_seconds(level: int) -> float:
+	var progress: float = (clampi(level, 1, MAX_LEVEL) - 1) / float(MAX_LEVEL - 1)
+	return lerpf(CHASE_SECONDS_LEVEL_1, CHASE_SECONDS_MAX_LEVEL, progress)
 
 
 static func mob_experience(level: int, rank: String = "normal") -> int:
@@ -181,4 +191,4 @@ static func signature() -> String:
 	return str([MAX_LEVEL, FINAL_BOSS_HEALTH, ATTACK_SECONDS, GEARED_HITS_PER_KILL, BASE_HITS_PER_KILL,
 		HITS_TO_FALL, MOB_HEALTH_LEVEL_1, PLAYER_HEALTH_LEVEL_1, PLAYER_MANA_LEVEL_1, BASE_CRITICAL,
 		REGEN_FRACTION, HEAL_FRACTION, EARLY_DAMAGE_LEVELS, VOCATIONS, RAID, RAID_FIGHT_SECONDS, ENRAGE_SECONDS,
-		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS])
+		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_LEVEL_1, CHASE_SECONDS_MAX_LEVEL])

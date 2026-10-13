@@ -207,7 +207,7 @@ func export_monster(id: int, now: float) -> Dictionary:
 	return {
 		"id": id, "kind": monster["kind"], "level": monster["level"], "cell": monster["cell"],
 		"from": monster["from"] if remaining > 0.0 else monster["cell"],
-		"remaining": remaining, "duration": monster["step"], "facing": monster["facing"],
+		"remaining": remaining, "duration": monster["last_step"], "facing": monster["facing"],
 		"health": monster["health"], "max_health": monster["max_health"], "enraged": monster["enraged"],
 	}
 
@@ -266,7 +266,9 @@ func spawn_monster(kind: String, level: int, cell: Vector2i, now: float, spawn: 
 	_taken_at = NAN
 	world.monsters[id] = {
 		"id": id, "kind": kind, "level": clampi(level, 1, Balance.MAX_LEVEL), "spawn": spawn, "home": cell,
-		"cell": cell, "from": cell, "next_move": now, "step": definition["step"], "facing": Vector2i.DOWN,
+		"cell": cell, "from": cell, "next_move": now, "step": definition["step"], "last_step": definition["step"],
+		## Walking home after losing its target: at full health, ignoring players, untouchable.
+		"returning": false, "facing": Vector2i.DOWN,
 		"health": health, "max_health": health, "target": 0, "next_attack": now, "damage_by": {},
 		"engaged_at": -1.0, "next_pulse": INF, "enraged": false, "wounds": {},
 		## Players who damaged this monster, were hit by it, or healed someone in the fight.
@@ -391,6 +393,10 @@ func _hit(attacker: int, target: int, power: float, now: float, events: Array) -
 
 func _damage(attacker: int, target: int, amount: int, style: String, now: float, events: Array) -> void:
 	var victim: Dictionary = creature(target)
+	if target < 0 and victim["returning"]:
+		# A monster walking home after a leash reset cannot be hurt (no free kills on the way back).
+		events.append({"kind": "hit", "target": target, "cell": victim["cell"], "amount": 0, "style": "damage", "source": attacker})
+		return
 	for id: int in [attacker, target]:
 		if id > 0 and world.players.has(id):
 			world.players[id]["last_combat"] = now
@@ -1069,16 +1075,17 @@ func _player_near(cell: Vector2i, radius: int) -> bool:
 func _monster_tick(id: int, now: float, events: Array) -> void:
 	var monster: Dictionary = world.monsters[id]
 	var target: int = monster["target"]
-	if target != 0 and (not world.players.has(target)
-			or distance(world.players[target]["cell"], monster["home"]) > Monsters.LEASH
-			or distance(world.players[target]["cell"], monster["cell"]) > Monsters.AGGRO_RANGE * 2):
+	if target != 0 and not _can_chase(monster, target):
+		# Dragged too far or into a town: give up, heal fully, and walk home untouchable.
 		target = 0
-	if target == 0:
+		_leash_reset(monster)
+		monster["returning"] = true
+		events.append({"kind": "monster", "id": id, "movement": false})
+	if target == 0 and not monster["returning"]:
 		var nearest: int = Monsters.AGGRO_RANGE + 1
 		for player: int in world.players:
-			var cell: Vector2i = world.players[player]["cell"]
-			var gap: int = distance(cell, monster["cell"])
-			if gap < nearest and distance(cell, monster["home"]) <= Monsters.LEASH:
+			var gap: int = distance(world.players[player]["cell"], monster["cell"])
+			if gap < nearest and _can_chase(monster, player):
 				nearest = gap
 				target = player
 		if target != 0:
@@ -1102,19 +1109,32 @@ func _monster_tick(id: int, now: float, events: Array) -> void:
 				_hit(id, target, 1.0, now, events)
 		elif now >= monster["next_move"]:
 			_monster_step(id, goal, now, events)
-	elif monster["engaged_at"] >= 0.0 and monster["cell"] == monster["home"]:
-		monster["health"] = monster["max_health"]
-		monster["damage_by"].clear()
-		monster["fought"].clear()
-		_reset_boss(monster)
-		events.append({"kind": "monster", "id": id, "movement": false})
 	elif monster["cell"] != monster["home"] and now >= monster["next_move"]:
 		_monster_step(id, monster["home"], now, events)
-		if distance(monster["cell"], monster["home"]) <= 1:
-			monster["health"] = monster["max_health"]
-			monster["damage_by"].clear()
-			monster["fought"].clear()
-			_reset_boss(monster)
+	elif monster["cell"] == monster["home"] and (monster["returning"] or monster["engaged_at"] >= 0.0
+			or monster["health"] < monster["max_health"]):
+		_leash_reset(monster)
+		monster["returning"] = false
+		events.append({"kind": "monster", "id": id, "movement": false})
+
+
+## Whether a monster may chase `player`: alive, outside every town (monsters never follow
+## anyone into a safe zone), within LEASH of the monster's home, and not far out of sight.
+func _can_chase(monster: Dictionary, player: int) -> bool:
+	if not world.players.has(player):
+		return false
+	var cell: Vector2i = world.players[player]["cell"]
+	var into_town: bool = World.zone_at(cell).get("town", false) and not World.zone_at(monster["home"]).get("town", false)
+	return not into_town and distance(cell, monster["home"]) <= Monsters.LEASH \
+		and distance(cell, monster["cell"]) <= Monsters.AGGRO_RANGE * 2 and World.dungeon_at(cell) == World.dungeon_at(monster["home"])
+
+
+## Forgets the fight: full health, no experience or trophy claims, and (for bosses) no timer.
+func _leash_reset(monster: Dictionary) -> void:
+	monster["health"] = monster["max_health"]
+	monster["damage_by"].clear()
+	monster["fought"].clear()
+	_reset_boss(monster)
 
 
 func wound_stacks(boss: int, player: int, now: float) -> int:
@@ -1192,7 +1212,12 @@ func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 	var step: Vector2i = path_step(monster["cell"], goal, func(cell: Vector2i) -> bool:
 		return taken.get(cell, 0) > own.get(cell, 0) or distance(cell, home) > Monsters.LEASH \
 			or World.zone_at(cell).is_empty() == home_zoned)
-	monster["next_move"] = now + monster["step"]
+	# Chasing is quicker than a player's step (Balance.chase_seconds); idling and going home use the monster's own pace.
+	var pace: float = minf(monster["step"], Balance.chase_seconds(monster["level"])) if monster["target"] != 0 else monster["step"]
+	# Steps happen on ticks; carry the leftover so a steady chase keeps its real pace between ticks.
+	var since: float = now - monster["next_move"]
+	monster["next_move"] = (monster["next_move"] if since >= 0.0 and since < TICK_SECONDS else now) + pace
+	monster["last_step"] = pace
 	if step == Vector2i.ZERO:
 		return
 	# The old tile stays reserved (as "from") until the step ends; the new one is taken now.

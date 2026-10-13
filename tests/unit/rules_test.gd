@@ -53,6 +53,8 @@ func _run() -> void:
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
+	_chase_checks()
+	_monster_catalog_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -481,9 +483,9 @@ func _balance_checks() -> void:
 				or level == Balance.MAX_LEVEL, "levels get longer")
 		var falls: float = Balance.player_health(level) / float(Balance.mob_damage(level))
 		if level > Balance.EARLY_DAMAGE_LEVELS:
-			check(falls >= 14.0 and falls <= 16.0, "a player survives about 15 same-level normal hits")
+			check(falls >= 17.0 and falls <= 19.0, "a player survives about 18 same-level normal hits")
 		else:
-			check(falls >= 15.0 and falls <= 31.0, "early monsters hit softer: 15 to 30 hits to fall")
+			check(falls >= 18.0 and falls <= 38.0, "early monsters hit softer: 18 to 38 hits to fall")
 	check(Balance.mob_health(10, "elite") == roundi(Balance.mob_health(10) * 4.0) \
 		or absi(Balance.mob_health(10, "elite") - Balance.mob_health(10) * 4) <= 2, "elites have four times the health")
 	check(Balance.experience_to_next(Balance.MAX_LEVEL) == 0, "no experience past max level")
@@ -2155,6 +2157,141 @@ func _hardening_checks() -> void:
 				overlap = overlap or seen.has(crowd.monsters[id]["cell"])
 				seen[crowd.monsters[id]["cell"]] = true
 	check(not overlap, "monsters closing in never share a tile")
+
+
+## Monsters catch fleeing players; dragging one too far or into a town resets it at full health.
+func _chase_checks() -> void:
+	check(Balance.chase_seconds(1) < World.MOVE_SECONDS and Balance.chase_seconds(Balance.MAX_LEVEL) < Balance.chase_seconds(1),
+		"monsters chase faster than players walk, and higher monsters faster still")
+	# An open straight corridor outside any town, at least 14 tiles east of a monster camp.
+	var start: Vector2i = Vector2i(-1, -1)
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var clear: bool = World.dungeon_at(spawn["cell"]).is_empty()
+		for dx: int in range(-2, 16):
+			for dy: int in range(-1, 2):
+				var cell: Vector2i = spawn["cell"] + Vector2i(dx, dy)
+				clear = clear and World.walkable(cell) and World.zone_at(cell).is_empty()
+		if clear and start.x < 0:
+			start = spawn["cell"]
+	check(start.x >= 0, "an open corridor for the chase checks")
+	for level: int in [1, 40]:
+		var world := World.new()
+		var combat := Combat.new(world, 3)
+		world.monsters.clear()
+		world.add_player(1, 0.0, "sorcerer")
+		var player: Dictionary = world.players[1]
+		player["health"] = 999999
+		_place(world, 1, start + Vector2i(2, 0))
+		var monster: int = combat.spawn_monster("field_vole", level, start, 0.0)
+		# The player flees east at full walking speed; the monster chases.
+		var now: float = 0.0
+		var caught: bool = false
+		# About 8 tiles of fleeing: well inside the leash.
+		while now < 1.5 and not caught:
+			now += 0.05
+			if now >= player["next_move"]:
+				world.move(1, Vector2i.RIGHT, now)
+			combat.tick(now)
+			caught = caught or Combat.distance(world.monsters[monster]["cell"], player["cell"]) <= 1
+		check(caught and world.monsters[monster]["target"] == 1, "a level %d monster catches a fleeing player" % level)
+	# Dragging a monster past its leash: it gives up at full health and walks home untouchable.
+	var drag := World.new()
+	var drag_combat := Combat.new(drag, 4)
+	drag.monsters.clear()
+	drag.add_player(1, 0.0, "knight")
+	drag.players[1]["health"] = 999999
+	_place(drag, 1, start + Vector2i(1, 0))
+	var vole: int = drag_combat.spawn_monster("field_vole", 5, start, 0.0)
+	var events: Array = []
+	drag_combat._damage(1, vole, 20, "damage", 0.0, events)
+	check(drag.monsters[vole]["health"] < drag.monsters[vole]["max_health"] and drag.monsters[vole]["target"] == 1, "a hit monster engages")
+	_place(drag, 1, start + Vector2i(Monsters.LEASH + 1, 0))
+	drag.monsters[vole]["cell"] = start + Vector2i(Monsters.LEASH, 0)
+	drag_combat.tick(1.0)
+	var returning: Dictionary = drag.monsters[vole]
+	check(returning["target"] == 0 and returning["returning"] and returning["health"] == returning["max_health"]
+		and returning["damage_by"].is_empty(), "past its leash a monster resets to full health and turns home")
+	events = []
+	drag_combat._damage(1, vole, 20, "damage", 1.1, events)
+	check(returning["health"] == returning["max_health"] and returning["target"] == 0, "a monster going home cannot be hurt or re-pulled")
+	_place(drag, 1, start + Vector2i(1, 0))
+	var now_home: float = 1.2
+	while now_home < 12.0 and returning["cell"] != returning["home"]:
+		now_home += 0.15
+		drag_combat.tick(now_home)
+	drag_combat.tick(now_home + 0.15)
+	drag_combat.tick(now_home + 0.3)
+	check(returning["cell"] == returning["home"] and not returning["returning"] and returning["target"] == 1,
+		"home again, it fights anyone nearby")
+	# Into a town: a monster never follows, and resets.
+	var town: Dictionary = {}
+	for zone: Dictionary in World.ZONES:
+		if zone["town"] and town.is_empty():
+			town = zone
+	var gate: Vector2i = Vector2i(-1, -1)
+	for y: int in range(town["rect"].position.y, town["rect"].end.y):
+		for x: int in range(town["rect"].position.x, town["rect"].end.x):
+			var inside := Vector2i(x, y)
+			if gate.x < 0 and World.walkable(inside) and World.walkable(inside + Vector2i.RIGHT) \
+					and not World.zone_at(inside + Vector2i.RIGHT).get("town", false) and World.zone_at(inside + Vector2i.RIGHT).get("name", "").is_empty():
+				gate = inside
+	check(gate.x >= 0, "a town edge for the town check")
+	var townsfolk := World.new()
+	var town_combat := Combat.new(townsfolk, 5)
+	townsfolk.monsters.clear()
+	townsfolk.add_player(1, 0.0, "knight")
+	_place(townsfolk, 1, gate + Vector2i.RIGHT)
+	var hunter: int = town_combat.spawn_monster("field_vole", 5, gate + Vector2i(3, 0), 0.0)
+	events = []
+	town_combat._damage(1, hunter, 10, "damage", 0.0, events)
+	_place(townsfolk, 1, gate)
+	town_combat.tick(1.0)
+	town_combat.tick(1.2)
+	check(townsfolk.monsters[hunter]["target"] == 0 and townsfolk.monsters[hunter]["health"] == townsfolk.monsters[hunter]["max_health"]
+		and townsfolk.monsters[hunter]["damage_by"].is_empty(), "a monster never follows into a town and resets")
+	# The client is told how long each step really takes, so chases animate at chase speed.
+	check(is_equal_approx(town_combat.export_monster(hunter, 1.0)["duration"], townsfolk.monsters[hunter]["last_step"]),
+		"monster steps replicate their real duration")
+
+
+## The monster catalog's contract (see .github/skills/monster-authoring): every monster, new ones
+## included, is fully described, uses a drawable look, derives its numbers from Balance, has a
+## loot table of real items, and appears somewhere in the world at a level its loot allows.
+func _monster_catalog_checks() -> void:
+	var placed: Dictionary = {}
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		placed[spawn["monster"]] = mini(placed.get(spawn["monster"], 99), spawn["level"])
+	for dungeon: String in Dungeons.DUNGEONS:
+		for symbol: String in Dungeons.DUNGEONS[dungeon]["monsters"]:
+			var entry: Array = Dungeons.DUNGEONS[dungeon]["monsters"][symbol]
+			placed[entry[0]] = mini(placed.get(entry[0], 99), entry[1])
+	for kind: String in Monsters.MONSTERS:
+		var definition: Dictionary = Monsters.MONSTERS[kind]
+		var named: String = "monster %s" % kind
+		check(kind == kind.to_snake_case() and not String(definition.get("name", "")).is_empty(), "%s has a snake_case id and a name" % named)
+		check(Balance.RANKS.has(definition.get("rank", "")), "%s has a Balance rank" % named)
+		check(SpriteArt.MONSTER_SHEETS.has(definition.get("look", "")) or definition.get("look", "") == "humanoid", "%s has a drawable look" % named)
+		check(definition.get("color") is Color and float(definition.get("size", 0.0)) >= 0.4 and float(definition.get("size", 0.0)) <= 2.0,
+			"%s has a tint and a size between 0.4 and 2" % named)
+		check(int(definition.get("range", 0)) >= 1 and int(definition.get("range", 0)) <= 6, "%s attacks from 1 to 6 tiles" % named)
+		check(float(definition.get("step", 0.0)) >= 0.3 and float(definition.get("step", 0.0)) <= 0.8,
+			"%s idles at 0.3 to 0.8 s per tile (chasing uses Balance.chase_seconds)" % named)
+		for key: String in definition:
+			check(key in ["name", "look", "color", "size", "rank", "range", "step", "gear", "glow", "relics", "respawn"],
+				"%s uses only known fields (%s)" % [named, key])
+		for numbers: String in ["health", "damage", "experience", "attack", "defense", "level"]:
+			check(not definition.has(numbers), "%s takes %s from Balance, not the catalog" % [named, numbers])
+		check(Monsters.LOOT.has(kind), "%s has a loot table (may be empty)" % named)
+		for entry: Array in Monsters.LOOT.get(kind, []):
+			check(World.ITEMS.has(entry[0]) and float(entry[1]) > 0.0 and float(entry[1]) <= 1.0 and not World.ITEMS[entry[0]].has("glow"),
+				"%s drops a catalog item at a chance in (0, 1], never a relic" % named)
+		check(placed.has(kind), "%s is placed on the map or in a dungeon" % named)
+		if definition["rank"] == "boss":
+			check(definition.get("relics", []).size() >= 4 and definition.has("respawn"), "%s (boss) offers relics and a slow respawn" % named)
+		else:
+			check(not definition.has("relics"), "%s: only bosses have relics" % named)
+	for kind: String in Monsters.LOOT:
+		check(Monsters.MONSTERS.has(kind), "loot table %s belongs to a monster" % kind)
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

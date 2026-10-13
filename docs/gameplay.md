@@ -26,14 +26,17 @@ Knights add Brutal blow and Whirling strike (level 10), Paladins Piercing shot a
 mend (level 8), Sorcerers Ember bolt and Flame wave (level 10), and Druids Frost bolt,
 Mend, and Mass mend (level 10), which heals everyone within 3 tiles.
 
-Monsters stand idle until a player comes within 6 tiles, then chase and attack, but never
-farther than 12 tiles from their spawn or across a zone edge; out of reach, they walk home
-and heal. They respawn 45 seconds after death, once no player stands within 4 tiles of the
+Monsters stand idle until a player comes within 6 tiles, then chase and attack. A chasing
+monster is faster than you (from 0.14 s per tile at level 1 to 0.11 s at level 50, against
+your 0.18 s), so you cannot outrun or kite it: fight with armor, spells, and potions, or
+flee. A monster gives up if you reach a town, drag it more than 12 tiles from its spawn, or
+get more than 12 tiles away. It then heals to full at once and walks home, ignoring everyone
+and taking no damage until it gets there, so you cannot wear one down and run. They respawn 45 seconds after death, once no player stands within 4 tiles of the
 spawn. Monsters chase along real paths around trees and walls. Level 1–4 voles and toads
 ring Cinder Crossing; beyond them, levels rise to 35 in the far east and south, and
 Blackreed Isle holds levels 40–50. Spawns sit in small clearings at least 7 steps from
 roads, so travel between towns stays safe. Early monsters hit softer (half damage at level
-1, full at level 11), and a monster's name shows its level in white (fair), yellow (tough),
+1, full at level 11; a same-level monster needs about 18 hits to drop you), and a monster's name shows its level in white (fair), yellow (tough),
 or red (5+ levels above you). Experience is shared by damage dealt; level 2 takes about 4
 kills. Monsters drop loot from their own table (see below), spilling onto nearby tiles when
 the corpse tile is full. Health and mana regenerate every 2 seconds,
