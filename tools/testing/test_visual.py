@@ -29,6 +29,7 @@ CAPTURES = (
     ("visual-trainer.png", "Training hall: Ranger Tamsin offers the Paladin vocation to an Adventurer who passed the trial"),
     ("visual-lexicon.png", "Lexicon (K) searched for silk: the spiders, where they live, and their drop chances"),
     ("visual-quest-marks.png", "Cinder Landing at level 12: Harbourmaster Ilse's ! and the quest list's next stop"),
+    ("visual-bots.png", "Bots panel (host only): a level-30 Knight bot added beside you, listed with its stance and place"),
     ("visual-quests.png", "Quest list: a task in progress and one ready to turn in, with giver and town"),
     ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
     ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),

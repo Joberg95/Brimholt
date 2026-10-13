@@ -156,6 +156,29 @@ in red (critical hits in orange), healing in green, and experience in white. Ran
 fly as projectiles and area spells flash their tiles. Your health and mana bars sit in the
 top-left of the game window.
 
+## Player bots (host only)
+
+The host's top bar has a **Bots** button. Pick a vocation, a level (1–50), and a stance, then
+**Add a bot beside me**. Bots are real players on the host: they take player slots (twelve in
+all), wear the best regular gear of their level (with accessories from level 20), carry 50
+health and 50 mana potions, and play through the server's own rules, so PvP zones, skulls,
+death penalties, and loot drops all apply. Their nameplates read "Bot Knight 40" and so on.
+They fight like the fight simulator's careful player: their strongest ready attack spell
+while above 30% health, healing spells below 55%, a health potion below 35%, and a mana potion
+below 25% mana; ranged bots step back from anything beside them.
+
+| Stance | Behaviour |
+| --- | --- |
+| Hunter | Hunts monsters (up to 3 levels above it) within 10 tiles of where you placed it, and fights back when a player attacks it |
+| PvP | Also attacks any player (bots too) within 7 tiles while both stand in a PvP zone: take one to Blackreed Isle to duel it |
+| Training dummy | Stands still and never fights back: test damage, spells, and skulls |
+
+A bot that dies comes back 6 seconds later where you placed it, with its level, gear, and
+potions restored, so a test can go on (what it dropped stays on the ground for you to loot).
+The panel lists each bot's stance, place, health, skull, and whether it is fighting, with
+**Remove** and **Remove all**. Bots are never saved and leave with the host; clients cannot
+create them.
+
 ## Talking to people
 
 There is no typed dialogue: right-click a person to open their menu and pick an option.

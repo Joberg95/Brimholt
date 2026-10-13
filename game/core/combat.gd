@@ -789,7 +789,7 @@ func share_bonus(members: Array[int]) -> float:
 
 func describe(id: int) -> String:
 	var player: Dictionary = world.players[id]
-	return "%s %d" % [Balance.profile_of(player["vocation"])["name"], player["level"]]
+	return "%s%s %d" % ["Bot " if player.get("bot", false) else "", Balance.profile_of(player["vocation"])["name"], player["level"]]
 
 
 ## invite/revoke (by a leader or a player without a party), join (an inviting leader), and leave.

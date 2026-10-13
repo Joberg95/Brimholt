@@ -697,14 +697,22 @@ func _has_dungeon_monster() -> bool:
 
 
 func _loss_host_tick() -> void:
+	# A host bot (a training dummy) must reach the client like any player.
+	if game.bots.bots.is_empty() and not game.spawn_bot("knight", 20, "dummy").is_empty():
+		fail("The host could not add a bot")
+		return
 	for id: int in game.actors:
-		if id != 1 and state(id)["equipment"].has("helmet"):
+		if id != 1 and not game.bots.is_bot(id) and state(id)["equipment"].has("helmet"):
 			finish()
 			return
 
 
 func _loss_client_tick() -> void:
-	if stage == 0 and game.connected and game.actors.has(game.self_id):
+	if stage == 0 and game.connected and game.actors.has(game.self_id) and game.actors.keys().any(func(id: int) -> bool:
+			return game.actors[id]["state"].get("bot", false) and game.actors[id]["state"]["level"] == 20):
+		if game.bots.bots.size() != 0 or not game.spawn_bot("knight", 1, "dummy").begins_with("Only the host"):
+			fail("A client holds or can create bots")
+			return
 		# This host was started without --allow-start-vocation: asking for a vocation gets an Adventurer.
 		if state(game.self_id)["vocation"] != "adventurer":
 			fail("A client chose its own starting vocation (%s)" % state(game.self_id)["vocation"])

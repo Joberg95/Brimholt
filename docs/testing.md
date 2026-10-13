@@ -164,7 +164,7 @@ Integration tests and the visual check never use your real saves or identity: ho
 `--no-save` (or a temporary `--save-dir`) and clients with `--fresh-identity`. Test hosts add
 `--allow-start-vocation` so bots can start with `--vocation=...`; the host-loss scenario
 leaves it out and checks that such a client still arrives as an Adventurer.
-`--host-loss` checks the exact disconnect error and
+`--host-loss` checks that a host bot reaches the client as a player (and that clients cannot create bots), the exact disconnect error, and
 clearing stale client state. `--occupied-port` checks an explicit hosting error
 and exit status 1 while another socket holds the port.
 

@@ -14,6 +14,8 @@ const MESSAGE_SECONDS: float = 4.0
 var game: Node
 var address: LineEdit
 var controls: PanelContainer
+## Shown only to the host: opens the Bots panel.
+var bots_button: Button
 var zone_label: Label
 var vitals: Control
 var _status: Label
@@ -44,6 +46,9 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_add_button(row, "Join", Callable(game, "join_game"))
 	_add_button(row, "Leave", Callable(game, "leave_game"))
 	_add_button(row, "Controls", func() -> void: controls.visible = not controls.visible)
+	bots_button = _add_button(row, "Bots", func() -> void: game.bot_panel.visible = not game.bot_panel.visible)
+	bots_button.tooltip_text = "Add player bots to this world (host only)"
+	bots_button.visible = false
 	vitals = Control.new()
 	vitals.position = Layout.VIEW_ORIGIN + Vector2(10, 8)
 	vitals.size = Vector2(220, 34)
@@ -91,6 +96,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 
 ## Per frame: the zone banner and the vitals.
 func refresh() -> void:
+	bots_button.visible = game.hosting and game.connected
 	_update_zone()
 	vitals.queue_redraw()
 
@@ -113,11 +119,12 @@ func update_labels() -> void:
 	_action.text = game.last_action_message
 
 
-func _add_button(parent: Node, text: String, callback: Callable) -> void:
+func _add_button(parent: Node, text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.pressed.connect(callback)
 	parent.add_child(button)
+	return button
 
 
 func _draw_vitals() -> void:

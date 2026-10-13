@@ -7,6 +7,7 @@ const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Lexicon = preload("res://game/core/lexicon.gd")
+const Bots = preload("res://game/core/bots.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Items = preload("res://game/data/items.gd")
 const Economy = preload("res://game/core/economy.gd")
@@ -152,6 +153,7 @@ func _run() -> void:
 	_balance_checks()
 	_adventurer_checks()
 	_quest_hub_and_lexicon_checks()
+	_bot_checks()
 	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
 
@@ -298,6 +300,131 @@ func _quest_hub_and_lexicon_checks() -> void:
 	var vole: Dictionary = Lexicon.entry("field_vole")
 	check(vole["gold"] == roundi(0.6 * World.ITEMS["gold_coins"]["gold"]) and vole["places"] == ["Cinder Meadows"],
 		"the lexicon's gold matches the expected coin piles")
+
+
+## An open cell in a zone (PvP zone when pvp is true) with walkable ground all around.
+func _open_cell(pvp: bool) -> Vector2i:
+	for zone: Dictionary in World.ZONES:
+		if zone["pvp"] != pvp or zone["town"] or zone.get("underground", false):
+			continue
+		var rect: Rect2i = zone["rect"]
+		for y: int in range(rect.position.y + 4, rect.end.y - 4):
+			for x: int in range(rect.position.x + 4, rect.end.x - 4):
+				var clear: bool = true
+				for dy: int in range(-3, 4):
+					for dx: int in range(-3, 4):
+						clear = clear and World.walkable(Vector2i(x + dx, y + dy)) and World.zone_at(Vector2i(x + dx, y + dy)) == zone
+				if clear:
+					return Vector2i(x, y)
+	return Vector2i(-1, -1)
+
+
+## Runs bots and combat together for `seconds`, from `start`; returns the end time.
+func _run_bots(bots: Bots, combat: Combat, start: float, seconds: float) -> float:
+	var now: float = start
+	while now < start + seconds:
+		now += Combat.TICK_SECONDS
+		bots.tick(now)
+		combat.tick(now)
+	return now
+
+
+## Host-side player bots: hunting, PvP, self-defence, dummies, resources, death, and slots.
+func _bot_checks() -> void:
+	var kit: Dictionary = Bots.gear(30, "knight")
+	check(kit.has("helmet") and kit.has("armor") and kit.has("main_hand") and kit.has("off_hand") and kit.has("necklace")
+		and kit.has("ring_1") and kit.values().all(func(kind: String) -> bool: return World.requirement_error(kind, 30, "knight").is_empty()),
+		"bots wear the best regular gear their level and vocation allow")
+	var arena: Vector2i = _open_cell(true)
+	var field: Vector2i = Vector2i(-1, -1)
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var spot: Vector2i = spawn["cell"] + Vector2i(0, 5)
+		if World.zone_at(spot).is_empty() and World.walkable(spot) and World.walkable(spot + Vector2i(0, 3)) and field.x < 0:
+			field = spot
+	check(arena.x >= 0 and field.x >= 0, "bot test sites exist")
+	# Hunting: a hunter walks to a monster near its post, kills it, and earns experience.
+	var world := World.new()
+	var combat := Combat.new(world, 9)
+	var bots := Bots.new(world, combat)
+	world.monsters.clear()
+	var hunter: int = bots.add("knight", 20, "hunter", field, 0.0)["id"]
+	var prey: int = combat.spawn_monster("grey_wolf", 12, world.players[hunter]["cell"] + Vector2i(0, 3), 0.0)
+	world.monsters[prey]["next_attack"] = INF
+	var now: float = _run_bots(bots, combat, 0.0, 30.0)
+	check(world.players[hunter].get("bot", false) and world.export_player(hunter, now)["bot"] and not world.monsters.has(prey)
+		and world.players[hunter]["experience"] > 0, "a hunter bot hunts monsters near its post")
+	# PvP: a PvP bot attacks a player in a PvP zone (and takes a white skull) but not outside one.
+	var pvp_world := World.new()
+	var pvp_combat := Combat.new(pvp_world, 4)
+	var pvp_bots := Bots.new(pvp_world, pvp_combat)
+	pvp_world.monsters.clear()
+	pvp_world.add_player(1, 0.0, "knight")
+	pvp_world.players[1]["level"] = 40
+	pvp_world.clamp_vitals(1)
+	_place(pvp_world, 1, arena)
+	var full_health: int = pvp_world.player_stats(1)["health"]
+	pvp_world.players[1]["health"] = full_health
+	var hunter_pvp: int = pvp_bots.add("paladin", 40, "pvp", arena + Vector2i(3, 0), 0.0)["id"]
+	var passive: int = pvp_bots.add("knight", 40, "hunter", arena + Vector2i(-3, 0), 0.0)["id"]
+	var dummy: int = pvp_bots.add("druid", 40, "dummy", arena + Vector2i(0, 3), 0.0)["id"]
+	now = _run_bots(pvp_bots, pvp_combat, 0.0, 6.0)
+	check(pvp_world.players[hunter_pvp]["target"] == 1 and pvp_world.players[1]["health"] < full_health
+		and pvp_world.players[hunter_pvp]["skull"] == "white", "a PvP bot attacks players in a PvP zone and takes a white skull")
+	check(pvp_world.players[passive]["target"] == 0 and pvp_world.players[dummy]["target"] == 0,
+		"hunter bots and dummies leave players alone")
+	# Self-defence: attacking the hunter bot makes it fight back, without a skull; the dummy never does.
+	pvp_combat.set_target(1, passive, now)
+	now = _run_bots(pvp_bots, pvp_combat, now, 4.0)
+	check(pvp_world.players[passive]["target"] == 1 and pvp_world.players[passive]["skull"].is_empty(),
+		"a hunter bot fights back in self-defence without a skull")
+	pvp_combat.set_target(1, dummy, now)
+	now = _run_bots(pvp_bots, pvp_combat, now, 4.0)
+	check(pvp_world.players[dummy]["target"] == 0 and pvp_world.players[dummy]["health"] < pvp_world.player_stats(dummy)["health"],
+		"a training dummy takes hits and never strikes back")
+	# Outside PvP zones nobody is attacked.
+	var calm_world := World.new()
+	var calm_combat := Combat.new(calm_world, 4)
+	var calm_bots := Bots.new(calm_world, calm_combat)
+	calm_world.monsters.clear()
+	calm_world.add_player(1, 0.0, "knight")
+	_place(calm_world, 1, field)
+	var calm: int = calm_bots.add("sorcerer", 40, "pvp", field + Vector2i(2, 0), 0.0)["id"]
+	_run_bots(calm_bots, calm_combat, 0.0, 3.0)
+	check(calm_world.players[calm]["target"] == 0, "a PvP bot attacks no one outside PvP zones")
+	# Resources: a wounded bot drinks or heals; a ranged bot steps back from a melee foe.
+	var medic: Dictionary = calm_world.players[calm]
+	medic["health"] = roundi(calm_world.player_stats(calm)["health"] * 0.2)
+	var low: int = medic["health"]
+	_run_bots(calm_bots, calm_combat, 10.0, 1.0)
+	check(medic["health"] > low and World.count_of(medic["backpack"][0]) < Bots.POTIONS, "a wounded bot drinks a potion like the fight simulator")
+	var foe: int = calm_combat.spawn_monster("thornback_boar", 5, medic["cell"] + Vector2i(1, 0), 20.0)
+	calm_world.monsters[foe]["next_move"] = INF
+	calm_world.monsters[foe]["next_attack"] = INF
+	_run_bots(calm_bots, calm_combat, 20.0, 0.5)
+	check(Combat.distance(medic["cell"], calm_world.monsters[foe]["cell"]) >= 2 if calm_world.monsters.has(foe) else true,
+		"a ranged bot backs away from a monster beside it")
+	# Death: a killed bot comes back at its post with its level, gear, and potions.
+	var events: Array = []
+	var post: Vector2i = calm_bots.bots[calm]["post"]
+	calm_combat._kill_player(calm, 30.0, events)
+	_run_bots(calm_bots, calm_combat, 30.0, 1.0)
+	var waiting: bool = calm_bots.bots[calm]["restore_at"] > 0.0 and Combat.distance(medic["cell"], post) > 2
+	_run_bots(calm_bots, calm_combat, 31.0, Bots.RESTORE_SECONDS + 1.0)
+	check(waiting and Combat.distance(medic["cell"], post) <= 2 and medic["level"] == 40 and medic["equipment"] == Bots.gear(40, "sorcerer")
+		and medic["health"] == calm_world.player_stats(calm)["health"], "a dead bot is restored at its post")
+	# Slots: bots count toward the player limit and free theirs when removed.
+	var full := World.new()
+	var full_bots := Bots.new(full, Combat.new(full, 1))
+	var added: Array[int] = []
+	for index: int in World.MAX_PLAYERS:
+		added.append(full_bots.add("knight", 10, "dummy", World.SPAWNS[0], 0.0).get("id", 0))
+	check(not full_bots.add("knight", 10, "dummy", World.SPAWNS[0], 0.0)["ok"] and not full.add_player(5, 0.0, "knight"),
+		"bots count toward the player limit")
+	full_bots.remove(added[0])
+	check(full.add_player(5, 0.0, "knight") and not full_bots.is_bot(added[0]) and full.players.size() == World.MAX_PLAYERS,
+		"removing a bot frees its slot")
+	check(not full_bots.add("pirate", 10, "dummy", World.SPAWNS[0], 0.0)["ok"] and not full_bots.add("knight", 10, "berserk", World.SPAWNS[0], 0.0)["ok"],
+		"bots need a real vocation and stance")
 
 
 func _inventory_checks() -> void:

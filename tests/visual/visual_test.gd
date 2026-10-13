@@ -240,6 +240,8 @@ func _run() -> void:
 		return
 	if not await _check_lexicon_and_marks():
 		return
+	if not await _check_bots():
+		return
 	if not await _check_waystone():
 		return
 	if not await _check_town_services():
@@ -260,7 +262,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks, host bots panel")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1233,6 +1235,32 @@ func _check_lexicon_and_marks() -> bool:
 	await create_timer(0.5).timeout
 	return _expect(marked == "!" and "\n".join(listed).contains("Next: Wolves at the woodline"),
 		"Harbourmaster Ilse shows no quest mark, or the quest list no next stop (%s)" % [listed])
+
+
+## The host's Bots button opens the panel; adding a bot puts a "Bot" player beside you that the
+## panel lists; removing it takes it out of the world.
+func _check_bots() -> bool:
+	var button: Button = game.hud.bots_button
+	if not _expect(button.visible, "The host has no Bots button"):
+		return false
+	button.pressed.emit()
+	var panel: Control = game.bot_panel
+	panel.level.value = 30
+	panel.stance.select(0)
+	panel.add_button.pressed.emit()
+	await create_timer(0.6).timeout
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-bots.png")
+	var ids: Array = game.bots.bots.keys()
+	var text: PackedStringArray = []
+	_texts(panel, text)
+	var shown: bool = ids.size() == 1 and game.actors.has(ids[0]) and game.actors[ids[0]]["state"].get("bot", false) \
+		and "\n".join(text).contains("Bot Knight 30") and Combat.distance(game.world.players[ids[0]]["cell"], game.world.players[1]["cell"]) <= 2
+	game.remove_bot(ids[0] if not ids.is_empty() else 0)
+	panel.hide()
+	await process_frame
+	return _expect(shown and game.bots.bots.is_empty() and not game.actors.has(ids[0] if not ids.is_empty() else 0),
+		"Adding a bot from the Bots panel did not put a bot beside you, or removing it failed (%s)" % [text])
 
 
 func _texts(node: Node, into: PackedStringArray) -> void:

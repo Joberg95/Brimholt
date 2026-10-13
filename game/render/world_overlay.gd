@@ -80,8 +80,8 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 		var center: Vector2 = _center_of(actor)
 		if shown.has_point(center) and actor["state"].has("health") and not view.covered(Vector2i(actor["visual"].round())):
 			var state: Dictionary = actor["state"]
-			var title: String = "%s %d" % [Balance.VOCATIONS.get(state.get("vocation", ""), {"name": "Player"})["name"],
-				state.get("level", 1)]
+			var title: String = "%s%s %d" % ["Bot " if state.get("bot", false) else "",
+				Balance.profile_of(state.get("vocation", ""))["name"], state.get("level", 1)]
 			SpriteArt.draw_nameplate(self, center, title, state["health"], state["max_health"], 1.0, state.get("skull", ""),
 				Color.TRANSPARENT, _party_mark(id, state), true)
 	var font: Font = ThemeDB.fallback_font

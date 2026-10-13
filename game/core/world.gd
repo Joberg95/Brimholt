@@ -683,6 +683,8 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		"health": player["health"], "max_health": player_stats(id)["health"], "skull": player["skull"],
 		"party": player["party"],
 	}
+	if player.get("bot", false):
+		state["bot"] = true
 	if include_private:
 		var invites: Array[int] = []
 		for leader: int in players:

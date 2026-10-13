@@ -13,6 +13,7 @@ game/
     economy.gd           Vendors (stock, buying, selling) and the banker (gold accounts)
     instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
+    bots.gd              Host player bots: hunter, PvP, and dummy stances through the real rules
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
     items.json           Item catalog (also read by the sprite generator)
@@ -37,6 +38,7 @@ game/
     spell_book.gd        Spell book (B): your vocation's spells explained (Spells.info), drag to the bar
     character_window.gd  Character window (C): stats explained, experience, and status
     lexicon_window.gd    Lexicon (K): searchable monster list with drop tables
+    bot_panel.gd         Host-only Bots panel: add, list, and remove player bots
     micro_menu.gd        Buttons right of the action bar for the character, book, quests, map, controls
     spell_rune.gd        A spell rune: drawing, coloured tooltip, drag and drop (bar and book)
     item_slot.gd         An item slot whose hover tooltip shows the rarity colour

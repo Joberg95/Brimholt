@@ -25,6 +25,8 @@ const SpellBook = preload("res://game/ui/spell_book.gd")
 const CharacterWindow = preload("res://game/ui/character_window.gd")
 const MicroMenu = preload("res://game/ui/micro_menu.gd")
 const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
+const Bots = preload("res://game/core/bots.gd")
+const BotPanel = preload("res://game/ui/bot_panel.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -101,6 +103,9 @@ var spell_book: SpellBook
 var character_window: CharacterWindow
 var micro_menu: MicroMenu
 var lexicon: LexiconWindow
+var bot_panel: BotPanel
+## Host-only player bots (game/core/bots.gd).
+var bots: Bots
 var inventory: InventoryPanel
 var maps: WorldMaps
 var action_bar: ActionBar
@@ -213,11 +218,15 @@ func _process(delta: float) -> void:
 				_pending_peers.erase(id)
 				_reject_connection(id, "Client handshake timed out.")
 		for id: int in multiplayer.get_peers():
-			if not world.players.has(id) and not _pending_peers.has(id):
+			# ENet picks client ids at random: one that a bot already holds must join again.
+			if bots.is_bot(id) and not _closing_peers.has(id):
+				_reject_connection(id, "Your connection id is in use by a bot. Join again.")
+			elif not world.players.has(id) and not _pending_peers.has(id):
 				if not _closing_peers.has(id):
 					_pending_peers[id] = now
 	if hosting and not _leaving:
 		_handle_events(combat.tick(now))
+		_handle_events(bots.tick(now))
 		_handle_events(instances.tick(now))
 		_handle_events(world.decay_ground(now))
 		if now >= _next_interest:
@@ -252,6 +261,7 @@ func _process(delta: float) -> void:
 	quest_list.refresh()
 	spell_book.refresh()
 	character_window.refresh()
+	bot_panel.refresh()
 	start_panel.refresh()
 	action_bar.redraw()
 	micro_menu.redraw()
@@ -271,7 +281,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
 		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
-				and not character_window.visible and not lexicon.visible and own_target() != 0:
+				and not character_window.visible and not lexicon.visible and not bot_panel.visible and own_target() != 0:
 			target_local(0)
 		_world_map.hide()
 		_close_travel()
@@ -279,6 +289,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		spell_book.hide()
 		character_window.hide()
 		lexicon.hide()
+		bot_panel.hide()
 		return
 	var key: Key = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	var action: String = keybinds.action_for(key)
@@ -359,6 +370,7 @@ func _reset_session() -> void:
 	combat = Combat.new(world)
 	economy = Economy.new(world)
 	instances = Instances.new(world, combat)
+	bots = Bots.new(world, combat)
 	_known_monsters.clear()
 	_next_interest = 0.0
 	store = null
@@ -538,6 +550,34 @@ func _connection_failed() -> void:
 func _host_lost() -> void:
 	if not _leaving:
 		_fail("The host disconnected. Your LAN session has ended.")
+
+
+## Host only: adds a bot beside you (or the first spawn on a dedicated server). Returns "" or why not.
+func spawn_bot(vocation: String, level: int, stance: String) -> String:
+	if not hosting:
+		return "Only the host can add bots"
+	var near: Vector2i = world.players[self_id]["cell"] if world.players.has(self_id) else World.SPAWNS[0]
+	var added: Dictionary = bots.add(vocation, level, stance, near, _now())
+	if not added["ok"]:
+		return added["reason"]
+	_publish_actor(added["id"])
+	return ""
+
+
+## Host only: removes a bot as if it had left.
+func remove_bot(id: int) -> void:
+	if not hosting or not bots.is_bot(id):
+		return
+	var events: Array = []
+	combat.leave_party(id, events)
+	bots.remove(id)
+	actors.erase(id)
+	actor_left.rpc(id)
+	for other: int in world.players:
+		if world.players[other]["target"] == id:
+			world.players[other]["target"] = 0
+			events.append({"kind": "player", "id": other})
+	_handle_events(events)
 
 
 func _peer_left(id: int) -> void:
@@ -1011,7 +1051,7 @@ func _handle_events(events: Array) -> void:
 	for event: Dictionary in events:
 		match event["kind"]:
 			"player":
-				players_changed[event["id"]] = true
+				players_changed[event["id"]] = players_changed.get(event["id"], false) or event.get("movement", false)
 			"monster":
 				monsters_changed[event["id"]] = monsters_changed.get(event["id"], false) or event["movement"]
 			"monster_gone":
@@ -1033,7 +1073,7 @@ func _handle_events(events: Array) -> void:
 						combat_event.rpc_id(peer_id, event)
 	for id: int in players_changed:
 		if world.players.has(id):
-			_publish_actor(id)
+			_publish_actor(id, players_changed[id])
 	for id: int in monsters_changed:
 		if world.monsters.has(id):
 			_publish_monster(id)
@@ -1384,13 +1424,16 @@ func _build_ui() -> void:
 	lexicon = LexiconWindow.new()
 	lexicon.game = self
 	layer.add_child(lexicon)
+	bot_panel = BotPanel.new()
+	bot_panel.game = self
+	layer.add_child(bot_panel)
 	micro_menu = MicroMenu.new()
 	add_child(micro_menu)
 	micro_menu.build(self, layer)
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
 	# list, location line, spell book, character window, lexicon, world map, dialog panel, and Controls menu.
 	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, character_window,
-			lexicon, maps.world_map, dialogs.panel, hud.controls]:
+			lexicon, bot_panel, maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_controls = hud.controls
