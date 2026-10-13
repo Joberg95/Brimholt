@@ -660,7 +660,7 @@ func _stacking_checks() -> void:
 func _sprite_checks() -> void:
 	check(World.ITEMS["bronze_scale_coat"]["look"] == "scale" and World.ITEMS["steel_hauberk"]["look"] == "mail",
 		"scale armour and chainmail use distinct construction")
-	check(World.ITEMS["steel_cuirass"]["look"] == "brigandine"
+	check(World.ITEMS["iron_cuirass"]["look"] == "brigandine"
 		and World.ITEMS["cobalt_warhammer"]["look"] == "hammer" and World.ITEMS["starforged_maul"]["look"] == "hammer",
 		"brigandine and hammers have dedicated icon and worn shapes")
 	# Five poses (stand, two steps, attack wind-up, strike) by four facings.

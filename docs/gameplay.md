@@ -401,8 +401,9 @@ starforged, and wyrmglass. Every tier has a helmet, armor, legs, and boots in fo
 class: **Plate** for Warriors, **Mail** for Hunters, **Leather** for Druids, and **Cloth** for
 Sorcerers. A class wears only its own type (Adventurers may wear any tier-1 piece); the
 types share stats per tier and differ in looks. Low tiers follow each class's
-basic look (Warriors' steel helms, Hunters' feathered ranger hats, Druids' hoods and circlets,
-Sorcerers' wizard hats and robes). From tier 25 the lines are named sets: Golden lion, Frostborn,
+basic look: Warriors go from iron to gilded bronze, blackened steel, and Crusader plate; Hunters
+wear feathered ranger hats and Woodland hoods; Druids antlered hide, Thornvine, Snowwolf, and
+Silverleaf hoods; Sorcerers blue, purple, red, and white wizard hats and robes. From tier 25 the lines are named sets: Golden lion, Frostborn,
 Crimson aegis, Skullcrusher, and the brute's Obsidian bulwark (Warrior); Windrider, Sunspear,
 Glacierstrider, Shadowstalker, and the Great bear (Hunter); Spiritbloom, Mooncloak, Wildroot,
 Verdant spirit, and the Elder stag (Druid); Astral veil, Arcane eclipse, Ashcaller, Voidweaver,

@@ -72,8 +72,10 @@ catalog entry in `game/data/items.json`, an icon, and (if visibly equippable) a 
 ## Painted outfits
 
 The named class sets can be shown as painted full figures instead of generated layers.
-`art/outfits/` holds the source paintings (`class_sets.png` was generated and supplied by the
-project owner as the gear design reference) and `manifest.json`, which lists each outfit: the
+`art/outfits/` holds the source paintings (`class_sets.png` and `class_pieces.png` were generated
+and supplied by the project owner as the gear design reference) and `manifest.json`. Its
+`icon_rows` take loose icons from a region split into equal columns (`class_pieces.png` gives
+the helmet, armor, legs, and boots icons of tiers 5–20). Its `outfits` list each painted figure: the
 source file, the `figures` region and the facings in it (`order`), the `layout`, and optionally
 an `icons` region whose icons (left to right) replace the generated icons of `icon_items`.
 `make outfits` runs `tools/generators/import_outfits.gd`, which separates each figure from its

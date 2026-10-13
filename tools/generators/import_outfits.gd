@@ -12,7 +12,8 @@ extends SceneTree
 ##   stand, step A, step B, wind-up, strike.
 ## A missing left or right facing is mirrored from the other. One scale fits the whole outfit: the
 ## first figure is scaled to "figure_height". An optional "icons" region holds item icons left to
-## right, mapped to "icon_items" (null skips one).
+## right, mapped to "icon_items" (null skips one). "icon_rows" import loose icons (no frames): the region
+## is split into equal columns, one icon per listed item, left to right.
 ## godot --headless --path . --script res://tools/generators/import_outfits.gd [-- --debug=path.png]
 
 const MANIFEST: String = "res://art/outfits/manifest.json"
@@ -121,6 +122,37 @@ func _initialize() -> void:
 				_debug.blit_rect(icon, Rect2i(0, 0, ICON, ICON), Vector2i(FRAME * 4 + slot * ICON, index * FRAME + 16))
 				if items[slot] != null:
 					icon.save_png("res://assets/sprites/icons/%s.png" % items[slot])
+	# Loose icon rows: icons on a flat background, left to right, one item each (null skips one).
+	for entry: Dictionary in manifest.get("icon_rows", []):
+		var file: String = "res://art/outfits/" + String(entry["file"])
+		if not sources.has(file):
+			var loaded := Image.load_from_file(file)
+			if loaded == null:
+				push_error("Cannot read %s" % file)
+				quit(1)
+				return
+			loaded.convert(Image.FORMAT_RGBA8)
+			sources[file] = loaded
+		var row_items: Array = entry["items"]
+		var region: Rect2i = _rect(entry["region"])
+		var width: int = region.size.x / row_items.size()
+		for slot: int in row_items.size():
+			if row_items[slot] != null:
+				# Equal-width columns, cut out whole: an icon may be several pieces (a pair of boots).
+				var cell: Image = sources[file].get_region(Rect2i(region.position.x + slot * width, region.position.y, width,
+					region.size.y))
+				var mask: PackedByteArray = _foreground(cell)
+				for at: int in mask.size():
+					if mask[at] == 0:
+						cell.set_pixel(at % width, at / width, Color(0, 0, 0, 0))
+				var used: Vector2i = cell.get_used_rect().size
+				if not used.x > 0:
+					push_error("%s %s: column %d is empty" % [entry["file"], entry["region"], slot])
+					failed += 1
+					continue
+				_fit(cell, float(ICON - 4) / maxi(used.x, used.y), ICON, true).save_png(
+					"res://assets/sprites/icons/%s.png" % row_items[slot])
+		print("wrote %d icons from %s" % [row_items.size(), entry["file"]])
 	if not debug_path.is_empty():
 		_debug.save_png(debug_path)
 		print("wrote %s" % debug_path)

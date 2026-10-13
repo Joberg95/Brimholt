@@ -190,7 +190,9 @@ func _run() -> void:
 			quit(1)
 			return
 	var icon_origin: Vector2 = Vector2(TEST_ITEM_CELL) * World.TILE_SIZE
-	if not _expect(_matches_texel(image, SpriteArt.ITEM_ICONS, SpriteArt.item_region("iron_coif"), icon_origin),
+	# The Ranger's cap has a painted icon (assets/sprites/icons), drawn instead of its items.png cell.
+	if not _expect(SpriteArt.ICONS.has("iron_coif")
+			and _matches_texel(image, SpriteArt.ICONS["iron_coif"], Rect2(0, 0, SpriteArt.TILE, SpriteArt.TILE), icon_origin),
 			"Ground item sprite is not drawn on its tile"):
 		return
 	# Wall (8, 7) has open ground to its north/west; its raised top must reach over tile (7, 6).
