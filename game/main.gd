@@ -116,6 +116,8 @@ var _address: LineEdit
 ## The vocation a new character asks to start with (--vocation=, for tests and bots); hosts only
 ## grant it when started with --allow-start-vocation, otherwise every new character is an Adventurer.
 var start_vocation: String = Balance.ADVENTURER
+## The 3D renderer (game/render3d/) instead of the 2D one: --renderer=3d, or the toggle key (F3).
+var renderer_3d: bool = false
 var allow_start_vocation: bool = false
 var _controls: PanelContainer
 var _zone_label: Label
@@ -155,6 +157,8 @@ func _ready() -> void:
 			start_vocation = choice
 		elif arg == "--allow-start-vocation":
 			allow_start_vocation = true
+		elif arg == "--renderer=3d":
+			set_renderer_3d(true)
 	for arg: String in args:
 		if arg.begins_with("--port="):
 			var value: String = arg.trim_prefix("--port=")
@@ -299,6 +303,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_run_action(action)
 
 
+func set_renderer_3d(enabled: bool) -> void:
+	renderer_3d = enabled
+	_view.set_3d(enabled)
+
+
 ## Whether a text field (the address, the lexicon search) has the keyboard: game keys wait.
 func typing() -> bool:
 	return get_viewport().gui_get_focus_owner() is LineEdit
@@ -351,6 +360,8 @@ func _run_action(action: String) -> void:
 		character_window.toggle()
 	elif action == "lexicon":
 		lexicon.toggle()
+	elif action == "toggle_3d":
+		set_renderer_3d(not renderer_3d)
 	elif not connected:
 		return
 	elif action == "pick_up":
@@ -1503,11 +1514,15 @@ func camera_focus() -> Vector2:
 
 
 func map_to_screen(point: Vector2) -> Vector2:
+	if renderer_3d:
+		return VIEW_ORIGIN + _view.world_3d.screen_point(point)
 	return VIEW_ORIGIN + _world_view.position + point * ZOOM
 
 
 ## at is relative to the game window.
 func _map_location(at: Vector2) -> Dictionary:
+	if renderer_3d:
+		return {"type": "ground", "cell": _view.world_3d.cell_at(at)}
 	var point: Vector2 = (at - _world_view.position) / ZOOM
 	return {"type": "ground", "cell": Vector2i((point / World.TILE_SIZE).floor())}
 
@@ -1525,6 +1540,10 @@ func _map_drop(at: Vector2, data: Variant) -> void:
 
 
 func _map_input(event: InputEvent) -> void:
+	if renderer_3d and event is InputEventMouseButton and event.pressed \
+			and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		_view.world_3d.zoom_by(-1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0)
+		return
 	if event is InputEventMouseButton and event.pressed:
 		get_viewport().gui_release_focus()
 		var cell: Vector2i = _map_location(event.position)["cell"]

@@ -30,6 +30,9 @@ CAPTURES = (
     ("visual-lexicon.png", "Lexicon (K) searched for silk: the spiders, where they live, and their drop chances"),
     ("visual-quest-marks.png", "Cinder Landing at level 12: Harbourmaster Ilse's ! and the quest list's next stop"),
     ("visual-bots.png", "Bots panel (host only): a level-30 Knight bot added beside you, listed with its stance and place"),
+    ("visual-3d.png", "3D view (F3) by day: Cinder Crossing, your character, a wolf, NPCs, trees, nameplates"),
+    ("visual-3d-forest.png", "3D view in a forest: KayKit trees on the grass"),
+    ("visual-3d-night.png", "3D view at night: lanterns and town torches"),
     ("visual-quests.png", "Quest list: a task in progress and one ready to turn in, with giver and town"),
     ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
     ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),
@@ -52,6 +55,10 @@ CAPTURES = (
 )
 
 
+## The 3D view compiles its shaders on first use, so allow well over the usual ~40 seconds.
+VISUAL_TIMEOUT = 120
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--godot", default="godot", help="Godot 4 executable")
@@ -67,9 +74,9 @@ def main():
     ]
     try:
         result = subprocess.run(command, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True, timeout=45)
+                                text=True, timeout=VISUAL_TIMEOUT)
     except subprocess.TimeoutExpired:
-        print("FAIL: visual check timed out after 30 seconds")
+        print(f"FAIL: visual check timed out after {VISUAL_TIMEOUT} seconds")
         return 1
     lines = [line for line in result.stdout.splitlines() if "BRIMHOLT" in line or "ERROR" in line]
     print("\n".join(lines))

@@ -191,3 +191,31 @@ Original art is generated; the only third-party assets are CC0 textures in
 `assets/third_party/` (currently eight 128 px textures from Kenney's Particle Pack, used for
 lights and particles). Add a CC0 pack only with its original license file beside it and a row
 in `assets/third_party/CREDITS.md`; never import ripped, proprietary, or Tibia-derived art.
+
+## 3D view (in progress)
+
+Press **F3** (rebindable "3D view on/off", or start with `--renderer=3d`) to switch the game
+window to the 3D renderer in `game/render3d/`; the 2D view stays the default until the 3D one
+matches it. The game rules, networking, and UI are the same in both. Rendering uses Forward+.
+
+- **Camera:** a fixed angled top-down view (52° pitch) following your character; the mouse
+  wheel zooms between 10 and 30 tiles away. Clicks map to tiles by casting a ray to the ground,
+  and a click on a creature's body finds that creature.
+- **Terrain** (`terrain_3d.gd`) is built in 16×16-tile chunks around the camera and freed
+  behind it: vertex-coloured ground, sunken water with a glossy surface and earth banks, walls
+  as stone boxes, and KayKit trees, dead trees, and rocks as MultiMesh instances.
+- **Characters** (`character_3d.gd`) are KayKit Adventurers by vocation (Knight: Knight,
+  Paladin: hooded Rogue, Sorcerer: Mage, Druid: Barbarian, Adventurer: Rogue). The equipped
+  weapon and off-hand attach to the hand bones by item look (swords, axes, crossbows for bows,
+  wands, staffs for rods, round/badge/square shields, spellbooks; a torch is built in code),
+  helmets and capes show only when worn, relics glow, and they idle, run, and attack.
+- **Monsters** (`creature_3d.gd`) are tinted low-poly placeholders per look until their models
+  arrive; humanoid monsters use KayKit characters with their catalog gear.
+- **Light:** the sun follows the shared day/night clock and zone ambience, with soft shadows,
+  SSAO, filmic tone mapping, light fog, and glow; at night (or underground) a pool of lights
+  serves lanterns, held torches, and town wall torches.
+- **Overlay** (`overlay_3d.gd`): nameplates, the target square, NPC names with quest marks,
+  missiles, and floating numbers are projected from 3D and stay crisp at every zoom.
+
+3D models come from CC0 KayKit packs (see `assets/third_party/CREDITS.md`).
+

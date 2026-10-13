@@ -15,6 +15,8 @@ game/
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
     bots.gd              Host player bots: hunter, PvP, and dummy stances through the real rules
     ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/
+  render3d/              The 3D renderer (F3): world_3d.gd (camera, light, streaming, creatures),
+                         terrain_3d.gd (chunks), character_3d.gd, creature_3d.gd, overlay_3d.gd
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
     items.json           Item catalog (also read by the sprite generator)
