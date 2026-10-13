@@ -104,7 +104,7 @@ monsters at the player's level currently give:
 | Fight | Auto-attacks only | Spells and potions |
 | --- | --- | --- |
 | One monster | 3–27% health lost; nobody dies | 3–27% lost, 0–3 potions |
-| A camp of three | Knights end at 5–60% health; Paladins die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–11 potions (Druids drink the most mana) |
+| A camp of three | Knights end at 5–60% health; Paladins die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–8 potions (Druids about 5–6, mostly mana) |
 | Level 1 against a level 40 | Dead within 2 seconds | Dead |
 
 ## Early game

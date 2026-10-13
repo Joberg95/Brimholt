@@ -114,7 +114,7 @@ current bands in `docs/balance.md`:
 - One monster costs at most about a third of a player's health with auto-attacks alone.
 - A camp of three kills sorcerers and druids that only auto-attack.
 - Every vocation wins that camp with spells and potions, ending above about 40% health and
-  using roughly 0–12 potions.
+  using roughly 0–8 potions.
 
 If a new monster falls outside the bands, change its rank, range or camp size, not its
 numbers. If every monster is off, adjust the `Balance` constants and regenerate

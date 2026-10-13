@@ -24,7 +24,7 @@ const SPELLS: Dictionary = {
 	"flame_wave": {"name": "Flame wave", "vocations": ["sorcerer"], "level": 10, "kind": "area_target", "range": 5,
 		"radius": 1, "power": 1.5, "mana": 0.2, "cooldown": 6.0, "group": "attack", "color": Color("#ff6a30")},
 	"frost_bolt": {"name": "Frost bolt", "vocations": ["druid"], "level": 1, "kind": "target", "range": 5,
-		"power": 1.6, "mana": 0.08, "cooldown": 2.0, "group": "attack", "color": Color("#8ad0ff")},
+		"power": 1.6, "mana": 0.06, "cooldown": 2.0, "group": "attack", "color": Color("#8ad0ff")},
 	"mend": {"name": "Mend", "vocations": ["druid"], "level": 1, "kind": "heal_self", "power": 0.35, "mana": 0.1,
 		"cooldown": 1.0, "group": "healing", "color": Color("#7fe08a")},
 	"mass_mend": {"name": "Mass mend", "vocations": ["druid"], "level": 10, "kind": "heal_area", "radius": 3,
