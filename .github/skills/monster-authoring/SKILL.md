@@ -30,8 +30,9 @@ the contract below. Consult the gameplay and validation skills for wider rules.
   sight). Ranged monsters hit as hard as melee ones, so keep them rarer in a camp.
 - **step**: the idle and walk-home pace, 0.3–0.8 s per tile (slow brutes 0.6–0.7, beasts
   0.3–0.45).
-  - Chasing always uses `Balance.chase_seconds(level)` instead: 0.14 s per tile at level 1
-    to 0.11 s at level 50, faster than a player's 0.18 s.
+  - Chasing always uses `Balance.chase_seconds(monster_level, target_level)` instead: 0.17 s
+    per tile at even level (a touch faster than a player's 0.18 s), down to 0.13 s when the
+    monster outlevels its target by 10 or more.
   - So `step` never makes a monster kitable.
 - **look**: one of the tinted creature sheets (`quadruped`, `blob`, `golem`, `wraith`) with
   `color` as the tint. Or `humanoid` with `gear`: catalog item ids per visible slot, each of
@@ -87,7 +88,8 @@ Art must be original (see `docs/art.md`).
 
 ## 4. Behaviour you get for free
 
-- Aggro within `Monsters.AGGRO_RANGE` (6 tiles).
+- Aggro within `Monsters.AGGRO_RANGE` (3 tiles), so players can pull from a camp's edge; it
+  gives up beyond `Monsters.CHASE_RANGE` (12 tiles).
 - Chasing at chase speed, along real paths.
 - An auto-attack every 2 s.
 - A reset when the target reaches a town, is dragged more than `Monsters.LEASH` (12 tiles)

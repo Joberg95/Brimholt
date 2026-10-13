@@ -369,7 +369,8 @@ func _dedicated_host_tick() -> void:
 	if saw_voyage and sparring != 0 and not game.world.monsters.has(sparring) and not quest_ready:
 		for id: int in game.world.players:
 			var player: Dictionary = game.world.players[id]
-			var beside: Vector2i = World.QUEST_GIVERS["relic_keeper_kharzul"]["cell"] + Vector2i.DOWN
+			# Between Ysolde and Brannoc, in talking range of both.
+			var beside: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"] + Vector2i(2, 1)
 			player["trophies"] = {"kharzul": 1}
 			player["cell"] = beside
 			player["from"] = beside

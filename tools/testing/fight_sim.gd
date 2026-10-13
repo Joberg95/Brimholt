@@ -32,8 +32,8 @@ func _initialize() -> void:
 		quit(1)
 		return
 	var definition: Dictionary = Monsters.MONSTERS[kind]
-	print("%s (%s, range %d, step %.2f s, chase %.2f-%.2f s)" % [definition["name"], definition["rank"], definition["range"],
-		definition["step"], Balance.chase_seconds(1), Balance.chase_seconds(Balance.MAX_LEVEL)])
+	print("%s (%s, range %d, step %.2f s, chase %.2f s at even level, %.2f s 10+ levels up)" % [definition["name"],
+		definition["rank"], definition["range"], definition["step"], Balance.chase_seconds(1, 1), Balance.chase_seconds(50, 1)])
 	for level_text: String in options["levels"].split(","):
 		var level: int = level_text.to_int()
 		var player_level: int = options["player-level"].to_int() if not options["player-level"].is_empty() else level

@@ -166,6 +166,9 @@ output for script/resource errors, not just its exit status.
 
 ## Visual
 
+Quest list capture: `visual-quests.png` (a task in progress and one ready to turn in, each
+with its giver and town; the quest list key hides it).
+
 Roof captures: `visual-roofs.png` (Ashford's shop from the plaza: the roof hides the merchant
 and their name; the sign hangs beside the door) and `visual-shop-inside.png` (inside, the roof
 has faded and the merchant shows).

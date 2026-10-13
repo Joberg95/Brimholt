@@ -15,8 +15,6 @@ const GEARED_HITS_PER_KILL: float = 6.0
 const BASE_HITS_PER_KILL: float = 8.0
 ## Same-level normal mob hits an ungeared paladin survives (from level 11; more before that).
 const HITS_TO_FALL: float = 18.0
-## Seconds per tile a monster takes while chasing (level 1 to MAX_LEVEL): always quicker than a
-## player's World.MOVE_SECONDS (0.18), so nobody outruns or kites a monster; it catches up.
 ## PvP: players hit players PVP_DAMAGE times harder (player health is built to survive many
 ## monster hits). For PVP_COMBAT_SECONDS after any hit between players, both heal at PVP_HEALING
 ## strength (spells, potions, and regeneration), fading to nothing over PVP_DAMPENING_SECONDS of
@@ -25,8 +23,13 @@ const PVP_DAMAGE: float = 1.5
 const PVP_HEALING: float = 0.35
 const PVP_COMBAT_SECONDS: float = 10.0
 const PVP_DAMPENING_SECONDS: float = 90.0
-const CHASE_SECONDS_LEVEL_1: float = 0.14
-const CHASE_SECONDS_MAX_LEVEL: float = 0.11
+## Seconds per tile a chasing monster takes: CHASE_SECONDS_EVEN against a target of its level or
+## higher (a touch quicker than a player's World.MOVE_SECONDS, 0.18), down to CHASE_SECONDS_FAST
+## once it outlevels the target by CHASE_GAP_LEVELS or more. Nobody outruns a monster far above
+## them; a fair fight is not a sprint.
+const CHASE_SECONDS_EVEN: float = 0.17
+const CHASE_SECONDS_FAST: float = 0.13
+const CHASE_GAP_LEVELS: float = 10.0
 const EARLY_DAMAGE_LEVELS: float = 10.0
 const MOB_HEALTH_LEVEL_1: float = 30.0
 const PLAYER_HEALTH_LEVEL_1: float = 150.0
@@ -110,10 +113,11 @@ static func mob_damage(level: int, rank: String = "normal") -> int:
 	return maxi(1, roundi(PLAYER_HEALTH_LEVEL_1 * _scale(level) / HITS_TO_FALL * RANKS[rank]["damage"] * early_damage(level)))
 
 
-## A monster's step time while chasing a target (its own, slower pace is for idling and going home).
-static func chase_seconds(level: int) -> float:
-	var progress: float = (clampi(level, 1, MAX_LEVEL) - 1) / float(MAX_LEVEL - 1)
-	return lerpf(CHASE_SECONDS_LEVEL_1, CHASE_SECONDS_MAX_LEVEL, progress)
+## A monster's step time while chasing a target of `target_level` (its own, slower pace is for
+## idling and going home).
+static func chase_seconds(monster_level: int, target_level: int) -> float:
+	var gap: float = clampf((monster_level - target_level) / CHASE_GAP_LEVELS, 0.0, 1.0)
+	return lerpf(CHASE_SECONDS_EVEN, CHASE_SECONDS_FAST, gap)
 
 
 static func mob_experience(level: int, rank: String = "normal") -> int:
@@ -199,5 +203,5 @@ static func signature() -> String:
 	return str([MAX_LEVEL, FINAL_BOSS_HEALTH, ATTACK_SECONDS, GEARED_HITS_PER_KILL, BASE_HITS_PER_KILL,
 		HITS_TO_FALL, MOB_HEALTH_LEVEL_1, PLAYER_HEALTH_LEVEL_1, PLAYER_MANA_LEVEL_1, BASE_CRITICAL,
 		REGEN_FRACTION, HEAL_FRACTION, EARLY_DAMAGE_LEVELS, VOCATIONS, RAID, RAID_FIGHT_SECONDS, ENRAGE_SECONDS,
-		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_LEVEL_1, CHASE_SECONDS_MAX_LEVEL,
+		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_EVEN, CHASE_SECONDS_FAST, CHASE_GAP_LEVELS,
 		PVP_DAMAGE, PVP_HEALING, PVP_COMBAT_SECONDS, PVP_DAMPENING_SECONDS])

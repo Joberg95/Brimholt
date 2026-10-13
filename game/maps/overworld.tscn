@@ -2891,16 +2891,17 @@ place = "Emberfall"
 task = "hollow_purge"
 
 [node name="relic_keeper_kharzul" type="Marker2D" parent="QuestGivers"]
-position = Vector2(4816, 6000)
+position = Vector2(4880, 6000)
 script = ExtResource("6_qgive")
 npc_name = "Brannoc the Forgemaster"
 place = "Reedmere"
 
 [node name="relic_keeper_sylvaine" type="Marker2D" parent="QuestGivers"]
-position = Vector2(4880, 6000)
+position = Vector2(4752, 6096)
 script = ExtResource("6_qgive")
 npc_name = "Liraen of the Thorn"
 place = "Reedmere"
+facing = Vector2i(1, 0)
 
 [node name="relic_keeper_vaelith" type="Marker2D" parent="QuestGivers"]
 position = Vector2(4880, 6096)

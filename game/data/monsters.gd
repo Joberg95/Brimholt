@@ -111,7 +111,9 @@ const LOOT: Dictionary = {
 	"obsidian_golem": [["obsidian_chunk", 0.4], ["sanctum_warhammer", 0.055]],
 	"vaelith": [],
 }
-## Monsters notice players within this many tiles and never chase beyond LEASH from home.
-const AGGRO_RANGE: int = 6
+## Monsters notice players within AGGRO_RANGE tiles (so you can pull one at a camp's edge),
+## give up beyond CHASE_RANGE from themselves, and never chase beyond LEASH from home.
+const AGGRO_RANGE: int = 3
+const CHASE_RANGE: int = 12
 const LEASH: int = 12
 const RESPAWN_SECONDS: float = 45.0

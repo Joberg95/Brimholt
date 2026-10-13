@@ -1166,7 +1166,7 @@ func _can_chase(monster: Dictionary, player: int) -> bool:
 	var cell: Vector2i = world.players[player]["cell"]
 	var into_town: bool = World.zone_at(cell).get("town", false) and not World.zone_at(monster["home"]).get("town", false)
 	return not into_town and distance(cell, monster["home"]) <= Monsters.LEASH \
-		and distance(cell, monster["cell"]) <= Monsters.AGGRO_RANGE * 2 and World.dungeon_at(cell) == World.dungeon_at(monster["home"])
+		and distance(cell, monster["cell"]) <= Monsters.CHASE_RANGE and World.dungeon_at(cell) == World.dungeon_at(monster["home"])
 
 
 ## Forgets the fight: full health, no experience or trophy claims, and (for bosses) no timer.
@@ -1253,10 +1253,13 @@ func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 		return taken.get(cell, 0) > own.get(cell, 0) or distance(cell, home) > Monsters.LEASH \
 			or World.zone_at(cell).is_empty() == home_zoned)
 	# Chasing is quicker than a player's step (Balance.chase_seconds); idling and going home use the monster's own pace.
-	var pace: float = minf(monster["step"], Balance.chase_seconds(monster["level"])) if monster["target"] != 0 else monster["step"]
+	var hunted: int = monster["target"]
+	var pace: float = monster["step"]
+	if hunted > 0 and world.players.has(hunted):
+		pace = minf(pace, Balance.chase_seconds(monster["level"], world.players[hunted]["level"]))
 	# Steps happen on ticks; carry the leftover so a steady chase keeps its real pace between ticks.
 	var since: float = now - monster["next_move"]
-	monster["next_move"] = (monster["next_move"] if since >= 0.0 and since < TICK_SECONDS else now) + pace
+	monster["next_move"] = (monster["next_move"] if since >= 0.0 and since < pace else now) + pace
 	monster["last_step"] = pace
 	if step == Vector2i.ZERO:
 		return

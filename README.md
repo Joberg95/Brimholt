@@ -90,6 +90,7 @@ These are the default keys; every key can be changed (see below).
 | Q / E | Drink a health / mana potion |
 | Right-click / click a bar slot | Choose its spell / cast it |
 | M | Open or close the world map |
+| L | Show or hide the quest list (your tasks, their givers, and your progress) |
 | Esc | Close menus, or release your target (cannot be rebound) |
 | Leave / close window | Disconnect; leaving the host ends the session |
 

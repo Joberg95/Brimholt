@@ -15,6 +15,7 @@ const DEFAULTS: Dictionary = {
 	"pick_up": ["Pick up", KEY_G, KEY_NONE],
 	"target_nearest": ["Target nearest", KEY_SPACE, KEY_NONE],
 	"world_map": ["World map", KEY_M, KEY_NONE],
+	"quest_list": ["Quest list", KEY_L, KEY_NONE],
 	"health_potion": ["Health potion", KEY_Q, KEY_NONE],
 	"mana_potion": ["Mana potion", KEY_E, KEY_NONE],
 	"slot_1": ["Action bar 1", KEY_1, KEY_NONE],
@@ -30,7 +31,7 @@ const DEFAULTS: Dictionary = {
 ## Escape always closes menus and cannot be bound.
 const RESERVED: Array[Key] = [KEY_ESCAPE]
 ## The action bar holds spells only, stored as "spell:<id>"; "" is an empty slot. Other
-## actions (target nearest, pick up, world map, potions) have their own key bindings above.
+## actions (target nearest, pick up, world map, quest list, potions) have their own key bindings above.
 const DEFAULT_BAR: Array[String] = ["", "", "", "", "", "", "", "", ""]
 
 ## Action id -> [primary, secondary] physical keycodes.

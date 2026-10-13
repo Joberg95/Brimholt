@@ -20,6 +20,7 @@ const ActionBar = preload("res://game/ui/action_bar.gd")
 const NpcDialogs = preload("res://game/ui/npc_dialogs.gd")
 const StartPanel = preload("res://game/ui/start_panel.gd")
 const CellIndex = preload("res://game/render/cell_index.gd")
+const QuestList = preload("res://game/ui/quest_list.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -91,6 +92,7 @@ var identity_profile: String = ""
 ## request (a click or shortcut meant for another app) cannot end their session.
 var close_ends_session: bool = true
 var hud: Hud
+var quest_list: QuestList
 var inventory: InventoryPanel
 var maps: WorldMaps
 var action_bar: ActionBar
@@ -234,6 +236,7 @@ func _process(delta: float) -> void:
 	_world_view.queue_redraw()
 	dialogs.refresh()
 	hud.refresh()
+	quest_list.refresh()
 	start_panel.refresh()
 	action_bar.redraw()
 	maps.redraw()
@@ -274,6 +277,8 @@ func use_bar_slot(slot: int) -> void:
 func _run_action(action: String) -> void:
 	if action == "world_map":
 		_world_map.visible = not _world_map.visible
+	elif action == "quest_list":
+		quest_list.shown = not quest_list.shown
 	elif not connected:
 		return
 	elif action == "pick_up":
@@ -1276,9 +1281,12 @@ func _build_ui() -> void:
 	start_panel = StartPanel.new()
 	start_panel.setup(self, hud.address, hud.vocation)
 	layer.add_child(start_panel)
-	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals,
-	# world map, dialog panel, and Controls menu.
-	for top: Control in [hud.zone_label, hud.vitals, maps.world_map, dialogs.panel, hud.controls]:
+	quest_list = QuestList.new()
+	quest_list.game = self
+	layer.add_child(quest_list)
+	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
+	# list, location line, world map, dialog panel, and Controls menu.
+	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_vocation = hud.vocation

@@ -88,9 +88,11 @@ experience, which can lose levels; below level 8, players keep their items and g
 
 ## Monster pace, leash, and fights you cannot dodge
 
-Monsters chase at `Balance.chase_seconds(level)` per tile: 0.14 s at level 1 down to 0.11 s at
-level 50, always quicker than a player's 0.18 s step. Nobody outruns or kites a monster; a
-monster far above your level simply kills you. A monster gives up when its target enters a
+Monsters notice players within 3 tiles (`Monsters.AGGRO_RANGE`), so a camp can be pulled one
+monster at a time from its edge, and chase at `Balance.chase_seconds(monster_level,
+target_level)` per tile: 0.17 s against a target of their level or higher (just quicker than a
+player's 0.18 s step), falling to 0.13 s once they outlevel the target by 10 or more. Nobody
+outruns a monster far above them; a monster far above your level simply kills you. A monster gives up when its target enters a
 town, is dragged more than 12 tiles (`Monsters.LEASH`) from its home, or gets more than 12
 tiles away; it heals to full at once and walks home at its own pace, untouchable and ignoring
 players until it arrives. So a fight must be won where it starts, with armor, spells, and

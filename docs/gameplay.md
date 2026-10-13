@@ -35,10 +35,11 @@ times the spell's power):
 New spells fill empty action-bar slots when you reach their level (or right-click a slot to
 choose one).
 
-Monsters stand idle until a player comes within 6 tiles, then chase and attack. A chasing
-monster is faster than you (from 0.14 s per tile at level 1 to 0.11 s at level 50, against
-your 0.18 s), so you cannot outrun or kite it: fight with armor, spells, and potions, or
-flee. A monster gives up if you reach a town, drag it more than 12 tiles from its spawn, or
+Monsters stand idle until a player comes within 3 tiles, so you can pull one from the edge of
+a camp instead of the whole camp, then chase and attack. A chasing monster is a touch quicker
+than you (0.17 s per tile against your 0.18 s), and much quicker when it outlevels you, down
+to 0.13 s from 10 levels above: you cannot outrun a monster far above your level, and kiting
+one of your own level gains you little. Fight with armor, spells, and potions, or flee. A monster gives up if you reach a town, drag it more than 12 tiles from its spawn, or
 get more than 12 tiles away. It then heals to full at once and walks home, ignoring everyone
 and taking no damage until it gets there, so you cannot wear one down and run. They respawn 45 seconds after death, once no player stands within 4 tiles of the
 spawn. Monsters chase along real paths around trees and walls. Level 1–4 voles and toads
@@ -187,6 +188,10 @@ house (30 risen dead, then Abbot Morrow), and **Foreman Dagny** inside Highmoor'
 hunt, and your party's shared kills count too. They pay experience and gold instead of a pack:
 half of what the kills themselves gave for a hunt, and as much again as the boss gave for a
 boss task (shown in the quest dialog). A giver lists all their tasks; each is done once.
+
+The **quest list** in the top-left of the game window shows every task you are on: its giver
+and town, and your progress, or "Done: return to ..." once you can turn it in. Press L
+(rebindable) to hide or show it.
 
 Each finished town task gives you the next **pack**, worn in the bag slot (top right of the
 paperdoll): a Traveler's pack (12 backpack slots), then an Explorer's pack (16), then a

@@ -32,6 +32,7 @@ game/
     game_window.gd       Game window: world SubViewport, rain, vignette, overlay; forwards map input to main
     hud.gd               Title row, status line, action message, zone banner, vitals, Controls menu
     inventory_panel.gd   Paperdoll and backpack slots, drag-and-drop, stat sheet, item tooltips
+    quest_list.gd        Quest list in the game window: active tasks, givers, progress
     item_slot.gd         An item slot whose hover tooltip shows the rarity colour
     action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation
     world_maps.gd        Minimap and world map drawn from one terrain texture

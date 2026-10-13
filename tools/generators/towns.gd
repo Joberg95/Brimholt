@@ -20,12 +20,12 @@ const BANK_PLACE: String = "Reedmere"
 const TILE: int = 32
 const QUEST_SCRIPT: Script = preload("res://game/maps/markers/quest_giver.gd")
 ## Quest givers this painter places (or moves): node name, display name, place, cell, facing.
-## Relic keepers (one per final boss, game/data/quests.gd RELIC_KEEPERS) stand on Reedmere's
-## north plaza, the town at the middle of the world; dungeon task givers stand by their stairway.
+## Relic keepers (one per final boss, game/data/quests.gd RELIC_KEEPERS) stand in the corners of
+## Reedmere's north plaza (far enough apart that their names do not overlap), the town at the middle of the world; dungeon task givers stand by their stairway.
 const QUEST_GIVERS: Array = [
 	["relic_keeper", "Ysolde", "Reedmere", Vector2i(148, 187), Vector2i.DOWN],
-	["relic_keeper_kharzul", "Brannoc the Forgemaster", "Reedmere", Vector2i(150, 187), Vector2i.DOWN],
-	["relic_keeper_sylvaine", "Liraen of the Thorn", "Reedmere", Vector2i(152, 187), Vector2i.DOWN],
+	["relic_keeper_kharzul", "Brannoc the Forgemaster", "Reedmere", Vector2i(152, 187), Vector2i.DOWN],
+	["relic_keeper_sylvaine", "Liraen of the Thorn", "Reedmere", Vector2i(148, 190), Vector2i.RIGHT],
 	["relic_keeper_vaelith", "Oswin the Ashen", "Reedmere", Vector2i(152, 190), Vector2i.LEFT],
 	["cellarmaster_pell", "Cellarmaster Pell", "Cinder Crossing", Vector2i(15, 5), Vector2i.DOWN],
 	["sexton_wren", "Sexton Wren", "Ashford", Vector2i(189, 127), Vector2i.RIGHT],
@@ -154,6 +154,11 @@ static func apply(scene_root: Node) -> int:
 static func _place_quest_givers(scene_root: Node, layer: TileMapLayer, blocked: Dictionary) -> int:
 	var changed: int = 0
 	var group: Node = scene_root.get_node("QuestGivers")
+	# Givers this painter places may swap tiles; only other markers block them.
+	var placing: Array = QUEST_GIVERS.map(func(entry: Array) -> String: return entry[0])
+	for cell: Vector2i in blocked.keys():
+		if blocked[cell] in placing:
+			blocked.erase(cell)
 	for entry: Array in QUEST_GIVERS:
 		var cell: Vector2i = entry[3]
 		var marker: Node2D = group.get_node_or_null(String(entry[0]))

@@ -23,6 +23,7 @@ CAPTURES = (
     ("visual-isle.png", "Blackreed Isle: PvP zone banner, action bar, red minimap"),
     ("visual-map.png", "World map (M) with the PvP island"),
     ("visual-combat.png", "Combat: locked target, nameplates, health/mana bars, floating damage"),
+    ("visual-quests.png", "Quest list: a task in progress and one ready to turn in, with giver and town"),
     ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
     ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),
     ("visual-roofs.png", "Ashford from the plaza: roofs over the houses, a hanging shop sign, no names through roofs"),

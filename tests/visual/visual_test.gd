@@ -223,6 +223,8 @@ func _run() -> void:
 		return
 	if not await _check_relics():
 		return
+	if not await _check_quest_list():
+		return
 	if not await _check_town_services():
 		return
 	if not await _check_roofs_and_signs():
@@ -903,6 +905,35 @@ func _check_dungeons() -> bool:
 	var mine: Image = screen.get_texture().get_image()
 	mine.save_png("res://.tools/visual-mine.png")
 	return _expect(_colours(mine, Rect2(game.VIEW_ORIGIN + Vector2(260, 220), Vector2(160, 120))) > 20, "The mine caves are blank")
+
+
+## The quest list: one task in progress and one ready to turn in, then hidden with its key.
+func _check_quest_list() -> bool:
+	var player: Dictionary = game.world.players[1]
+	var before: Dictionary = player["tasks"].duplicate()
+	player["tasks"] = {"cellar_vermin": 12, "rat_king": 1}
+	game._publish_actor(1)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-quests.png")
+	var lines: PackedStringArray = []
+	for child: Node in game.quest_list.get_child(0).get_children():
+		if child is Label and not child.is_queued_for_deletion():
+			lines.append(child.text)
+	var text: String = "\n".join(lines)
+	var ok: bool = game.quest_list.visible and text.contains("Vermin in the cellar") and text.contains("12/25 cellar rats") \
+		and text.contains("Cellarmaster Pell, Cinder Crossing") and text.contains("Done: return to Cellarmaster Pell")
+	game._run_action("quest_list")
+	await process_frame
+	await process_frame
+	var hidden: bool = not game.quest_list.visible
+	game._run_action("quest_list")
+	player["tasks"] = before
+	game._publish_actor(1)
+	await process_frame
+	return _expect(ok, "The quest list should show each task's giver and progress:\n%s" % text) \
+		and _expect(hidden, "The quest list key should hide the list")
 
 
 ## Ashford's shop from the plaza (roof over the merchant, sign by the door, no name through

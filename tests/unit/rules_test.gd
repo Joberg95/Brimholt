@@ -1367,7 +1367,7 @@ func _relic_quest_checks() -> void:
 	_place(world, 1, lair + Vector2i(1, 0))
 	_place(world, 2, lair + Vector2i(1, 3))
 	_place(world, 3, lair + Vector2i(-4, 0))
-	_place(world, 4, keeper + Vector2i(0, 1))
+	_place(world, 4, keeper + Vector2i(2, 1))
 	var boss: int = combat.spawn_monster("morvain", 50, lair, 0.0)
 	# Player 1 tanks (is hit) and attacks; player 2 heals player 1; player 3 stands nearby
 	# self-healing at full health every so often; player 4 is far away.
@@ -1815,7 +1815,7 @@ func _dungeon_checks() -> void:
 	quiet.add_player(1, 0.0)
 	_place(quiet, 1, Vector2i(10, 10))
 	var far: int = quiet_combat.spawn_monster("field_vole", 1, Vector2i(200, 200), 0.0)
-	var near: int = quiet_combat.spawn_monster("field_vole", 1, Vector2i(14, 10), 0.0)
+	var near: int = quiet_combat.spawn_monster("field_vole", 1, Vector2i(13, 10), 0.0)
 	quiet_combat.tick(1.0)
 	check(quiet.monsters[far]["target"] == 0 and quiet.monsters[near]["target"] == 1, "only monsters near players wake")
 
@@ -2192,8 +2192,10 @@ func _hardening_checks() -> void:
 
 ## Monsters catch fleeing players; dragging one too far or into a town resets it at full health.
 func _chase_checks() -> void:
-	check(Balance.chase_seconds(1) < World.MOVE_SECONDS and Balance.chase_seconds(Balance.MAX_LEVEL) < Balance.chase_seconds(1),
-		"monsters chase faster than players walk, and higher monsters faster still")
+	check(Balance.chase_seconds(5, 5) < World.MOVE_SECONDS and Balance.chase_seconds(5, 5) > World.MOVE_SECONDS - 0.03
+		and Balance.chase_seconds(40, 1) < Balance.chase_seconds(5, 5) and Balance.chase_seconds(1, 40) == Balance.chase_seconds(5, 5),
+		"a monster chases a touch faster than you walk, much faster only when it outlevels you")
+	check(Monsters.AGGRO_RANGE <= 3 and Monsters.CHASE_RANGE > Monsters.AGGRO_RANGE, "monsters notice you up close but chase far")
 	# An open straight corridor outside any town, at least 14 tiles east of a monster camp.
 	var start: Vector2i = Vector2i(-1, -1)
 	for spawn: Dictionary in World.MONSTER_SPAWNS:
@@ -2224,7 +2226,11 @@ func _chase_checks() -> void:
 				world.move(1, Vector2i.RIGHT, now)
 			combat.tick(now)
 			caught = caught or Combat.distance(world.monsters[monster]["cell"], player["cell"]) <= 1
-		check(caught and world.monsters[monster]["target"] == 1, "a level %d monster catches a fleeing player" % level)
+		if level == 40:
+			check(caught and world.monsters[monster]["target"] == 1, "a monster far above you catches you fleeing")
+		else:
+			check(Combat.distance(world.monsters[monster]["cell"], player["cell"]) <= 2 and world.monsters[monster]["target"] == 1,
+				"an even-level monster keeps up with you (%d tiles behind)" % Combat.distance(world.monsters[monster]["cell"], player["cell"]))
 	# Dragging a monster past its leash: it gives up at full health and walks home untouchable.
 	var drag := World.new()
 	var drag_combat := Combat.new(drag, 4)
@@ -2609,7 +2615,7 @@ func _combat_checks() -> void:
 	paladin["target"] = 0
 
 	# Monster AI: notice, chase without overlapping, attack, then return home and heal.
-	var wolf: int = combat.spawn_monster("grey_wolf", 1, Vector2i(10, 6), 20.0)
+	var wolf: int = combat.spawn_monster("grey_wolf", 1, Vector2i(8, 6), 20.0)
 	_place(world, 1, Vector2i(5, 6))
 	_place(world, 2, Vector2i(20, 15))
 	var health: int = paladin["health"]
@@ -2630,7 +2636,7 @@ func _combat_checks() -> void:
 	while time < 45.0:
 		time += 0.1
 		combat.tick(time)
-	check(world.monsters[wolf]["target"] == 0 and world.monsters[wolf]["cell"] == Vector2i(10, 6)
+	check(world.monsters[wolf]["target"] == 0 and world.monsters[wolf]["cell"] == Vector2i(8, 6)
 		and world.monsters[wolf]["health"] == world.monsters[wolf]["max_health"], "out of the leash, monsters walk home and heal")
 	world.monsters.erase(wolf)
 
