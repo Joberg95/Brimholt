@@ -13,7 +13,8 @@ extends SceneTree
 ## A missing left or right facing is mirrored from the other. One scale fits the whole outfit: the
 ## first figure is scaled to "figure_height". An optional "icons" region holds item icons left to
 ## right, mapped to "icon_items" (null skips one). "icon_rows" import loose icons (no frames): the region
-## is split into equal columns, one icon per listed item, left to right.
+## (default: the whole image) is split into "grid" [columns, rows] equal cells (default: one row),
+## one icon per listed item in reading order. Sheets not generated yet are skipped.
 ## godot --headless --path . --script res://tools/generators/import_outfits.gd [-- --debug=path.png]
 
 const MANIFEST: String = "res://art/outfits/manifest.json"
@@ -125,6 +126,9 @@ func _initialize() -> void:
 	# Loose icon rows: icons on a flat background, left to right, one item each (null skips one).
 	for entry: Dictionary in manifest.get("icon_rows", []):
 		var file: String = "res://art/outfits/" + String(entry["file"])
+		if not FileAccess.file_exists(file):
+			print("waiting for %s (%d icons)" % [file, entry["items"].size()])
+			continue
 		if not sources.has(file):
 			var loaded := Image.load_from_file(file)
 			if loaded == null:
@@ -134,13 +138,19 @@ func _initialize() -> void:
 			loaded.convert(Image.FORMAT_RGBA8)
 			sources[file] = loaded
 		var row_items: Array = entry["items"]
-		var region: Rect2i = _rect(entry["region"])
-		var width: int = region.size.x / row_items.size()
+		var source: Image = sources[file]
+		var region: Rect2i = _rect(entry["region"]) if entry.has("region") else Rect2i(Vector2i.ZERO, source.get_size())
+		var grid: Vector2i = Vector2i(int(entry["grid"][0]), int(entry["grid"][1])) if entry.has("grid") \
+			else Vector2i(row_items.size(), 1)
+		var cell_size: Vector2i = region.size / grid
 		for slot: int in row_items.size():
 			if row_items[slot] != null:
-				# Equal-width columns, cut out whole: an icon may be several pieces (a pair of boots).
-				var cell: Image = sources[file].get_region(Rect2i(region.position.x + slot * width, region.position.y, width,
-					region.size.y))
+				# Equal cells, cut out whole: an icon may be several pieces (a pair of boots). A small
+				# margin keeps neighbouring icons and stray frame lines out.
+				var margin: Vector2i = cell_size / 20
+				var corner: Vector2i = region.position + Vector2i(slot % grid.x, slot / grid.x) * cell_size + margin
+				var cell: Image = source.get_region(Rect2i(corner, cell_size - margin * 2))
+				var width: int = cell.get_width()
 				var mask: PackedByteArray = _foreground(cell)
 				for at: int in mask.size():
 					if mask[at] == 0:

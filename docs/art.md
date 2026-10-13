@@ -75,7 +75,11 @@ The named class sets can be shown as painted full figures instead of generated l
 `art/outfits/` holds the source paintings (`class_sets.png` and `class_pieces.png` were generated
 and supplied by the project owner as the gear design reference) and `manifest.json`. Its
 `icon_rows` take loose icons from a region split into equal columns (`class_pieces.png` gives
-the helmet, armor, legs, and boots icons of tiers 5–20). Its `outfits` list each painted figure: the
+the helmet, armor, legs, and boots icons of tiers 5–20). An entry with `"grid": [columns, rows]`
+and no region splits the whole image into cells, one item per cell in reading order;
+`icons_<group>_<n>.png` sheets (4×4) cover every other item and are skipped until their PNG
+exists, so painted icons can arrive a sheet at a time. Items without a painted icon keep their
+generated `items.png` cell. Its `outfits` list each painted figure: the
 source file, the `figures` region and the facings in it (`order`), the `layout`, and optionally
 an `icons` region whose icons (left to right) replace the generated icons of `icon_items`.
 `make outfits` runs `tools/generators/import_outfits.gd`, which separates each figure from its
