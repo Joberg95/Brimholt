@@ -207,13 +207,13 @@ func item_tooltip(kind: String) -> String:
 			lines.append("✗ " + refused)
 	if item.has("gold"):
 		lines.append("Worth %d gold; picked up into your purse" % item["gold"])
-	if item.get("loot_only", false):
+	if item.get("loot_only", false) or Items.mythic(item):
 		var sources: PackedStringArray = []
 		for monster: String in Monsters.LOOT:
 			for entry: Array in Monsters.LOOT[monster]:
 				if entry[0] == kind:
 					sources.append(Monsters.MONSTERS[monster]["name"])
-		lines.append("Hunting drop: %s" % ", ".join(sources))
+		lines.append("%s drop: %s" % ["Mythic" if Items.mythic(item) else "Hunting", ", ".join(sources)])
 	if item.has("value"):
 		lines.append("Monster material; vendors buy it for %d gold" % item["value"])
 	if item.has("drink"):

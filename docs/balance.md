@@ -168,7 +168,7 @@ They use `Items.tier_stats` without per-item stat overrides. Their source-specif
 do not dilute the existing generic tier pool or vendor stock; equipment rolls are gated by
 the killed monster's level. Names and looks vary, not attack timing, range or damage type.
 
-Helmets, armor, legs, and boots come in four armor types, one per class (`Balance.ARMOR_OF`): Plate for Warriors, Mail for Hunters, Leather for Druids and Cloth for Sorcerers. Each type has the same stats per tier; only names and looks differ. Relics have no armor type.
+Helmets, armor, legs, and boots come in four armor types, one per class (`Balance.ARMOR_OF`): Plate for Warriors, Mail for Hunters, Leather for Druids and Cloth for Sorcerers. Each type has the same stats per tier; only names and looks differ. Relics have no armor type. Mythic gear is level 50 and unbound, computed at level 50 with a 1.05 bonus (relics 1.15), so every piece sits between tier 45 and the relics; only the level-50 elites drop it.
 
 Regenerate with `make gear-table`:
 
@@ -226,6 +226,13 @@ Regenerate with `make gear-table`:
 | Morvain the Drowned | Abyssal greathelm (13 def); Abyssal plate (26 def, 113 regen); Tidebreaker (56 atk); Abyssal ward (26 def) |
 | Kharzul the Cinder Colossus | Cinderheart bow (94 atk); Cinderheart wand (123 atk); Molten heart (679 hp); Cinderheart charm (227 regen, 113 heal) |
 | Sylvaine the Hollow Bloom | Bloomheart rod (38 atk); Verdant codex (6 def, 452 mana); Hollowbloom cape (7 def, 271 mana); Bloomsoul ring (339 hp, 136 mana) |
+
+| Elite | Mythic gear (level 50, unbound; chance per kill) |
+| --- | --- |
+| Ashmaw drake | Drakeforged helm (12 def) 1.5%; Drakeforged plate (24 def, 103 regen) 1.2%; Drakeforged legplates (12 def) 1.5%; Drakeforged sabatons (8 def) 1.5%; Drakefang greatsword (51 atk) 1.2%; Drakescale bulwark (24 def) 1.5%; Emberwing cape (6 def, 248 mana) 1.5% |
+| Rime titan | Rimeguard coif (12 def) 1.5%; Rimeguard hauberk (24 def, 103 regen) 1.2%; Rimeguard chausses (12 def) 1.5%; Rimeguard striders (8 def) 1.5%; Rimestring longbow (86 atk) 1.2%; Rimeheart ring (310 hp, 124 mana) 1.5% |
+| Barrow lich | Gravecall cowl (12 def) 1.5%; Gravecall robe (24 def, 103 regen) 1.2%; Gravecall leggings (12 def) 1.5%; Gravecall slippers (8 def) 1.5%; Gravecall wand (112 atk) 1.2%; Gravecall grimoire (5 def, 413 mana) 1.5%; Gravecall amulet (620 hp) 1.5% |
+| Thornscale basilisk | Thornscale circlet (12 def) 1.5%; Thornscale hide (24 def, 103 regen) 1.2%; Thornscale breeches (12 def) 1.5%; Thornscale boots (8 def) 1.5%; Thornscale rod (35 atk) 1.2%; Basilisk-eye charm (207 regen, 103 heal) 1.5% |
 
 ## Level table (reference class: Hunter)
 

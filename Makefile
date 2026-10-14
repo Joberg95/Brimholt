@@ -105,7 +105,7 @@ endgame-zone: ## Repaint the Hollow Reach into the existing overworld (keeps oth
 map-force: ## Regenerate the overworld draft, overwriting game/maps/overworld.tscn
 	$(GODOT) --headless --path . --script res://tools/generators/make_map.gd -- --force
 
-hunts: ## Place the Hunters' Lodge hunting camps (keeps existing camps)
+hunts: ## Place the Hunters' Lodge and level-50 elite hunting camps (keeps existing camps)
 	$(GODOT) --headless --path . --script res://tools/generators/hunts.gd
 
 cliffs: ## One-time pass: cliffs along the high ground and 30% fewer forest trees (keeps other edits)

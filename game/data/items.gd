@@ -13,6 +13,9 @@ const ACCESSORY_SLOTS: Array[String] = ["necklace", "cape", "charm", "ring"]
 ## (one step past the last tier) and multiplied by RELIC_BONUS.
 const RELIC_LEVEL: int = 50
 const RELIC_BONUS: float = 1.15
+## Mythic gear: unbound level-50 pieces (no glow) that only the level-50 farm monsters drop
+## (Monsters.LOOT). Computed at RELIC_LEVEL with the smaller MYTHIC_BONUS: past the last tier, below relics.
+const MYTHIC_BONUS: float = 1.05
 ## Defense of a full tier set (helmet, armor, legs, boots, shield) rises linearly from SET_DEFENSE_LOW at
 ## level 1 to SET_DEFENSE_HIGH at the last tier; each piece takes a share.
 const SET_DEFENSE_LOW: float = 14.0
@@ -41,7 +44,7 @@ const SELL_SHARE: float = 0.25
 ## in their own glow colour. [from level, name, colour].
 const RARITIES: Array = [
 	[1, "Common", Color("#c9c4b8")], [10, "Uncommon", Color("#7ccf6a")], [20, "Rare", Color("#6a9cff")],
-	[30, "Epic", Color("#b47cff")], [40, "Legendary", Color("#ff9a3c")],
+	[30, "Epic", Color("#b47cff")], [40, "Legendary", Color("#ff9a3c")], [RELIC_LEVEL, "Mythic", Color("#ff5a7a")],
 ]
 
 
@@ -92,9 +95,10 @@ static func load_catalog() -> Dictionary:
 				stats[stat] = int(entry["stats"][stat])
 		elif not item["slot"].is_empty():
 			stats = tier_stats(item)
-			if item.has("glow"):
+			if item.has("glow") or mythic(item):
+				var bonus: float = float(entry.get("bonus", RELIC_BONUS)) if item.has("glow") else MYTHIC_BONUS
 				for stat: String in stats:
-					stats[stat] = roundi(stats[stat] * float(entry.get("bonus", RELIC_BONUS)))
+					stats[stat] = roundi(stats[stat] * bonus)
 		item["stats"] = stats
 		catalog[String(entry["id"])] = item
 	return catalog
@@ -165,6 +169,12 @@ static func rarity(item: Dictionary) -> Array:
 		if item["level"] >= entry[0]:
 			grade = entry
 	return [grade[1], grade[2]]
+
+
+## Whether an item is mythic: unbound level-50 equipment that monsters drop (not a relic).
+static func mythic(item: Dictionary) -> bool:
+	return item.get("level", 0) == RELIC_LEVEL and not item.get("slot", "").is_empty() and not item.has("glow") \
+		and not item.get("bound", false)
 
 
 ## The highest tier level at or below `level`.

@@ -47,6 +47,17 @@ const MONSTERS: Dictionary = {
 		"rank": "normal", "range": 1, "step": 0.55, "gear_chance": 0.09},
 	"behemoth": {"name": "Behemoth", "look": "quadruped", "color": Color("#5a4a3a"), "size": 1.4,
 		"rank": "normal", "range": 1, "step": 0.55, "gear_chance": 0.1},
+	# Level-50 hunting grounds for endgame characters: elites in the high regions (elite gold
+	# and tier-gear rolls), each with a valuable trophy and its own mythic set (Items.mythic:
+	# unbound level-50 gear, between tier 45 and relics) at low chances.
+	"ashmaw_drake": {"name": "Ashmaw drake", "look": "quadruped", "color": Color("#3a2c2c"), "size": 1.35,
+		"rank": "elite", "range": 1, "step": 0.38},
+	"rime_titan": {"name": "Rime titan", "look": "golem", "color": Color("#a8c4d8"), "size": 1.4,
+		"rank": "elite", "range": 1, "step": 0.6},
+	"barrow_lich": {"name": "Barrow lich", "look": "humanoid", "color": Color("#2a3a3a"), "size": 1.35,
+		"rank": "elite", "range": 4, "step": 0.45},
+	"thornscale_basilisk": {"name": "Thornscale basilisk", "look": "quadruped", "color": Color("#4a6a2a"), "size": 1.3,
+		"rank": "elite", "range": 1, "step": 0.42},
 	# Dungeon monsters (game/data/dungeons.gd): instanced, spawned when a party enters a copy.
 	# Each dungeon ends in a "champion": a mini-boss that always drops gear of its tier.
 	"sewer_rat": {"name": "Sewer rat", "look": "quadruped", "color": Color("#7a6a5e"), "size": 0.5,
@@ -119,6 +130,18 @@ const LOOT: Dictionary = {
 	"cyclops_smith": [["cyclops_iron", 0.3], ["cyclops_eye", 0.15], ["health_potion", 0.15], ["mana_potion", 0.15],
 		["rune_shard", 0.03]],
 	"behemoth": [["behemoth_horn", 0.3], ["health_potion", 0.2], ["mana_potion", 0.2], ["rune_shard", 0.04]],
+	"ashmaw_drake": [["ashmaw_heartscale", 0.5], ["health_potion", 0.25], ["mana_potion", 0.25], ["rune_shard", 0.05],
+		["drakeforged_helm", 0.015], ["drakeforged_plate", 0.012], ["drakeforged_legplates", 0.015], ["drakeforged_sabatons", 0.015],
+		["drakefang_greatsword", 0.012], ["drakescale_bulwark", 0.015], ["emberwing_cape", 0.015]],
+	"rime_titan": [["rime_core", 0.5], ["health_potion", 0.25], ["mana_potion", 0.25], ["rune_shard", 0.05],
+		["rimeguard_coif", 0.015], ["rimeguard_hauberk", 0.012], ["rimeguard_chausses", 0.015], ["rimeguard_striders", 0.015],
+		["rimestring_longbow", 0.012], ["rimeheart_ring", 0.015]],
+	"barrow_lich": [["lich_phylactery", 0.5], ["health_potion", 0.25], ["mana_potion", 0.25], ["rune_shard", 0.05],
+		["gravecall_cowl", 0.015], ["gravecall_robe", 0.012], ["gravecall_leggings", 0.015], ["gravecall_slippers", 0.015],
+		["gravecall_wand", 0.012], ["gravecall_grimoire", 0.015], ["gravecall_amulet", 0.015]],
+	"thornscale_basilisk": [["basilisk_eye", 0.5], ["health_potion", 0.25], ["mana_potion", 0.25], ["rune_shard", 0.05],
+		["thornscale_circlet", 0.015], ["thornscale_hide", 0.012], ["thornscale_breeches", 0.015], ["thornscale_boots", 0.015],
+		["thornscale_rod", 0.012], ["basilisk_eye_charm", 0.015]],
 	# Bosses drop gold; their relics are quest rewards (Combat.claim_relic, the Relic keeper).
 	"morvain": [],
 	"kharzul": [],

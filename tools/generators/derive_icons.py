@@ -143,6 +143,8 @@ def armor_template(kind, item):
 
 
 def template_for(kind, item):
+    if item.get("template") and (PAINTED / f"{item['template']}.png").exists():
+        return item["template"]
     shape = M.look(kind)[0]
     if item.get("slot") in ARMOR_SLOTS:
         return armor_template(kind, item)

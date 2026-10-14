@@ -43,6 +43,16 @@ func _initialize() -> void:
 			for relic: String in Monsters.MONSTERS[boss]["relics"]:
 				cells.append(_cell(relic))
 			lines.append("| %s | %s |" % [Monsters.MONSTERS[boss]["name"], "; ".join(cells)])
+	lines.append("")
+	lines.append("| Elite | Mythic gear (level %d, unbound; chance per kill) |" % Items.RELIC_LEVEL)
+	lines.append("| --- | --- |")
+	for monster: String in Monsters.LOOT:
+		var mythic: PackedStringArray = []
+		for entry: Array in Monsters.LOOT[monster]:
+			if Items.mythic(World.ITEMS[entry[0]]):
+				mythic.append("%s %s%%" % [_cell(entry[0]), str(snappedf(float(entry[1]) * 100.0, 0.1))])
+		if not mythic.is_empty():
+			lines.append("| %s | %s |" % [Monsters.MONSTERS[monster]["name"], "; ".join(mythic)])
 	print("\n".join(lines))
 	quit()
 

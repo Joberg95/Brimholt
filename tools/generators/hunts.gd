@@ -1,6 +1,6 @@
 extends "res://tools/generators/landscape.gd"
-## Places the Hunters' Lodge hunting grounds (game/data/quests.gd "hunters_lodge") in the existing
-## overworld scene: monster spawn markers for each new prey, in the region whose level band suits
+## Places the Hunters' Lodge hunting grounds (game/data/quests.gd "hunters_lodge") and the level-50
+## elite grounds (Monsters "ashmaw_drake" and kin: mythic gear farms) in the existing overworld scene: monster spawn markers for each new prey, in the region whose level band suits
 ## it, on open meadow that can be walked to from the player spawns, clear of zones and of every
 ## other camp. Markers are named "Hunt_<monster>_<n>"; a camp that already exists is kept, so
 ## running again changes nothing. Move them in Godot like any other spawn.
@@ -8,13 +8,18 @@ extends "res://tools/generators/landscape.gd"
 ##   godot --headless --path . --script res://tools/generators/hunts.gd
 
 const SPAWN_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
-## [monster, region, lowest level, highest level, camps, monsters per camp, wander radius].
+## [monster, region, lowest level, highest level, camps, monsters per camp, wander radius,
+## optional tiles kept from roads (elites, so travellers are not caught)].
 const HUNTS: Array = [
 	["frostfang_wolf", "Outlaw Ridge", 19, 21, 5, 4, 3],
 	["greymaw", "Golemback Hills", 24, 24, 1, 1, 2],
 	["cyclops", "Smoulder Fells", 29, 31, 5, 3, 3],
 	["cyclops_smith", "Hollow March", 36, 38, 5, 3, 3],
 	["behemoth", "Gloamwood", 43, 45, 5, 2, 3],
+	["ashmaw_drake", "Emberwaste", 48, 50, 4, 2, 3, 7],
+	["rime_titan", "Hollow March", 48, 50, 4, 2, 3, 7],
+	["barrow_lich", "Mirewood Fen", 48, 50, 4, 2, 3, 7],
+	["thornscale_basilisk", "Gloamwood", 48, 50, 4, 2, 3, 7],
 ]
 ## Chebyshev distance kept from every other camp, and between new camps.
 const CAMP_GAP: int = 9
@@ -38,10 +43,11 @@ func _initialize() -> void:
 		var monster: String = hunt[0]
 		var camps: int = hunt[4]
 		var radius: int = hunt[6]
+		var road_gap: int = hunt[7] if hunt.size() > 7 else 0
 		var candidates: Array[Vector2i] = []
 		for cell: Vector2i in reached:
 			if WORLD.has_point(cell) and _tile(cell) == "." and _region(cell) == hunt[1] and _zone(cell).is_empty() \
-					and _open(cell, radius, walkable):
+					and _open(cell, radius, walkable) and (road_gap == 0 or not _near(cell, road_gap, ",=")):
 				candidates.append(cell)
 		# A fixed shuffle so the camps spread over the region instead of bunching in one corner.
 		candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return _hash(a, 71) < _hash(b, 71))

@@ -308,7 +308,8 @@ The overworld is divided into named **regions**, each with its own monsters: the
 Meadows (levels 1–5) around the starting town, the Greywood, the Westwind Coast, Lurkmoor,
 Outlaw Ridge, the Thornfield Wilds, the Golemback Hills, Stillwater Shore, Stonevale, the
 Smoulder Fells, the Sunscar Dunes (the desert), the Hollow March, Lastlight Downs, the
-Emberwaste, the Mirewood Fen, and the Gloamwood (levels 34–45). The line under the minimap
+Emberwaste, the Mirewood Fen, and the Gloamwood (levels 34–45, with level-50 elite camps in the
+Hollow March and the last three). The line under the minimap
 shows where you are and the monster levels there, coloured white, yellow, or red by how they
 compare to your level (hover it for a description); crossing into a new region is announced.
 The world map (M) opens zoomed in on you; scroll (or + and −) to zoom around the cursor down
@@ -415,8 +416,8 @@ stack always moves whole; there is no splitting yet. Loot and death drops merge 
 way, and a dead player's purse becomes one gold stack. Equipment never stacks.
 
 Hover an item for its tooltip: wearable gear shows its rarity, from **Common** (tiers 1 and 5)
-through **Uncommon** (10, 15), **Rare** (20, 25), and **Epic** (30, 35) to **Legendary** (40, 45),
-with relics as **Relic**. The name and the tooltip's frame take the rarity's colour. Gear you
+through **Uncommon** (10, 15), **Rare** (20, 25), and **Epic** (30, 35) to **Legendary** (40, 45)
+and **Mythic** (level-50 monster sets), with relics as **Relic**. The name and the tooltip's frame take the rarity's colour. Gear you
 cannot use yet is tinted red in its slot.
 
 ## Gear tiers
@@ -443,6 +444,27 @@ otherwise, and worn items you no longer qualify for (after losing levels) give n
 Tooltips show the tier, level, and who can use an item; a coloured bar under each slot
 shows its tier, red when you cannot use it yet. Stats come from the balance curves
 (`game/data/items.gd`); the full table is in [balance.md](balance.md#gear-tiers).
+
+## Level-50 hunting grounds and mythic gear
+
+Endgame characters farm four **level 48–50 elites** in the high regions, each camp of two kept
+at least seven tiles from roads so travellers are not caught. They hit like the Blackreed
+warden: one at a time with spells and potions solo, a whole camp with a party. Each drops elite
+gold, a 25% tier-45 gear roll, potions, rune shards (5%), a valuable trophy (50%), and pieces
+of its own **mythic set** at 1.2–1.5% each:
+
+| Elite | Region | Trophy (sells for) | Mythic pieces |
+| --- | --- | --- | --- |
+| Ashmaw drake (winged, horned) | Emberwaste | Ashmaw heartscale (380) | Drakeforged plate set (Warrior), Drakefang greatsword, Drakescale bulwark, Emberwing cape |
+| Rime titan (ice-shard giant) | Hollow March | Rime core (360) | Rimeguard mail set (Hunter), Rimestring longbow, Rimeheart ring |
+| Barrow lich (crowned, ranged) | Mirewood Fen | Lich phylactery (420) | Gravecall cloth set (Sorcerer), Gravecall wand and grimoire, Gravecall amulet |
+| Thornscale basilisk | Gloamwood | Basilisk eye (340) | Thornscale leather set (Druid), Thornscale rod, Basilisk-eye charm |
+
+**Mythic gear** is level 50, a step past tier 45 and below the relics (stats in
+[balance.md](balance.md#gear-tiers)). Unlike relics it is ordinary loot: unbound, sold to
+vendors (never bought from them), kept in the depot, and dropped on death like other gear.
+Tooltips name each piece's source. Every class can farm a full mythic helmet, armor, legs,
+boots, and weapon. Mythic pieces need a level-50 kill.
 
 ## The Hollow Reach
 

@@ -66,9 +66,11 @@ five-tone ramp per material (warm lights, cool shadows), gloss on chitin and sli
 (fur strokes, stone slabs and cracks, glowing ember seams, warts, scales), emissive eyes and
 cores, a coloured silhouette edge, and dark seams where parts overlap. Builders: `quadruped`
 (voles, rats, the Rat King's crown, boars with tusks and spines, wolves with a ruff, the
-reedfang lizard), `beetle`, `spider`, `toad`, `slime`, `golem` (stone, moss, ember, obsidian,
+reedfang lizard, the thornscale basilisk, and the Ashmaw drake's swept horns and beating wings:
+a bony edge with a membrane sail under each bone), `beetle`, `spider`, `toad`, `slime`, `golem` (stone, moss, ember, obsidian,
 Forgemaw's and Kharzul's horns and burning maws), `wraith` (Sylvaine's flowers and antlers), and
-`biped` (the skeleton, ghoul, and robed Abbot). `SPECIES` sets each one's proportions and
+`biped` (the skeleton, ghoul, robed Abbot, and the Barrow lich's crown), and `giant` (cyclopes;
+the Rime titan's shoulder crystals). `SPECIES` sets each one's proportions and
 materials and `ZOOM` its on-screen scale; `creatures/<monster>_glow.png` halos only the bright
 parts of glowing creatures. Armed humanoids (bandits, archers, knights, Vaelith, Morvain) still
 wear catalog gear. The old tinted `monsters/<look>.png` sheets remain as a fallback.
@@ -93,7 +95,8 @@ and no region splits the whole image into cells, one item per cell in reading or
 exists, so painted icons can arrive a sheet at a time. Items without a painted icon get one derived
 from the painted art (`tools/generators/derive_icons.py`, run by `make outfits`): a painted
 template of the same kind (`TEMPLATES`, plain to ornate by level; for helmets, armor, legs, and
-boots the nearest-tier painted piece of the same slot and armor type), recoloured to the item's
+boots the nearest-tier painted piece of the same slot and armor type; a catalog `template`
+names a specific painted icon instead, as the mythic sets do), recoloured to the item's
 catalog colours: outlines and wood stay, gold trim takes the accent colour, and everything else
 follows its brightness on a ramp from the main to the light colour. Rings lose the template's
 dark middle. They are written to `assets/sprites/icons_derived/` every run. The extra templates

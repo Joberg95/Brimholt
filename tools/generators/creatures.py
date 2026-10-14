@@ -359,6 +359,26 @@ def quadruped(frame, s):
             parts.append(ell(at, (1.2, 1.4, 1.0), s["scutes"], group="body"))
     if s.get("ruff"):
         parts.append(ell((0, L * 0.38, top + g * 0.25), (g * 1.1, g * 0.8, g * 1.05), s["ruff"], group="body"))
+    if s.get("horns"):
+        # Swept back from the brow, curling up at the tips.
+        for side in (1, -1):
+            root = add(hc, (side * hr * 0.45, -hr * 0.2, hr * 0.7))
+            points = [root, add(root, (side * hr * 0.25, -hr * 0.8, hr * 0.35)), add(root, (side * hr * 0.4, -hr * 1.5, hr * 0.9))]
+            parts += chain(points, [hr * 0.24, hr * 0.15], s["horns"], "horn%d" % side)
+    if s.get("wings"):
+        # Bat-like wings from the shoulders: a bony leading edge and a membrane, beating with the stride.
+        rise = (0.6, 1.0, 0.25)[frame]
+        for side in (1, -1):
+            shoulder = (side * g * 0.55, L * 0.22, top + g * 0.7)
+            wrist = add(shoulder, (side * g * 1.3, -L * 0.04, g * (1.1 + 1.2 * rise)))
+            tip = add(wrist, (side * g * 1.1, -L * 0.28, g * (0.2 + 0.6 * rise)))
+            edge = s.get("wing_bone", body)
+            parts += [limb(shoulder, wrist, 0.9, edge, group="wing%d" % side), limb(wrist, tip, 0.7, edge, group="wing%d" % side)]
+            # Membrane sails hanging below each bone: thin along the body, so front and back views show them whole.
+            for a, b, chord in ((shoulder, wrist, g * 0.75), (wrist, tip, g * 0.6)):
+                axis = sub(b, a)
+                centre = add(mul(add(a, b), 0.5), (0, -L * 0.04, -chord * 0.55))
+                parts.append(ell(centre, (0.7, math.sqrt(dot(axis, axis)) * 0.55, chord), s["wings"], basis(axis), "wing%d" % side))
     if s.get("crown"):
         crown_c = add(hc, (0, -hr * 0.1, hr * 0.95))
         parts.append(ell(crown_c, (hr * 0.62, hr * 0.62, hr * 0.28), GOLD, group="crown"))
@@ -589,6 +609,15 @@ def biped(frame, s):
         parts.append(ell(add(head, (0, -0.6, 0.6)), (3.8, 3.6, 3.9), s["hood"], group="hood"))
     if s.get("focus"):
         parts.append(ell(add(chest, (0, 5.5, -1.5)), (1.6, 1.6, 1.6), emissive(s["focus"]), group="focus"))
+    if s.get("crown"):
+        crown_c = add(head, (0, -0.2, 3.0))
+        parts.append(ell(crown_c, (2.9, 2.9, 0.9), s["crown"], group="crown"))
+        for k in range(6):
+            angle = k / 6 * 2 * math.pi
+            base = add(crown_c, (math.cos(angle) * 2.4, math.sin(angle) * 2.4, 0.4))
+            parts.append(limb(base, add(base, (math.cos(angle) * 0.4, math.sin(angle) * 0.4, 2.2 + (k % 2) * 0.9)), 0.55,
+                              s["crown"], group="crown"))
+        parts.append(ell(add(crown_c, (0, 2.6, 0.3)), (0.8, 0.5, 0.8), emissive(s.get("focus", s["eyes"])), group="gem"))
     if s.get("rags"):
         for k, side in enumerate((1, -1, 1)):
             at = (side * 2.2 - k * 0.4, 1.0, hip_z - 0.6)
@@ -628,6 +657,12 @@ def giant(frame, s):
     for side in (1, -1):
         shoulder = (side * 8.0, 0, 25 + bob)
         parts.append(ell(shoulder, (3.4, 3.4, 3.2), skin, group="arm%d" % side))
+        if s.get("shards"):
+            # Ice crystals growing from the shoulders.
+            for k, (dx, dy, h) in enumerate(((0.0, -0.6, 5.5), (1.6, 1.2, 3.8), (-1.4, -2.0, 3.2))):
+                base = add(shoulder, (side * dx, dy, 2.2))
+                parts.append(limb(base, add(base, (side * (0.8 + dx * 0.4), dy * 0.3, h)), 1.0 - k * 0.15, s["shards"],
+                                  group="shard%d%d" % (side, k)))
         phase = -swing * side * 0.8
         elbow = (side * 10.0, phase * 0.5 + 1.0, 19 + bob)
         fist = (side * 9.6, phase + 2.4, 13 + bob)
@@ -726,6 +761,20 @@ SPECIES = {
                                   claws=M("2a3020")), (10, 3)),
     "void_wraith": (wraith, dict(robe=M("4a2a6a", "cloth"), hood=M("3a2058", "cloth"), eyes="d0a0ff",
                                  claws=emissive("b080ff")), (10, 3)),
+    "ashmaw_drake": (quadruped, dict(length=28, height=8, girth=7, head=5.0, snout=1.3, snout_width=0.48, leg=1.7, spread=0.8,
+                                     stride=2.4, ears="none", tail="heavy", body=M("4a3430", "scales"), belly=M("c8682a", "scales"),
+                                     scutes=M("1e1818", "stone"), teeth=True, neck=1.4, eye=emissive("ffb030"),
+                                     nose=M("1a1414"), paw=M("1e1818"), horns=M("d8ccb0", "bone"),
+                                     wings=M("a83a26", "cloth"), wing_bone=M("2a2020", "scales")), (15, 4.5)),
+    "thornscale_basilisk": (quadruped, dict(length=30, height=4, girth=7, flat=0.65, head=5.4, snout=1.3, snout_width=0.55,
+                                            leg=1.9, spread=1.05, stride=2.4, ears="none", tail="heavy",
+                                            body=M("4a6a2a", "scales"), belly=M("c8b860", "scales"), spikes=M("d8602a", "bone"),
+                                            scutes=M("2e4420", "stone"), teeth=True, neck=0.2, eye=emissive("ff4030"),
+                                            nose=M("1e2a14"), paw=M("2a3418"), horns=M("e0c060", "bone")), (16, 4.5)),
+    "rime_titan": (giant, dict(skin=M("a8c4d8"), cloth=M("e8eef2", "fur"), eye="70e0ff", weapon="club",
+                               horn=M("d8f4ff", gloss=0.8), hands=M("7a98b0"), shards=M("c8f0ff", gloss=0.9)), (14, 4.5)),
+    "barrow_lich": (biped, dict(flesh=IVORY, skull=IVORY, robe=M("3e5a54", "cloth", spread=1.3), eyes="60ffc0",
+                                focus="60ffc0", crown=M("d0a840", gloss=0.8), torso=M("4a6a62", "cloth")), (10, 3.5)),
     "sylvaine": (wraith, dict(robe=M("5a3a80", "cloth"), hood=M("3a5a3a", "fur"), eyes="f0d0ff", claws=M("5a7a40"),
                               flowers=M("e888c0", gloss=0.3), antlers=M("8a6a48", "bone"), scale=1.05), (11, 3.5)),
 }
@@ -737,7 +786,8 @@ ZOOM = {"frostfang_wolf": 1.2, "greymaw": 1.0, "behemoth": 1.05, "cyclops": 1.25
         "grave_ghoul": 1.15, "abbot_morrow": 1.1, "grey_wolf": 1.2, "thornback_boar": 1.25, "reedfang": 1.0, "cave_crawler": 1.4, "cave_spider": 1.5,
         "venom_weaver": 1.5, "silk_matron": 1.5, "marsh_toad": 1.35, "bog_lurker": 1.35, "stone_golem": 1.6,
         "bog_hulk": 1.6, "ember_golem": 1.6, "forgemaw": 1.4, "kharzul": 1.35, "obsidian_golem": 1.6,
-        "cinder_wraith": 1.15, "mire_stalker": 1.15, "void_wraith": 1.15, "sylvaine": 1.1}
+        "cinder_wraith": 1.15, "mire_stalker": 1.15, "void_wraith": 1.15, "sylvaine": 1.1, "ashmaw_drake": 1.0,
+        "thornscale_basilisk": 1.0, "rime_titan": 1.2, "barrow_lich": 1.4}
 
 
 def frames(kind, direction, frame):

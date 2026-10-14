@@ -2986,6 +2986,118 @@ monster = "behemoth"
 level = 45
 count = 2
 
+[node name="Hunt_ashmaw_drake_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(8912, 8816)
+script = ExtResource("5_xkg0o")
+monster = "ashmaw_drake"
+level = 48
+count = 2
+
+[node name="Hunt_ashmaw_drake_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9648, 10992)
+script = ExtResource("5_xkg0o")
+monster = "ashmaw_drake"
+level = 48
+count = 2
+
+[node name="Hunt_ashmaw_drake_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(7984, 6608)
+script = ExtResource("5_xkg0o")
+monster = "ashmaw_drake"
+level = 49
+count = 2
+
+[node name="Hunt_ashmaw_drake_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(8944, 10128)
+script = ExtResource("5_xkg0o")
+monster = "ashmaw_drake"
+level = 50
+count = 2
+
+[node name="Hunt_rime_titan_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(12176, 4048)
+script = ExtResource("5_xkg0o")
+monster = "rime_titan"
+level = 48
+count = 2
+
+[node name="Hunt_rime_titan_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(11248, 5648)
+script = ExtResource("5_xkg0o")
+monster = "rime_titan"
+level = 48
+count = 2
+
+[node name="Hunt_rime_titan_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(11536, 4432)
+script = ExtResource("5_xkg0o")
+monster = "rime_titan"
+level = 49
+count = 2
+
+[node name="Hunt_rime_titan_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(10064, 4208)
+script = ExtResource("5_xkg0o")
+monster = "rime_titan"
+level = 50
+count = 2
+
+[node name="Hunt_barrow_lich_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9584, 8080)
+script = ExtResource("5_xkg0o")
+monster = "barrow_lich"
+level = 48
+count = 2
+
+[node name="Hunt_barrow_lich_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9552, 7344)
+script = ExtResource("5_xkg0o")
+monster = "barrow_lich"
+level = 48
+count = 2
+
+[node name="Hunt_barrow_lich_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9968, 5808)
+script = ExtResource("5_xkg0o")
+monster = "barrow_lich"
+level = 49
+count = 2
+
+[node name="Hunt_barrow_lich_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9968, 7024)
+script = ExtResource("5_xkg0o")
+monster = "barrow_lich"
+level = 50
+count = 2
+
+[node name="Hunt_thornscale_basilisk_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(4496, 12112)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 2
+
+[node name="Hunt_thornscale_basilisk_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(10672, 12048)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 2
+
+[node name="Hunt_thornscale_basilisk_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(10096, 11536)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 49
+count = 2
+
+[node name="Hunt_thornscale_basilisk_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(6288, 11472)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 50
+count = 2
+
 [node name="DungeonEntrances" type="Node2D" parent="."]
 
 [node name="CinderCellar" type="Marker2D" parent="DungeonEntrances"]

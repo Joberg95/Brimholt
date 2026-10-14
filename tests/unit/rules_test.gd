@@ -449,7 +449,7 @@ func _armor_type_checks() -> void:
 		var tiers: Dictionary = {}
 		for kind: String in World.ITEMS:
 			var item: Dictionary = World.ITEMS[kind]
-			if item.get("armor", "") == type and not item.get("loot_only", false):
+			if item.get("armor", "") == type and not item.get("loot_only", false) and not Items.mythic(item):
 				tiers["%s/%d" % [item["slot"], item["level"]]] = true
 		check(tiers.size() == Items.TIER_LEVELS.size() * 4, "%s has a helmet, armor, legs, and boots of every tier" % type)
 	# Trainers hand over the class's armor; old saves swap shared pieces for the player's own type.
@@ -1373,8 +1373,8 @@ func _gear_tier_checks() -> void:
 		if item["slot"].is_empty():
 			check(item["stats"].is_empty(), "%s is not equipment and has no stats" % kind)
 			continue
-		check(item["level"] in Items.TIER_LEVELS or (item.has("glow") and item["level"] == Items.RELIC_LEVEL),
-			"%s has a tier level (or is a level-50 relic)" % kind)
+		check(item["level"] in Items.TIER_LEVELS or (item["level"] == Items.RELIC_LEVEL and (item.has("glow") or Items.mythic(item))),
+			"%s has a tier level (or is level-50 relic or mythic gear)" % kind)
 		if item.has("glow"):
 			continue
 		if item["slot"] == "bag":
@@ -1428,6 +1428,7 @@ func _gear_tier_checks() -> void:
 	check(Items.tier_for(1) == 1 and Items.tier_for(4) == 1 and Items.tier_for(5) == 5 and Items.tier_for(50) == 45,
 		"levels map to tiers")
 	_relic_checks(by_key)
+	_mythic_checks(by_key)
 	# Requirements, on the server.
 	check(World.requirement_error("willow_shortbow", 50, "knight") == "Only Hunters can use the Willow shortbow",
 		"weapons are class-bound")
@@ -1557,6 +1558,74 @@ func _hunting_weapon_checks() -> void:
 		for roll: int in 100:
 			check(not World.ITEMS[combat.gear_drop(tier)].get("loot_only", false),
 				"hunting weapons do not dilute the existing generic gear pool")
+
+
+## Mythic gear: unbound level-50 sets that only the level-50 elite farm monsters drop, between the
+## last tier and the relics, one full armor set and weapon per class.
+func _mythic_checks(by_key: Dictionary) -> void:
+	var mythic: Array[String] = []
+	for kind: String in World.ITEMS:
+		if Items.mythic(World.ITEMS[kind]):
+			mythic.append(kind)
+	check(mythic.size() == 26, "twenty-six mythic pieces")
+	var sources: Dictionary = {}
+	for monster: String in Monsters.LOOT:
+		for entry: Array in Monsters.LOOT[monster]:
+			if Items.mythic(World.ITEMS[entry[0]]):
+				sources[entry[0]] = sources.get(entry[0], []) + [monster]
+				check(Monsters.MONSTERS[monster]["rank"] == "elite" and float(entry[1]) <= 0.02,
+					"%s drops %s rarely, and only as an elite" % [monster, entry[0]])
+	var farms: Dictionary = {}
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		if spawn["monster"] in sources.values().reduce(func(all: Array, list: Array) -> Array: return all + list, []):
+			check(World.zone_at(spawn["cell"]).is_empty(), "level-50 farms are open countryside, not zones")
+			farms[spawn["monster"]] = farms.get(spawn["monster"], 0) + 1
+	for kind: String in mythic:
+		var item: Dictionary = World.ITEMS[kind]
+		check(Items.rarity(item)[0] == "Mythic", "%s shows as Mythic" % kind)
+		check(not World.bound(kind) and not World.stackable(kind) and not Economy.stock().has(kind) and Economy.sell_price(kind) > 0,
+			"%s is tradeable loot that vendors buy but never sell" % kind)
+		var derived: Dictionary = Items.tier_stats(item)
+		for stat: String in derived:
+			derived[stat] = roundi(derived[stat] * Items.MYTHIC_BONUS)
+		check(item["stats"] == derived, "%s derives its stats at level 50 with the small mythic bonus" % kind)
+		check(sources.get(kind, []).size() == 1 and farms.has(sources.get(kind, [""])[0]),
+			"%s has exactly one placed level-50 source" % kind)
+		var vocation: String = item["vocations"][0] if not item["vocations"].is_empty() else ""
+		if item.has("armor"):
+			for other: String in Balance.ARMOR_OF:
+				if Balance.ARMOR_OF[other] == item["armor"]:
+					vocation = other
+		var key: String = "%s/%s/%d" % [item["slot"], vocation if not vocation.is_empty() else "knight", Items.TIER_LEVELS[-1]]
+		var tier_total: int = 0
+		for stat: String in World.ITEMS[by_key[key][0]]["stats"]:
+			tier_total += World.ITEMS[by_key[key][0]]["stats"][stat]
+		var total: int = 0
+		for stat: String in item["stats"]:
+			total += item["stats"][stat]
+		check(total > tier_total, "%s beats the tier-45 %s" % [kind, item["slot"]])
+		for relic: String in World.ITEMS:
+			if World.ITEMS[relic].has("glow") and World.ITEMS[relic]["slot"] == item["slot"] \
+					and World.ITEMS[relic].get("armor", "") == item.get("armor", "") and World.ITEMS[relic]["vocations"] == item["vocations"]:
+				var relic_total: int = 0
+				for stat: String in World.ITEMS[relic]["stats"]:
+					relic_total += World.ITEMS[relic]["stats"][stat]
+				check(relic_total > total, "the relic %s still beats %s" % [relic, kind])
+	for vocation: String in Balance.VOCATIONS:
+		for slot: String in ["helmet", "armor", "legs", "boots", "main_hand"]:
+			check(by_key.has("%s/%s/%d" % [slot, vocation, Items.RELIC_LEVEL]), "%s can farm a mythic %s" % [vocation, slot])
+	for monster: String in farms:
+		check(farms[monster] >= 3, "%s has several level-50 camps" % monster)
+	var combat := Combat.new(World.new(), 51)
+	var counts: Dictionary = {}
+	for roll: int in 3000:
+		for entry: String in combat.roll_loot("ashmaw_drake", 50):
+			counts[World.kind_of(entry)] = counts.get(World.kind_of(entry), 0) + 1
+	check(absf(counts.get("drakeforged_helm", 0) - 45.0) < 25.0 and counts.get("ashmaw_heartscale", 0) > 1300,
+		"the drake drops its mythic pieces and trophy near their chances")
+	check(not counts.has("drakeforged_helm") or combat.roll_loot("ashmaw_drake", 49).all(
+		func(entry: String) -> bool: return World.ITEMS[World.kind_of(entry)]["level"] <= 49 or World.ITEMS[World.kind_of(entry)]["slot"].is_empty()),
+		"mythic pieces need a level-50 monster")
 
 
 ## Glowing relics: level-50 gear that only final bosses drop, one boss per relic.
@@ -2948,7 +3017,7 @@ func _dungeon_task_and_region_checks() -> void:
 	for name: String in World.REGION_NAMES:
 		check(World.REGION_INFO.has(name) and not Regions.description(name).is_empty(), "%s is described" % name)
 		var info: Dictionary = World.REGION_INFO[name]
-		check(info["max_level"] >= info["min_level"] and info["max_level"] <= 45, "%s has a level range from its monsters" % name)
+		check(info["max_level"] >= info["min_level"] and info["max_level"] <= Balance.MAX_LEVEL, "%s has a level range from its monsters" % name)
 	check(World.REGION_INFO["Cinder Meadows"]["min_level"] == 1 and World.region_at(World.SPAWNS[0] + Vector2i(30, 25)) == "Cinder Meadows",
 		"the starting fields are Cinder Meadows, from level 1")
 	check(World.region_at(Biomes.DESERT_CENTRE) == Regions.DESERT, "the desert is the Sunscar Dunes")
