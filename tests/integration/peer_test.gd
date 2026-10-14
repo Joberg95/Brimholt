@@ -422,6 +422,7 @@ func _dedicated_host_tick() -> void:
 		elif errand == "cinder_cellar" and saw_hunting_weapon and not player["equipment"].has("main_hand"):
 			next = "artisan_cinder"
 			# Test-only: resources for one rusted breastplate.
+			player["backpack"][-3] = "leather_satchel"
 			player["backpack"][-2] = "copper_ore#6"
 			player["backpack"][-1] = "pine_log#2"
 		elif errand == "artisan_cinder" and player["backpack"].has("rusted_breastplate") and World.carried(player["backpack"], "copper_ore") == 0:
@@ -667,9 +668,11 @@ func _dedicated_client_tick(now: float) -> void:
 		36:
 			if state(own)["backpack"].has("rusted_breastplate") and not state(own)["backpack"].has("copper_ore#6") \
 					and int(state(own).get("skills", {}).get("smithing", [1, 0])[1]) > 0 and now - stage_since > 0.2:
+				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("leather_satchel")}, {"type": "bag", "bag": 0})
 				advance()
 		37:
-			if Crafting.node_at(state(own)["cell"] + state(own)["facing"]) == "mining":
+			if state(own)["bags"][0] == "leather_satchel" and state(own)["backpack"].size() == World.main_size(state(own)) + 6 \
+					and Crafting.node_at(state(own)["cell"] + state(own)["facing"]) == "mining":
 				game.request_gather.rpc_id(1, "a rock")
 				advance()
 		38:

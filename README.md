@@ -146,8 +146,8 @@ to allow UDP 1234.
 
 ## Scope and reference licensing
 
-Blessings, yellow and black skulls, loot protection, nested containers, player trading, procedural caves, floors, NPCs
-other than the menu-driven ferrymen, waystones, vendors, bankers, and quest givers, world persistence (ground items and
+Blessings, yellow and black skulls, loot protection, nested containers (bags hold items only in the three bag slots),
+player trading, procedural caves, floors, NPCs other than the menu-driven ferrymen, waystones, vendors, bankers, artisans, and quest givers, world persistence (ground items and
 monsters), and accounts beyond the per-computer identity token are outside this prototype.
 
 [The Forgotten Server](https://github.com/otland/forgottenserver) (GPL-2.0) and

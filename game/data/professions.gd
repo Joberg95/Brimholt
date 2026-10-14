@@ -24,7 +24,7 @@ const DESCRIPTIONS: Dictionary = {
 	"fishing": "Fish open water within three tiles of the shore.",
 	"smithing": "Plate and mail armor, Warrior weapons, shields, amulets, and rings.",
 	"woodworking": "Bows, wands, rods, and charms.",
-	"tailoring": "Leather and cloth armor, spellbooks, and capes.",
+	"tailoring": "Leather and cloth armor, spellbooks, capes, and bags.",
 	"alchemy": "Health and mana potions, up to great potions.",
 	"cooking": "Food: more health and mana regeneration for a while.",
 }
@@ -60,7 +60,7 @@ const GEAR_INPUTS: Dictionary = {
 const MATERIALS: Dictionary = {
 	"smithing": ["mining", "woodcutting"], "woodworking": ["woodcutting", "mining"], "tailoring": ["herbalism", "mining"],
 }
-## Potions and food: [output, count made, profession, skill, inputs [[resource, count], ...]].
+## Potions, food, and bags: [output, count made, profession, skill, inputs [[resource, count], ...]].
 const CONSUMABLES: Array = [
 	["health_potion", 1, "alchemy", 1, [["sunflax", 2]]],
 	["mana_potion", 1, "alchemy", 3, [["sunflax", 2]]],
@@ -73,6 +73,11 @@ const CONSUMABLES: Array = [
 	["trout_pie", 1, "cooking", 20, [["silver_trout", 2], ["mirereed", 1]]],
 	["pike_stew", 1, "cooking", 30, [["deep_pike", 2], ["silverthistle", 1]]],
 	["glimmerfin_feast", 1, "cooking", 40, [["glimmerfin", 2], ["nightcotton", 1]]],
+	["leather_satchel", 1, "tailoring", 1, [["sunflax", 6], ["copper_ore", 2]]],
+	["reedweave_bag", 1, "tailoring", 10, [["mirereed", 8], ["iron_ore", 2]]],
+	["silkthistle_pack", 1, "tailoring", 20, [["silverthistle", 8], ["silver_ore", 3]]],
+	["nightcotton_haversack", 1, "tailoring", 30, [["nightcotton", 10], ["cobalt_ore", 3]]],
+	["starweave_rucksack", 1, "tailoring", 40, [["starpetal", 10], ["starmetal_ore", 4]]],
 ]
 
 

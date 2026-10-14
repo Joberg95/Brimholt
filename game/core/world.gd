@@ -116,6 +116,15 @@ const START_KITS: Dictionary = {
 ## Backpack slots without a pack; a worn pack adds its "slots", up to BACKPACK_MAX.
 const BACKPACK_SIZE: int = 8
 const BACKPACK_MAX: int = 20
+## Bag slots beside the paperdoll: each holds a bag (an item of slot "container" with "slots"),
+## and a worn bag's slots extend the backpack array after the main backpack, bag by bag:
+## [main backpack][bag 0][bag 1][bag 2]. Everything that uses the backpack (loot, crafting,
+## potions, selling, death) uses bag contents too. Only a worn bag holds items: a bag in the
+## backpack is just an item. A worn bag comes off only when it is empty.
+const BAG_SLOTS: int = 3
+const BAG_MAX: int = 16
+## The highest backpack index a location may name.
+const BACKPACK_LIMIT: int = BACKPACK_MAX + BAG_SLOTS * BAG_MAX
 ## Item depot slots, kept by the banker (one depot per player, at the one bank in Reedmere).
 const DEPOT_SIZE: int = 24
 const GROUND_STACK_MAX: int = 6
@@ -525,7 +534,7 @@ static func signature() -> String:
 	return (str(PROTOCOL) + str(TILE_SIZE) + str(MAX_PLAYERS) + MAP_HASH + str(ITEMS) + str(START_GOLD) \
 		+ str(TALK_RANGE) + str(TRAVEL_SECONDS) \
 		+ str(MOVE_SECONDS) + str(SLOTS) + str(START_KITS) + str(GROUND_ITEMS) + str(BACKPACK_SIZE) \
-		+ str(GROUND_STACK_MAX) + str(ITEM_SECONDS) + str(SLOT_TYPES) + str(BACKPACK_MAX) + str(DEPOT_SIZE) \
+		+ str(GROUND_STACK_MAX) + str(ITEM_SECONDS) + str(SLOT_TYPES) + str(BACKPACK_MAX) + str(DEPOT_SIZE) + str(BAG_SLOTS) \
 		+ str(STACK_MAX) + str(Quests.TASKS) + str(Quests.PACKS) + Balance.signature()).sha256_text()
 
 
@@ -663,7 +672,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {},
 				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
-				"skills": {}, "gathering": {}, "next_craft": now, "fed": {},
+				"skills": {}, "gathering": {}, "next_craft": now, "fed": {}, "bags": ["", "", ""],
 			}
 			var limits: Dictionary = stats(1, {}, vocation)
 			players[id]["health"] = limits["health"]
@@ -735,6 +744,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 					left[key] = player[timers][key] - now
 			state[timers] = left
 		state["backpack"] = player["backpack"].duplicate()
+		state["bags"] = player["bags"].duplicate()
 		state["depot"] = player["depot"].duplicate()
 		state["bank"] = player["bank"]
 		state["tasks"] = player["tasks"].duplicate()
@@ -800,7 +810,8 @@ func toggle_equipment(id: int, slot: String, now: float) -> Dictionary:
 
 
 ## Locations are {"type": "backpack", "index": int}, {"type": "depot", "index": int},
-## {"type": "equipment", "slot": String} or {"type": "ground", "cell": Vector2i}. A target
+## {"type": "equipment", "slot": String}, {"type": "bag", "bag": int} (a bag slot), or
+## {"type": "ground", "cell": Vector2i}. A target
 ## backpack or depot without an index means a matching stack or the first free slot. Anything
 ## else, including client-supplied extra keys, is rejected.
 static func parse_location(value: Variant, allow_auto: bool) -> Dictionary:
@@ -815,13 +826,17 @@ static func parse_location(value: Variant, allow_auto: bool) -> Dictionary:
 			if not location.has("index"):
 				return {"type": kind, "index": -1} if allow_auto and location.size() == 1 else {}
 			var index: Variant = location["index"]
-			var size: int = BACKPACK_MAX if kind == "backpack" else DEPOT_SIZE
+			var size: int = BACKPACK_LIMIT if kind == "backpack" else DEPOT_SIZE
 			if location.size() == 2 and typeof(index) == TYPE_INT and index >= 0 and index < size:
 				return {"type": kind, "index": index}
 		"equipment":
 			var slot: Variant = location.get("slot")
 			if location.size() == 2 and typeof(slot) == TYPE_STRING and slot in SLOTS:
 				return {"type": "equipment", "slot": slot}
+		"bag":
+			var bag: Variant = location.get("bag")
+			if location.size() == 2 and typeof(bag) == TYPE_INT and bag >= 0 and bag < BAG_SLOTS:
+				return {"type": "bag", "bag": bag}
 		"ground":
 			var cell: Variant = location.get("cell")
 			if location.size() == 2 and typeof(cell) == TYPE_VECTOR2I:
@@ -849,6 +864,8 @@ func move_item(id: int, source_value: Variant, target_value: Variant, now: float
 			return _item_error("That is too far away")
 		if location["type"] == "equipment" and location["slot"] == "bag":
 			return _item_error("Your pack stays on your back")
+	if "bag" in [source["type"], target["type"]]:
+		return _move_bag(id, source, target, now)
 	if "depot" in [source["type"], target["type"]]:
 		if source["type"] not in ["backpack", "depot"] or target["type"] not in ["backpack", "depot"]:
 			return _item_error("Move items to and from your depot through your backpack")
@@ -1159,10 +1176,98 @@ func choose_vocation(id: int, trainer: Variant, _now: float) -> Dictionary:
 
 func wear_pack(id: int, kind: String) -> void:
 	var player: Dictionary = players[id]
+	var before: int = main_size(player)
 	player["equipment"]["bag"] = kind
-	var size: int = mini(BACKPACK_MAX, BACKPACK_SIZE + int(ITEMS[kind].get("slots", 0)))
-	while player["backpack"].size() < size:
-		player["backpack"].append("")
+	# The main backpack grows in front of the worn bags' slots.
+	for added: int in maxi(0, main_size(player) - before):
+		player["backpack"].insert(before, "")
+
+
+## Slots of the main backpack: BACKPACK_SIZE plus the worn pack's (works on exported states too).
+static func main_size(player: Dictionary) -> int:
+	var pack: String = player["equipment"].get("bag", "")
+	return mini(BACKPACK_MAX, BACKPACK_SIZE + (int(ITEMS[pack].get("slots", 0)) if ITEMS.has(pack) else 0))
+
+
+## Whether an item is a bag for the bag slots.
+static func is_bag(kind: String) -> bool:
+	return ITEMS.has(kind) and ITEMS[kind]["slot"] == "container"
+
+
+## [first backpack index, slot count] of the bag worn in bag slot `bag` ([.., 0] when empty).
+static func bag_range(player: Dictionary, bag: int) -> Vector2i:
+	var start: int = main_size(player)
+	var bags: Array = player.get("bags", [])
+	for index: int in bag:
+		start += int(ITEMS[bags[index]]["slots"]) if is_bag(bags[index]) else 0
+	return Vector2i(start, int(ITEMS[bags[bag]]["slots"]) if bag < bags.size() and is_bag(bags[bag]) else 0)
+
+
+## Puts a bag in an empty bag slot: its slots join the backpack (used by moves and saves).
+func wear_bag(id: int, bag: int, kind: String) -> void:
+	var player: Dictionary = players[id]
+	player["bags"][bag] = kind
+	var region: Vector2i = bag_range(player, bag)
+	for added: int in region.y:
+		player["backpack"].insert(region.x, "")
+
+
+## Moves a bag into or out of a bag slot. A bag goes on from the backpack or the ground into an
+## empty bag slot; it comes off into the backpack (outside its own slots), onto the ground, or
+## into another empty bag slot, and only when it holds nothing.
+func _move_bag(id: int, source: Dictionary, target: Dictionary, now: float) -> Dictionary:
+	var player: Dictionary = players[id]
+	if source["type"] == "depot" or target["type"] == "depot":
+		return _item_error("Move items to and from your depot through your backpack")
+	if target["type"] == "equipment" or source["type"] == "equipment":
+		return _item_error("That item does not fit there")
+	var entry: String = _item_at(player, source) if source["type"] != "bag" else player["bags"][source["bag"]]
+	if entry.is_empty():
+		return _item_error("There is no item there")
+	if not is_bag(entry):
+		return _item_error("Only bags go in a bag slot")
+	if target["type"] == "bag" and not player["bags"][target["bag"]].is_empty():
+		return _item_error("Take that bag off first")
+	var region := Vector2i.ZERO
+	if source["type"] == "bag":
+		region = bag_range(player, source["bag"])
+		if player["backpack"].slice(region.x, region.x + region.y).any(func(held: String) -> bool: return not held.is_empty()):
+			return _item_error("Empty the %s first" % ITEMS[entry]["name"])
+	# Resolve the target as it will be once the bag's slots are gone.
+	var after: Array = player["backpack"].duplicate()
+	for removed: int in region.y:
+		after.remove_at(region.x)
+	if target["type"] == "backpack":
+		var index: int = target["index"]
+		if index >= region.x and index < region.x + region.y:
+			return _item_error("A bag cannot go inside itself")
+		if index >= region.x + region.y:
+			index -= region.y
+		if index < 0 or index >= after.size() or not after[index].is_empty():
+			index = after.find("")
+		if index < 0:
+			return _item_error("Your backpack is full")
+		target = {"type": "backpack", "index": index}
+	elif target["type"] == "ground":
+		if not walkable(target["cell"]):
+			return _item_error("Items cannot be placed there")
+		if ground.get(target["cell"], []).size() >= GROUND_STACK_MAX:
+			return _item_error("There is no room on that tile")
+	if source["type"] == "bag":
+		player["bags"][source["bag"]] = ""
+		player["backpack"] = after
+	else:
+		_take(player, source)
+	if target["type"] == "bag":
+		wear_bag(id, target["bag"], entry)
+	else:
+		_put(player, target, entry)
+	player["next_item"] = now + ITEM_SECONDS
+	var changed: Array[Vector2i] = []
+	for location: Dictionary in [source, target]:
+		if location["type"] == "ground" and location["cell"] not in changed:
+			changed.append(location["cell"])
+	return {"ok": true, "state": export_player(id, now, true), "ground": changed}
 
 
 func _set_entry(player: Dictionary, location: Dictionary, entry: String) -> void:

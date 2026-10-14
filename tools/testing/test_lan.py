@@ -94,7 +94,7 @@ def main():
                     if args.host_loss:
                         print("PASS: host loss is reported and stale client state is cleared")
                     elif args.dedicated:
-                        print("PASS: dedicated ENet movement/equipment/inventory, level-gated ring, ferry travel, combat, relic quest, vendor/potion/bank/depot/task RPCs, a private dungeon copy, hunting weapon equip/unequip, crafting at an artisan, gathering with node sync, and disconnect cleanup")
+                        print("PASS: dedicated ENet movement/equipment/inventory, level-gated ring, ferry travel, combat, relic quest, vendor/potion/bank/depot/task RPCs, a private dungeon copy, hunting weapon equip/unequip, crafting at an artisan, wearing a bag, gathering with node sync, and disconnect cleanup")
                     else:
                         print("PASS: real ENet host/client/late-join movement, authority, "
                               "collision, cooldown, equip/unequip, inventory/ground sync, party invite/join and disconnect cleanup")

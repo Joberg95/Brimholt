@@ -122,7 +122,7 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 		"vocation": player["vocation"], "level": player["level"], "experience": player["experience"],
 		"health": player["health"], "mana": player["mana"], "gold": player["gold"], "bank": player["bank"],
 		"cell": [player["cell"].x, player["cell"].y],
-		"equipment": player["equipment"].duplicate(), "backpack": player["backpack"].duplicate(),
+		"equipment": player["equipment"].duplicate(), "bags": player["bags"].duplicate(), "backpack": player["backpack"].duplicate(),
 		"depot": player["depot"].duplicate(), "trophies": player["trophies"].duplicate(),
 		"tasks": player["tasks"].duplicate(), "done_tasks": player["done_tasks"].keys(),
 		"spell_ranks": player["spell_ranks"].duplicate(),
@@ -172,6 +172,12 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 					world.wear_pack(id, kind)
 			else:
 				player["equipment"][slot] = kind
+	# Worn bags first: their slots extend the backpack the saved entries are read into.
+	var bags: Variant = data.get("bags")
+	if typeof(bags) == TYPE_ARRAY:
+		for bag: int in mini(bags.size(), World.BAG_SLOTS):
+			if typeof(bags[bag]) == TYPE_STRING and World.is_bag(bags[bag]):
+				world.wear_bag(id, bag, bags[bag])
 	for container: String in ["backpack", "depot"]:
 		var saved: Variant = data.get(container)
 		var slots: Array = player[container]

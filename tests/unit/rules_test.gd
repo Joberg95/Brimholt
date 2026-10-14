@@ -260,6 +260,7 @@ func _quest_hub_and_lexicon_checks() -> void:
 	_profession_data_checks()
 	_gathering_checks()
 	_crafting_checks()
+	_bag_checks()
 	check(World.next_task({"level": 3, "vocation": "knight", "tasks": {}, "done_tasks": []}) != Quests.TRIAL_TASK
 		and World.task_open(Quests.TRIAL_TASK, {"vocation": Balance.ADVENTURER, "tasks": {}, "done_tasks": []}),
 		"only Adventurers are pointed to the trial")
@@ -688,9 +689,10 @@ func _profession_data_checks() -> void:
 				gathered = gathered or entry[0] in Professions.RESOURCES[profession]
 			check(gathered and entry[1] >= 1, "%s is made from gathered resources" % recipe["id"])
 			value += entry[1]
-		if not output["slot"].is_empty():
+		if not Professions.gear_profession(output).is_empty():
 			crafted[recipe["id"]] = true
 			check(recipe["skill"] == maxi(1, output["level"]), "%s needs the skill of its tier" % recipe["id"])
+		if not output["slot"].is_empty():
 			check(Economy.sell_price(recipe["id"]) <= value * 30, "selling crafted %s pays at most 30 gold per resource" % recipe["id"])
 	for kind: String in World.ITEMS:
 		if not Professions.gear_profession(World.ITEMS[kind]).is_empty():
@@ -911,6 +913,76 @@ func _crafting_checks() -> void:
 		"a meal regenerates health and mana faster")
 
 
+## Bag slots: a worn bag's slots extend the backpack; bags come off only when empty.
+func _bag_checks() -> void:
+	var world := World.new()
+	world.add_player(1, 0.0, "knight")
+	var player: Dictionary = world.players[1]
+	var tick: Array[float] = [1.0]
+	var at := func() -> float:
+		tick[0] += 1.0
+		return tick[0]
+	check(Economy.stock().has("leather_satchel") and not Economy.stock().has("starweave_rucksack"), "vendors sell the satchel; better bags are crafted")
+	player["backpack"].fill("")
+	player["backpack"][0] = "leather_satchel"
+	player["backpack"][1] = "reedweave_bag"
+	player["backpack"][2] = "health_potion#5"
+	for bad: Variant in [{"type": "bag", "bag": 3}, {"type": "bag", "bag": -1}, {"type": "bag", "bag": "0"}, {"type": "bag"},
+			{"type": "bag", "bag": 0, "extra": 1}]:
+		check(not world.move_item(1, {"type": "backpack", "index": 0}, bad, at.call())["ok"], "malformed bag slots are refused")
+	check(world.move_item(1, {"type": "backpack", "index": 2}, {"type": "bag", "bag": 0}, at.call())["reason"] == "Only bags go in a bag slot",
+		"only bags go in bag slots")
+	check(not world.move_item(1, {"type": "backpack", "index": 0}, {"type": "equipment", "slot": "armor"}, at.call())["ok"],
+		"a bag is not armor")
+	check(world.move_item(1, {"type": "backpack", "index": 0}, {"type": "bag", "bag": 0}, at.call())["ok"]
+		and player["bags"][0] == "leather_satchel" and player["backpack"][0] == ""
+		and player["backpack"].size() == World.BACKPACK_SIZE + 6 and World.bag_range(player, 0) == Vector2i(8, 6),
+		"a worn satchel adds its six slots after the main backpack")
+	check(world.move_item(1, {"type": "backpack", "index": 1}, {"type": "bag", "bag": 2}, at.call())["ok"]
+		and World.bag_range(player, 2) == Vector2i(14, 8) and player["backpack"].size() == World.BACKPACK_SIZE + 14,
+		"bags line up slot by slot")
+	check(world.move_item(1, {"type": "backpack", "index": 2}, {"type": "backpack", "index": 15}, at.call())["ok"]
+		and player["backpack"][15] == "health_potion#5", "items move into a bag's slots")
+	check(World.carried(player["backpack"], "health_potion") == 5 and Combat.new(world, 5).drink(1, 15, at.call())["reason"] != "Unknown item location",
+		"bag contents count as carried and can be used in place")
+	check(world.move_item(1, {"type": "bag", "bag": 2}, {"type": "backpack"}, at.call())["reason"] == "Empty the Reedweave bag first",
+		"a bag with items stays on")
+	check(world.move_item(1, {"type": "bag", "bag": 0}, {"type": "backpack", "index": 9}, at.call())["reason"] == "A bag cannot go inside itself",
+		"a bag cannot be put into its own slots")
+	# Wearing a bigger pack grows the main backpack in front of the bags, keeping their contents.
+	world.wear_pack(1, "traveler_pack")
+	check(World.main_size(player) == 12 and World.bag_range(player, 0) == Vector2i(12, 6) and player["backpack"][19] == "health_potion#5",
+		"a pack grows the main backpack and shifts the bags intact")
+	# Saves keep worn bags and what they hold.
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(CharacterStore.capture(world, 1, 0.0)))
+	var restored := World.new()
+	restored.add_player(1, 0.0, "knight")
+	CharacterStore.restore(restored, 1, saved, 0.0)
+	check(restored.players[1]["bags"] == player["bags"] and restored.players[1]["backpack"] == player["backpack"], "bags survive a save")
+	saved["bags"] = ["voidrend", 7, "starweave_rucksack", "leather_satchel"]
+	var tampered := World.new()
+	tampered.add_player(1, 0.0, "knight")
+	CharacterStore.restore(tampered, 1, saved, 0.0)
+	check(tampered.players[1]["bags"] == ["", "", "starweave_rucksack"] and tampered.players[1]["backpack"].size() == 12 + 14,
+		"saved bags are sanitized")
+	# Empty bags come off into the backpack (or onto the ground); the slots after them close up.
+	player["backpack"][19] = ""
+	player["backpack"][0] = "health_potion#5"
+	check(world.move_item(1, {"type": "bag", "bag": 0}, {"type": "backpack"}, at.call())["ok"] and player["bags"][0] == ""
+		and player["backpack"].size() == 12 + 8 and World.bag_range(player, 2) == Vector2i(12, 8) and player["backpack"].has("leather_satchel"),
+		"an empty bag comes off and later bags move up")
+	var spot: Vector2i = player["cell"] + Vector2i.DOWN
+	if World.walkable(spot):
+		check(world.move_item(1, {"type": "bag", "bag": 2}, {"type": "ground", "cell": spot}, at.call())["ok"]
+			and world.ground[spot] == ["reedweave_bag"] and player["backpack"].size() == 12, "a bag can be dropped from its slot")
+		check(world.move_item(1, {"type": "ground", "cell": spot}, {"type": "bag", "bag": 1}, at.call())["ok"]
+			and player["bags"][1] == "reedweave_bag", "a bag is worn straight from the ground")
+	check(world.export_player(1, 0.0, true)["bags"] == player["bags"] and not world.export_player(1, 0.0).has("bags"),
+		"only you see your bags")
+	check(not World.parse_location({"type": "backpack", "index": World.BACKPACK_LIMIT}, false).size() > 0
+		and World.parse_location({"type": "backpack", "index": World.BACKPACK_LIMIT - 1}, false).size() == 2, "backpack indices are bounded")
+
+
 func _hunters_lodge_checks() -> void:
 	# A chain: each contract opens when the previous is done, against harder prey, and pays more.
 	var chain: Array[String] = []
@@ -1075,7 +1147,7 @@ func _slot_and_stat_checks() -> void:
 		check(fitting, "every slot has at least one item")
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
-		check(item["slot"] == "" or item["slot"] in World.SLOT_TYPES.values(), "item slot type is known")
+		check(item["slot"] in ["", "container"] or item["slot"] in World.SLOT_TYPES.values(), "item slot type is known")
 		for stat: String in item["stats"]:
 			check(stat in Balance.STATS and typeof(item["stats"][stat]) == TYPE_INT, "item stat is known")
 	check(World.fits("garnet_ring", "ring_1") and World.fits("garnet_ring", "ring_2"), "rings fit both ring slots")
@@ -1633,6 +1705,10 @@ func _gear_tier_checks() -> void:
 		if item["slot"] == "bag":
 			check(item["stats"].is_empty() and World.bound(kind) and item["slots"] > 0 and kind in Quests.PACKS,
 				"%s is a bound quest pack that adds backpack slots" % kind)
+			continue
+		if item["slot"] == "container":
+			check(item["stats"].is_empty() and not World.bound(kind) and item["slots"] > 0 and item["slots"] <= World.BAG_MAX
+				and Crafting.RECIPES.has(kind) and Economy.sell_price(kind) > 0, "%s is an unbound, craftable bag" % kind)
 			continue
 		if item["look"] == "torch":
 			check(item["slot"] == "off_hand" and item["stats"].is_empty() and item["vocations"].is_empty()

@@ -74,7 +74,7 @@ static func gear(level: int, vocation: String) -> Dictionary:
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
 		var slot: String = item["slot"]
-		if slot.is_empty() or slot == "bag" or item.get("loot_only", false) or item.has("glow") or item["level"] > tier \
+		if slot.is_empty() or slot in ["bag", "container"] or item.get("loot_only", false) or item.has("glow") or item["level"] > tier \
 				or not World.requirement_error(kind, level, vocation).is_empty():
 			continue
 		var target: String = "ring_1" if slot == "ring" else slot

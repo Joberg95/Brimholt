@@ -8,7 +8,7 @@ Makefile                 Developer commands (`make help`)
 game/
   main.tscn, main.gd     Entry scene: ENet lifecycle, RPC endpoint (/root/Main), camera, input; assembles the UI
   core/                  Server-authoritative simulation shared by every peer (no nodes)
-    world.gd             Map loading, item catalog, movement, inventory and depot, packs, travel
+    world.gd             Map loading, item catalog, movement, inventory and depot, packs, bag slots, travel
     combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
     economy.gd           Vendors (stock, buying, selling) and the banker (gold accounts)
     crafting.gd          Professions on the host: herb patches, gathering (nodes, regrowth), crafting at artisans, skill training
@@ -37,7 +37,7 @@ game/
     layout.gd            Shared screen layout constants (game window, panel origin, zoom, bar slot)
     game_window.gd       Game window: world SubViewport, rain, vignette, overlay; forwards map input to main
     hud.gd               Title row, status line, action message, zone banner, vitals, Controls menu
-    inventory_panel.gd   Paperdoll and backpack slots, drag-and-drop, stat sheet, item tooltips
+    inventory_panel.gd   Paperdoll, backpack, and bag slots, bag windows, drag-and-drop, stat sheet, item tooltips
     quest_list.gd        Quest list in the game window: active tasks, givers, progress
     spell_book.gd        Spell book (B): your vocation's spells explained (Spells.info), drag to the bar
     character_window.gd  Character window (C): stats explained, experience, and status (meal included)

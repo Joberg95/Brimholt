@@ -1,6 +1,7 @@
 extends Node
 ## The panel right of the game window: the paperdoll and backpack slots (drag-and-drop,
-## right-click to equip, unequip, drink, eat, or deposit), the stat sheet, and item tooltips.
+## right-click to equip, unequip, drink, eat, or deposit), three bag slots beside the paperdoll
+## whose bags open in windows of their own (click a bag slot), the stat sheet, and item tooltips.
 ## Depot slots in the bank dialog are made here too (make_slot).
 
 const World = preload("res://game/core/world.gd")
@@ -30,6 +31,12 @@ const STAT_LABELS: Dictionary = {
 
 var game: Node
 var _backpack_label: Label
+## One window per bag slot: a title and a grid of the bag's backpack slots, rebuilt when the
+## backpack layout (pack size and worn bags) changes.
+var bag_windows: Array[PanelContainer] = []
+var _bag_titles: Array[Label] = []
+var _bag_grids: Array[GridContainer] = []
+var _bag_layout: String = ""
 var _stat_values: Dictionary = {}
 var _slots: Array[Control] = []
 
@@ -48,25 +55,111 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_backpack_label = _add_panel_label(layer, "Backpack", Layout.PANEL_ORIGIN + Vector2(0, 172))
 	for index: int in World.BACKPACK_MAX:
 		_add_slot(layer, {"type": "backpack", "index": index}, slot_position({"type": "backpack", "index": index}))
+	for bag: int in World.BAG_SLOTS:
+		_add_slot(layer, {"type": "bag", "bag": bag}, slot_position({"type": "bag", "bag": bag}))
+		_build_bag_window(layer)
 	_build_stat_sheet(layer)
+
+
+func _build_bag_window(layer: CanvasLayer) -> void:
+	var window := PanelContainer.new()
+	var frame := StyleBoxFlat.new()
+	frame.bg_color = Color("#151a20f0")
+	frame.border_color = Color("#6a5a3a")
+	frame.set_border_width_all(1)
+	frame.set_content_margin_all(6)
+	frame.anti_aliasing = false
+	window.add_theme_stylebox_override("panel", frame)
+	window.visible = false
+	var column := VBoxContainer.new()
+	window.add_child(column)
+	var header := HBoxContainer.new()
+	column.add_child(header)
+	var title := Label.new()
+	title.add_theme_font_size_override("font_size", 13)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	var close := Button.new()
+	close.text = "×"
+	close.focus_mode = Control.FOCUS_NONE
+	close.pressed.connect(window.hide)
+	header.add_child(close)
+	var grid := GridContainer.new()
+	grid.columns = BACKPACK_COLUMNS
+	grid.add_theme_constant_override("h_separation", 4)
+	grid.add_theme_constant_override("v_separation", 4)
+	column.add_child(grid)
+	layer.add_child(window)
+	bag_windows.append(window)
+	_bag_titles.append(title)
+	_bag_grids.append(grid)
+
+
+## Opens or closes the window of the bag in bag slot `bag` (nothing happens for an empty slot).
+func toggle_bag(bag: int) -> void:
+	if not game.actors.has(game.self_id) or String(game.actors[game.self_id]["state"].get("bags", ["", "", ""])[bag]).is_empty():
+		return
+	bag_windows[bag].visible = not bag_windows[bag].visible
+	_place_bag_windows()
+
+
+## Open bag windows stack down the right edge of the game window.
+func _place_bag_windows() -> void:
+	var top: float = Layout.VIEW_ORIGIN.y + 8
+	for window: PanelContainer in bag_windows:
+		if window.visible:
+			window.reset_size()
+			window.position = Vector2(Layout.VIEW_ORIGIN.x + Layout.VIEW_SIZE.x - window.size.x - 8, top)
+			top += window.size.y + 6
+
+
+## Per frame: rebuild bag windows when the layout changed, and keep their titles current.
+func refresh_bags() -> void:
+	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var bags: Array = state.get("bags", ["", "", ""])
+	var layout: String = "%s|%s" % [World.main_size(state) if state.has("equipment") else 0, bags]
+	if layout != _bag_layout:
+		_bag_layout = layout
+		for bag: int in World.BAG_SLOTS:
+			for child: Node in _bag_grids[bag].get_children():
+				_bag_grids[bag].remove_child(child)
+				child.queue_free()
+			if String(bags[bag]).is_empty():
+				bag_windows[bag].hide()
+				continue
+			var region: Vector2i = World.bag_range(state, bag)
+			for index: int in range(region.x, region.x + region.y):
+				var slot: Control = make_slot({"type": "backpack", "index": index})
+				slot.set_meta("in_bag", true)
+				_bag_grids[bag].add_child(slot)
+	_place_bag_windows()
+	for bag: int in World.BAG_SLOTS:
+		if bag_windows[bag].visible:
+			var region: Vector2i = World.bag_range(state, bag)
+			var used: int = state.get("backpack", []).slice(region.x, region.x + region.y).filter(
+				func(entry: String) -> bool: return not entry.is_empty()).size()
+			_bag_titles[bag].text = "%s  %d/%d" % [World.ITEMS[bags[bag]]["name"], used, region.y]
 
 
 func slot_position(location: Dictionary) -> Vector2:
 	if location["type"] == "equipment":
 		return Layout.PANEL_ORIGIN + Vector2(40, 28) + PAPERDOLL[location["slot"]] * SLOT_STEP
+	if location["type"] == "bag":
+		return Layout.PANEL_ORIGIN + Vector2(40, 28) + Vector2(3.2, location["bag"]) * SLOT_STEP
 	var index: int = location["index"]
 	return Layout.PANEL_ORIGIN + Vector2(4, 196) + Vector2(index % BACKPACK_COLUMNS, index / BACKPACK_COLUMNS) * SLOT_STEP
 
 
-## Backpack slots you can use: 8, plus your pack's slots.
+## Main backpack slots you can use: 8, plus your pack's slots (bags have their own windows).
 func capacity() -> int:
 	if not game.actors.has(game.self_id):
 		return World.BACKPACK_SIZE
-	return game.actors[game.self_id]["state"].get("backpack", []).size()
+	return World.main_size(game.actors[game.self_id]["state"])
 
 
-func _locked(location: Dictionary) -> bool:
-	return location["type"] == "backpack" and location["index"] >= capacity()
+## A main backpack slot beyond your pack's size (slots in bag windows are never locked).
+func _locked(location: Dictionary, slot: Control = null) -> bool:
+	return location["type"] == "backpack" and location["index"] >= capacity() and not (slot != null and slot.get_meta("in_bag", false))
 
 
 ## Per frame: refresh a slot only when its item or your level or vocation changed (tooltips
@@ -85,8 +178,12 @@ func redraw_slots() -> void:
 		var key: String = entry + "|" + who
 		if slot.get_meta("shown", "") != key:
 			slot.set_meta("shown", key)
-			slot.tooltip_text = LOCKED_TOOLTIP if _locked(location) else item_tooltip(kind)
-			var grade: Array = Items.rarity(World.ITEMS.get(kind, {})) if not _locked(location) else []
+			slot.tooltip_text = LOCKED_TOOLTIP if _locked(location, slot) else item_tooltip(kind)
+			if location["type"] == "bag" and kind.is_empty():
+				slot.tooltip_text = "Bag slot: put a bag here; click it to open the bag"
+			elif location["type"] == "bag":
+				slot.tooltip_text += "\nClick to open or close it; empty it to take it off"
+			var grade: Array = Items.rarity(World.ITEMS.get(kind, {})) if not _locked(location, slot) else []
 			slot.rarity_color = grade[1] if not grade.is_empty() else Color.TRANSPARENT
 			if World.count_of(entry) > 1:
 				slot.tooltip_text += "\nStack of %d" % World.count_of(entry)
@@ -128,7 +225,7 @@ func update_stats() -> void:
 	var self_id: int = game.self_id
 	var carried: int = 0
 	if actors.has(self_id):
-		carried = capacity() - actors[self_id]["state"].get("backpack", []).count("")
+		carried = capacity() - actors[self_id]["state"].get("backpack", []).slice(0, capacity()).count("")
 	_backpack_label.text = "Backpack  %d/%d" % [carried, capacity()]
 	if not actors.has(self_id):
 		for value: Label in _stat_values.values():
@@ -185,7 +282,7 @@ func item_tooltip(kind: String) -> String:
 		return ""
 	var item: Dictionary = World.ITEMS[kind]
 	var lines: PackedStringArray = [item["name"]]
-	if not item["slot"].is_empty():
+	if not item["slot"].is_empty() and not World.is_bag(kind):
 		var who: String = "everyone"
 		if not item["vocations"].is_empty():
 			var names: PackedStringArray = []
@@ -202,7 +299,7 @@ func item_tooltip(kind: String) -> String:
 				"%s %s" % [grade[0], slot_name] if not grade.is_empty() else slot_name.capitalize(), item["level"], item["level"], who])
 	for stat: String in item["stats"]:
 		lines.append("%+d %s%s" % [item["stats"][stat], STAT_LABELS[stat], "%" if stat == "critical" else ""])
-	if not item["slot"].is_empty():
+	if not item["slot"].is_empty() and not World.is_bag(kind):
 		var refused: String = requirement_for(kind)
 		if not refused.is_empty():
 			lines.append("✗ " + refused)
@@ -234,7 +331,9 @@ func item_tooltip(kind: String) -> String:
 			lines.append("Restores %d%% of your maximum %s" % [roundi(item["drink"][stat] * 100.0), stat])
 		var key: String = game.keybinds.label(item["timer"])
 		lines.append("Right-click%s to drink  ·  %d s cooldown" % ["" if key.is_empty() else " or press " + key, roundi(item["cooldown"])])
-	if item.has("slots"):
+	if World.is_bag(kind):
+		lines.append("Bag: holds %d items. Put it in a bag slot beside your equipment, then click the slot to open it" % item["slots"])
+	elif item.has("slots"):
 		lines.append("+%d backpack slots  ·  bound to you" % item["slots"])
 	elif item.get("sell", 0) > 0 and not item.has("value"):
 		lines.append("Vendors buy it for %d gold" % item["sell"])
@@ -263,7 +362,7 @@ func make_slot(location: Dictionary) -> Control:
 	slot.set_meta("location", location)
 	slot.draw.connect(_draw_slot.bind(slot, location))
 	slot.gui_input.connect(slot_input.bind(location))
-	slot.set_drag_forwarding(item_drag.bind(slot, location), item_can_drop.bind(location), item_drop.bind(location))
+	slot.set_drag_forwarding(item_drag.bind(slot, location), item_can_drop.bind(location, slot), item_drop.bind(location, slot))
 	_slots.append(slot)
 	return slot
 
@@ -281,12 +380,14 @@ func local_item(location: Dictionary) -> String:
 	var state: Dictionary = actors[self_id]["state"]
 	if location["type"] == "equipment":
 		return state["equipment"].get(location["slot"], "")
+	if location["type"] == "bag":
+		return state.get("bags", ["", "", ""])[location["bag"]]
 	var backpack: Array = state.get(location["type"], [])
 	return backpack[location["index"]] if location["index"] < backpack.size() else ""
 
 
 func _draw_slot(slot: Control, location: Dictionary) -> void:
-	if _locked(location):
+	if _locked(location, slot):
 		slot.draw_rect(Rect2(Vector2.ZERO, slot.size), Color("#171c22"))
 		slot.draw_rect(Rect2(Vector2(-1, -1), slot.size + Vector2(2, 2)), Color("#0b0e12"), false, 1.0)
 		return
@@ -312,6 +413,10 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 			SpriteArt.draw_count(slot, slot.size - Vector2(3, 3), World.count_of(entry))
 	elif location["type"] == "equipment":
 		SpriteArt.draw_slot_hint(slot, slot.size / 2.0, location["slot"])
+	elif location["type"] == "bag":
+		SpriteArt.draw_item(slot, slot.size / 2.0, "leather_satchel", Color(0, 0, 0, 0.35))
+	if location["type"] == "bag" and bag_windows.size() > location["bag"] and bag_windows[location["bag"]].visible:
+		slot.draw_rect(Rect2(Vector2.ZERO, slot.size), Color("#ffcf6a"), false, 1.0)
 
 
 ## Seconds until you can drink another potion of `kind` (0 when ready or not a potion).
@@ -333,18 +438,36 @@ func item_drag(_at: Vector2, source: Control, location: Dictionary) -> Variant:
 	return {"brimholt_item": location}
 
 
-func item_can_drop(_at: Vector2, data: Variant, target: Dictionary) -> bool:
+func item_can_drop(_at: Vector2, data: Variant, target: Dictionary, slot: Control = null) -> bool:
 	return game.connected and typeof(data) == TYPE_DICTIONARY and data.has("brimholt_item") \
-		and data["brimholt_item"] != target and not _locked(target)
+		and data["brimholt_item"] != target and not _locked(target, slot)
 
 
-func item_drop(at: Vector2, data: Variant, target: Dictionary) -> void:
-	if item_can_drop(at, data, target):
-		game.move_item_local(data["brimholt_item"], target)
+## Dropping on a bag slot wears a bag there, or puts any other item into that bag.
+func item_drop(at: Vector2, data: Variant, target: Dictionary, slot: Control = null) -> void:
+	if not item_can_drop(at, data, target, slot):
+		return
+	var kind: String = World.kind_of(local_item(data["brimholt_item"]))
+	if target["type"] == "bag" and not World.is_bag(kind) and game.actors.has(game.self_id):
+		var state: Dictionary = game.actors[game.self_id]["state"]
+		var region: Vector2i = World.bag_range(state, target["bag"])
+		var backpack: Array = state.get("backpack", [])
+		for index: int in range(region.x, region.x + region.y):
+			if backpack[index].is_empty():
+				game.move_item_local(data["brimholt_item"], {"type": "backpack", "index": index})
+				return
+		game.last_action_message = "That bag is full" if region.y > 0 else "Put a bag in that slot first"
+		return
+	game.move_item_local(data["brimholt_item"], target)
 
 
-## Right-click: unequip or pick up into the backpack, or equip from the backpack.
+## Right-click: unequip or pick up into the backpack, or equip from the backpack. Click a bag
+## slot to open its bag.
 func slot_input(event: InputEvent, location: Dictionary) -> void:
+	if location["type"] == "bag" and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT \
+			and not event.pressed:
+		toggle_bag(location["bag"])
+		return
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT):
 		return
 	var kind: String = World.kind_of(local_item(location))
@@ -356,6 +479,10 @@ func slot_input(event: InputEvent, location: Dictionary) -> void:
 		game.move_item_local(location, {"type": "depot"})
 	elif World.ITEMS[kind].has("drink") or World.ITEMS[kind].has("eat"):
 		game.drink_local(location["index"])
+	elif World.is_bag(kind) and game.actors.has(game.self_id):
+		var bags: Array = game.actors[game.self_id]["state"].get("bags", ["", "", ""])
+		if bags.has(""):
+			game.move_item_local(location, {"type": "bag", "bag": bags.find("")})
 	elif game.actors.has(game.self_id):
 		var slot: String = World.slot_for(kind, game.actors[game.self_id]["state"]["equipment"])
 		if not slot.is_empty():

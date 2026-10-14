@@ -208,7 +208,7 @@ stand in fades away while you are there.
 
 **Vendors** sell health and mana potions (20 gold each, in ones or tens) and levelling gear:
 the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your class, and
-torches for dark caves.
+torches for dark caves, and the Leather satchel (see [Bags](#inventory)).
 Gear costs about 40 × level^1.05 gold (weapons a quarter more): 40–50 gold at tier 1,
 215–270 at tier 5, and 450–560 at tier 10. Better gear comes from monsters and quests. Vendors
 buy monster materials for their value (one stack, or **Sell all materials**) and unbound gear
@@ -262,7 +262,7 @@ resources a recipe uses, less for recipes well below your skill.
 
 - **Smithing** (ore with logs): plate and mail armor, Warrior weapons, shields, amulets, rings.
 - **Woodworking** (logs with ore): bows, wands, rods, charms.
-- **Tailoring** (herbs with ore): leather and cloth armor, spellbooks, capes.
+- **Tailoring** (herbs with ore): leather and cloth armor, spellbooks, capes, and bags (6 to 14 slots).
 - **Alchemy** (herbs): health and mana potions, and from skill 20 and 40 strong and great
   potions (30% and 40% health, 35% and 45% mana) that vendors never sell.
 - **Cooking** (fish and herbs): food. Eating (right-click it) speeds health and mana
@@ -444,6 +444,25 @@ legs and boots too; rings, amulets, and charms are too small to show. Items can 
 tile, stacking up to six per tile, and the top item is picked up. Ground tiles must be
 your own tile or one of the eight around you.
 
+**Bags.** Beside the paperdoll are three **bag slots**. Drag a bag into one (or right-click
+the bag in your backpack) and click the slot to open the bag in its own window at the right of
+the game window; click again (or ×, or Esc) to close it. Each bag adds its slots to what you
+carry, so potions, food, materials, and spare gear can each have their own bag. Drag items
+between the backpack and bag windows, or drop an item on a bag slot to put it in that bag.
+Everything that uses your backpack uses your bags too: loot and purchases fill the backpack
+first and then the bags, crafting and turning in tasks count what bags hold, potions and food
+are drunk or eaten straight from a bag, and vendors buy from them. A worn bag comes off only
+when it is empty; a bag lying in your backpack or another bag is just an item. Bags stay worn
+on death, but what they hold is carried like the backpack and follows its death rules.
+
+| Bag | Slots | Source |
+| --- | ---: | --- |
+| Leather satchel | 6 | vendors (120 gold), or Tailoring 1 |
+| Reedweave bag | 8 | Tailoring 10 |
+| Silkthistle pack | 10 | Tailoring 20 |
+| Nightcotton haversack | 12 | Tailoring 30 |
+| Starweave rucksack | 14 | Tailoring 40 |
+
 Peer 1 validates every item move: location shape, reach, slot type, level and class,
 free space, stack limit, and a 150 ms item cooldown. Dragging onto an occupied slot swaps
 items when both fit; a worn item displaced from the ground goes back to that tile.
@@ -452,7 +471,8 @@ owner. Late joiners receive ground items in the snapshot. Items carried by a
 player who leaves disappear with them. Ground stacks left untouched for 15 minutes decay
 (any change to a stack restarts its timer); the map's starting items and bound relics never
 decay, and nothing on the ground survives a host restart.
-The backpack is flat: there are no nested containers or player trading.
+Only bags in the three bag slots hold items (a bag inside a bag is just an item), and there is
+no player trading.
 
 **Stacking.** Items without an equipment slot (monster materials, glowcaps, potions, gold piles)
 stack up to 100 in one backpack slot or ground entry; the count shows in the corner of the

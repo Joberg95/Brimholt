@@ -49,7 +49,8 @@ const RARITIES: Array = [
 
 
 ## id -> {name, slot, level, vocations, look, colors, stats, [armor], [outfit], [gold], [value], [price], [sell],
-## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only]} in file order. Potions sharing a
+## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only], [sold]} in file order. "sold" puts
+## an item without a gear slot (a bag) in vendor stock. Potions sharing a
 ## "timer" share one cooldown (a strong health potion waits on the health potion's timer). "price" is the tier valuation,
 ## "sell" what vendors pay; loot_only items are never vendor stock or generic gear rolls.
 static func load_catalog() -> Dictionary:
@@ -71,6 +72,8 @@ static func load_catalog() -> Dictionary:
 			item["outfit"] = String(entry["outfit"])
 		if bool(entry.get("loot_only", false)):
 			item["loot_only"] = true
+		if bool(entry.get("sold", false)):
+			item["sold"] = true
 		for key: String in ["gold", "value", "price", "slots"]:
 			if entry.has(key):
 				item[key] = int(entry[key])
@@ -164,7 +167,7 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 
 ## [name, colour] of a wearable item's rarity, or [] for potions, materials, gold, and packs.
 static func rarity(item: Dictionary) -> Array:
-	if item.get("slot", "").is_empty() or item.get("slot", "") == "bag":
+	if item.get("slot", "") in ["", "bag", "container"]:
 		return []
 	if item.has("glow"):
 		return ["Relic", item["glow"]]

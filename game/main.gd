@@ -262,6 +262,7 @@ func _process(delta: float) -> void:
 			move_local(direction)
 	_update_labels()
 	inventory.redraw_slots()
+	inventory.refresh_bags()
 	_world_view.position = (VIEW_SIZE / 2.0 - camera_focus() * ZOOM).round()
 	_world_view.queue_redraw()
 	dialogs.refresh()
@@ -299,6 +300,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		spell_book.hide()
 		character_window.hide()
 		professions_window.hide()
+		for window: PanelContainer in inventory.bag_windows:
+			window.hide()
 		lexicon.hide()
 		bot_panel.hide()
 		return

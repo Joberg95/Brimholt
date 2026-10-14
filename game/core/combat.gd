@@ -714,7 +714,7 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 					text = "%s thanks you. Your pack is already the largest there is." % giver
 				else:
 					world.wear_pack(id, pack)
-					text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], player["backpack"].size()]
+					text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], World.main_size(player)]
 		_:
 			return {"ok": false, "reason": "Unknown task request", "events": []}
 	if action == "complete":
@@ -972,7 +972,7 @@ func gear_drop(level: int) -> String:
 	var choices: Array[String] = []
 	for kind: String in World.ITEMS:
 		if World.ITEMS[kind]["level"] == tier and not World.ITEMS[kind]["slot"].is_empty() \
-				and not World.bound(kind) and not World.ITEMS[kind].get("loot_only", false):
+				and not World.bound(kind) and not World.ITEMS[kind].get("loot_only", false) and not World.is_bag(kind):
 			choices.append(kind)
 	return choices[rng.randi_range(0, choices.size() - 1)]
 
