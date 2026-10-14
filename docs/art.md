@@ -81,12 +81,17 @@ and no region splits the whole image into cells, one item per cell in reading or
 exists, so painted icons can arrive a sheet at a time. Items without a painted icon keep their
 generated `items.png` cell.
 
-Worn helmets, armor, legs, and boots with a painted icon take their look from it
-(`textured` in `make_sprites.py`): each pose keeps its generated silhouette and shading, and
-every pixel takes the icon's colour at the matching place (rows top to bottom, each row's span
-onto the icon's; the side view uses the icon's middle, the back view is mirrored and darker),
-smoothed and snapped to the icon's five main colours. `make outfits` regenerates the sheets,
-so new icons change the worn gear too. Weapons and shields are still generated models. Its `outfits` list each painted figure: the
+Worn helmets, armor, legs, and boots with a painted icon wear that icon like a paper doll
+(`textured` in `make_sprites.py`): in every pose the icon is shrunk (area-averaged, with a little
+extra contrast) into the bounding box of the generated piece after `compact_humanoid`, and
+clipped to the generated silhouette so the face, arms, and the gap between the legs stay. The
+side view uses the icon's middle 70%; the back view the mirrored icon, darker, with its dark
+openings (faces, visors) filled. `make outfits` regenerates the sheets, so new icons change the
+worn gear too. Capes wear their icon the same way (the back view is the icon), and so do shields and
+spellbooks (the face from the front, a slice edge-on). A weapon with a painted icon is
+rebuilt from it (`painted_model`): the icon's long axis is found from its pixels, stood upright
+with its upper end as the tip, and fitted to the generated model's length, so the grip and
+every swing stay where they were. Its `outfits` list each painted figure: the
 source file, the `figures` region and the facings in it (`order`), the `layout`, and optionally
 an `icons` region whose icons (left to right) replace the generated icons of `icon_items`.
 `make outfits` runs `tools/generators/import_outfits.gd`, which separates each figure from its

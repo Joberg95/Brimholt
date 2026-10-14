@@ -15,6 +15,7 @@ Aseprite), treat that PNG as the source of truth and stop regenerating it.
 
 import argparse
 import json
+import colorsys
 import math
 import re
 import random
@@ -315,7 +316,7 @@ def character_sheet(builder, compact=False, columns=3):
                 image = builder("left", frame).mirrored()
             else:
                 image = builder(direction, frame)
-            frames.append(compact_humanoid(image) if compact else image)
+            frames.append(compact_humanoid(image) if compact and not getattr(builder, "compacted", False) else image)
     return sheet(frames, columns, FRAME)
 
 
@@ -1548,7 +1549,7 @@ def framewise(sheet_image, cell_width, cell_height, transform):
 # `make outfits`) wear it: the generated silhouette of each pose is filled from the icon, row by
 # row, so the worn piece shows the icon's colours, trim, and pattern.
 
-PAINTED_SLOTS = ("helmet", "armor", "legs", "boots")
+PAINTED_SLOTS = ("helmet", "armor", "legs", "boots", "cape", "off_hand", "main_hand")
 ICON_DIR = ROOT / "assets" / "sprites" / "icons"
 
 
@@ -1603,65 +1604,150 @@ def palette_of(icon, size=5):
     return [tuple(round(channel) for channel in centre) + (255,) for centre in centres]
 
 
-def textured(build, icon, kind):
-    """Wraps a gear builder: every non-outline pixel takes the icon's colour at the matching place,
-    snapped to the icon's main colours (palette_of) so flat areas stay flat.
-    Rows map top to bottom; within a row, the worn span maps onto the icon's span (seen from the
-    side, its middle 60%; from behind, mirrored and a little darker)."""
-    icon_spans = _spans(icon, lambda color: color is not None)
-    icon_top, icon_bottom = min(icon_spans), max(icon_spans)
-    tones = palette_of(icon)
-    # The generated layer's shading, relative to the item's main colour, lights the icon colours.
-    base_luma = max(1.0, _luma(tones_for_shading(kind)))
+def _coverage(icon, left, right, top, bottom):
+    """Area-weighted mean colour of icon pixels in a fractional rectangle, with the share of it
+    that is opaque."""
+    total, weight, area = [0.0, 0.0, 0.0], 0.0, 0.0
+    for y in range(math.floor(top), math.ceil(bottom)):
+        for x in range(math.floor(left), math.ceil(right)):
+            share = (min(right, x + 1) - max(left, x)) * (min(bottom, y + 1) - max(top, y))
+            if share <= 0:
+                continue
+            area += share
+            pixel = icon.get(x, y)
+            if pixel is not None:
+                weight += share
+                for channel in range(3):
+                    total[channel] += pixel[channel] * share
+    if weight == 0:
+        return None, 0.0
+    return tuple(round(value / weight) for value in total) + (255,), weight / area
 
-    def nearest(mean):
-        return min(tones, key=lambda tone: sum((tone[c] - mean[c]) ** 2 for c in range(3)))
+
+def _crisp(color):
+    """A little more contrast and saturation: shrunken paintings read flat at sprite size."""
+    hue, light, sat = colorsys.rgb_to_hls(*(channel / 255 for channel in color[:3]))
+    light = min(1.0, max(0.0, (light - 0.5) * 1.12 + 0.5))
+    sat = min(1.0, sat * 1.15)
+    return tuple(round(channel * 255) for channel in colorsys.hls_to_rgb(hue, light, sat)) + (255,)
+
+
+def textured(build, icon, kind, cape=False):
+    """Wraps a gear builder so the worn piece is its painted icon, like a paper doll: in every pose
+    the icon is shrunk into the bounding box of the generated piece (after compact_humanoid, so no
+    rows are lost) and clipped to its silhouette, which keeps the face, the arms, and the gap
+    between the legs. Seen from the side the icon's middle 70% is used; from behind, the mirrored
+    icon a little darker. A cape is seen from behind: its back view is the icon, its front view
+    (the edges beside the body) a little darker."""
+    used = [(x, y) for y in range(icon.height) for x in range(icon.width) if icon.pixels[y][x] is not None]
+    icon_left, icon_right = min(x for x, _ in used), max(x for x, _ in used) + 1
+    icon_top, icon_bottom = min(y for _, y in used), max(y for _, y in used) + 1
+    # From behind there is no face or visor: the painting's dark openings take its main colour.
+    lit = [icon.pixels[y][x] for x, y in used if _luma(icon.pixels[y][x]) >= 60]
+    back_fill = tuple(round(sum(pixel[c] for pixel in lit) / len(lit)) for c in range(3)) + (255,) if lit else None
 
     def wrapped(direction, frame):
-        image = build(direction, frame)
-        inside = lambda color: color is not None and color != OUTLINE and color[3] == 255
-        spans = _spans(image, inside)
-        if not spans:
+        image = compact_humanoid(build(direction, frame))
+        solid = {(x, y) for y in range(FRAME) for x in range(FRAME) if image.opaque(x, y)}
+        if not solid:
             return image
-        top, bottom = min(spans), max(spans)
-        rows = (icon_bottom - icon_top + 1) / (bottom - top + 1)
-        source = icon.mirrored() if direction == "up" else icon
-        shade_by = 0.82 if direction == "up" else 1.0
+        left, right = min(x for x, _ in solid), max(x for x, _ in solid) + 1
+        top, bottom = min(y for _, y in solid), max(y for _, y in solid) + 1
+        u_left, u_right = icon_left, icon_right
+        if direction == "left":
+            middle, half = (u_left + u_right) / 2, (u_right - u_left) * 0.35
+            u_left, u_right = middle - half, middle + half
+        behind = direction == "up" and not cape
+        source = icon.mirrored() if behind else icon
+        if behind:
+            u_left, u_right = icon.width - u_right, icon.width - u_left
+        columns = (u_right - u_left) / (right - left)
+        rows = (icon_bottom - icon_top) / (bottom - top)
         result = Image(FRAME, FRAME)
-        for y in range(FRAME):
-            for x in range(FRAME):
-                color = image.pixels[y][x]
-                if not inside(color):
-                    result.pixels[y][x] = color
-                    continue
-                v0 = icon_top + (y - top) * rows
-                row = icon_spans.get(min(icon_bottom, int(v0 + rows / 2)))
-                if row is None:
-                    row = (min(a for a, b in icon_spans.values()), max(b for a, b in icon_spans.values()))
-                if direction == "up":
-                    row = (icon.width - 1 - row[1], icon.width - 1 - row[0])
-                first, last = spans[y]
-                u_first, u_last = row
-                if direction == "left":
-                    middle, half = (u_first + u_last) / 2, (u_last - u_first) * 0.3
-                    u_first, u_last = middle - half, middle + half
-                columns = (u_last - u_first + 1) / (last - first + 1)
-                u0 = u_first + (x - first) * columns
-                # A window wider than the pixel smooths the painting's fine detail into areas.
-                mean = _average(source, u0 - columns * 0.6, u0 + columns * 1.6, v0 - rows * 0.6, v0 + rows * 1.6)
-                sampled = nearest(mean) if mean is not None else color
-                light = min(1.25, max(0.72, _luma(color) / base_luma))
-                sampled = scale(sampled, light)
-                result.pixels[y][x] = scale(sampled, shade_by) if shade_by != 1.0 else sampled
-        return result
+        for x, y in solid:
+            u = u_left + (x - left) * columns
+            v = icon_top + (y - top) * rows
+            color, opaque = _coverage(source, u, u + columns, v, v + rows)
+            if color is not None and opaque >= 0.35:
+                if behind and back_fill is not None and _luma(color) < 45:
+                    color = back_fill
+                color = _crisp(color)
+                darker = behind or (cape and direction != "up")
+                result.pixels[y][x] = scale(color, 0.85) if darker else color
+        return result.outlined()
+    wrapped.compacted = True
     return wrapped
+
+
+def painted_model(kind, icon):
+    """An upright weapon model (tip up, like weapon_model) made from a painted icon: the icon's
+    long axis is found from its pixels, stood upright with its upper end as the tip, and fitted
+    into the generated model's bounds so grip, reach, and swings stay where they were."""
+    model = weapon_model(kind)
+    solid = [(x, y) for y in range(model.height) for x in range(model.width) if model.opaque(x, y)]
+    left, right = min(x for x, _ in solid), max(x for x, _ in solid) + 1
+    top, bottom = min(y for _, y in solid), max(y for _, y in solid) + 1
+    points = [(x + 0.5, y + 0.5) for y in range(icon.height) for x in range(icon.width) if icon.pixels[y][x] is not None]
+    mx = sum(x for x, _ in points) / len(points)
+    my = sum(y for _, y in points) / len(points)
+    cxx = sum((x - mx) ** 2 for x, _ in points)
+    cyy = sum((y - my) ** 2 for _, y in points)
+    cxy = sum((x - mx) * (y - my) for x, y in points)
+    angle = 0.5 * math.atan2(2 * cxy, cxx - cyy)
+    dx, dy = math.cos(angle), math.sin(angle)
+    if dy > 0 or (dy == 0 and dx < 0):
+        dx, dy = -dx, -dy
+    px, py = -dy, dx
+    along = [(x - mx) * dx + (y - my) * dy for x, y in points]
+    across = [(x - mx) * px + (y - my) * py for x, y in points]
+    t_low, t_high = min(along) - 0.5, max(along) + 0.5
+    s_low, s_high = min(across) - 0.5, max(across) + 0.5
+    # Keep the painting's proportions: the model's length sets the scale, centred across.
+    length = (bottom - top) / (t_high - t_low)
+    width = (s_high - s_low) * length
+    centre = (left + right) / 2
+    result = Image(model.width, model.height)
+    for y in range(top, bottom):
+        for x in range(round(centre - width / 2) - 1, round(centre + width / 2) + 2):
+            colours = []
+            hits = 0
+            for sy in (0.25, 0.75):
+                for sx in (0.25, 0.75):
+                    t = t_high - (y + sy - top) / length
+                    s_ = (x + sx - centre) / length
+                    ix, iy = mx + t * dx + s_ * px, my + t * dy + s_ * py
+                    pixel = icon.get(math.floor(ix), math.floor(iy))
+                    if pixel is not None:
+                        hits += 1
+                        colours.append(pixel)
+            if hits >= 2:
+                mean = tuple(round(sum(c[k] for c in colours) / len(colours)) for k in range(3)) + (255,)
+                result.set(x, y, _crisp(mean))
+    return result
+
+
+def painted_held(kind, icon):
+    """held_builder with the painted model."""
+    model = painted_model(kind, icon)
+    shape, _ = look(kind)
+    style = GRIP_STYLE.get(shape, "melee")
+
+    def build(direction, frame):
+        angle = WEAPON_ANGLES[style]["side" if direction == "left" else direction][frame]
+        size = 0.85 if style == "bow" else 1.0
+        return pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle), size)
+    return build
 
 
 def gear_builder(kind):
     slot = ITEMS[kind]["slot"]
     icon = painted_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
-    return textured(build, icon, kind) if icon is not None else build
+    if icon is None or look(kind)[0] == "torch":
+        return build
+    if slot == "main_hand":
+        return painted_held(kind, icon)
+    return textured(build, icon, kind, cape=slot == "cape")
 
 
 def tones_for_shading(kind):
