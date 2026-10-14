@@ -12,7 +12,8 @@ const Spells = preload("res://game/data/spells.gd")
 const Economy = preload("res://game/core/economy.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Layout = preload("res://game/ui/layout.gd")
-const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests", "vocation": "Class"}
+const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests", "vocation": "Class",
+	"runes": "Runes"}
 const DEPOT_COLUMNS: int = 8
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
 	"join": "Join party", "leave": "Leave party"}
@@ -68,7 +69,7 @@ func refresh() -> void:
 	if not talking_to.is_empty() and (not actors.has(self_id) or not World.in_talk_range(
 			actors[self_id]["state"]["cell"], World.npc(talking_to)["cell"])):
 		close()
-	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests", "vocation"] and _state_key() != _shown_state:
+	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests", "vocation", "runes"] and _state_key() != _shown_state:
 		_open(mode, talking_to)
 
 
@@ -89,7 +90,7 @@ func _state_key() -> String:
 		return ""
 	var state: Dictionary = actors[game.self_id]["state"]
 	return str([state.get("gold"), state.get("bank"), state.get("backpack"), state.get("tasks"), state.get("done_tasks"),
-		state.get("trophies"), state.get("level"), state["equipment"].get("bag"), state.get("vocation")])
+		state.get("trophies"), state.get("level"), state["equipment"].get("bag"), state.get("vocation"), state.get("spell_ranks")])
 
 
 func _open(kind: String, npc: String) -> void:
@@ -102,6 +103,8 @@ func _open(kind: String, npc: String) -> void:
 			open_quests(npc)
 		"vocation":
 			open_vocation(npc)
+		"runes":
+			open_runes(npc)
 
 
 ## Right-clicking a person opens their services; there is no typed dialogue.
@@ -295,6 +298,42 @@ func open_vocation(npc: String) -> void:
 	_show(npc, "vocation")
 
 
+## A class trainer's runes: carve rune shards into your spells, one rank at a time
+## (Spells.RANK_COSTS), for spells of the trainer's class that you know.
+func open_runes(npc: String) -> void:
+	if not _begin(npc) or not Quests.TRAINERS.has(npc):
+		return
+	var trainer: Dictionary = World.npc(npc)
+	var vocation: String = Quests.TRAINERS[npc][0]
+	var state: Dictionary = game.actors[game.self_id]["state"]
+	var shards: int = World.carried(state.get("backpack", []), Spells.SHARD)
+	_wrapped("%s, %s trainer\n\"Bring me rune shards from the hunt and I will carve them into your spells: each rank hits or heals %d%% harder.\"" % [
+		trainer["name"], Balance.VOCATIONS[vocation]["name"], roundi(Spells.RANK_POWER * 100.0)])
+	if state.get("vocation", "") != vocation:
+		_label("Only %ss learn from %s." % [Balance.VOCATIONS[vocation]["name"], trainer["name"]], Color("#a7b0b8"))
+		_farewell()
+		_show(npc, "runes")
+		return
+	_label("Rune shards carried: %d" % shards, Color("#ffcf6a"))
+	var ranks: Dictionary = state.get("spell_ranks", {})
+	var level: int = state.get("level", 1)
+	for spell: String in Spells.for_vocation(vocation):
+		if not Spells.rankable(spell):
+			continue
+		var definition: Dictionary = Spells.SPELLS[spell]
+		var rank: int = int(ranks.get(spell, 1))
+		var cost: int = Spells.rank_cost(rank)
+		if cost == 0:
+			_label("%s: rank %d of %d." % [definition["name"], rank, Spells.MAX_RANK], Color("#9fe07a"))
+		elif level < definition["level"]:
+			_label("%s: needs level %d." % [definition["name"], definition["level"]], Color("#7a8088"))
+		else:
+			_button("%s: rank %d → %d for %d shards" % [definition["name"], rank, rank + 1, cost], shards >= cost,
+				func() -> void: game.empower_local(npc, spell))
+	_farewell()
+	_show(npc, "runes")
+
+
 func _wrapped(text: String, color: Color = Color.TRANSPARENT) -> Label:
 	var label: Label = _label(text, color)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -424,6 +463,12 @@ func _open_task(npc: String) -> void:
 	for task: String in giver["tasks"]:
 		var definition: Dictionary = Quests.TASKS[task]
 		var target: String = Quests.target_name(task)
+		var requires: String = definition.get("requires", "")
+		if not requires.is_empty() and requires not in done:
+			# A chain shows its next contract once; later ones stay hidden until it is done.
+			if Quests.TASKS[requires].get("requires", "") in done or Quests.TASKS[requires].get("requires", "").is_empty():
+				_label("%s: after %s." % [definition["title"], Quests.TASKS[requires]["title"]], Color("#7a8088"))
+			continue
 		if task != giver["tasks"][0] and task not in done:
 			_label("\"%s\"" % definition["intro"], Color("#a7b0b8"))
 		if task in done:
@@ -447,7 +492,15 @@ func _open_task(npc: String) -> void:
 func _reward_label(task: String, state: Dictionary) -> void:
 	var reward: Dictionary = Quests.reward(task)
 	if not reward.is_empty():
-		_label("Reward: %d experience and %d gold." % [reward["experience"], reward["gold"]], Color("#a7b0b8"))
+		var items: Array = World.task_items(task, state.get("vocation", Balance.DEFAULT_VOCATION))
+		var paid: Label = _label("Reward: %d experience and %d gold%s." % [reward["experience"], reward["gold"],
+			World.items_text(items)], Color("#a7b0b8"))
+		paid.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		paid.custom_minimum_size.x = 460
+		for entry: Array in items:
+			if not World.ITEMS[entry[0]]["slot"].is_empty():
+				paid.tooltip_text = game.inventory.item_tooltip(entry[0])
+				paid.mouse_filter = Control.MOUSE_FILTER_PASS
 		return
 	var pack: String = Quests.next_pack(state["equipment"].get("bag", ""))
 	if pack.is_empty():

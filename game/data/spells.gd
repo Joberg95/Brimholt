@@ -19,6 +19,13 @@ const RUNES: Dictionary = {
 	"dagaz": ["Dagaz", "the dawn"], "othala": ["Othala", "the homeland"],
 }
 const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0}
+## Spell ranks: a class trainer raises a known spell one rank for rune shards (rank 2 costs
+## RANK_COSTS[0], rank 3 RANK_COSTS[1]); each rank above 1 adds RANK_POWER to its power
+## (damage or healing). Challenge has no power and cannot be empowered.
+const MAX_RANK: int = 3
+const RANK_COSTS: Array[int] = [3, 6]
+const RANK_POWER: float = 0.15
+const SHARD: String = "rune_shard"
 const SPELLS: Dictionary = {
 	"light_heal": {"rune": "berkano", "name": "Light heal", "vocations": ["knight", "paladin", "sorcerer", "druid"], "level": 1,
 		"kind": "heal_self", "power": 0.15, "mana": 0.15, "cooldown": 2.0, "group": "healing", "color": Color("#7fe08a")},
@@ -92,12 +99,27 @@ static func for_vocation(vocation: String) -> Array[String]:
 	return result
 
 
+## A spell's power at a rank (1 = unranked).
+static func ranked_power(id: String, rank: int) -> float:
+	return SPELLS[id]["power"] * (1.0 + RANK_POWER * (clampi(rank, 1, MAX_RANK) - 1))
+
+
+## Whether a spell can be empowered at all.
+static func rankable(id: String) -> bool:
+	return SPELLS.has(id) and SPELLS[id]["power"] > 0.0
+
+
+## Rune shards the next rank costs, or 0 at the top rank.
+static func rank_cost(rank: int) -> int:
+	return RANK_COSTS[rank - 1] if rank >= 1 and rank < MAX_RANK else 0
+
+
 ## What a spell does, for its tooltip and the spell book, from the same numbers Combat.cast uses.
 ## `stats` are the caster's World.stats (empty: no estimates); `level` gates "unlocked".
 ## Returns name, requirement, effect, amount ("" for none), cost, cooldown, and unlocked.
-static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
+static func info(id: String, stats: Dictionary, level: int, rank: int = 1) -> Dictionary:
 	var spell: Dictionary = SPELLS[id]
-	var power: float = spell["power"]
+	var power: float = ranked_power(id, rank)
 	var radius: int = spell.get("radius", 0)
 	var area: String = "%d tile%s" % [radius, "" if radius == 1 else "s"]
 	var reach: int = spell.get("range", 1)
@@ -134,8 +156,10 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 	var who: String = "Every class" if vocations.size() == Balance.VOCATIONS.size() \
 		else ", ".join(vocations.map(_class_name))
 	var rune: Array = RUNES[spell["rune"]]
+	var ranked: int = clampi(rank, 1, MAX_RANK)
 	return {
-		"name": spell["name"], "unlocked": level >= spell["level"], "rune": "Rune of %s (%s)" % [rune[0], rune[1]],
+		"name": spell["name"] if ranked == 1 else "%s · rank %d" % [spell["name"], ranked], "rank": ranked,
+		"unlocked": level >= spell["level"], "rune": "Rune of %s (%s)" % [rune[0], rune[1]],
 		"requirement": "%s · level %d" % [who, spell["level"]] if level >= spell["level"]
 			else "✗ Needs level %d (%s)" % [spell["level"], who],
 		"effect": effect, "amount": amount, "cost": cost,
@@ -145,8 +169,8 @@ static func info(id: String, stats: Dictionary, level: int) -> Dictionary:
 
 
 ## The tooltip text: name, requirement, effect, then the numbers.
-static func describe(id: String, stats: Dictionary, level: int) -> String:
-	var details: Dictionary = info(id, stats, level)
+static func describe(id: String, stats: Dictionary, level: int, rank: int = 1) -> String:
+	var details: Dictionary = info(id, stats, level, rank)
 	var lines: PackedStringArray = [details["name"], details["requirement"], details["rune"], details["effect"]]
 	if not details["amount"].is_empty():
 		lines.append(details["amount"])

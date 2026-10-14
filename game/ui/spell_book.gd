@@ -74,7 +74,8 @@ func refresh() -> void:
 	var vocation: String = state.get("vocation", game.selected_vocation())
 	var level: int = state.get("level", 1)
 	var equipment: Dictionary = state.get("equipment", {})
-	var key: String = "%s|%d|%s|%s" % [vocation, level, equipment, game.keybinds.keys["spell_book"]]
+	var ranks: Dictionary = state.get("spell_ranks", {})
+	var key: String = "%s|%d|%s|%s|%s" % [vocation, level, equipment, ranks, game.keybinds.keys["spell_book"]]
 	if key == _key:
 		return
 	_key = key
@@ -85,7 +86,7 @@ func refresh() -> void:
 		child.queue_free()
 	var stats: Dictionary = World.stats(level, equipment, vocation)
 	for spell: String in Spells.for_vocation(vocation):
-		_list.add_child(_row(spell, Spells.info(spell, stats, level)))
+		_list.add_child(_row(spell, Spells.info(spell, stats, level, int(ranks.get(spell, 1)))))
 
 
 func _row(spell: String, details: Dictionary) -> Control:

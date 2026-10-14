@@ -35,6 +35,18 @@ const MONSTERS: Dictionary = {
 		"rank": "elite", "range": 1, "step": 0.4,
 		"gear": {"helmet": "duskiron_visor", "armor": "duskiron_plate", "cape": "dusk_cape", "main_hand": "duskiron_cleaver",
 			"off_hand": "duskiron_bulwark"}},
+	# The Hunters' Lodge chain (Quests "hunters_lodge"): ever harder hunting grounds that are also
+	# good farms ("gear_chance" doubles the usual tier-gear roll; potions and rune shards drop too).
+	"frostfang_wolf": {"name": "Frostfang wolf", "look": "quadruped", "color": Color("#c8d8e4"), "size": 1.05,
+		"rank": "normal", "range": 1, "step": 0.33, "gear_chance": 0.08},
+	"greymaw": {"name": "Greymaw the Dire", "look": "quadruped", "color": Color("#3a3a40"), "size": 1.45,
+		"rank": "champion", "range": 1, "step": 0.33, "respawn": 600.0},
+	"cyclops": {"name": "Cyclops", "look": "golem", "color": Color("#9a8a6a"), "size": 1.25,
+		"rank": "normal", "range": 1, "step": 0.55, "gear_chance": 0.08},
+	"cyclops_smith": {"name": "Cyclops smith", "look": "golem", "color": Color("#7a6a5a"), "size": 1.3,
+		"rank": "normal", "range": 1, "step": 0.55, "gear_chance": 0.09},
+	"behemoth": {"name": "Behemoth", "look": "quadruped", "color": Color("#5a4a3a"), "size": 1.4,
+		"rank": "normal", "range": 1, "step": 0.55, "gear_chance": 0.1},
 	# Dungeon monsters (game/data/dungeons.gd): instanced, spawned when a party enters a copy.
 	# Each dungeon ends in a "champion": a mini-boss that always drops gear of its tier.
 	"sewer_rat": {"name": "Sewer rat", "look": "quadruped", "color": Color("#7a6a5e"), "size": 0.5,
@@ -101,6 +113,12 @@ const LOOT: Dictionary = {
 	"reedfang": [["reedfang_scale", 0.25]],
 	"bog_hulk": [["bog_heart", 0.2]],
 	"blackreed_warden": [["warden_crest", 0.5]],
+	"frostfang_wolf": [["frostfang_pelt", 0.35], ["health_potion", 0.12], ["mana_potion", 0.12], ["rune_shard", 0.015]],
+	"greymaw": [["greymaw_fang", 1.0], ["frostfang_pelt", 1.0], ["health_potion", 1.0], ["rune_shard", 0.5]],
+	"cyclops": [["cyclops_eye", 0.3], ["health_potion", 0.15], ["mana_potion", 0.15], ["rune_shard", 0.025]],
+	"cyclops_smith": [["cyclops_iron", 0.3], ["cyclops_eye", 0.15], ["health_potion", 0.15], ["mana_potion", 0.15],
+		["rune_shard", 0.03]],
+	"behemoth": [["behemoth_horn", 0.3], ["health_potion", 0.2], ["mana_potion", 0.2], ["rune_shard", 0.04]],
 	# Bosses drop gold; their relics are quest rewards (Combat.claim_relic, the Relic keeper).
 	"morvain": [],
 	"kharzul": [],

@@ -105,6 +105,11 @@ clear of roads, water, towns, markers, and camps, with no trees inside or at the
 about 30% of the countryside trees. Ground a cliff closed off got a way in, and every marker
 stays reachable. Paint `L` by hand for more rock.
 
+**Hunting grounds** for the Hunters' Lodge are placed by `tools/generators/hunts.gd`: camps
+named `Hunt_<monster>_<n>` in the region that suits each prey (`HUNTS`), on open meadow that can
+be walked to, away from zones and other camps. Existing camps are kept, so running it again
+changes nothing; move them in Godot like any other spawn.
+
 **Buildings** are found from the walls: a room of at most 48 tiles in a town zone, enclosed
 by `#` walls and doors (an open tile between two walls in a line). They get a roof, and
 nobody inside can be dealt with from outside. Paint houses at least three tiles wide inside.

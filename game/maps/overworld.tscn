@@ -2839,6 +2839,153 @@ monster = "vaelith"
 level = 50
 radius = 1
 
+[node name="Hunt_frostfang_wolf_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(6960, 304)
+script = ExtResource("5_xkg0o")
+monster = "frostfang_wolf"
+level = 19
+count = 4
+
+[node name="Hunt_frostfang_wolf_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(5488, 464)
+script = ExtResource("5_xkg0o")
+monster = "frostfang_wolf"
+level = 19
+count = 4
+
+[node name="Hunt_frostfang_wolf_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(6480, 1040)
+script = ExtResource("5_xkg0o")
+monster = "frostfang_wolf"
+level = 20
+count = 4
+
+[node name="Hunt_frostfang_wolf_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(7984, 240)
+script = ExtResource("5_xkg0o")
+monster = "frostfang_wolf"
+level = 20
+count = 4
+
+[node name="Hunt_frostfang_wolf_5" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(7056, 1424)
+script = ExtResource("5_xkg0o")
+monster = "frostfang_wolf"
+level = 21
+count = 4
+
+[node name="Hunt_greymaw_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(8784, 1808)
+script = ExtResource("5_xkg0o")
+monster = "greymaw"
+level = 24
+radius = 2
+
+[node name="Hunt_cyclops_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9872, 1168)
+script = ExtResource("5_xkg0o")
+monster = "cyclops"
+level = 29
+count = 3
+
+[node name="Hunt_cyclops_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9744, 688)
+script = ExtResource("5_xkg0o")
+monster = "cyclops"
+level = 29
+count = 3
+
+[node name="Hunt_cyclops_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(10384, 1232)
+script = ExtResource("5_xkg0o")
+monster = "cyclops"
+level = 30
+count = 3
+
+[node name="Hunt_cyclops_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(11728, 1648)
+script = ExtResource("5_xkg0o")
+monster = "cyclops"
+level = 30
+count = 3
+
+[node name="Hunt_cyclops_5" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(9328, 1200)
+script = ExtResource("5_xkg0o")
+monster = "cyclops"
+level = 31
+count = 3
+
+[node name="Hunt_cyclops_smith_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(11184, 4752)
+script = ExtResource("5_xkg0o")
+monster = "cyclops_smith"
+level = 36
+count = 3
+
+[node name="Hunt_cyclops_smith_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(12176, 3376)
+script = ExtResource("5_xkg0o")
+monster = "cyclops_smith"
+level = 36
+count = 3
+
+[node name="Hunt_cyclops_smith_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(11024, 3440)
+script = ExtResource("5_xkg0o")
+monster = "cyclops_smith"
+level = 37
+count = 3
+
+[node name="Hunt_cyclops_smith_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(11984, 2000)
+script = ExtResource("5_xkg0o")
+monster = "cyclops_smith"
+level = 37
+count = 3
+
+[node name="Hunt_cyclops_smith_5" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(11376, 2704)
+script = ExtResource("5_xkg0o")
+monster = "cyclops_smith"
+level = 38
+count = 3
+
+[node name="Hunt_behemoth_1" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(6736, 11792)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 43
+count = 2
+
+[node name="Hunt_behemoth_2" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(6416, 10288)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 43
+count = 2
+
+[node name="Hunt_behemoth_3" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(7184, 11984)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 44
+count = 2
+
+[node name="Hunt_behemoth_4" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(5360, 11280)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 44
+count = 2
+
+[node name="Hunt_behemoth_5" type="Marker2D" parent="MonsterSpawns"]
+position = Vector2(6480, 12112)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 45
+count = 2
+
 [node name="DungeonEntrances" type="Node2D" parent="."]
 
 [node name="CinderCellar" type="Marker2D" parent="DungeonEntrances"]
@@ -2998,6 +3145,13 @@ script = ExtResource("6_qgive")
 npc_name = "Huntmaster Corvel"
 place = "Emberfall"
 facing = Vector2i(1, 0)
+
+[node name="lodgemaster_varga" type="Marker2D" parent="QuestGivers"]
+position = Vector2(4496, 6288)
+script = ExtResource("6_qgive")
+npc_name = "Lodgemaster Varga"
+place = "Reedmere"
+facing = Vector2i(0, -1)
 
 [node name="Townsfolk" type="Node2D" parent="."]
 

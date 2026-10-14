@@ -596,6 +596,58 @@ def biped(frame, s):
     return parts
 
 
+def giant(frame, s):
+    """A cyclops: thick legs under a loincloth, a big belly, broad shoulders, long arms, a small
+    bald head with one great eye and a horn, and a weapon in the right hand (a club, or a smith's
+    hammer); `apron` gives a leather smith's apron, `soot` darkens the hands."""
+    swing = (0.0, 1.0, -1.0)[frame] * 2.6
+    bob = (0.0, 0.7, 0.7)[frame]
+    skin = s["skin"]
+    parts = []
+    for side in (1, -1):
+        phase = swing * side
+        knee = (side * 3.6, phase * 0.5 + 0.8, 6.5 + bob * 0.5)
+        foot = (side * 3.8, phase, 1.4)
+        parts += [limb((side * 3.4, 0, 12 + bob), knee, 2.6, skin, group="leg%d" % side),
+                  limb(knee, foot, 2.2, skin, group="leg%d" % side),
+                  ell(add(foot, (0, 1.2, -0.4)), (2.6, 3.4, 1.4), s.get("feet", skin), group="leg%d" % side)]
+    parts.append(ell((0, 0.4, 13 + bob), (6.2, 4.4, 3.4), s["cloth"], group="cloth"))
+    parts.append(ell((0, 1.8, 18 + bob), (7.2, 5.6, 6.4), skin, group="belly"))
+    parts.append(ell((0, 0, 24 + bob), (8.4, 5.2, 4.6), skin, group="chest"))
+    if s.get("apron"):
+        parts.append(ell((0, 6.4, 18 + bob), (5.6, 1.6, 7.6), s["apron"], group="apron"))
+    head = (0, 2.0, 30 + bob)
+    parts.append(ell(head, (3.6, 3.6, 3.8), skin, group="head"))
+    parts.append(ell(add(head, (0, 3.0, 0.6)), (2.6, 1.0, 2.2), Material("f4f0e2"), group="eye"))
+    parts.append(ell(add(head, (0, 3.7, 0.6)), (1.4, 0.6, 1.4), emissive(s["eye"]), group="eye"))
+    parts.append(ell(add(head, (0, 4.1, 0.6)), (0.6, 0.4, 0.6), EYE, group="eye"))
+    parts.append(ell(add(head, (0, 3.2, -2.0)), (2.2, 1.0, 0.6), Material("3a2018"), group="mouth"))
+    horn = add(head, (0, 0.5, 3.4))
+    parts += chain([horn, add(horn, (0, -0.6, 2.2)), add(horn, (0, -1.4, 3.6))], [1.0, 0.6], s.get("horn", BONE), "horn")
+    hands = s.get("hands", skin)
+    for side in (1, -1):
+        shoulder = (side * 8.0, 0, 25 + bob)
+        parts.append(ell(shoulder, (3.4, 3.4, 3.2), skin, group="arm%d" % side))
+        phase = -swing * side * 0.8
+        elbow = (side * 10.0, phase * 0.5 + 1.0, 19 + bob)
+        fist = (side * 9.6, phase + 2.4, 13 + bob)
+        parts += [limb(shoulder, elbow, 2.4, skin, group="arm%d" % side), limb(elbow, fist, 2.2, skin, group="arm%d" % side),
+                  ell(fist, (2.6, 2.6, 2.4), hands, group="arm%d" % side)]
+        if side == 1:
+            weapon = s["weapon"]
+            # Held out to the side and forward, so it shows in every facing.
+            if weapon == "club":
+                parts.append(limb(add(fist, (0, 0, -1.0)), add(fist, (3.5, 5.0, 9.0)), 1.6, Material("8a6a44", "bone"), group="weapon"))
+                parts.append(ell(add(fist, (4.0, 5.8, 10.5)), (3.0, 3.0, 3.8), Material("7a5a38", "bone"), group="weapon"))
+                for k in range(3):
+                    parts.append(ell(add(fist, (4.0 + (k - 1) * 2.0, 6.0, 12 + k % 2)), (0.7, 0.7, 1.2), BONE, group="weapon"))
+            else:
+                parts.append(limb(add(fist, (0, 0, -1.0)), add(fist, (3.0, 4.5, 8.0)), 1.0, Material("6a4a2e"), group="weapon"))
+                parts.append(ell(add(fist, (3.3, 5.0, 9.4)), (4.0, 2.2, 2.4), Material("6a6a74", "stone", gloss=0.7),
+                                 basis((1, 0.3, 0)), "weapon"))
+    return parts
+
+
 # ---------------------------------------------------------------- species
 
 def M(base, pattern="smooth", **kw):
@@ -623,6 +675,22 @@ SPECIES = {
                                   ears="pointed", tail="bushy", body=M("8a9096", "fur"), belly=M("c8ccd0", "fur"),
                                   ruff=M("b0b6bc", "fur"), chest=1.1, neck=0.9, eye=emissive("e8c040"),
                                   paw=M("4a4c50")), (12, 3.5)),
+    "frostfang_wolf": (quadruped, dict(length=27, height=9.5, girth=6.4, head=4.8, snout=1.05, snout_width=0.42, leg=1.3,
+                                       ears="pointed", tail="bushy", body=M("c8d4dc", "fur"), belly=M("eef4f8", "fur"),
+                                       ruff=M("e4ecf2", "fur"), chest=1.1, neck=0.9, eye=emissive("70d8ff"),
+                                       paw=M("6a7a88"), nose=M("2a3038")), (12, 3.5)),
+    "greymaw": (quadruped, dict(length=30, height=10.5, girth=7.4, head=5.4, snout=1.05, snout_width=0.45, leg=1.6,
+                                ears="pointed", tail="bushy", body=M("3e3e46", "fur"), belly=M("5a5a64", "fur"),
+                                ruff=M("4a4a54", "fur"), chest=1.15, neck=0.9, eye=emissive("ff3a2a"), teeth=True,
+                                spikes=M("b8b0a0", "bone"), paw=M("22222a")), (14, 4)),
+    "behemoth": (quadruped, dict(length=30, height=8, girth=9.5, head=6.2, snout=0.55, snout_width=0.7, leg=2.6, spread=0.75,
+                                 stride=2.2, ears="small", tail="short", body=M("5a4a3a", "fur"), belly=M("7a6a52", "fur"),
+                                 head_material=M("4a3c30", "stone"), nose=M("2a2018"), tusks=True,
+                                 scutes=M("6a6050", "stone"), chest=1.15, neck=0.2, eye=emissive("e8a030"),
+                                 paw=M("2a2420")), (16, 5)),
+    "cyclops": (giant, dict(skin=M("b0927a"), cloth=M("6a5236", "fur"), eye="5a8ad0", weapon="club"), (13, 4)),
+    "cyclops_smith": (giant, dict(skin=M("9a7a64"), cloth=M("4a3a2a", "fur"), apron=M("5a3a22", "cloth"), eye="e0703a",
+                                  weapon="hammer", hands=M("4a3a32"), horn=M("3a3230", "stone")), (13, 4)),
     "reedfang": (quadruped, dict(length=26, height=3.2, girth=6.5, flat=0.6, head=5, snout=1.5, snout_width=0.5, leg=1.6,
                                  spread=1.05, stride=2.4, ears="none", tail="heavy", body=M("5d7346", "scales"),
                                  belly=M("a8a870", "scales"), scutes=M("3e5030", "stone"), teeth=True, neck=0.15,
@@ -664,7 +732,8 @@ SPECIES = {
 
 
 # On-screen scale per species at monster size 1 (the game scales again by Monsters "size").
-ZOOM = {"field_vole": 1.6, "sewer_rat": 1.35, "giant_rat": 1.2, "rat_king": 1.1, "crypt_skeleton": 1.15,
+ZOOM = {"frostfang_wolf": 1.2, "greymaw": 1.0, "behemoth": 1.05, "cyclops": 1.25, "cyclops_smith": 1.25,
+        "field_vole": 1.6, "sewer_rat": 1.35, "giant_rat": 1.2, "rat_king": 1.1, "crypt_skeleton": 1.15,
         "grave_ghoul": 1.15, "abbot_morrow": 1.1, "grey_wolf": 1.2, "thornback_boar": 1.25, "reedfang": 1.0, "cave_crawler": 1.4, "cave_spider": 1.5,
         "venom_weaver": 1.5, "silk_matron": 1.5, "marsh_toad": 1.35, "bog_lurker": 1.35, "stone_golem": 1.6,
         "bog_hulk": 1.6, "ember_golem": 1.6, "forgemaw": 1.4, "kharzul": 1.35, "obsidian_golem": 1.6,

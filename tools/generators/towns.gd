@@ -34,6 +34,8 @@ const QUEST_GIVERS: Array = [
 	# Quest hubs: one giver per hunting band, on the plaza of the town nearest its monsters.
 	["harbourmaster_ilse", "Harbourmaster Ilse", "Cinder Crossing", Vector2i(33, 48), Vector2i.UP],
 	["fenwarden_ostrel", "Fenwarden Ostrel", "Reedmere", Vector2i(146, 196), Vector2i.UP],
+	# The Hunters' Lodge chain (Quests "hunters_lodge") starts and ends here, in the capital.
+	["lodgemaster_varga", "Lodgemaster Varga", "Reedmere", Vector2i(140, 196), Vector2i.UP],
 	["quartermaster_rhosyn", "Quartermaster Rhosyn", "Dunmere", Vector2i(192, 271), Vector2i.RIGHT],
 	["huntmaster_corvel", "Huntmaster Corvel", "Emberfall", Vector2i(286, 200), Vector2i.RIGHT],
 	# Cinder Crossing's training hall (its old bank house): the trial master by the door, and

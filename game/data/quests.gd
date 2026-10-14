@@ -7,6 +7,11 @@ extends RefCounted
 ## reward does not depend on the order you finish them. Dungeon tasks ("reward": "experience")
 ## pay experience and gold derived from Balance (see reward()): `share` of what the kills
 ## themselves gave, so a boss task (share 1) doubles the boss's experience.
+##
+## Chains: a task with "requires" opens only once that task is done. Tasks may also pay
+## "items" ([item, count] pairs: potions, rune shards) and "gear" (an equipment slot: the
+## piece of that slot for your class at the tier of the task's "level", World.class_piece);
+## turning in needs backpack room for all of them.
 
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
@@ -30,7 +35,7 @@ const TASKS: Dictionary = {
 		"level": 9, "reward": "experience", "share": 0.5,
 		"intro": "Bandits rob every cart between the landing and Greywood. Twenty fewer would do."},
 	"wolf_winter": {"title": "Wolves at the woodline", "giver": "harbourmaster_ilse", "monster": "grey_wolf", "count": 20,
-		"level": 12, "reward": "experience", "share": 0.5,
+		"level": 12, "reward": "experience", "share": 0.5, "target": "grey wolves",
 		"intro": "Grey wolves come down from Greywood and Westwind for our nets and goats."},
 	"lurker_drain": {"title": "Drain the bog pools", "giver": "fenwarden_ostrel", "monster": "bog_lurker", "count": 25,
 		"level": 16, "reward": "experience", "share": 0.5,
@@ -47,6 +52,36 @@ const TASKS: Dictionary = {
 	"fen_beasts": {"title": "Beasts of the drowned wood", "giver": "huntmaster_corvel", "monster": "reedfang",
 		"also": ["bog_hulk"], "target": "fen beasts", "count": 25, "level": 45, "reward": "experience", "share": 0.5,
 		"intro": "Reedfangs and bog hulks rule the deep fen and Gloamwood. Thin them before they reach Emberfall."},
+	# The Hunters' Lodge (Lodgemaster Varga, Reedmere): one contract at a time, each against
+	# harder prey, paying potions, a class piece of the hunt's tier, and rune shards that a class
+	# trainer turns into spell ranks (Spells.RANK_COSTS). The prey are farms in their own right.
+	"lodge_wolves": {"title": "Lodge contract: the grey pack", "giver": "lodgemaster_varga", "monster": "grey_wolf",
+		"count": 20, "level": 12, "reward": "experience", "share": 0.5, "chain": "hunters_lodge", "target": "grey wolves",
+		"items": [["health_potion", 5], ["mana_potion", 5]], "gear": "boots",
+		"intro": "The Hunters' Lodge pays for proof, not stories. Start with twenty grey wolves in Greywood."},
+	"lodge_frostfang": {"title": "Lodge contract: frostfangs", "giver": "lodgemaster_varga", "monster": "frostfang_wolf",
+		"count": 25, "level": 20, "reward": "experience", "share": 0.5, "requires": "lodge_wolves", "chain": "hunters_lodge",
+		"target": "frostfang wolves",
+		"items": [["health_potion", 8], ["mana_potion", 8], ["rune_shard", 1]], "gear": "legs",
+		"intro": "White wolves hunt the high passes of Outlaw Ridge. Their pelts fetch a fortune; bring me twenty-five."},
+	"lodge_greymaw": {"title": "Lodge contract: Greymaw the Dire", "giver": "lodgemaster_varga", "monster": "greymaw",
+		"count": 1, "level": 24, "reward": "experience", "share": 1.0, "requires": "lodge_frostfang", "chain": "hunters_lodge",
+		"items": [["rune_shard", 2]], "gear": "main_hand",
+		"intro": "Their alpha is a dire wolf the size of a horse, lairing in the Golemback Hills. End it."},
+	"lodge_cyclops": {"title": "Lodge contract: the one-eyed", "giver": "lodgemaster_varga", "monster": "cyclops",
+		"count": 25, "level": 30, "reward": "experience", "share": 0.5, "requires": "lodge_greymaw", "chain": "hunters_lodge",
+		"target": "cyclopes",
+		"items": [["health_potion", 10], ["mana_potion", 10], ["rune_shard", 1]], "gear": "helmet",
+		"intro": "Cyclopes have come down from the mountains of the Smoulder Fells. Twenty-five eyes, hunter."},
+	"lodge_smiths": {"title": "Lodge contract: cyclops forges", "giver": "lodgemaster_varga", "monster": "cyclops_smith",
+		"count": 25, "level": 37, "reward": "experience", "share": 0.5, "requires": "lodge_cyclops", "chain": "hunters_lodge",
+		"target": "cyclops smiths",
+		"items": [["health_potion", 10], ["mana_potion", 10], ["rune_shard", 2]], "gear": "armor",
+		"intro": "The cyclopes arm themselves at forges in the Hollow March. Break the smiths and their iron is yours."},
+	"lodge_behemoth": {"title": "Lodge contract: behemoth country", "giver": "lodgemaster_varga", "monster": "behemoth",
+		"count": 20, "level": 44, "reward": "experience", "share": 0.5, "requires": "lodge_smiths", "chain": "hunters_lodge",
+		"items": [["health_potion", 15], ["mana_potion", 15], ["rune_shard", 3]], "gear": "off_hand",
+		"intro": "The last contract: behemoths roam the Gloamwood, and nothing in the Lodge's books is bigger."},
 	# Dungeon tasks: a hunt through the copies, and the dungeon's champion.
 	"cellar_vermin": {"title": "Vermin in the cellar", "giver": "cellarmaster_pell", "monster": "giant_rat",
 		"also": ["sewer_rat"], "target": "cellar rats", "count": 25, "reward": "experience", "share": 0.5,

@@ -744,6 +744,16 @@ func task_local(npc: String, task: String, action: String) -> void:
 		request_task.rpc_id(1, npc, task, action)
 
 
+## Asks your class trainer to raise a spell's rank for rune shards (the host checks everything).
+func empower_local(npc: String, spell: String) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_empower(1, npc, spell)
+	else:
+		request_empower.rpc_id(1, npc, spell)
+
+
 ## Asks a trainer to make you their vocation (permanent; the host checks the trial and level).
 func vocation_local(npc: String) -> void:
 	if not connected or self_id == 0:
@@ -937,6 +947,22 @@ func request_task(npc: Variant, task: Variant, action: Variant) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	if _valid_sender(sender):
 		_handle_task(sender, npc, task, action)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_empower(npc: Variant, spell: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_empower(sender, npc, spell)
+
+
+func _handle_empower(id: int, npc: Variant, spell: Variant) -> void:
+	var result: Dictionary = combat.empower_spell(id, npc, spell, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+		_save_player(id)
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
 
 
 @rpc("any_peer", "call_remote", "reliable")

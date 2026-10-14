@@ -78,7 +78,8 @@ static func spell_tooltip(spell: String, state: Dictionary) -> String:
 	if state.is_empty():
 		return Spells.describe(spell, {}, 0)
 	var level: int = state.get("level", 1)
-	return Spells.describe(spell, World.stats(level, state.get("equipment", {}), state.get("vocation", "knight")), level)
+	return Spells.describe(spell, World.stats(level, state.get("equipment", {}), state.get("vocation", "knight")), level,
+		int(state.get("spell_ranks", {}).get(spell, 1)))
 
 
 ## A rune dropped on a bar slot: a spell-book drag fills it; a drag from another slot swaps them.

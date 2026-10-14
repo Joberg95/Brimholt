@@ -192,7 +192,7 @@ static func _static_init() -> void:
 			QUEST_GIVERS[String(marker.name)] = {
 				"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
 				"cell": _cell_of(marker), "facing": marker.get("facing"),
-				"services": ["vocation"] if Quests.TRAINERS.has(String(marker.name)) else ["quests"],
+				"services": ["vocation", "runes"] if Quests.TRAINERS.has(String(marker.name)) else ["quests"],
 				"tasks": tasks, "boss": String(Quests.RELIC_KEEPERS.get(String(marker.name), "")),
 			}
 			NPC_CELLS[_cell_of(marker)] = String(marker.name)
@@ -660,7 +660,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"target": 0, "next_attack": now, "next_regen": now, "town_rest": false, "town_rest_ready": -INF, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {},
-				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "pvp_until": -INF, "pvp_since": -INF,
+				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
 			}
 			var limits: Dictionary = stats(1, {}, vocation)
 			players[id]["health"] = limits["health"]
@@ -734,6 +734,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["bank"] = player["bank"]
 		state["tasks"] = player["tasks"].duplicate()
 		state["done_tasks"] = player["done_tasks"].keys()
+		state["spell_ranks"] = player["spell_ranks"].duplicate()
 		state["experience"] = player["experience"]
 		state["gold"] = player["gold"]
 	return state
@@ -937,6 +938,77 @@ func _merge_target(player: Dictionary, source: Dictionary, target: Dictionary, k
 
 ## The slot in `slots` that can take `count` more of `kind`: a stack of it with room, else the
 ## first empty slot; -1 when there is none. Equipment always needs an empty slot.
+## How many of `kind` a backpack holds, across stacks.
+static func carried(slots: Array, kind: String) -> int:
+	var total: int = 0
+	for entry: String in slots:
+		if kind_of(entry) == kind:
+			total += count_of(entry)
+	return total
+
+
+## Removes `count` of `kind` from a backpack (smallest stacks first is not needed: front to back).
+static func remove_carried(slots: Array, kind: String, count: int) -> void:
+	for index: int in slots.size():
+		if count <= 0:
+			return
+		if kind_of(slots[index]) == kind:
+			var take: int = mini(count, count_of(slots[index]))
+			count -= take
+			slots[index] = "" if take == count_of(slots[index]) else make_entry(kind, count_of(slots[index]) - take)
+
+
+## A copy of `slots` with every [kind, count] of `items` added (stacking where it can), or []
+## when they do not all fit.
+static func with_items(slots: Array, items: Array) -> Array:
+	var result: Array = slots.duplicate()
+	for entry: Array in items:
+		var kind: String = entry[0]
+		var count: int = entry[1]
+		var pieces: int = count if not stackable(kind) else 1
+		for piece: int in pieces:
+			var amount: int = 1 if not stackable(kind) else count
+			var slot: int = receiving_slot(result, kind, amount)
+			if slot < 0:
+				return []
+			result[slot] = make_entry(kind, count_of(result[slot]) + amount)
+	return result
+
+
+## The items a task pays besides experience and gold, for a class: its "items", then its "gear"
+## piece ([kind, 1]) at the tier of the task's level.
+static func task_items(task: String, vocation: String) -> Array:
+	var definition: Dictionary = Quests.TASKS[task]
+	var result: Array = definition.get("items", []).duplicate(true)
+	if definition.has("gear"):
+		var piece: String = class_piece(definition["gear"], Items.tier_for(definition.get("level", 1)), vocation)
+		if not piece.is_empty():
+			result.append([piece, 1])
+	return result
+
+
+## ", 5 Health potions and a Steel cuirass" for a reward message ("" for none).
+static func items_text(items: Array) -> String:
+	var parts: PackedStringArray = []
+	for entry: Array in items:
+		var name: String = ITEMS[entry[0]]["name"]
+		parts.append(name if entry[1] == 1 else "%d %ss" % [entry[1], name])
+	if parts.is_empty():
+		return ""
+	return ", " + ", ".join(parts.slice(0, parts.size() - 1)) + (" and " if parts.size() > 1 else "") + parts[-1]
+
+
+## The class's piece for an equipment slot at a tier: its armor type's helmet, armor, legs, or
+## boots, or its weapon or off-hand (no relics, hunting weapons, or loot-only pieces); "" if none.
+static func class_piece(slot: String, tier: int, vocation: String) -> String:
+	for kind: String in ITEMS:
+		var item: Dictionary = ITEMS[kind]
+		if item["slot"] == slot and item["level"] == tier and not item.get("loot_only", false) and not item.has("glow") \
+				and requirement_error(kind, Balance.MAX_LEVEL, vocation).is_empty():
+			return kind
+	return ""
+
+
 static func receiving_slot(slots: Array, kind: String, count: int) -> int:
 	if stackable(kind):
 		for index: int in slots.size():
@@ -966,9 +1038,12 @@ static func task_levels(task: String) -> Vector2i:
 
 
 ## Whether a character (a player record, or a client's exported state) may still accept `task`:
-## not done, not on it, its giver placed, and the trial only for Adventurers.
+## not done, not on it, its giver placed, the task it "requires" done, and the trial only for Adventurers.
 static func task_open(task: String, state: Dictionary) -> bool:
 	if task in state.get("done_tasks", []) or state.get("tasks", {}).has(task) or not QUEST_GIVERS.has(Quests.TASKS[task]["giver"]):
+		return false
+	var requires: String = Quests.TASKS[task].get("requires", "")
+	if not requires.is_empty() and requires not in state.get("done_tasks", []):
 		return false
 	return task != Quests.TRIAL_TASK or state.get("vocation", "") == Balance.ADVENTURER
 

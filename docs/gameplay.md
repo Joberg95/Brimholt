@@ -246,6 +246,29 @@ monsters, paying experience and gold.
 | Quartermaster Rhosyn | Dunmere | 25 stone golems; 25 cinder wraiths | 24–28; 29–32 |
 | Huntmaster Corvel | Emberfall | 25 mire stalkers; 25 fen beasts (reedfangs, bog hulks) | 36–44; 40–48 |
 
+**The Hunters' Lodge.** **Lodgemaster Varga** on Reedmere's plaza runs a chain of six hunting
+contracts, one at a time: each opens once the one before it is turned in, against harder prey in
+a new region. The prey are also the best farms for their level: twice the usual chance of tier
+gear, health and mana potions, and **rune shards**. Each contract pays experience and gold,
+potions and shards, and one piece of the hunt's tier made for your class (your own armor type,
+weapon, or off-hand); turning in needs a free backpack slot for every item.
+
+| Contract | Prey | Where | Levels | Also pays |
+| --- | --- | --- | --- | --- |
+| The grey pack | 20 grey wolves | Greywood | 11–14 | 5+5 potions, boots |
+| Frostfangs | 25 frostfang wolves (white, ice-eyed) | Outlaw Ridge | 19–21 | 8+8 potions, 1 shard, legs |
+| Greymaw the Dire | the black dire wolf (champion, 10 min respawn) | Golemback Hills | 24 | 2 shards, weapon |
+| The one-eyed | 25 cyclopes (with clubs) | Smoulder Fells | 29–31 | 10+10 potions, 1 shard, helmet |
+| Cyclops forges | 25 cyclops smiths (hammers, aprons) | Hollow March | 36–38 | 10+10 potions, 2 shards, armor |
+| Behemoth country | 20 behemoths (horned, tusked) | Gloamwood | 43–45 | 15+15 potions, 3 shards, off-hand |
+
+**Spell ranks.** Right-click your class trainer in Cinder Crossing's training hall and choose
+**Runes**: they carve rune shards into a spell you know, one rank at a time (rank 2 costs 3
+shards, rank 3 costs 6 more). Each rank makes the spell 15% stronger (damage or healing);
+Challenge has no strength to raise. Ranks are saved with your character and show in the spell
+book and tooltips ("Ember bolt · rank 3"). Shards drop from the Lodge prey (1.5–4%), Greymaw
+(50%), and as contract rewards: the whole chain pays 9, enough to take one spell to rank 3.
+
 **Where to go next:** a gold **!** over a quest giver means they have a task that suits your
 level (or, over a trainer, that you may choose a class); a **?** means you can turn
 something in (or bring a relic keeper a trophy). The same marks appear on the world map. The

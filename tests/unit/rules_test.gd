@@ -167,7 +167,7 @@ func _adventurer_checks() -> void:
 	for trainer: String in Quests.TRAINERS:
 		var giver: Dictionary = World.QUEST_GIVERS.get(trainer, {})
 		trainers[Quests.TRAINERS[trainer][0]] = trainer
-		check(not giver.is_empty() and giver["services"] == ["vocation"] and giver["tasks"].is_empty()
+		check(not giver.is_empty() and giver["services"] == ["vocation", "runes"] and giver["tasks"].is_empty()
 			and giver["place"] == "Cinder Crossing" and World.ROOM_AT.has(giver["cell"]), "%s teaches in a Cinder Crossing building" % trainer)
 		hall.append(World.ROOM_AT.get(giver.get("cell", Vector2i(-1, -1)), -1))
 	check(trainers.keys().size() == Balance.VOCATIONS.size() and trainers.has_all(Balance.VOCATIONS.keys())
@@ -252,8 +252,9 @@ func _quest_hub_and_lexicon_checks() -> void:
 			"tasks": {}, "done_tasks": []}
 		check(not World.next_task(state).is_empty(), "a task fits at every level (%d)" % level)
 	check(World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": []}) == "wolf_winter"
-		and World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": ["wolf_winter"]}) == "highway_robbers",
-		"the suggestion moves to the best remaining fit")
+		and World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": ["wolf_winter", "lodge_wolves"]})
+		== "highway_robbers", "the suggestion moves to the best remaining fit")
+	_hunters_lodge_checks()
 	check(World.next_task({"level": 3, "vocation": "knight", "tasks": {}, "done_tasks": []}) != Quests.TRIAL_TASK
 		and World.task_open(Quests.TRIAL_TASK, {"vocation": Balance.ADVENTURER, "tasks": {}, "done_tasks": []}),
 		"only Adventurers are pointed to the trial")
@@ -655,6 +656,79 @@ func _stacking_checks() -> void:
 	check(World.stack_onto(stack, "wolf_pelt#2") and stack == ["wolf_pelt#99", "wolf_pelt#2"],
 		"ground stacks never exceed the stack limit")
 	check(World.bound("abyssal_greathelm") and World.bound("abyssal_greathelm#1") and not World.bound("wolf_pelt#3"), "bound checks use the item id")
+
+
+func _hunters_lodge_checks() -> void:
+	# A chain: each contract opens when the previous is done, against harder prey, and pays more.
+	var chain: Array[String] = []
+	for task: String in Quests.TASKS:
+		if Quests.TASKS[task].get("chain", "") == "hunters_lodge":
+			chain.append(task)
+	check(chain.size() == 6 and Quests.TASKS[chain[0]].get("requires", "").is_empty(), "the Hunters' Lodge has six contracts")
+	for index: int in range(1, chain.size()):
+		var definition: Dictionary = Quests.TASKS[chain[index]]
+		check(definition["requires"] == chain[index - 1] and definition["level"] > Quests.TASKS[chain[index - 1]]["level"],
+			"%s follows %s against harder prey" % [chain[index], chain[index - 1]])
+	var fresh: Dictionary = {"level": 50, "vocation": "druid", "tasks": {}, "done_tasks": []}
+	check(World.task_open(chain[0], fresh) and not World.task_open(chain[1], fresh)
+		and World.task_open(chain[1], {"level": 50, "vocation": "druid", "tasks": {}, "done_tasks": [chain[0]]}),
+		"a contract opens only after the one before it")
+	for vocation: String in Balance.VOCATIONS:
+		for task: String in chain:
+			var items: Array = World.task_items(task, vocation)
+			var gear: Array = items.filter(func(entry: Array) -> bool: return not World.ITEMS[entry[0]]["slot"].is_empty())
+			check(gear.size() == 1 and World.requirement_error(gear[0][0], Balance.MAX_LEVEL, vocation).is_empty()
+				and World.ITEMS[gear[0][0]]["level"] == Items.tier_for(Quests.TASKS[task]["level"]),
+				"%s pays a %s a piece of its own class at the hunt's tier" % [task, vocation])
+	for kind: String in ["frostfang_wolf", "cyclops", "cyclops_smith", "behemoth"]:
+		var drops: Array = Monsters.LOOT[kind].map(func(entry: Array) -> String: return entry[0])
+		check("rune_shard" in drops and "health_potion" in drops and "mana_potion" in drops
+			and Monsters.MONSTERS[kind]["gear_chance"] > Combat.GEAR_DROP_CHANCE["normal"],
+			"%s is a farm: potions, rune shards, and double gear drops" % kind)
+	# Turning in: needs room, pays items and the class piece; the next contract opens.
+	var world := World.new()
+	var combat := Combat.new(world, 3)
+	world.add_player(1, 0.0, "paladin")
+	var player: Dictionary = world.players[1]
+	var varga: Dictionary = World.QUEST_GIVERS["lodgemaster_varga"]
+	_place(world, 1, varga["cell"] + varga["facing"])
+	check(not combat.task_action(1, "lodgemaster_varga", chain[1], "accept", 1.0)["ok"], "the second contract waits for the first")
+	check(combat.task_action(1, "lodgemaster_varga", chain[0], "accept", 1.0)["ok"], "accept the first contract")
+	player["tasks"][chain[0]] = Quests.TASKS[chain[0]]["count"]
+	var full: Array = player["backpack"].duplicate()
+	player["backpack"].fill("glowcap#100")
+	check(combat.task_action(1, "lodgemaster_varga", chain[0], "complete", 2.0)["reason"].begins_with("Make room"),
+		"a reward needs backpack room")
+	player["backpack"] = full
+	player["backpack"][0] = ""
+	check(combat.task_action(1, "lodgemaster_varga", chain[0], "complete", 3.0)["ok"]
+		and World.carried(player["backpack"], "health_potion") == 5 and player["backpack"].has(World.class_piece("boots", 10, "paladin")),
+		"the first contract pays potions and the Hunter's boots")
+	check(combat.task_action(1, "lodgemaster_varga", chain[1], "accept", 4.0)["ok"], "the next contract opens")
+	# Spell ranks: a class trainer carves rune shards into a known spell.
+	var trainer: String = "trainer_paladin"
+	var spot: Dictionary = World.QUEST_GIVERS[trainer]
+	_place(world, 1, spot["cell"] + spot["facing"])
+	player["level"] = 20
+	var slot: int = player["backpack"].find("")
+	player["backpack"][slot] = "rune_shard#2"
+	check(combat.empower_spell(1, trainer, "piercing_shot", 5.0)["reason"] == "You need 3 rune shards", "ranks cost shards")
+	player["backpack"][slot] = "rune_shard#9"
+	check(not combat.empower_spell(1, "trainer_knight", "piercing_shot", 5.0)["ok"]
+		and not combat.empower_spell(1, trainer, "ember_bolt", 5.0)["ok"] and not combat.empower_spell(1, trainer, 7, 5.0)["ok"],
+		"only your own trainer, for your own spells")
+	check(combat.empower_spell(1, trainer, "piercing_shot", 5.0)["ok"] and player["spell_ranks"]["piercing_shot"] == 2
+		and World.carried(player["backpack"], "rune_shard") == 6, "rank 2 for three shards")
+	check(combat.empower_spell(1, trainer, "piercing_shot", 6.0)["ok"] and player["spell_ranks"]["piercing_shot"] == 3
+		and World.carried(player["backpack"], "rune_shard") == 0, "rank 3 for six more")
+	check(combat.empower_spell(1, trainer, "piercing_shot", 7.0)["reason"].ends_with("highest rank"), "rank 3 is the top")
+	check(is_equal_approx(Spells.ranked_power("piercing_shot", 3), Spells.SPELLS["piercing_shot"]["power"] * 1.3)
+		and Spells.info("piercing_shot", {}, 20, 3)["name"].ends_with("rank 3") and not Spells.rankable("challenge"),
+		"each rank adds 15% power and shows in the spell's name")
+	check(CharacterStore.capture(world, 1, 8.0)["spell_ranks"] == {"piercing_shot": 3}, "ranks are saved")
+	CharacterStore.restore(world, 1, {"version": CharacterStore.VERSION, "level": 20, "vocation": "paladin",
+		"spell_ranks": {"piercing_shot": 3, "ember_bolt": 3, "holy_mend": 9, "nonsense": 2}}, 8.0)
+	check(player["spell_ranks"] == {"piercing_shot": 3, "holy_mend": 3}, "saves keep only valid ranks of your own spells")
 
 
 func _sprite_checks() -> void:
@@ -2700,7 +2774,7 @@ func _monster_catalog_checks() -> void:
 		check(float(definition.get("step", 0.0)) >= 0.3 and float(definition.get("step", 0.0)) <= 0.8,
 			"%s idles at 0.3 to 0.8 s per tile (chasing uses Balance.chase_seconds)" % named)
 		for key: String in definition:
-			check(key in ["name", "look", "color", "size", "rank", "range", "step", "gear", "glow", "relics", "respawn"],
+			check(key in ["name", "look", "color", "size", "rank", "range", "step", "gear", "glow", "relics", "respawn", "gear_chance"],
 				"%s uses only known fields (%s)" % [named, key])
 		for numbers: String in ["health", "damage", "experience", "attack", "defense", "level"]:
 			check(not definition.has(numbers), "%s takes %s from Balance, not the catalog" % [named, numbers])

@@ -344,15 +344,16 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	player["mana"] -= cost
 	player["cooldowns"][spell] = now + definition["cooldown"]
 	player["groups"][definition["group"]] = now + Spells.GROUP_SECONDS[definition["group"]]
+	var power: float = Spells.ranked_power(spell, int(player["spell_ranks"].get(spell, 1)))
 	match definition["kind"]:
 		"target":
 			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
-			_hit(id, target, definition["power"], now, events)
+			_hit(id, target, power, now, events)
 		"area_self", "area_target":
 			var center: Vector2i = player["cell"] if definition["kind"] == "area_self" else creature(target)["cell"]
 			_area(center, definition["radius"], definition["color"], events)
 			for victim: int in _enemies_near(id, center, definition["radius"]):
-				_hit(id, victim, definition["power"], now, events)
+				_hit(id, victim, power, now, events)
 		"taunt":
 			_area(player["cell"], definition["radius"], definition["color"], events)
 			for monster: int in world.monsters:
@@ -360,10 +361,10 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 					world.monsters[monster]["target"] = id
 			events.append({"kind": "message", "id": id, "text": "You challenge every monster around you."})
 		"heal_self":
-			_heal(id, roundi(limits["health"] * definition["power"] * rng.randf_range(0.9, 1.1)), events, id, now)
+			_heal(id, roundi(limits["health"] * power * rng.randf_range(0.9, 1.1)), events, id, now)
 			_area(player["cell"], 0, definition["color"], events)
 		"heal_area":
-			var amount: int = maxi(1, roundi(limits["healing"] * definition["power"]))
+			var amount: int = maxi(1, roundi(limits["healing"] * power))
 			_area(player["cell"], definition["radius"], definition["color"], events)
 			for friend: int in world.players:
 				if distance(world.players[friend]["cell"], player["cell"]) <= definition["radius"]:
@@ -626,6 +627,40 @@ func claim_relic(id: int, npc: Variant, relic: Variant, _now: float) -> Dictiona
 	return {"ok": true, "events": events}
 
 
+# ---------------------------------------------------------------- spell ranks
+
+## A class trainer in range raises one of your known spells a rank for rune shards from your
+## backpack (Spells.RANK_COSTS). Returns {ok, events} or {ok: false, reason, events}.
+func empower_spell(id: int, npc: Variant, spell: Variant, _now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	var player: Dictionary = world.players[id]
+	if not World.serves(npc, "runes", player["cell"]):
+		return {"ok": false, "reason": "Walk closer to a class trainer", "events": []}
+	var trainer: Dictionary = World.QUEST_GIVERS[npc]
+	if Quests.TRAINERS[npc][0] != player["vocation"]:
+		return {"ok": false, "reason": "%s only teaches %ss" % [trainer["name"],
+			Balance.VOCATIONS[Quests.TRAINERS[npc][0]]["name"]], "events": []}
+	if typeof(spell) != TYPE_STRING or not Spells.rankable(spell) or not Spells.allows(spell, player["vocation"]):
+		return {"ok": false, "reason": "%s cannot empower that" % trainer["name"], "events": []}
+	var definition: Dictionary = Spells.SPELLS[spell]
+	if player["level"] < definition["level"]:
+		return {"ok": false, "reason": "%s needs level %d" % [definition["name"], definition["level"]], "events": []}
+	var rank: int = int(player["spell_ranks"].get(spell, 1))
+	var cost: int = Spells.rank_cost(rank)
+	if cost == 0:
+		return {"ok": false, "reason": "%s is already at its highest rank" % definition["name"], "events": []}
+	if World.carried(player["backpack"], Spells.SHARD) < cost:
+		return {"ok": false, "reason": "You need %d rune shards" % cost, "events": []}
+	World.remove_carried(player["backpack"], Spells.SHARD, cost)
+	player["spell_ranks"][spell] = rank + 1
+	var text: String = "%s carves %d rune shards into your %s: rank %d, %d%% stronger." % [trainer["name"], cost,
+		definition["name"], rank + 1, roundi(Spells.RANK_POWER * rank * 100.0)]
+	var flash: Array[Vector2i] = [player["cell"]]
+	return {"ok": true, "events": [{"kind": "player", "id": id}, {"kind": "message", "id": id, "text": text},
+		{"kind": "area", "cells": flash, "color": definition["color"]}]}
+
+
 # ---------------------------------------------------------------- town tasks
 
 ## Accepts ("accept") or turns in ("complete") the hunting task of a quest giver in range.
@@ -649,6 +684,9 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 		"accept":
 			if player["tasks"].has(task):
 				return {"ok": false, "reason": "You are already on that task", "events": []}
+			var requires: String = definition.get("requires", "")
+			if not requires.is_empty() and not player["done_tasks"].has(requires):
+				return {"ok": false, "reason": "Finish %s first" % Quests.TASKS[requires]["title"], "events": []}
 			player["tasks"][task] = 0
 			text = "%s: slay %s, then return to %s." % [definition["title"],
 				target if definition["count"] == 1 else "%d %s" % [definition["count"], target], giver]
@@ -656,12 +694,19 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 			if player["tasks"].get(task, 0) < definition["count"]:
 				return {"ok": false, "reason": "Slay %s first" % (target if definition["count"] == 1
 					else "%d %s" % [definition["count"], target]), "events": []}
+			var items: Array = World.task_items(task, player["vocation"])
+			var packed: Array = World.with_items(player["backpack"], items)
+			if not items.is_empty() and packed.is_empty():
+				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % items.size(),
+					"events": []}
 			player["tasks"].erase(task)
 			player["done_tasks"][task] = true
+			if not items.is_empty():
+				player["backpack"] = packed
 			if definition["reward"] == "experience":
 				var reward: Dictionary = Quests.reward(task)
 				player["gold"] += reward["gold"]
-				text = "%s rewards you with %d gold." % [giver, reward["gold"]]
+				text = "%s rewards you with %d gold%s." % [giver, reward["gold"], World.items_text(items)]
 				grant_experience(id, reward["experience"], events)
 			else:
 				var pack: String = Quests.next_pack(player["equipment"].get("bag", ""))
@@ -882,7 +927,8 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 		var item: Dictionary = World.ITEMS[entry[0]]
 		if rng.randf() < float(entry[1]) and (item["slot"].is_empty() or level >= item["level"]):
 			loot.append(entry[0])
-	if rng.randf() < GEAR_DROP_CHANCE.get(Monsters.MONSTERS[kind]["rank"], 0.0):
+	var definition: Dictionary = Monsters.MONSTERS[kind]
+	if rng.randf() < float(definition.get("gear_chance", GEAR_DROP_CHANCE.get(definition["rank"], 0.0))):
 		loot.append(gear_drop(level))
 	var piles: int = level / 10 + (1 if rng.randf() < 0.6 else 0)
 	if Monsters.MONSTERS[kind]["rank"] != "normal":
