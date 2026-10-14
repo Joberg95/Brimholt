@@ -658,6 +658,13 @@ func _stacking_checks() -> void:
 
 
 func _sprite_checks() -> void:
+	# Every creature (and the undead) has its own painted-style sheet; only armed humanoids wear gear.
+	for kind: String in Monsters.MONSTERS:
+		var definition: Dictionary = Monsters.MONSTERS[kind]
+		check(SpriteArt.CREATURES.has(kind) or (definition["look"] == "humanoid" and definition.has("gear")),
+			"%s has its own creature sheet or wears gear" % kind)
+		if SpriteArt.CREATURES.has(kind):
+			check(SpriteArt.CREATURES[kind].get_size() == Vector2(3, 4) * SpriteArt.FRAME, "%s's sheet has 3 poses by 4 facings" % kind)
 	check(World.ITEMS["bronze_scale_coat"]["look"] == "scale" and World.ITEMS["steel_hauberk"]["look"] == "mail",
 		"scale armour and chainmail use distinct construction")
 	check(World.ITEMS["iron_cuirass"]["look"] == "brigandine"

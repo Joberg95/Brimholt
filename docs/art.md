@@ -58,9 +58,20 @@ the same integer pixel mapping (80% authored height, feet anchored at frame y=53
 This is baked into the PNGs, not a runtime stretch. It keeps grips, masks, capes and
 walk poses registered without altering the 64×64 frame or gameplay collision footprint.
 Monster bodies keep their own proportions; humanoid monsters use the compact character rig.
-Creature sheets (`monsters/<look>.png`, greyscale and tinted per monster, with an untinted
-`_detail` sheet for eyes): `quadruped`, `spider` (eight jointed legs, a banded abdomen, red
-eyes), `blob`, `golem`, `wraith`.
+Creatures have one sheet each, `creatures/<monster>.png` (untinted; stand, step A, step B by
+four facings), made by `tools/generators/creatures.py`: each species is built from simple 3D
+anatomy (ellipsoid body, head, jointed limbs, tails, horns, crowns ...) and rendered for every
+facing and walk frame with the painted look of the gear art: top-left light posterized into a
+five-tone ramp per material (warm lights, cool shadows), gloss on chitin and slime, textures
+(fur strokes, stone slabs and cracks, glowing ember seams, warts, scales), emissive eyes and
+cores, a coloured silhouette edge, and dark seams where parts overlap. Builders: `quadruped`
+(voles, rats, the Rat King's crown, boars with tusks and spines, wolves with a ruff, the
+reedfang lizard), `beetle`, `spider`, `toad`, `slime`, `golem` (stone, moss, ember, obsidian,
+Forgemaw's and Kharzul's horns and burning maws), `wraith` (Sylvaine's flowers and antlers), and
+`biped` (the skeleton, ghoul, and robed Abbot). `SPECIES` sets each one's proportions and
+materials and `ZOOM` its on-screen scale; `creatures/<monster>_glow.png` halos only the bright
+parts of glowing creatures. Armed humanoids (bandits, archers, knights, Vaelith, Morvain) still
+wear catalog gear. The old tinted `monsters/<look>.png` sheets remain as a fallback.
 Glow masks are generated from the final compact sheets.
 
 To edit art, change a PNG in Aseprite or another pixel editor, keeping its frame

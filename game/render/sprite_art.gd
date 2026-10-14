@@ -63,6 +63,10 @@ const MONSTER_DETAILS: Dictionary = {
 	"golem": preload("res://assets/sprites/monsters/golem_detail.png"),
 	"wraith": preload("res://assets/sprites/monsters/wraith_detail.png"),
 }
+## Painted-style creature sheets (tools/generators/creatures.py), one per monster kind, drawn
+## untinted; kinds without one fall back to the tinted generic sheets above.
+static var CREATURES: Dictionary = _creature_sheets()
+static var CREATURE_GLOW: Dictionary = _creature_sheets("_glow")
 ## Characters' feet sit this far below the tile centre; monsters scale around that point.
 const FEET: Vector2 = Vector2(0, 13.5)
 ## Source rectangles of tiles.png by tile index (4 per row), computed once.
@@ -133,6 +137,15 @@ static func _gear_sheets(suffix: String = "") -> Dictionary:
 	for kind: String in World.ITEMS:
 		if VISIBLE_SLOTS.has(World.ITEMS[kind]["slot"]) and (suffix.is_empty() or World.ITEMS[kind].has("glow")):
 			sheets[kind] = load("res://assets/sprites/gear/%s%s.png" % [kind, suffix])
+	return sheets
+
+
+static func _creature_sheets(suffix: String = "") -> Dictionary:
+	var sheets: Dictionary = {}
+	for kind: String in Monsters.MONSTERS:
+		var path: String = "res://assets/sprites/creatures/%s%s.png" % [kind, suffix]
+		if ResourceLoader.exists(path):
+			sheets[kind] = load(path)
 	return sheets
 
 
@@ -484,7 +497,10 @@ static func draw_monster(canvas: CanvasItem, center: Vector2, state: Dictionary,
 	if definition.is_empty():
 		return
 	canvas.draw_set_transform(center + FEET, 0.0, Vector2.ONE * definition["size"])
-	if definition["look"] == "humanoid":
+	if CREATURES.has(state["kind"]):
+		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
+		canvas.draw_texture_rect_region(CREATURES[state["kind"]], dest, frame_region(state["facing"], stride))
+	elif definition["look"] == "humanoid":
 		draw_actor(canvas, -FEET, {"id": 0, "facing": state["facing"], "equipment": definition.get("gear", {}),
 			"attack": state.get("attack", -1.0)}, false, stride, definition["color"])
 	else:
@@ -573,6 +589,11 @@ static func draw_monster_glow(canvas: CanvasItem, center: Vector2, state: Dictio
 	if definition["look"] == "humanoid":
 		glowing = draw_actor_glow(canvas, -FEET, {"facing": state["facing"], "equipment": definition.get("gear", {}),
 			"attack": state.get("attack", -1.0)}, stride, strength)
+	elif definition.has("glow") and CREATURE_GLOW.has(state["kind"]):
+		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
+		canvas.draw_texture_rect_region(CREATURE_GLOW[state["kind"]], dest, frame_region(state["facing"], stride),
+			Color(definition["glow"], strength))
+		glowing = true
 	elif definition.has("glow") and MONSTER_GLOW.has(definition["look"]):
 		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
 		canvas.draw_texture_rect_region(MONSTER_GLOW[definition["look"]], dest, frame_region(state["facing"], stride),

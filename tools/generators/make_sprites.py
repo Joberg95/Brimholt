@@ -1975,6 +1975,21 @@ def wraith(direction, frame):
     return body, detail
 
 
+# Painted-style creatures (tools/generators/creatures.py): one untinted sheet per species, the
+# same 64x64 frames and rows as characters (stand, step A, step B).
+import creatures  # noqa: E402
+
+GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
+
+
+def creature_sheet(kind):
+    def build(direction, frame):
+        image = Image(FRAME, FRAME)
+        image.pixels = creatures.frames(kind, direction, frame)
+        return image
+    return character_sheet(build)
+
+
 def monster_sheet(builder, want_detail):
     def build(direction, frame):
         if direction == "right":
@@ -3633,6 +3648,8 @@ def main():
            if item.get("glow") and item.get("slot") in VISIBLE_SLOTS},
         "items_glow.png": None,
         **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
+        **{f"creatures/{kind}.png": creature_sheet(kind) for kind in creatures.SPECIES},
+        **{f"creatures/{kind}_glow.png": None for kind in GLOWING_CREATURES},
         **{f"monsters/{name}.png": monster_sheet(builder, False)
            for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},
         **{f"monsters/{name}_detail.png": monster_sheet(builder, True)
@@ -3648,6 +3665,15 @@ def main():
             outputs[name] = glowing
         else:
             base = outputs[name.replace("_glow.png", ".png")]
+            if name.startswith("creatures/"):
+                # Only the glowing parts (eyes, seams, cores) shine, not the whole body.
+                bright = Image(base.width, base.height)
+                for y in range(base.height):
+                    for x in range(base.width):
+                        pixel = base.pixels[y][x]
+                        if pixel is not None and pixel[3] == 255 and max(pixel[:3]) > 200 and max(pixel[:3]) - min(pixel[:3]) > 90:
+                            bright.pixels[y][x] = pixel
+                base = bright
             outputs[name] = framewise(base, FRAME, FRAME, halo)
     for name, image in outputs.items():
         image.save(root / name)
