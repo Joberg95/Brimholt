@@ -1550,12 +1550,17 @@ def framewise(sheet_image, cell_width, cell_height, transform):
 # row, so the worn piece shows the icon's colours, trim, and pattern.
 
 PAINTED_SLOTS = ("helmet", "armor", "legs", "boots", "cape", "off_hand", "main_hand")
-ICON_DIR = ROOT / "assets" / "sprites" / "icons"
+ICON_DIRS = (ROOT / "assets" / "sprites" / "icons", ROOT / "assets" / "sprites" / "icons_derived")
 
 
 def painted_icon(kind):
-    path = ICON_DIR / f"{kind}.png"
-    return Image.load(path) if ITEMS[kind].get("slot") in PAINTED_SLOTS and path.exists() else None
+    """The painted icon, else the one derive_icons.py made from painted art, else None."""
+    if ITEMS[kind].get("slot") not in PAINTED_SLOTS:
+        return None
+    for folder in ICON_DIRS:
+        if (folder / f"{kind}.png").exists():
+            return Image.load(folder / f"{kind}.png")
+    return None
 
 
 def _spans(image, keep):

@@ -78,8 +78,16 @@ and supplied by the project owner as the gear design reference) and `manifest.js
 the helmet, armor, legs, and boots icons of tiers 5–20). An entry with `"grid": [columns, rows]`
 and no region splits the whole image into cells, one item per cell in reading order;
 `icons_<group>_<n>.png` sheets (4×4) cover every other item and are skipped until their PNG
-exists, so painted icons can arrive a sheet at a time. Items without a painted icon keep their
-generated `items.png` cell.
+exists, so painted icons can arrive a sheet at a time. Items without a painted icon get one derived
+from the painted art (`tools/generators/derive_icons.py`, run by `make outfits`): a painted
+template of the same kind (`TEMPLATES`, plain to ornate by level; for helmets, armor, legs, and
+boots the nearest-tier painted piece of the same slot and armor type), recoloured to the item's
+catalog colours: outlines and wood stay, gold trim takes the accent colour, and everything else
+follows its brightness on a ramp from the main to the light colour. Rings lose the template's
+dark middle. They are written to `assets/sprites/icons_derived/` every run. The extra templates
+(`template_*` icons) come from the unused weapon and off-hand cells of `class_sets.png` and the
+single pieces of `class_pieces.png`. Axes, maces, hammers, crossbows, torches, capes, packs,
+potions, and most materials have no template yet and keep their generated `items.png` cell.
 
 Worn helmets, armor, legs, and boots with a painted icon wear that icon like a paper doll
 (`textured` in `make_sprites.py`): in every pose the icon is shrunk (area-averaged, with a little

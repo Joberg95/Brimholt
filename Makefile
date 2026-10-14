@@ -90,8 +90,9 @@ bot-tree: ## Save the player bots' LimboAI behavior tree to game/data/bot_behavi
 sprites: ## Regenerate the original sprite sheets in assets/sprites
 	$(PYTHON) tools/generators/make_sprites.py
 
-outfits: ## Import painted outfits and icons from art/outfits (manifest.json), then repaint worn gear from them
+outfits: ## Import painted outfits and icons from art/outfits, derive icons for the rest, and repaint worn gear
 	$(GODOT) --headless --path . --script res://tools/generators/import_outfits.gd
+	$(PYTHON) tools/generators/derive_icons.py
 	$(PYTHON) tools/generators/make_sprites.py
 	$(GODOT) --headless --path . --import
 

@@ -76,7 +76,9 @@ const VISIBLE_SLOTS: Array[String] = ["helmet", "cape", "armor", "legs", "boots"
 static var GEAR: Dictionary = _gear_sheets()
 ## Painted full-figure outfits by armor kind (imported from art/outfits by
 ## tools/generators/import_outfits.gd): worn armor with an outfit replaces the body, helmet, armor,
-## legs, boots, and cape layers; weapons and shields are still drawn. Painted item icons (assets/sprites/icons/<id>.png) replace generated ones.
+## legs, boots, and cape layers; weapons and shields are still drawn. Painted item icons
+## (assets/sprites/icons/<id>.png) and icons derived from them (assets/sprites/icons_derived/<id>.png)
+## replace generated ones. Painted item icons (assets/sprites/icons/<id>.png) replace generated ones.
 static var OUTFITS: Dictionary = _outfit_sheets()
 static var ICONS: Dictionary = _icon_overrides()
 ## Relics glow: white halo sheets (gear/<id>_glow.png, items_glow.png, monsters/<look>_glow.png)
@@ -138,10 +140,13 @@ static func _outfit_sheets() -> Dictionary:
 
 static func _icon_overrides() -> Dictionary:
 	var icons: Dictionary = {}
+	# Painted icons first, then icons derived from them (tools/generators/derive_icons.py).
 	for kind: String in World.ITEMS:
-		var path: String = "res://assets/sprites/icons/%s.png" % kind
-		if ResourceLoader.exists(path):
-			icons[kind] = load(path)
+		for folder: String in ["icons", "icons_derived"]:
+			var path: String = "res://assets/sprites/%s/%s.png" % [folder, kind]
+			if ResourceLoader.exists(path):
+				icons[kind] = load(path)
+				break
 	return icons
 
 

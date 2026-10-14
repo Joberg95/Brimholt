@@ -46,6 +46,11 @@ func _initialize() -> void:
 	var height: int = int(manifest.get("figure_height", 40))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://assets/sprites/outfits"))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://assets/sprites/icons"))
+	# The folder holds only what this manifest writes: icons from older mappings are removed.
+	for file: String in DirAccess.get_files_at("res://assets/sprites/icons"):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("res://assets/sprites/icons/" + file))
+	for file: String in DirAccess.get_files_at("res://assets/sprites/outfits"):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("res://assets/sprites/outfits/" + file))
 	var outfits: Array = manifest["outfits"]
 	_debug = Image.create(FRAME * 4 + ICON * 6, FRAME * outfits.size(), false, Image.FORMAT_RGBA8)
 	_debug.fill(Color("#3a4a2e"))
@@ -112,7 +117,14 @@ func _initialize() -> void:
 		print("wrote %s" % path)
 		if outfit.has("icons"):
 			var items: Array = outfit["icon_items"]
-			var icons: Array[Image] = _figures(source, _rect(outfit["icons"]), items.size(), true)
+			# One framed box per equal column: whole-region detection drops thin icons (staves)
+			# and splits loose ones (flowers) into pieces.
+			var icon_region: Rect2i = _rect(outfit["icons"])
+			var column: int = icon_region.size.x / items.size()
+			var icons: Array[Image] = []
+			for slot: int in items.size():
+				icons.append_array(_figures(source, Rect2i(icon_region.position.x + slot * column, icon_region.position.y,
+					column, icon_region.size.y), 1, true))
 			if icons.size() != items.size():
 				push_error("%s: found %d icons, expected %d" % [outfit["id"], icons.size(), items.size()])
 				failed += 1
