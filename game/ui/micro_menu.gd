@@ -1,18 +1,19 @@
 extends Node
 ## The micro menu right of the action bar: small painted buttons that open the character window,
-## spell book, professions, quest list, lexicon, world map, and Controls menu, the same as their keys. Each button's
+## spell book, professions, quest list, lexicon, world map, party, and Controls menu, the same as their keys. Each button's
 ## tooltip names it and its key, and an open panel's button is framed in gold.
 
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Layout = preload("res://game/ui/layout.gd")
 
-const SIZE: float = 36.0
-const GAP: float = 3.0
+const SIZE: float = 32.0
+const GAP: float = 2.0
 ## Painted 32-pixel icons (tools/generators/make_sprites.py MENU_ICONS), one per entry in ICON_ORDER.
 const ICONS: Texture2D = preload("res://assets/sprites/menu_icons.png")
 const ICON: float = 32.0
-const ICON_ORDER: Array[String] = ["character", "spell_book", "professions", "quest_list", "lexicon", "world_map", "controls"]
+const ICON_ORDER: Array[String] = ["character", "spell_book", "professions", "quest_list", "lexicon", "world_map", "party",
+	"controls"]
 const ACCENT: Color = Color("#ffcf6a")
 ## [action, title, what it shows]; actions are Keybinds actions, except "controls" (no key).
 const ENTRIES: Array = [
@@ -22,6 +23,7 @@ const ENTRIES: Array = [
 	["quest_list", "Quests", "Show or hide the quest list"],
 	["lexicon", "Lexicon", "Every monster: where it lives, its levels, and what it drops"],
 	["world_map", "World map", "Towns, ferries, dungeons, and PvP zones"],
+	["party", "Party", "Your party's members and health, invitations, and (solo) the raid"],
 	["controls", "Controls", "Rebind keys"],
 ]
 
@@ -39,7 +41,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 		var entry: Array = ENTRIES[index]
 		var button := ItemSlot.new()
 		button.rarity_color = ACCENT
-		button.position = Vector2(bar_end + 12 + index * (SIZE + GAP), top)
+		button.position = Vector2(bar_end + 6 + index * (SIZE + GAP), top)
 		button.size = Vector2.ONE * SIZE
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		button.mouse_entered.connect(button.queue_redraw)

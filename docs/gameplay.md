@@ -21,8 +21,8 @@ Drag a spell's rune from the book onto the action bar to put it there. Before yo
 shows the Adventurer's spells.
 
 The **micro menu** right of the action bar has a button for each panel: Character (C), Spell
-book (B), Professions (P), Quests (L), Lexicon (K), World map (M), and Controls, each with a painted icon (a helm, a red tome, pick and hammer,
-a sealed scroll, a bestiary, a folded map, and a cog). A gold frame marks the panels that are
+book (B), Professions (P), Quests (L), Lexicon (K), World map (M), Party (O), and Controls, each with a painted icon (a helm, a red tome, pick and hammer,
+a sealed scroll, a bestiary, a folded map, three companions under a pennant, and a cog). A gold frame marks the panels that are
 open; hover a button for its key. The **character window** explains every stat (your base
 value, what your gear adds, and what the stat does, such as how much your defense cuts
 damage), shows experience to the next level, and your status: gold and bank, party, skull,
@@ -51,7 +51,7 @@ times the spell's power):
 | Warrior | Brutal blow (1), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
 | Hunter | Piercing shot (1), Holy mend (8), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
 | Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
-| Druid | Frost bolt (1), Mend (1), Mass mend (10, heals everyone within 3 tiles), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
+| Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
 
 New spells fill empty action-bar slots when you reach their level (or right-click a slot to
 choose one).
@@ -88,7 +88,10 @@ roughly 10–90 seconds.
 ## Parties and shared experience
 
 Right-click another player to **Invite to party**; they right-click you to **Join party**
-(or you **Withdraw invitation**). Right-click yourself or a member to **Leave party**. Only
+(or you **Withdraw invitation**). Right-click a member to **Leave party**. The **party window**
+(O, or the micro menu) lists your party's members with their class, level, and health, the
+invitations you can join or withdraw, and **Leave party**. Right-clicking yourself opens
+nothing, and loot under a person is picked up rather than opening their menu. Only
 the leader invites; when the leader leaves, the member who joined the game first leads, and
 a party of one disbands. Disconnecting leaves the party. Nameplates show a blue shield for
 members (gold rim for the leader) and a faint shield for open invitations. Party members
@@ -161,7 +164,8 @@ name above the character and stay after death. Yellow and black skulls are not u
 On screen, creatures show a name and a health bar that turns yellow and red, damage rises
 in red (critical hits in orange), healing in green, and experience in white. Ranged attacks
 fly as projectiles and area spells flash their tiles. Your health and mana bars sit in the
-top-left of the game window.
+top-left of the game window; while you have a target, the **target frame** beside them shows its
+name and level (coloured by danger, like its nameplate) and its health in numbers and percent.
 
 ## Playing solo: companions, rivals, and raids
 
@@ -173,7 +177,7 @@ saves your character like hosting does, but brings the group game to you:
   on). They always match your level, wear the best regular gear of your tier, and follow you
   everywhere: across the map, through waystones and ferries, after you die, and down dungeon
   stairs into your party's copy. They fight what you target and whatever attacks the group.
-  Druids heal hurt allies, moving to them; Warriors **Challenge** monsters that turn on a softer
+  Druids heal allies below 80% health with Mass mend from level 1, moving to them; Warriors **Challenge** monsters that turn on a softer
   member. A companion who falls is back beside you six seconds later with what it carried.
   Party experience is shared by the usual rules, so a full group levels as a real one does.
 - **Rival bands.** Two named adventurer bands of three (*the Ashen Hand* and *the
@@ -184,7 +188,7 @@ saves your character like hosting does, but brings the group game to you:
   closing in, so Blackreed Isle and the Hollow Reach become group fights. Outside PvP zones
   rivals cannot attack you, as for any player; skulls, death penalties, and loot drops all
   apply to them (beat them for their potions). A band rests a few minutes between ambushes.
-- **Raids.** At level 50, right-click yourself and choose **Gather a raid**: your party fills to
+- **Raids.** At level 50, open the party window (O) and choose **Gather a raid**: your party fills to
   the ten-player raid the final bosses are balanced for (two Warriors, three Hunters, three
   Sorcerers, two Druids, you included). The raid's Warriors trade the boss when its wounds stack
   on the tank (three or more), and the Druids keep everyone up through its pulses. The rival

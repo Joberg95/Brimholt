@@ -3455,7 +3455,7 @@ def furniture(kind):
 # 32x32 icons for the buttons right of the action bar (game/ui/micro_menu.gd), shaded like
 # the item icons. Order: MENU_ICONS (MicroMenu.ENTRIES actions).
 
-MENU_ICONS = ["character", "spell_book", "professions", "quest_list", "lexicon", "world_map", "controls"]
+MENU_ICONS = ["character", "spell_book", "professions", "quest_list", "lexicon", "world_map", "party", "controls"]
 
 
 def menu_icon(kind):
@@ -3530,6 +3530,19 @@ def menu_icon(kind):
                 image.set(x, y, rgba("c03a32"))
         for x, y in thick(line(20, 9, 25, 14) | line(25, 9, 20, 14), ((0, 0), (1, 0))):
             image.set(x, y, rgba("c03a32"))
+    elif kind == "party":
+        # Three companions shoulder to shoulder under a gold pennant: green and red hoods behind a
+        # blue-cloaked leader.
+        skin = (rgba("e8c0a0"), rgba("c89878"), rgba("98684c"))
+        for cx, tones3 in ((9, (rgba("7ab06a"), rgba("4e8048"), rgba("2e5030"))), (23, (rgba("d0705a"), rgba("a04838"), rgba("682a22")))):
+            shade(image, {p for p in ellipse(cx, 28, 7, 7) if p[1] <= 29}, tones3)
+            shade(image, ellipse(cx, 16, 4, 4.5), skin)
+            shade(image, {p for p in ellipse(cx, 15, 5, 5.5) if p[1] <= 14}, tones3, False)
+        shade(image, {p for p in ellipse(16, 30, 8, 8) if p[1] <= 29}, (rgba("6a9ad8"), rgba("3e68b0"), rgba("243e78")))
+        shade(image, ellipse(16, 18, 4.5, 5), skin)
+        shade(image, {p for p in ellipse(16, 17, 5.5, 6) if p[1] <= 15}, iron, False)
+        image.rect(15, 2, 1, 10, wood[2])
+        shade(image, {(x, y) for x in range(16, 24) for y in range(2, 8) if y - 2 <= (24 - x) * 0.75}, gold, False)
     elif kind == "controls":
         # A brass cog with a key across it.
         cog = set()

@@ -1,7 +1,8 @@
 extends Node
 ## Heads-up display around the game window: the title row (Controls and Leave game; hosting
 ## and joining happen on the start screen), the connection status line, the centred action message, the zone
-## banner, the health and mana bars, and the Controls menu.
+## banner, the health and mana bars, the target frame (your target's name, level, and health
+## beside your bars), and the Controls menu.
 
 const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -10,6 +11,7 @@ const ControlsMenu = preload("res://game/ui/controls_menu.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Regions = preload("res://game/data/regions.gd")
 const UiTheme = preload("res://game/ui/ui_theme.gd")
+const Monsters = preload("res://game/data/monsters.gd")
 const MESSAGE_SECONDS: float = 4.0
 
 var game: Node
@@ -21,6 +23,8 @@ var controls_button: Button
 var leave_button: Button
 var zone_label: Label
 var vitals: Control
+## Your target's name, level, and health, right of the vitals; hidden without a target.
+var target_frame: Control
 var _status: Label
 var _action: Label
 var _zone_name: String = ""
@@ -61,6 +65,11 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	vitals.size = Vector2(220, 34)
 	vitals.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vitals.draw.connect(_draw_vitals)
+	target_frame = Control.new()
+	target_frame.position = vitals.position + Vector2(vitals.size.x + 16, 0)
+	target_frame.size = Vector2(240, 34)
+	target_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target_frame.draw.connect(_draw_target)
 	_status = Label.new()
 	_status.position = Vector2(16, 48)
 	layer.add_child(_status)
@@ -94,6 +103,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	location_label.z_index = 2
 	layer.add_child(location_label)
 	layer.add_child(vitals)
+	layer.add_child(target_frame)
 	controls = ControlsMenu.new()
 	controls.visible = false
 	controls.setup(game.keybinds, func() -> void: controls.hide())
@@ -105,6 +115,45 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 func refresh() -> void:
 	_update_zone()
 	vitals.queue_redraw()
+	target_frame.queue_redraw()
+
+
+## Your target's title, danger-coloured like its nameplate, and its health; {} without a target.
+func target_info() -> Dictionary:
+	var view: Dictionary = game.creature_view(game.own_target())
+	if view.is_empty() or not view.has("state") or not view["state"].has("health"):
+		return {}
+	var state: Dictionary = view["state"]
+	var own_level: int = game.actors[game.self_id]["state"].get("level", 1) if game.actors.has(game.self_id) else 1
+	var title: String
+	if state.has("kind"):
+		title = "%s %d%s" % [Monsters.MONSTERS.get(state["kind"], {"name": "?"})["name"], state.get("level", 1),
+			"  ENRAGED" if state.get("enraged", false) else ""]
+	elif state.has("name"):
+		title = "%s %d" % [String(state["name"]).get_slice(" of ", 0), state.get("level", 1)]
+	else:
+		title = "%s %d" % [Balance.profile_of(state.get("vocation", ""))["name"], state.get("level", 1)]
+	return {"title": title, "health": int(state["health"]), "max_health": int(state["max_health"]),
+		"color": SpriteArt.danger_color(state.get("level", 1), own_level)}
+
+
+func _draw_target() -> void:
+	var info: Dictionary = target_info()
+	if info.is_empty():
+		return
+	var font: Font = ThemeDB.fallback_font
+	target_frame.draw_string_outline(font, Vector2(2, 11), info["title"], HORIZONTAL_ALIGNMENT_LEFT, target_frame.size.x, 12, 4,
+		Color("#0b0e12"))
+	target_frame.draw_string(font, Vector2(2, 11), info["title"], HORIZONTAL_ALIGNMENT_LEFT, target_frame.size.x, 12, info["color"])
+	var area := Rect2(0, 17, target_frame.size.x, 14)
+	var share: float = clampf(float(info["health"]) / maxf(1.0, info["max_health"]), 0.0, 1.0)
+	target_frame.draw_rect(area, Color(0, 0, 0, 0.6))
+	target_frame.draw_rect(Rect2(area.position, Vector2(area.size.x * share, area.size.y)), Color("#c0392b"))
+	target_frame.draw_rect(area, Color("#0b0e12"), false, 1.0)
+	target_frame.draw_string(font, area.position + Vector2(4, 11), "HP %d / %d" % [info["health"], info["max_health"]],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+	target_frame.draw_string(font, area.position + Vector2(area.size.x - 40, 11), "%d%%" % roundi(share * 100.0),
+		HORIZONTAL_ALIGNMENT_RIGHT, 36, 11, Color.WHITE)
 
 
 ## The status line, and the action message until it has shown for MESSAGE_SECONDS.

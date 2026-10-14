@@ -26,6 +26,7 @@ const QuestList = preload("res://game/ui/quest_list.gd")
 const SpellBook = preload("res://game/ui/spell_book.gd")
 const CharacterWindow = preload("res://game/ui/character_window.gd")
 const ProfessionsWindow = preload("res://game/ui/professions_window.gd")
+const PartyWindow = preload("res://game/ui/party_window.gd")
 const MicroMenu = preload("res://game/ui/micro_menu.gd")
 const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 const Bots = preload("res://game/core/bots.gd")
@@ -115,6 +116,7 @@ var quest_list: QuestList
 var spell_book: SpellBook
 var character_window: CharacterWindow
 var professions_window: ProfessionsWindow
+var party_window: PartyWindow
 var micro_menu: MicroMenu
 var lexicon: LexiconWindow
 ## Host-only player bots (game/core/bots.gd).
@@ -279,6 +281,7 @@ func _process(delta: float) -> void:
 	spell_book.refresh()
 	character_window.refresh()
 	professions_window.refresh()
+	party_window.refresh()
 	start_panel.refresh()
 	action_bar.redraw()
 	micro_menu.redraw()
@@ -298,7 +301,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
 		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
-				and not character_window.visible and not professions_window.visible and not lexicon.visible \
+				and not character_window.visible and not professions_window.visible and not party_window.visible and not lexicon.visible \
 				and own_target() != 0:
 			target_local(0)
 		_world_map.hide()
@@ -307,6 +310,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		spell_book.hide()
 		character_window.hide()
 		professions_window.hide()
+		party_window.hide()
 		for window: PanelContainer in inventory.bag_windows:
 			window.hide()
 		lexicon.hide()
@@ -343,6 +347,8 @@ func panel_open(action: String) -> bool:
 			return character_window.visible
 		"professions":
 			return professions_window.visible
+		"party":
+			return party_window.visible
 		"lexicon":
 			return lexicon.visible
 		"spell_book":
@@ -373,6 +379,8 @@ func _run_action(action: String) -> void:
 		character_window.toggle()
 	elif action == "professions":
 		professions_window.toggle()
+	elif action == "party":
+		party_window.toggle()
 	elif action == "lexicon":
 		lexicon.toggle()
 	elif not connected:
@@ -1647,6 +1655,9 @@ func _build_ui() -> void:
 	professions_window = ProfessionsWindow.new()
 	professions_window.game = self
 	layer.add_child(professions_window)
+	party_window = PartyWindow.new()
+	party_window.game = self
+	layer.add_child(party_window)
 	lexicon = LexiconWindow.new()
 	lexicon.game = self
 	layer.add_child(lexicon)
@@ -1656,7 +1667,7 @@ func _build_ui() -> void:
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
 	# list, location line, spell book, character window, lexicon, world map, dialog panel, and Controls menu.
 	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, character_window,
-			professions_window, lexicon, maps.world_map, dialogs.panel, hud.controls]:
+			professions_window, party_window, lexicon, maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_controls = hud.controls
@@ -1757,7 +1768,8 @@ func _map_input(event: InputEvent) -> void:
 			return
 		var creature: int = _creature_at(cell)
 		if event.button_index == MOUSE_BUTTON_RIGHT and connected:
-			var person: int = creature if creature > 0 else (self_id if dialogs.is_self_at(cell) else 0)
+			# Creatures never block a tile, so loot under someone is picked up rather than opening their menu.
+			var person: int = creature if creature > 0 and not ground_view.has(cell) else 0
 			if person > 0 and dialogs.open_player_menu(person, Vector2i(VIEW_ORIGIN + event.position)):
 				return
 			if person == 0 and not Crafting.node_at(cell).is_empty() and not ground_view.has(cell):

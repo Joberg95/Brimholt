@@ -69,7 +69,7 @@ const SEEN_RADIUS: int = 14
 const FAST_TRAVEL_DISTANCE: int = 40
 ## Group play: druids heal the party below HEAL_ALLY_SHARE; warriors challenge monsters on a
 ## softer member, and the off-tank takes the boss when its wounds on the main tank reach SWAP_WOUNDS.
-const HEAL_ALLY_SHARE: float = 0.7
+const HEAL_ALLY_SHARE: float = 0.8
 const SWAP_WOUNDS: int = 3
 ## Rival bands hunt a camp until their task is done or HUNT_SECONDS pass, and ambush players in
 ## PvP zones within AMBUSH_RADIUS.

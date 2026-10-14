@@ -19,7 +19,7 @@ const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": 
 	"runes": "Runes", "craft": "Craft"}
 const DEPOT_COLUMNS: int = 8
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
-	"join": "Join party", "leave": "Leave party", "raid": "Gather a raid (10 players)", "disband_raid": "Disband the raid"}
+	"join": "Join party", "leave": "Leave party"}
 
 var game: Node
 ## The dialog panel (travel routes or quests) and its rows.
@@ -64,10 +64,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_player_menu = PopupMenu.new()
 	_player_menu.id_pressed.connect(func(index: int) -> void:
 		var action: String = _player_menu.get_item_metadata(_player_menu.get_item_index(index))
-		if action in ["raid", "disband_raid"]:
-			game.raid_local(action == "raid")
-		else:
-			game.party_local(action, 0 if action == "leave" else _player_menu_target))
+		game.party_local(action, 0 if action == "leave" else _player_menu_target))
 	add_child(_player_menu)
 
 
@@ -141,17 +138,8 @@ func _npc_service_chosen(id: int) -> void:
 		_open(service, npc_menu_target)
 
 
-## Whether your character stands on (or just below) a clicked cell.
-func is_self_at(cell: Vector2i) -> bool:
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
-	if not actors.has(self_id):
-		return false
-	var at: Vector2i = Vector2i(actors[self_id]["visual"].round())
-	return cell == at or cell == at + Vector2i.DOWN
-
-
-## Party options for a player you right-click (yourself: leave). Empty when there are none.
+## Party options for another player you right-click; empty for yourself and in solo play (your
+## own party, and the raid, are in the party window).
 func party_options(person: int) -> Array[String]:
 	var actors: Dictionary = game.actors
 	var self_id: int = game.self_id
@@ -161,12 +149,7 @@ func party_options(person: int) -> Array[String]:
 	var mine: Dictionary = actors[self_id]["state"]
 	var theirs: Dictionary = actors[person]["state"]
 	var my_party: int = mine.get("party", 0)
-	if person == self_id:
-		# Solo: your companions always rejoin you, so your own menu gathers or disbands a raid.
-		if game.solo_mode:
-			options.append("disband_raid" if game.solo.raiding else "raid")
-		elif my_party != 0:
-			options.append("leave")
+	if person == self_id or game.solo_mode:
 		return options
 	if person in mine.get("invites", []) and my_party == 0:
 		options.append("join")

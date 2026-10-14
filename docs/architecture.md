@@ -44,6 +44,7 @@ game/
     spell_book.gd        Spell book (B): your vocation's spells explained (Spells.info), drag to the bar
     character_window.gd  Character window (C): stats explained, experience, and status (meal included)
     professions_window.gd Professions window (P): each skill's level, progress, and what it gathers or crafts
+    party_window.gd      Party window (O): members' class, level, and health, invitations, Leave party, solo raid
     lexicon_window.gd    Lexicon (K): searchable monster list with drop tables
     ui_theme.gd          The dark-and-gold button and field look (start screen, top bar)
     micro_menu.gd        Buttons right of the action bar for the character, book, professions, quests, map, controls

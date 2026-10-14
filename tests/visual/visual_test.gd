@@ -264,7 +264,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -408,6 +408,20 @@ func _check_mouse_inventory() -> bool:
 	await _push_mouse(tile_center, MOUSE_BUTTON_RIGHT, false)
 	if not _expect(game.world.ground_stack(cell).is_empty() and player["backpack"][0] == "ringmail_coif",
 			"Right-clicking the tile did not pick up its item"):
+		return false
+	# Loot on your own tile, in solo play: your own right-click menu (once the raid option) must
+	# not swallow the pickup.
+	await create_timer(World.ITEM_SECONDS + 0.05).timeout
+	var own: Vector2i = player["cell"]
+	if not await _drag_to_map(slot_center, _tile_center(own)):
+		return false
+	await create_timer(World.ITEM_SECONDS + 0.05).timeout
+	game.solo_mode = true
+	await _push_mouse(_tile_center(own), MOUSE_BUTTON_RIGHT, true)
+	await _push_mouse(_tile_center(own), MOUSE_BUTTON_RIGHT, false)
+	game.solo_mode = false
+	if not _expect(game.world.ground_stack(own).is_empty() and player["backpack"][0] == "ringmail_coif",
+			"Right-clicking loot on your own tile did not pick it up"):
 		return false
 	await create_timer(World.ITEM_SECONDS + 0.05).timeout
 	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, true)
@@ -780,6 +794,14 @@ func _check_combat() -> bool:
 	await RenderingServer.frame_post_draw
 	var image: Image = screen.get_texture().get_image()
 	image.save_png("res://.tools/visual-combat.png")
+	# The target frame beside your health bar names the target and shows its health.
+	var info: Dictionary = game.hud.target_info()
+	var frame_bar: Vector2i = Vector2i(game.hud.target_frame.get_global_rect().position + Vector2(2, 24))
+	if not _expect(info.get("title", "") == "%s 1" % Monsters.MONSTERS["field_vole"]["name"] and info["max_health"] == 1000
+			and info["health"] == game.world.monsters[spawned[0]]["health"]
+			and image.get_pixelv(frame_bar).r > 0.6 and image.get_pixelv(frame_bar).g < 0.35,
+			"The target frame does not show the target's name and health (%s)" % [info]):
+		return false
 	var corner: Vector2 = Vector2(game.world.monsters[spawned[0]]["cell"]) * World.TILE_SIZE
 	var edge: Vector2 = game.map_to_screen(corner + Vector2(1.5, World.TILE_SIZE / 2.0))
 	if not _expect(image.get_pixelv(Vector2i(edge)).is_equal_approx(WorldOverlay.TARGET_COLOR), "The target square is not drawn"):
@@ -1244,6 +1266,25 @@ func _check_lexicon_and_marks() -> bool:
 ## The top bar offers only Controls and Leave game (hosting, joining, and bots are on the start
 ## screen or automatic now); a host-added bot still appears beside you with a "Bot" nameplate.
 func _check_bots() -> bool:
+	# The party window (O, or the micro menu) holds what the self right-click menu used to.
+	if not _expect(game.party_options(1).is_empty(), "Your own right-click menu should offer nothing"):
+		return false
+	var party_button: Control = game.micro_menu.buttons[game.micro_menu.ICON_ORDER.find("party")]
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	party_button.gui_input.emit(release)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-party.png")
+	var party_text: PackedStringArray = []
+	_texts(game.party_window, party_text)
+	var opened: bool = game.party_window.visible and game.panel_open("party") and "You" in party_text \
+		and "\n".join(party_text).contains("not in a party") and party_button.tooltip_text.begins_with("Party  (O)")
+	party_button.gui_input.emit(release)
+	await process_frame
+	if not _expect(opened and not game.party_window.visible, "The party window does not open and close from the micro menu (%s)" % [party_text]):
+		return false
 	var buttons: Array = game.hud.leave_button.get_parent().get_children().filter(func(node: Node) -> bool: return node is Button)
 	var labels: Array = buttons.map(func(button: Button) -> String: return button.text)
 	if not _expect(labels == ["Controls", "Leave game"] and buttons.all(func(button: Button) -> bool: return button.is_visible_in_tree()),

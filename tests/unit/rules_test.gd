@@ -989,6 +989,16 @@ func _solo_checks() -> void:
 	world.players[friends[1]]["health"] = 10
 	_place(world, druid, world.players[friends[1]]["cell"] + Vector2i(1, 0))
 	check(bots._hurt_ally(druid, 3, Bots.HEAL_ALLY_SHARE), "druids notice hurt allies")
+	var wounded: int = roundi(world.player_stats(1)["health"] * 0.4)
+	me["health"] = wounded
+	world.players[druid]["cooldowns"] = {}
+	world.players[druid]["groups"] = {}
+	world.players[druid]["mana"] = world.player_stats(druid)["mana"]
+	_place(world, druid, me["cell"] + Vector2i(0, 1))
+	bots.use_resources(druid, sim_clock[0], [])
+	check(me["health"] > wounded, "a druid companion heals you when you are hurt")
+	check(Spells.for_vocation("druid").any(func(spell: String) -> bool:
+		return Spells.SPELLS[spell]["kind"] == "heal_area" and Spells.SPELLS[spell]["level"] == 1), "druids heal their party from level 1")
 	var guard: int = combat.spawn_monster("grey_wolf", 20, me["cell"] + Vector2i(1, 0), sim_clock[0])
 	world.monsters[guard]["target"] = druid
 	_place(world, druid, me["cell"] + Vector2i(2, 0))
@@ -1671,15 +1681,15 @@ func _keybind_checks() -> void:
 	check(loaded.keys == binds.keys and loaded.bar == binds.bar, "bindings load back")
 	var config := ConfigFile.new()
 	config.set_value("keys", "slot_1", [KEY_ESCAPE, "x"])
-	config.set_value("keys", "slot_2", [KEY_O, KEY_NONE])
-	config.set_value("keys", "slot_3", [KEY_O, KEY_NONE])
+	config.set_value("keys", "slot_2", [KEY_J, KEY_NONE])
+	config.set_value("keys", "slot_3", [KEY_J, KEY_NONE])
 	config.set_value("bar", "slots", ["fireball"])
 	config.save(path)
 	var tampered := Keybinds.new(path)
 	tampered.load_saved()
 	check(tampered.keys["slot_1"] == [KEY_1, KEY_NONE] and tampered.bar == Keybinds.DEFAULT_BAR,
 		"malformed saved values fall back to defaults")
-	check(tampered.action_for(KEY_O) == "slot_2" and tampered.keys["slot_3"][0] == KEY_NONE, "duplicate saved keys are dropped")
+	check(tampered.action_for(KEY_J) == "slot_2" and tampered.keys["slot_3"][0] == KEY_NONE, "duplicate saved keys are dropped")
 	var detached := Keybinds.new(path)
 	detached.persistent = false
 	detached.load_saved()
@@ -2337,6 +2347,9 @@ func _relic_quest_checks() -> void:
 	world.players[1]["health"] = world.player_stats(1)["health"]
 	combat._damage(boss, 1, 500, "damage", 98.0, [])
 	world.players[2]["mana"] = 999999
+	# The lair is in a PvP zone, where group heals mend only the healer's party.
+	world.players[1]["party"] = 1
+	world.players[2]["party"] = 1
 	check(combat.cast(2, "mass_mend", 99.0)["ok"], "the healer heals the wounded tank")
 	world.players[3]["mana"] = 999999
 	world.players[3]["active_at"] = 99.0
@@ -3882,6 +3895,20 @@ func _combat_checks() -> void:
 	world.players[3]["health"] = 10
 	var mass: Dictionary = combat.cast(4, "mass_mend", time + 20.0)
 	check(mass["ok"] and paladin["health"] > 10 and world.players[3]["health"] == 10, "mass mend heals players within its radius only")
+	var healed_to: int = paladin["health"]
+	# On Blackreed Isle (PvP), a group heal mends the druid's party but never a foe beside them.
+	var isle_cell: Vector2i = World.FERRYMEN["blackreed_isle"]["cell"]
+	_place(world, 4, isle_cell)
+	_place(world, 1, isle_cell + Vector2i(1, 0))
+	paladin["health"] = 10
+	druid["cooldowns"] = {}
+	druid["groups"] = {}
+	druid["mana"] = world.player_stats(4)["mana"]
+	check(combat.hostile(4, 1) and combat.cast(4, "mass_mend", time + 20.0)["ok"] and paladin["health"] == 10,
+		"group heals never mend a foe in a PvP zone")
+	_place(world, 4, Vector2i(14, 4))
+	_place(world, 1, Vector2i(15, 5))
+	paladin["health"] = healed_to
 	# Spell tooltips and the spell book state the numbers casting uses.
 	var druid_stats: Dictionary = world.player_stats(4)
 	var mend_info: Dictionary = Spells.info("mass_mend", druid_stats, 10)

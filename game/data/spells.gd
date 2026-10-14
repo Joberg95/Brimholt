@@ -73,7 +73,7 @@ const SPELLS: Dictionary = {
 		"radius": 2, "power": 1.5, "mana": 0.22, "cooldown": 10.0, "group": "attack", "color": Color("#c8e8ff")},
 	"wild_growth": {"rune": "mannaz", "name": "Wild growth", "vocations": ["druid"], "level": 40, "kind": "heal_area", "radius": 3,
 		"power": 5.0, "mana": 0.3, "cooldown": 8.0, "group": "healing", "color": Color("#60e070")},
-	"mass_mend": {"rune": "gebo", "name": "Mass mend", "vocations": ["druid"], "level": 10, "kind": "heal_area", "radius": 3,
+	"mass_mend": {"rune": "gebo", "name": "Mass mend", "vocations": ["druid"], "level": 1, "kind": "heal_area", "radius": 3,
 		"power": 3.0, "mana": 0.2, "cooldown": 2.0, "group": "healing", "color": Color("#a6f0b0")},
 }
 

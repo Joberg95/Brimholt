@@ -123,6 +123,7 @@ These are the default keys; every key can be changed (see below).
 | M | Open or close the world map (drag to move, mouse wheel to zoom) |
 | K | Open or close the Lexicon (monsters, where they live, and their drops) |
 | F / P | Gather from the node beside you / open the Professions window |
+| O | Open the party window (members and health, invitations, Leave party; solo: Gather a raid at level 50) |
 | L | Show or hide the quest list (your tasks, their givers, and your progress) |
 | Esc | Close menus, or release your target (cannot be rebound) |
 | **Leave game** (top bar) / close window | Save and return to the start screen; leaving the host ends the session |

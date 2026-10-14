@@ -366,8 +366,9 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 		"heal_area":
 			var amount: int = maxi(1, roundi(limits["healing"] * power))
 			_area(player["cell"], definition["radius"], definition["color"], events)
+			# Group heals mend the caster and anyone they could not attack (never a foe in a PvP zone).
 			for friend: int in world.players:
-				if distance(world.players[friend]["cell"], player["cell"]) <= definition["radius"]:
+				if distance(world.players[friend]["cell"], player["cell"]) <= definition["radius"] and not hostile(id, friend):
 					_heal(friend, amount, events, id, now)
 	events.append({"kind": "player", "id": id})
 	return {"ok": true, "events": events}
