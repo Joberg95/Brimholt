@@ -32,8 +32,9 @@ SAVED CHARACTERS
 The host saves every character, so you return as you left. Files live in
     %APPDATA%\Godot\app_userdata\Brimholt\
   saves\            the host's character saves and signing key (host only)
-  identity.cfg      your secret identity: the host uses it to recognise you
-Keep identity.cfg private, and copy it to another PC to play your characters there. Two
-players on one PC: start the second one with  Brimholt.exe -- --profile=second
+  identity*.cfg     one secret identity per character on the start screen: the host
+                    uses it to recognise that character
+Keep these files private, and copy them to another PC to play your characters there. Two
+players on one PC: each picks their own character on the start screen.
 
 This is a trusted-LAN game: do not open its port to the Internet.

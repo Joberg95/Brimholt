@@ -3451,6 +3451,163 @@ def furniture(kind):
     return image.outlined()
 
 
+# ---------------------------------------------------------------- title painting
+# The start screen's backdrop (400x267, shown at 3x): a castle on a hill above a lake at dusk,
+# mountains and a moon behind, pines framing a grassy ledge in front where the game draws the
+# four heroes. Pixel art with ordered dithering between colour bands, in the game's palette.
+
+TITLE_SIZE = (400, 267)
+BAYER = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
+SKY = [(0, "121730"), (40, "1e2346"), (80, "3a3458"), (105, "6a4466"), (125, "a8565c"), (142, "e0884e"), (152, "f2b860")]
+
+
+def _band(stops, y, x):
+    """The dithered colour of a vertical gradient at (x, y): two neighbouring stops mixed."""
+    for (y0, c0), (y1, c1) in zip(stops, stops[1:]):
+        if y0 <= y < y1:
+            share = (y - y0) / (y1 - y0)
+            return rgba(c1) if share * 16 > BAYER[y % 4][x % 4] + 0.5 else rgba(c0)
+    return rgba(stops[-1][1])
+
+
+def _ridge(x, base, amplitude, seed, roughness=1.0):
+    """A mountain or hill skyline: summed sines plus a little hashed jitter."""
+    y = base
+    for k, (period, weight) in enumerate(((97, 1.0), (41, 0.45), (17, 0.18 * roughness))):
+        y -= amplitude * weight * math.sin((x + seed * (k + 3) * 13) * 2 * math.pi / period)
+    return y + (hash_cell(x, seed) % 3 - 1) * 0.4 * roughness
+
+
+def _pine(image, cx, base, height, body, rim):
+    """A layered pine silhouette with a faint rim light on its left edges."""
+    for y in range(base - height, base + 1):
+        depth = (y - (base - height)) / height
+        tier = (depth * 4) % 1.0
+        half = int((2 + depth * height * 0.32) * (0.55 + 0.45 * tier))
+        for x in range(cx - half, cx + half + 1):
+            image.set(x, y, rim if x == cx - half and depth > 0.08 else body)
+    image.rect(cx - 1, base, 2, 3, body)
+
+
+def title_painting():
+    width, height = TITLE_SIZE
+    image = Image(width, height)
+    horizon = 152
+    for y in range(height):
+        for x in range(width):
+            image.set(x, y, _band(SKY, min(y, horizon), x))
+    # Stars thin out toward the glowing horizon.
+    for y in range(0, 95):
+        for x in range(width):
+            roll = hash_cell(x * 3 + 1, y * 7 + 2) % 1000
+            if roll < 6 * (1 - y / 95):
+                image.set(x, y, rgba("f4ecd8") if roll < 2 else rgba("9aa0c8"))
+    # The moon, with a dithered halo and a few maria.
+    mx, my, mr = 318, 44, 13
+    for y in range(my - 30, my + 31):
+        for x in range(mx - 30, mx + 31):
+            d = math.hypot(x - mx, y - my)
+            if d <= mr:
+                shade = rgba("f2ead0") if (x - mx) + (y - my) * 0.4 < 4 else rgba("d8cca8")
+                if hash_cell(x // 3, y // 3) % 9 == 0 and d < mr - 2:
+                    shade = rgba("c4b894")
+                image.set(x, y, shade)
+            elif d <= mr + 16 and (mr + 16 - d) * 1.1 > BAYER[y % 4][x % 4]:
+                image.set(x, y, scale(image.get(x, y), 1.25))
+    # Sunset clouds: long streaks lit from below.
+    for cy, cx, length, color in ((96, 40, 110, "8a4a66"), (108, 150, 140, "b05a5a"), (118, 20, 90, "c46a52"),
+                                  (102, 260, 120, "7a4466"), (126, 230, 100, "d07a50")):
+        for x in range(cx, cx + length):
+            thick = 1 + int(2 * math.sin((x - cx) / length * math.pi))
+            for y in range(cy - thick, cy + 1):
+                if (x + y) % 5 or y == cy:
+                    image.set(x, y, rgba(color) if y < cy else scale(rgba(color), 1.25))
+    # Far mountains, hazy violet with lit western slopes; then darker nearer ranges.
+    for x in range(width):
+        top = int(_ridge(x, 128, 16, 3))
+        for y in range(top, horizon + 1):
+            lit = _ridge(x - 1, 128, 16, 3) > _ridge(x, 128, 16, 3) and y < top + 5
+            image.set(x, y, rgba("7a5a7c") if lit else (rgba("54456e") if y < top + 9 else rgba("4a3e64")))
+        top = int(_ridge(x, 146, 9, 11, 1.4))
+        for y in range(top, horizon + 6):
+            image.set(x, y, rgba("362f50") if y > top else rgba("5a4a6a"))
+    # The castle hill (right) and its keep.
+    for x in range(200, 400):
+        top = int(150 - 22 * math.exp(-((x - 300) / 55) ** 2) + (hash_cell(x, 5) % 2))
+        for y in range(top, 172):
+            image.set(x, y, rgba("2a2640") if y > top else rgba("4a3a5a"))
+    stone, rim, window = rgba("221f34"), rgba("4e4062"), rgba("ffcf6a")
+    def tower(x0, top, w, roof):
+        image.rect(x0, top, w, 150 - top, stone)
+        image.rect(x0, top, 1, 150 - top, rim)
+        for k in range(0, w, 2):
+            image.set(x0 + k, top - 1, stone)
+        if roof:
+            rise = w + 4
+            for row in range(rise):
+                half = (w / 2 + 1.5) * (1 - row / rise)
+                left = round(x0 + w / 2 - half)
+                image.rect(left, top - 1 - row, max(1, round(half * 2)), 1, rgba("4a2a3e") if row and left == round(x0 + w / 2 - half) and row % 3 == 0 else rgba("3a2234"))
+                image.set(left, top - 1 - row, rgba("6a3a4e"))
+        for wy in range(top + 4, 146, 7):
+            if hash_cell(x0, wy) % 3:
+                image.rect(x0 + w // 2 - 1, wy, 2, 3, window)
+    image.rect(266, 118, 70, 22, stone)
+    for k in range(266, 336, 3):
+        image.set(k, 117, stone)
+    image.rect(266, 118, 70, 1, rim)
+    tower(258, 102, 10, True)
+    tower(286, 86, 14, True)
+    tower(316, 98, 10, True)
+    tower(334, 110, 8, False)
+    image.rect(296, 70, 1, 16, stone)
+    image.rect(297, 70, 7, 4, rgba("a83a3a"))
+    for wx in (272, 280, 306, 326):
+        image.rect(wx, 126, 2, 3, window)
+    image.rect(300, 132, 6, 8, rgba("120f1c"))
+    # The lake: the sky mirrored and darkened, broken by ripples; the moon and castle lights shimmer.
+    for y in range(158, 236):
+        mirror = horizon - (y - 158) * 2
+        for x in range(width):
+            color = scale(image.get(x, max(0, mirror)) or rgba("1e2346"), 0.62)
+            if (y * 7 + x // 9) % 11 == 0:
+                color = scale(color, 1.35)
+            image.set(x, y, color)
+    for y in range(160, 204, 2):
+        wobble = hash_cell(y, 9) % 5 - 2
+        image.rect(mx - 4 + wobble, y, 8 - abs(wobble), 1, rgba("d8cca8"))
+        if y < 190:
+            image.rect(300 + wobble, y, 3, 1, rgba("c89a4a"))
+    for x in range(width):
+        image.set(x, 158, rgba("1c1a2c"))
+    # Far shore pines along the lake, then the grassy ledge in front with big framing pines.
+    for k in range(0, width, 5):
+        if not 240 < k < 360:
+            _pine(image, k + hash_cell(k, 3) % 4, 160, 8 + hash_cell(k, 4) % 7, rgba("161a26"), rgba("2a2a40"))
+    for x in range(width):
+        top = int(214 + 10 * math.sin(x / 63.0) + 6 * math.sin(x / 23.0 + 1) + (hash_cell(x, 8) % 2))
+        for y in range(top, height):
+            depth = y - top
+            if depth == 0:
+                color = rgba("6a7a4a")
+            elif depth < 3:
+                color = rgba("4a5a36")
+            else:
+                color = rgba("2c3a26") if (depth * 3 + BAYER[y % 4][x % 4]) < 40 else rgba("1e2a1c")
+            image.set(x, y, color)
+        if hash_cell(x, 12) % 7 == 0:
+            image.set(x, top - 1, rgba("5a6a3e"))
+            image.set(x, top - 2, rgba("4a5a36"))
+    for cx, base, size in ((14, 267, 120), (46, 262, 92), (372, 267, 128), (394, 258, 84), (342, 265, 70)):
+        _pine(image, cx, base, size, rgba("0e1410"), rgba("26301e"))
+    for cx, cy, r in ((96, 236, 7), (108, 240, 4), (262, 238, 6), (250, 243, 3)):
+        for y in range(cy - r, cy + r):
+            for x in range(cx - r - 3, cx + r + 4):
+                if ((x - cx) / (r + 3)) ** 2 + ((y - cy) / r) ** 2 <= 1:
+                    image.set(x, y, rgba("8a8578") if x - cx + y - cy < -2 else rgba("5a564e"))
+    return image
+
+
 # ---------------------------------------------------------------- herb patches
 # Map patches for herbalism (game/core/crafting.gd HERBS): two 32x32 variants per resource band,
 # in the band's herb colours. Order: HERB_KINDS (Professions.RESOURCES["herbalism"]).
@@ -3804,6 +3961,7 @@ def main():
                                  + [boulder(v) for v in range(3)]),
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan")]),
+        "title.png": title_painting(),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
         "terrain_palette.png": terrain_palette(),

@@ -50,7 +50,7 @@ game/
     action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation (again after a trainer)
     world_maps.gd        Minimap and world map drawn from one terrain texture
     npc_dialogs.gd       NPC service menu; travel, trade, bank (depot), quest, runes, and craft dialogs; player party menu
-    start_panel.gd       Start menu shown until you host or join
+    start_panel.gd       Start screen until you host or join: painted backdrop, character list and creation, host/join
     controls_menu.gd     Key-binding window
   render/                Client-side drawing only
     floor_layer.gd       Floors drawn once into cached 16x16-tile chunks (one chunk per frame)

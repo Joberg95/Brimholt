@@ -46,8 +46,9 @@ from the command line: open the project in the Godot editor, or run `make import
 (`godot --headless --path . --editor --quit`). Otherwise sprites fail to load.
 
 Without `--host` or `--join` (for example when you press F5 in the editor), the game opens
-on a start menu over Cinder Crossing: click **Host a game** in one
-instance. In another instance, enter the host's LAN IPv4 address and click **Join**. Use `127.0.0.1` only for two instances on the same
+on the start screen: pick one of your characters (or **Create new character** and give it a
+name), then click **Host a game** in one instance. In another instance, pick a character, enter
+the host's LAN IPv4 address and click **Join**. Use `127.0.0.1` only for two instances on the same
 computer. All computers must use the same project files. Allow inbound **UDP
 1234** through the host firewall; ENet does not use TCP/WebSockets.
 
@@ -83,6 +84,12 @@ items and monsters reset when the host stops.
   private; copy it to play your characters from another computer. To run two players on one
   computer, give one `--profile=NAME` (its own `identity-NAME.cfg`). One identity can be in a
   world only once.
+- **Characters on the start screen:** every character you create gets its own identity file
+  (`identity-<name>-<id>.cfg`), so each is a separate save on every host. The file also keeps a
+  summary for the menu (name, class, level, look, last played), written from what the host
+  sends back; hosts never read it. **Delete** forgets the identity on this computer (the host's
+  save stays, but nobody can play it again). A character made before names existed shows as
+  "Wanderer".
 - **Protection:** players never send or receive save data, so they cannot edit their
   characters. Each save is signed (HMAC-SHA256 with `host.key`): an edited, damaged, or swapped
   file is refused at join with a message, and the host can restore the `.bak`. Every loaded

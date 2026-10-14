@@ -261,6 +261,7 @@ func _quest_hub_and_lexicon_checks() -> void:
 	_gathering_checks()
 	_crafting_checks()
 	_bag_checks()
+	_character_profile_checks()
 	check(World.next_task({"level": 3, "vocation": "knight", "tasks": {}, "done_tasks": []}) != Quests.TRIAL_TASK
 		and World.task_open(Quests.TRIAL_TASK, {"vocation": Balance.ADVENTURER, "tasks": {}, "done_tasks": []}),
 		"only Adventurers are pointed to the trial")
@@ -911,6 +912,21 @@ func _crafting_checks() -> void:
 	fed_combat.tick(10.0)
 	check(fed.players[1]["health"] > hungry.players[1]["health"] and fed.players[1]["mana"] > hungry.players[1]["mana"],
 		"a meal regenerates health and mana faster")
+
+
+## Start-menu characters: names are cleaned, and a profile's summary is read defensively.
+func _character_profile_checks() -> void:
+	check(Identity.clean_name("  Brann   Ironfist ") == "Brann Ironfist" and Identity.clean_name("x") == ""
+		and Identity.clean_name("<b>Sylra</b>/../") == "bSylrab" and Identity.clean_name("A".repeat(40)).length() == Identity.MAX_NAME
+		and Identity.clean_name("Åsa O'Neil-Ek") == "Åsa O'Neil-Ek", "character names keep letters, digits, spaces, ' and -")
+	var config := ConfigFile.new()
+	config.set_value("identity", "token", Identity.fresh())
+	check(Identity.summary(config, "p")["name"] == Identity.UNNAMED and Identity.summary(config, "p")["level"] == 0,
+		"an old profile without a summary shows as an unnamed new character")
+	config.set_value("character", "equipment", "not a dictionary")
+	config.set_value("character", "level", 12)
+	check(Identity.summary(config, "p")["equipment"] == {} and Identity.summary(config, "p")["level"] == 12,
+		"a damaged summary falls back safely")
 
 
 ## Bag slots: a worn bag's slots extend the backpack; bags come off only when empty.

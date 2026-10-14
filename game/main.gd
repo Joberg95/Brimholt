@@ -100,6 +100,10 @@ var _greetings: Dictionary = {}
 ## one per run with --fresh-identity (tests), or --token=HEX.
 var identity_token: String = ""
 var identity_profile: String = ""
+## Whether identity_token came from identity_profile's file (so the start menu's summary of that
+## character may be updated), and the summary last written.
+var _profile_backed: bool = false
+var _remembered: String = ""
 ## Automated tests and bots run in hidden windows and set this false, so a stray OS close
 ## request (a click or shortcut meant for another app) cannot end their session.
 var close_ends_session: bool = true
@@ -412,6 +416,7 @@ func _reset_session() -> void:
 	self_id = 0
 	hosting = false
 	connected = false
+	_remembered = ""
 	_joining_since = -1.0
 	_leaving = false
 	_move_pending_since = -1.0
@@ -516,7 +521,33 @@ func _connected_to_host() -> void:
 func own_token() -> String:
 	if identity_token.is_empty():
 		identity_token = Identity.load_or_create(identity_profile)
+		_profile_backed = not identity_token.is_empty()
 	return identity_token
+
+
+## Plays as a character profile from the start menu (game/persistence/identity.gd).
+func select_character(profile: String) -> void:
+	if not Identity.valid_profile(profile) or connected:
+		return
+	identity_profile = profile
+	identity_token = ""
+	_profile_backed = false
+	Identity.set_last_profile(profile)
+
+
+## Keeps the start menu's summary of the playing character current (class, level, and look as
+## the host sends them; local only, never sent anywhere).
+func _remember_character(state: Dictionary) -> void:
+	if not _profile_backed:
+		return
+	var look: Dictionary = {}
+	for slot: String in state["equipment"]:
+		if slot != "bag":
+			look[slot] = state["equipment"][slot]
+	var key: String = "%s|%s|%s" % [state.get("vocation"), state.get("level"), look]
+	if key != _remembered:
+		_remembered = key
+		Identity.remember(identity_profile, String(state.get("vocation", "")), int(state.get("level", 1)), look)
 
 
 ## Adds a joining player: their saved character if the host has one for this identity, else a
@@ -687,6 +718,7 @@ func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dicti
 		return
 	connected = true
 	_joining_since = -1.0
+	_remember_character(actors[self_id]["state"])
 	_status_message = "Connected to %s:%d" % [_address.text, port]
 	action_bar.fill_spell_slots(actors[self_id]["state"]["vocation"])
 
@@ -1533,6 +1565,8 @@ func _apply_actor(state: Dictionary, movement: bool = false) -> void:
 		"duration": remaining, "elapsed": 0.0, "received": _now(),
 	}
 	_keep_attack(previous, actors[id])
+	if id == self_id and connected:
+		_remember_character(state)
 	if id == self_id:
 		if movement:
 			_move_pending_since = -1.0
@@ -1566,9 +1600,13 @@ func _build_ui() -> void:
 	maps.build(self, layer)
 	action_bar.build(self, layer)
 	dialogs.build(self, layer)
+	# The start screen covers the whole window, above every other UI, until you host or join.
+	var start_layer := CanvasLayer.new()
+	start_layer.layer = layer.layer + 5
+	add_child(start_layer)
 	start_panel = StartPanel.new()
+	start_layer.add_child(start_panel)
 	start_panel.setup(self, hud.address)
-	layer.add_child(start_panel)
 	quest_list = QuestList.new()
 	quest_list.game = self
 	layer.add_child(quest_list)
