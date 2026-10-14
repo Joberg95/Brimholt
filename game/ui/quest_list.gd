@@ -48,7 +48,9 @@ func refresh() -> void:
 	if key == _key:
 		return
 	_key = key
+	# Removed at once (not just queued) so the old lines do not count toward the new size.
 	for child: Node in _list.get_children():
+		_list.remove_child(child)
 		child.queue_free()
 	visible = shown and (not tasks.is_empty() or not next.is_empty())
 	if not visible:
@@ -77,7 +79,8 @@ func refresh() -> void:
 		_line("Next: %s" % Quests.TASKS[next]["title"], 12, NEXT)
 		_line("  %s, %s" % [giver["name"], giver["place"]], 10, GIVER)
 		_line("  Monsters level %d-%d" % [band.x, band.y], 10, GIVER)
-	size = Vector2(WIDTH, 0)
+	# A container grows to fit but never shrinks on its own: fit the panel to these lines.
+	reset_size()
 
 
 func _line(text: String, font_size: int, color: Color) -> void:
