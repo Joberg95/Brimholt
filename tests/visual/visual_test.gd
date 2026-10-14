@@ -478,8 +478,8 @@ func _check_town_services() -> bool:
 	var buy: Button = null
 	for row: Node in game._travel_list.find_children("*", "HBoxContainer", true, false):
 		var named: bool = false
-		for child: Node in row.get_children():
-			named = named or (child is Label and child.text.begins_with("Health potion"))
+		for child: Node in row.find_children("*", "Label", true, false):
+			named = named or child.text.begins_with("Health potion")
 		for child: Node in row.get_children():
 			if named and child is Button and child.text == "Buy 10":
 				buy = child
@@ -845,7 +845,9 @@ func _check_relics() -> bool:
 	var claim: Button = null
 	var offered: int = 0
 	var locked: int = 0
-	for child: Node in game._travel_list.get_children():
+	for row: Node in game._travel_list.get_children():
+		# Relic buttons sit in coloured item-tooltip wrappers (ItemTip).
+		var child: Node = row.get_child(0) if row.get_child_count() == 1 and row.get_child(0) is Button else row
 		if child is Button and child.text.contains("Abyssal plate"):
 			claim = child
 		if child is Button and child.text.contains("Claim"):

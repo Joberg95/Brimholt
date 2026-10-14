@@ -404,8 +404,8 @@ func open_craft(npc: String) -> void:
 		var picture := TextureRect.new()
 		picture.texture = icon(output)
 		picture.custom_minimum_size = Vector2(32, 32)
-		picture.tooltip_text = game.item_tooltip(output)
 		row.add_child(picture)
+		game.inventory.tip(picture, output)
 		var text := VBoxContainer.new()
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(text)
@@ -471,10 +471,10 @@ func open_trade(npc: String) -> void:
 		var item_label := Label.new()
 		item_label.text = "%s  %d gold" % [item["name"], item["price"]] if World.stackable(kind) \
 			else "%s (level %d)  %d gold" % [item["name"], item["level"], item["price"]]
-		item_label.tooltip_text = game.inventory.item_tooltip(kind)
 		item_label.mouse_filter = Control.MOUSE_FILTER_PASS
 		item_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(item_label)
+		game.inventory.tip(item_label, kind)
 		var picture := TextureRect.new()
 		picture.texture = icon(kind)
 		row.add_child(picture)
@@ -598,18 +598,21 @@ func _reward_label(task: String, state: Dictionary) -> void:
 			World.items_text(items)], Color("#a7b0b8"))
 		paid.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		paid.custom_minimum_size.x = 460
+		var shown: String = ""
 		for entry: Array in items:
-			if not World.ITEMS[entry[0]]["slot"].is_empty():
-				paid.tooltip_text = game.inventory.item_tooltip(entry[0])
-				paid.mouse_filter = Control.MOUSE_FILTER_PASS
+			if shown.is_empty() or not World.ITEMS[entry[0]]["slot"].is_empty():
+				shown = entry[0]
+		if not shown.is_empty():
+			paid.mouse_filter = Control.MOUSE_FILTER_PASS
+			game.inventory.tip(paid, shown)
 		return
 	var pack: String = Quests.next_pack(state["equipment"].get("bag", ""))
 	if pack.is_empty():
 		return
 	var line: Label = _label("Reward: a %s (%d backpack slots)." % [World.ITEMS[pack]["name"],
 		mini(World.BACKPACK_MAX, World.BACKPACK_SIZE + World.ITEMS[pack]["slots"])], Color("#a7b0b8"))
-	line.tooltip_text = game.inventory.item_tooltip(pack)
 	line.mouse_filter = Control.MOUSE_FILTER_PASS
+	game.inventory.tip(line, pack)
 
 
 ## A quest giver: their hunting task, or the Relic keeper's quests (one per final boss, with
@@ -645,13 +648,13 @@ func open_quests(npc: String) -> void:
 			var button := Button.new()
 			var refused: String = game.inventory.requirement_for(relic)
 			button.text = "  Claim the %s%s" % [World.ITEMS[relic]["name"], "" if refused.is_empty() else "  (%s)" % refused]
-			button.tooltip_text = game.inventory.item_tooltip(relic)
 			button.add_theme_color_override("font_color", World.ITEMS[relic]["glow"])
 			button.disabled = trophies.get(boss, 0) <= 0 or not room
 			button.pressed.connect(func() -> void:
 				game.quest_local(npc, relic)
 				close())
 			list.add_child(button)
+			game.inventory.tip(button, relic)
 	if not room:
 		var full := Label.new()
 		full.text = "Make room in your backpack to carry a relic."

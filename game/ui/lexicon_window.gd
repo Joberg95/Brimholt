@@ -5,6 +5,7 @@ extends PanelContainer
 ## each drop's chance and what a vendor pays, plus gold, tier gear, and a boss's relics.
 
 const World = preload("res://game/core/world.gd")
+const Items = preload("res://game/data/items.gd")
 const Lexicon = preload("res://game/core/lexicon.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
@@ -162,7 +163,6 @@ func select(kind: String) -> void:
 func _drop_row(kind: String, chance: String) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	row.tooltip_text = game.inventory.item_tooltip(kind)
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	var icon := TextureRect.new()
 	icon.texture = NpcDialogs.icon(kind)
@@ -173,7 +173,8 @@ func _drop_row(kind: String, chance: String) -> void:
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon)
 	var item: Dictionary = World.ITEMS[kind]
-	var name_label := _label(item["name"], 13, item.get("glow", TEXT))
+	var grade: Array = Items.rarity(item)
+	var name_label := _label(item["name"], 13, grade[1] if not grade.is_empty() else TEXT)
 	name_label.custom_minimum_size = Vector2(220, 0)
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(name_label)
@@ -188,6 +189,7 @@ func _drop_row(kind: String, chance: String) -> void:
 		value.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(value)
 	_details.add_child(row)
+	game.inventory.tip(row, kind)
 
 
 func _section(text: String) -> void:

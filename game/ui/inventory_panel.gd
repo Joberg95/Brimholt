@@ -13,6 +13,7 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Professions = preload("res://game/data/professions.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
+const ItemTip = preload("res://game/ui/item_tip.gd")
 const SLOT_STEP: float = 36.0
 ## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/legs/ring,
 ## and cape/boots/charm.
@@ -282,7 +283,11 @@ func item_tooltip(kind: String) -> String:
 		return ""
 	var item: Dictionary = World.ITEMS[kind]
 	var lines: PackedStringArray = [item["name"]]
-	if not item["slot"].is_empty() and not World.is_bag(kind):
+	var grade: Array = Items.rarity(item)
+	if (item["slot"].is_empty() or item["slot"] in ["bag", "container"]) and not grade.is_empty():
+		# Everything but gear and gold: the quality and what kind of thing it is.
+		lines.append("%s %s" % [grade[0], _category(kind)])
+	if not item["slot"].is_empty() and not item["slot"] in ["bag", "container"]:
 		var who: String = "everyone"
 		if not item["vocations"].is_empty():
 			var names: PackedStringArray = []
@@ -293,7 +298,6 @@ func item_tooltip(kind: String) -> String:
 			lines.append("Relic %s  ·  level %d+  ·  %s" % [item["slot"].capitalize().to_lower(), item["level"], who])
 			lines.append("Quest reward for slaying %s; bound to you (never dropped or lost)" % _relic_source(kind))
 		else:
-			var grade: Array = Items.rarity(item)
 			var slot_name: String = item["slot"].capitalize().to_lower()
 			lines.append("%s  ·  tier %d  ·  level %d+  ·  %s" % [
 				"%s %s" % [grade[0], slot_name] if not grade.is_empty() else slot_name.capitalize(), item["level"], item["level"], who])
@@ -316,12 +320,12 @@ func item_tooltip(kind: String) -> String:
 	for profession: String in Professions.RESOURCES:
 		var band: int = Professions.RESOURCES[profession].find(kind)
 		if band >= 0:
-			gathered = "%s resource (%s %d, lands of level %d+); vendors buy it for %d gold" % [Professions.NAMES[profession],
-				Professions.NAMES[profession], Professions.BAND_LEVELS[band], Professions.BAND_LEVELS[band], item["value"]]
+			gathered = "Gathered with %s %d in lands of level %d+; vendors buy it for %d gold" % [Professions.NAMES[profession],
+				Professions.BAND_LEVELS[band], Professions.BAND_LEVELS[band], item["value"]]
 	if not gathered.is_empty():
 		lines.append(gathered)
 	elif item.has("value"):
-		lines.append("Monster material; vendors buy it for %d gold" % item["value"])
+		lines.append("Vendors buy it for %d gold" % item["value"])
 	if item.has("eat"):
 		lines.append("+%d%% health and mana regeneration for %d minutes" % [roundi(item["eat"]["regen"] * 100.0),
 			roundi(item["eat"]["seconds"] / 60.0)])
@@ -338,6 +342,43 @@ func item_tooltip(kind: String) -> String:
 	elif item.get("sell", 0) > 0 and not item.has("value"):
 		lines.append("Vendors buy it for %d gold" % item["sell"])
 	return "\n".join(lines)
+
+
+## What a non-gear item is, for its quality line: "Rare material", "Common potion" ...
+func _category(kind: String) -> String:
+	var item: Dictionary = World.ITEMS[kind]
+	for profession: String in Professions.RESOURCES:
+		if kind in Professions.RESOURCES[profession]:
+			return "%s resource" % Professions.NAMES[profession].to_lower()
+	if item.has("drink"):
+		return "potion"
+	if item.has("eat"):
+		return "food"
+	if item["slot"] == "container":
+		return "bag"
+	if item["slot"] == "bag":
+		return "pack"
+	return "material"
+
+
+## Gives `content` a coloured item tooltip (ItemTip): a wrapper takes its place in its parent,
+## if it has one, and is returned so callers can add it themselves otherwise.
+func tip(content: Control, kind: String) -> Control:
+	var wrapper := ItemTip.new()
+	wrapper.tooltip_text = item_tooltip(kind)
+	var grade: Array = Items.rarity(World.ITEMS.get(kind, {}))
+	wrapper.rarity_color = grade[1] if not grade.is_empty() else Color.TRANSPARENT
+	wrapper.size_flags_horizontal = content.size_flags_horizontal
+	wrapper.size_flags_vertical = content.size_flags_vertical
+	content.tooltip_text = ""
+	var parent: Node = content.get_parent()
+	if parent != null:
+		var index: int = content.get_index()
+		parent.remove_child(content)
+		parent.add_child(wrapper)
+		parent.move_child(wrapper, index)
+	wrapper.add_child(content)
+	return wrapper
 
 
 func _add_panel_label(layer: CanvasLayer, text: String, at: Vector2) -> Label:

@@ -2957,8 +2957,18 @@ func _building_checks() -> void:
 		check(World._room_open(building, door - building["outward"][door], World.TOWNSFOLK[id]["cell"]),
 			"%s's room stays open around the furniture" % World.TOWNSFOLK[id]["name"])
 	# Rarity grades replace the slot edge colour; only wearables have one.
-	check(Items.rarity(World.ITEMS["copper_blade"])[0] == "Common" and Items.rarity(World.ITEMS["health_potion"]).is_empty()
-		and Items.rarity(World.ITEMS["traveler_pack"]).is_empty(), "rarity grades for gear only")
+	check(Items.rarity(World.ITEMS["copper_blade"])[0] == "Common" and Items.rarity(World.ITEMS["gold_coins"]).is_empty(),
+		"gear grades by tier; gold has no quality")
+	for kind: String in World.ITEMS:
+		if not World.ITEMS[kind].has("gold"):
+			check(not Items.rarity(World.ITEMS[kind]).is_empty(), "%s has a quality colour" % kind)
+	var graded := func(kinds: Array) -> Array: return kinds.map(func(kind: String) -> String: return Items.rarity(World.ITEMS[kind])[0])
+	check(graded.call(["health_potion", "strong_health_potion", "great_health_potion"]) == ["Common", "Uncommon", "Rare"]
+		and graded.call(["copper_ore", "iron_ore", "silver_ore", "cobalt_ore", "starmetal_ore"]) == ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
+		and graded.call(["grilled_perch", "glimmerfin_feast"]) == ["Common", "Legendary"]
+		and graded.call(["leather_satchel", "starweave_rucksack"]) == ["Common", "Legendary"]
+		and graded.call(["vole_tail", "rune_shard", "forge_heart"]) == ["Common", "Rare", "Legendary"],
+		"potions, resources, food, bags, and materials grade by their worth")
 	var grades: Array = []
 	for level: int in Items.TIER_LEVELS:
 		var grade: String = Items.rarity({"slot": "helmet", "level": level})[0]

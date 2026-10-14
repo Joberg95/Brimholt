@@ -46,6 +46,11 @@ const RARITIES: Array = [
 	[1, "Common", Color("#c9c4b8")], [10, "Uncommon", Color("#7ccf6a")], [20, "Rare", Color("#6a9cff")],
 	[30, "Epic", Color("#b47cff")], [40, "Legendary", Color("#ff9a3c")], [RELIC_LEVEL, "Mythic", Color("#ff5a7a")],
 ]
+## Lowest material value of each grade (Common, Uncommon, Rare, Epic, Legendary).
+const QUALITY_VALUES: Array[int] = [0, 50, 150, 400, 1000]
+## Gathered resources (game/data/professions.gd) grade by their band's value instead.
+const GATHERED_LOOKS: Array[String] = ["ore", "log", "herb", "fish"]
+const RESOURCE_VALUES: Array[int] = [0, 4, 7, 10, 14]
 
 
 ## id -> {name, slot, level, vocations, look, colors, stats, [armor], [outfit], [gold], [value], [price], [sell],
@@ -165,17 +170,45 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 	return {}
 
 
-## [name, colour] of a wearable item's rarity, or [] for potions, materials, gold, and packs.
+## [name, colour] of an item's quality, or [] for gold. Gear grades by tier (two tiers per
+## grade), mythic gear and relics have their own; everything else grades by worth: materials and
+## resources by value (QUALITY_VALUES), potions by strength, food by its regeneration, and bags
+## and packs by their slots.
 static func rarity(item: Dictionary) -> Array:
-	if item.get("slot", "") in ["", "bag", "container"]:
-		return []
 	if item.has("glow"):
 		return ["Relic", item["glow"]]
-	var grade: Array = RARITIES[0]
-	for entry: Array in RARITIES:
-		if item["level"] >= entry[0]:
-			grade = entry
-	return [grade[1], grade[2]]
+	var grade: int = quality(item)
+	return [] if grade < 0 else [RARITIES[grade][1], RARITIES[grade][2]]
+
+
+## Index into RARITIES (-1 for gold piles and unknown items).
+static func quality(item: Dictionary) -> int:
+	var slot: String = item.get("slot", "")
+	if item.is_empty() or item.has("gold"):
+		return -1
+	if slot in ["bag", "container"]:
+		var slots: int = int(item.get("slots", 0))
+		return clampi((slots - 6) / 2, 0, 4) if slot == "container" else clampi(slots / 4, 0, 4)
+	if not slot.is_empty():
+		var grade: int = 0
+		for index: int in RARITIES.size():
+			if item.get("level", 1) >= RARITIES[index][0]:
+				grade = index
+		return grade
+	if item.has("drink"):
+		var share: float = 0.0
+		for stat: String in item["drink"]:
+			share += float(item["drink"][stat])
+		return clampi(floori((share - 0.2) / 0.1 + 0.001), 0, 4)
+	if item.has("eat"):
+		return clampi(roundi((float(item["eat"]["regen"]) - 0.2) / 0.18), 0, 4)
+	var value: int = int(item.get("value", 0))
+	var thresholds: Array[int] = RESOURCE_VALUES if item.get("look", "") in GATHERED_LOOKS else QUALITY_VALUES
+	var result: int = 0
+	for index: int in thresholds.size():
+		if value >= thresholds[index]:
+			result = index
+	return result
 
 
 ## Whether an item is mythic: unbound level-50 equipment that monsters drop (not a relic).
