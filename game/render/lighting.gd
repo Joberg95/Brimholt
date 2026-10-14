@@ -3,7 +3,7 @@ extends Node2D
 ## shares its map-pixel transform). A CanvasModulate tints the world by time of day, darker
 ## in zones with an ambient colour (the Hollow Reach) and under clouds (weather.gd), and
 ## briefly bright with lightning. Point lights from a CC0 Kenney
-## light texture follow players (lanterns), NPCs, glowing relics and bosses, spells, and
+## light texture follow players holding a torch, NPCs, glowing relics and bosses, spells, and
 ## missiles; they fade in as the ambient darkens. Day and night follow the host's clock.
 
 const World = preload("res://game/core/world.gd")
@@ -15,12 +15,11 @@ const DAY_SECONDS: float = 2400.0
 const DAY_START: float = 0.32
 const NIGHT: Color = Color(0.34, 0.38, 0.58)
 const DUSK: Color = Color(0.92, 0.72, 0.6)
+## The warm lamp light around NPCs. Light radii are in tiles (the texture is 128 px wide,
+## fading to its edge).
 const LANTERN: Color = Color(1.0, 0.82, 0.55)
-## Light radius in tiles (the texture is 128 px wide, fading to its edge).
-const LANTERN_TILES: float = 5.0
-## In a "dark" dungeon a lantern only lights an arm's length; a held torch (look "torch" in
-## the off hand) lights TORCH_TILES anywhere.
-const DARK_LANTERN_TILES: float = 1.4
+## A held torch (look "torch" in the off hand) lights TORCH_TILES around its holder; players
+## without one carry no light.
 const TORCH_TILES: float = 6.0
 const GLOW_TILES: float = 3.5
 const SPELL_TILES: float = 3.0
@@ -31,7 +30,7 @@ var time_override: float = -1.0
 var modulate_node: CanvasModulate
 ## The light before weather: what time of day and the zone alone would give.
 var clear_light: Color = Color.WHITE
-## The camera is in a "dark" dungeon (lanterns shrink; torches still light).
+## The camera is in a "dark" dungeon (pitch black but for torches).
 var dark_zone: bool = false
 ## The weather at the camera this frame (Weather.local), read by the rain layer.
 var weather: Dictionary = {"kind": "clear", "cloud": 0.0, "rain": 0.0, "storm": 0.0, "flash": 0.0}
@@ -96,15 +95,12 @@ func _process(_delta: float) -> void:
 	var area: Rect2i = view.visible_cells().grow(4)
 	var time: float = Time.get_ticks_msec() / 1000.0
 	if darkness > 0.01:
-		var lantern: float = DARK_LANTERN_TILES if dark_zone else LANTERN_TILES
+		# Only a held torch lights a player: without one they stand in the dark like everyone else.
 		for id: int in game.actors:
 			var actor: Dictionary = game.actors[id]
-			if area.has_point(Vector2i(actor["visual"])):
-				if holds_torch(actor["state"]["equipment"]):
-					var flicker: float = 0.92 + 0.08 * sin(time * 8.0 + id) * sin(time * 4.7)
-					_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness)
-				else:
-					_light(_centre(actor["visual"]), LANTERN, lantern * (1.0 if id == game.self_id else 0.7), 1.15 * darkness)
+			if area.has_point(Vector2i(actor["visual"])) and holds_torch(actor["state"]["equipment"]):
+				var flicker: float = 0.92 + 0.08 * sin(time * 8.0 + id) * sin(time * 4.7)
+				_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness)
 		for cell: Vector2i in World.NPC_CELLS:
 			if area.has_point(cell) and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") != "waystone":
 				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness)

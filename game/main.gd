@@ -30,7 +30,6 @@ const MicroMenu = preload("res://game/ui/micro_menu.gd")
 const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 const Bots = preload("res://game/core/bots.gd")
 const Solo = preload("res://game/core/solo.gd")
-const BotPanel = preload("res://game/ui/bot_panel.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -118,7 +117,6 @@ var character_window: CharacterWindow
 var professions_window: ProfessionsWindow
 var micro_menu: MicroMenu
 var lexicon: LexiconWindow
-var bot_panel: BotPanel
 ## Host-only player bots (game/core/bots.gd).
 var bots: Bots
 var inventory: InventoryPanel
@@ -281,7 +279,6 @@ func _process(delta: float) -> void:
 	spell_book.refresh()
 	character_window.refresh()
 	professions_window.refresh()
-	bot_panel.refresh()
 	start_panel.refresh()
 	action_bar.redraw()
 	micro_menu.redraw()
@@ -302,7 +299,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
 		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
 				and not character_window.visible and not professions_window.visible and not lexicon.visible \
-				and not bot_panel.visible and own_target() != 0:
+				and own_target() != 0:
 			target_local(0)
 		_world_map.hide()
 		_close_travel()
@@ -313,7 +310,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		for window: PanelContainer in inventory.bag_windows:
 			window.hide()
 		lexicon.hide()
-		bot_panel.hide()
 		return
 	var key: Key = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	var action: String = keybinds.action_for(key)
@@ -1040,12 +1036,8 @@ func _chase_direction() -> Vector2i:
 	var goal: Vector2i = target["state"]["cell"]
 	if Combat.in_reach(own["cell"], goal, Combat.VOCATION_RANGE.get(Combat.attack_style(own["vocation"], own["equipment"]), 1)):
 		return Vector2i.ZERO
-	var taken: Dictionary = {}
-	for group: Dictionary in [actors, monsters]:
-		for id: int in group:
-			if id != self_id:
-				taken[group[id]["state"]["cell"]] = true
-	return Combat.path_step(own["cell"], goal, func(cell: Vector2i) -> bool: return taken.has(cell))
+	# Creatures never block a player, so only the land shapes the path.
+	return Combat.path_step(own["cell"], goal, func(_cell: Vector2i) -> bool: return false)
 
 
 func _creature_at(cell: Vector2i) -> int:
@@ -1658,16 +1650,13 @@ func _build_ui() -> void:
 	lexicon = LexiconWindow.new()
 	lexicon.game = self
 	layer.add_child(lexicon)
-	bot_panel = BotPanel.new()
-	bot_panel.game = self
-	layer.add_child(bot_panel)
 	micro_menu = MicroMenu.new()
 	add_child(micro_menu)
 	micro_menu.build(self, layer)
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
 	# list, location line, spell book, character window, lexicon, world map, dialog panel, and Controls menu.
 	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, character_window,
-			professions_window, lexicon, bot_panel, maps.world_map, dialogs.panel, hud.controls]:
+			professions_window, lexicon, maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_controls = hud.controls

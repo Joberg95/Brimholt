@@ -230,7 +230,7 @@ steps onto the Cinder cellar stairway, captures the Rat King in the private copy
 cave rock (`visual-mine.png`). It ends at the
 Hollow Reach gate and in the throne room with Vaelith, checking the PvP banner and the
 obsidian floor texels (`visual-hollow-gate.png`, `visual-hollow-throne.png`). At night it
-checks that the world darkens, the player's lantern lights the ground, the UI panel is
+checks that the world darkens, only a held torch lights the ground around the player, the UI panel is
 unchanged, and hits and spells emit particles that free themselves (`visual-night.png`,
 `visual-particles.png`). Pixel checks run at a pinned noon. The map's own
 monsters are removed at the start so the pixel checks stay deterministic. It also uses simulated mouse

@@ -6,7 +6,7 @@ extends RefCounted
 ## (game/data/bot_behavior.tres, built by game/core/ai/bot_tree.gd) decides each turn; its
 ## tasks call the helpers below. It plays like the fight simulator (tools/testing/fight_sim.gd):
 ## strongest ready spell, heals and potions at the same health shares. Clients cannot create
-## bots; only the host's Bots panel (game/ui/bot_panel.gd) does.
+## bots: solo play (game/core/solo.gd) brings its own, and tests use the host's spawn_bot.
 ##
 ## Stances:
 ##   "hunter"  hunts monsters near its post and fights back against players who attack it.
@@ -34,7 +34,7 @@ const Nav = preload("res://game/core/nav.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 
-## Stances the host's Bots panel offers; solo play also uses SOLO_STANCES.
+## Stances for standalone bots (tests, the fight and duel simulators); solo play uses SOLO_STANCES.
 const STANCES: Array[String] = ["hunter", "pvp", "dummy"]
 const SOLO_STANCES: Array[String] = ["companion", "rival"]
 const STANCE_NAMES: Dictionary = {"hunter": "Hunter", "pvp": "PvP", "dummy": "Training dummy", "companion": "Companion",
@@ -375,10 +375,9 @@ func _step(id: int, direction: Vector2i, now: float, events: Array) -> void:
 		events.append({"kind": "player", "id": id, "movement": true})
 
 
-## Occupied tiles and stairways block a bot's path (bots never take stairs or leave the world).
-func _blocked_for(id: int, now: float) -> Callable:
-	var taken: Dictionary = world.occupied_cells(now, id)
-	return func(cell: Vector2i) -> bool: return taken.has(cell) or World.terrain(cell) in ["v", "^"]
+## Stairways block a bot's path (bots never take stairs on their own); creatures never do.
+func _blocked_for(_id: int, _now: float) -> Callable:
+	return func(cell: Vector2i) -> bool: return World.terrain(cell) in ["v", "^"]
 
 
 
@@ -590,43 +589,12 @@ func travel(id: int, goal: Vector2i, reach: int, now: float, events: Array) -> b
 			return false
 	var next: Vector2i = route[0]
 	var direction: Vector2i = next - player["cell"]
-	if _swap_with_friend(id, next, now, events):
-		route.pop_front()
-		return false
-	if world.occupied(next, now, id):
-		# Someone stands on the route: step around toward a point a few tiles on.
-		direction = Combat.path_step(player["cell"], route[mini(4, route.size() - 1)], _blocked_for(id, now))
-	if direction == Vector2i.ZERO:
-		return false
 	if world.move(id, direction, now)["ok"]:
 		events.append({"kind": "player", "id": id, "movement": true})
 		if player["cell"] == next:
 			route.pop_front()
 		else:
 			bot["route"] = []
-	return false
-
-
-## A bot squeezes past a party member (another bot) standing still on the tile it steps to:
-## they trade places, as two players stepping past each other. Returns whether it did.
-func _swap_with_friend(id: int, next: Vector2i, now: float, events: Array) -> bool:
-	var player: Dictionary = world.players[id]
-	if player["party"] == 0 or now < player["next_move"]:
-		return false
-	for other: int in world.players:
-		var friend: Dictionary = world.players[other]
-		if other != id and friend["cell"] == next and bots.has(other) and friend["party"] == player["party"] \
-				and now >= friend["next_move"]:
-			var here: Vector2i = player["cell"]
-			for pair: Array in [[id, next, next - here], [other, here, here - next]]:
-				var who: Dictionary = world.players[pair[0]]
-				who["from"] = who["cell"]
-				who["cell"] = pair[1]
-				who["facing"] = pair[2]
-				who["next_move"] = now + World.MOVE_SECONDS
-				bots[pair[0]]["last_cell"] = pair[1]
-				events.append({"kind": "player", "id": pair[0], "movement": true})
-			return true
 	return false
 
 

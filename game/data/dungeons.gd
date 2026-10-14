@@ -10,7 +10,7 @@ extends RefCounted
 ##
 ## Layout legend: "#" wall, "." floor, "^" stairs up, "@" arrival, anything else a monster from
 ## "monsters" (symbol -> [id, level]); "boss" names the symbol of the dungeon's boss. A "dark"
-## dungeon shrinks the lantern to an arm's length: only a held torch lights it.
+## dungeon is pitch black: only a held torch lights it.
 
 ## First column of the dungeon band; the overworld is everything left of BAND_X - COPY_GAP.
 const BAND_X: int = 388
@@ -114,7 +114,7 @@ const DUNGEONS: Dictionary = {
 			"####################################",
 		],
 	},
-	# A lightless spider cave in the wilds: "dark" shrinks the lantern to an arm's length, so
+	# A lightless spider cave in the wilds: "dark" leaves it pitch black, so
 	# players carry a torch (a vendor off-hand item) instead of a shield or book.
 	"silkhollow": {
 		"name": "Silkhollow", "town": "Thornfield Wilds", "copies": 4, "floor": "c", "wall": "C",

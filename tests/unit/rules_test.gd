@@ -100,10 +100,17 @@ func _run() -> void:
 	check(world.move(2, Vector2i.LEFT, 0.0)["ok"], "one cardinal move")
 	check(world.players[2]["cell"] == Vector2i(6, 6), "server computes destination")
 	check(not world.move(2, Vector2i.RIGHT, 0.01)["ok"], "server cooldown")
-	check(not world.move(1, Vector2i.RIGHT, 0.2)["ok"], "occupied destination")
 	check(world.move(2, Vector2i.DOWN, 0.2)["ok"], "next step after cooldown")
-	check(world.occupied(Vector2i(6, 6), 0.21), "origin reserved in transit")
-	check(not world.move(1, Vector2i.RIGHT, 0.21)["ok"], "cannot overlap a departing actor")
+	check(world.occupied(Vector2i(6, 6), 0.21), "origin reserved in transit (for spawns and monsters)")
+	check(world.move(1, Vector2i.RIGHT, 0.21)["ok"] and world.players[1]["cell"] == Vector2i(6, 6),
+		"players walk through each other: only the land blocks them")
+	var through: int = Combat.new(world, 3).spawn_monster("field_vole", 1, Vector2i(7, 6), 0.0)
+	check(world.move(1, Vector2i.RIGHT, 0.4)["ok"] and world.players[1]["cell"] == world.monsters[through]["cell"],
+		"players walk through monsters")
+	world.monsters.erase(through)
+	world.players[1]["cell"] = Vector2i(5, 6)
+	world.players[1]["from"] = Vector2i(5, 6)
+	world.players[1]["next_move"] = 0.0
 	var transit: Dictionary = world.export_player(2, 0.29)
 	check(is_equal_approx(transit["remaining"], 0.09), "late join sees remaining movement")
 	check(transit["from"] == Vector2i(6, 6), "late join sees movement origin")
@@ -1015,10 +1022,11 @@ func _solo_checks() -> void:
 	for band: int in solo.bands:
 		solo.bands[band]["rest_until"] = 0.0  # disbanding a raid gives the bands a rest first
 	_place(world, 1, island)
-	run.call(25.0)
 	var hunted: bool = false
-	for id: int in [1] + friends:
-		hunted = hunted or not world.players[id]["aggressors"].is_empty()
+	for step: int in 50:
+		run.call(0.5)
+		for id: int in [1] + friends:
+			hunted = hunted or not world.players[id]["aggressors"].is_empty()
 	check(hunted, "rivals ambush your group in a PvP zone")
 
 
@@ -3668,8 +3676,8 @@ func _combat_checks() -> void:
 		"health is public; mana and target are private")
 	var vole: int = combat.spawn_monster("field_vole", 1, Vector2i(5, 8), 0.0)
 	var far: int = combat.spawn_monster("field_vole", 1, Vector2i(15, 15), 0.0)
-	check(world.move(1, Vector2i.DOWN, 0.0)["ok"] and not world.move(1, Vector2i.DOWN, 1.0)["ok"] and world.players[1]["cell"] == Vector2i(5, 7),
-		"monsters block movement")
+	check(world.move(1, Vector2i.DOWN, 0.0)["ok"] and world.move(1, Vector2i.DOWN, 1.0)["ok"] and world.players[1]["cell"] == Vector2i(5, 8),
+		"players walk onto a monster's tile")
 	_place(world, 1, Vector2i(5, 6))
 	check(combat.set_target(1, "x", 0.0)["reason"] == "Unknown target", "malformed target rejected")
 	check(combat.set_target(1, -999, 0.0)["reason"] == "Unknown target", "unknown target rejected")

@@ -1,5 +1,5 @@
 extends Node
-## The micro menu right of the action bar: small drawn buttons that open the character window,
+## The micro menu right of the action bar: small painted buttons that open the character window,
 ## spell book, professions, quest list, lexicon, world map, and Controls menu, the same as their keys. Each button's
 ## tooltip names it and its key, and an open panel's button is framed in gold.
 
@@ -9,8 +9,10 @@ const Layout = preload("res://game/ui/layout.gd")
 
 const SIZE: float = 36.0
 const GAP: float = 3.0
-## Icons are drawn on a 40-pixel grid and scaled to SIZE.
-const ICON_GRID: float = 40.0
+## Painted 32-pixel icons (tools/generators/make_sprites.py MENU_ICONS), one per entry in ICON_ORDER.
+const ICONS: Texture2D = preload("res://assets/sprites/menu_icons.png")
+const ICON: float = 32.0
+const ICON_ORDER: Array[String] = ["character", "spell_book", "professions", "quest_list", "lexicon", "world_map", "controls"]
 const ACCENT: Color = Color("#ffcf6a")
 ## [action, title, what it shows]; actions are Keybinds actions, except "controls" (no key).
 const ENTRIES: Array = [
@@ -40,6 +42,8 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 		button.position = Vector2(bar_end + 12 + index * (SIZE + GAP), top)
 		button.size = Vector2.ONE * SIZE
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		button.mouse_entered.connect(button.queue_redraw)
+		button.mouse_exited.connect(button.queue_redraw)
 		button.draw.connect(_draw_button.bind(button, entry[0]))
 		button.gui_input.connect(func(event: InputEvent) -> void:
 			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
@@ -70,51 +74,14 @@ func redraw() -> void:
 func _draw_button(button: Control, action: String) -> void:
 	var area := Rect2(Vector2.ZERO, button.size)
 	var open: bool = game.panel_open(action)
-	button.draw_rect(area, Color(0.08, 0.1, 0.12, 0.85))
-	button.draw_rect(area, ACCENT if open else Color("#4a5560"), false, 2.0 if open else 1.0)
-	button.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * SIZE / ICON_GRID)
-	match action:
-		"character":
-			button.draw_circle(Vector2(20, 14), 5.5, Color("#d8b48a"))
-			button.draw_colored_polygon(PackedVector2Array([Vector2(10, 33), Vector2(30, 33), Vector2(27, 22), Vector2(13, 22)]),
-				Color("#4f7f86"))
-			button.draw_rect(Rect2(18, 22, 4, 4), Color("#c9a24a"))
-		"spell_book":
-			button.draw_rect(Rect2(11, 9, 18, 23), Color("#7a3a3a"))
-			button.draw_rect(Rect2(11, 9, 4, 23), Color("#4f2424"))
-			button.draw_rect(Rect2(27, 11, 2, 19), Color("#efe6cf"))
-			button.draw_circle(Vector2(21, 20), 4.0, Color("#ffcf6a"))
-		"professions":
-			button.draw_line(Vector2(12, 30), Vector2(26, 12), Color("#8a6440"), 3.0)
-			button.draw_colored_polygon(PackedVector2Array([Vector2(19, 8), Vector2(31, 14), Vector2(28, 17), Vector2(22, 12)]),
-				Color("#c8ccd0"))
-			button.draw_circle(Vector2(12, 26), 4.0, Color("#9ac050"))
-			button.draw_circle(Vector2(12, 26), 1.6, Color("#f0d040"))
-		"quest_list":
-			button.draw_rect(Rect2(12, 11, 16, 20), Color("#e6d6a8"))
-			button.draw_rect(Rect2(10, 8, 20, 4), Color("#c8b07a"))
-			button.draw_rect(Rect2(10, 30, 20, 4), Color("#c8b07a"))
-			for y: int in [15, 19, 23, 27]:
-				button.draw_rect(Rect2(14, y, 12 if y != 27 else 7, 1), Color("#6a5a3a"))
-		"lexicon":
-			button.draw_rect(Rect2(9, 10, 22, 21), Color("#3a5a4a"))
-			button.draw_rect(Rect2(9, 10, 3, 21), Color("#24382e"))
-			button.draw_rect(Rect2(29, 12, 2, 17), Color("#efe6cf"))
-			button.draw_circle(Vector2(20, 18), 4.5, Color("#c8ccd0"))
-			button.draw_circle(Vector2(20, 18), 2.5, Color("#3a5a4a"))
-			button.draw_line(Vector2(23, 21), Vector2(27, 26), Color("#c8ccd0"), 2.0)
-		"world_map":
-			var folds: Array[Color] = [Color("#6a8a4a"), Color("#4a6a8a"), Color("#6a8a4a")]
-			for fold: int in 3:
-				var x: float = 8 + fold * 8
-				var lift: float = 2.0 if fold % 2 == 0 else -2.0
-				button.draw_colored_polygon(PackedVector2Array([Vector2(x, 12 + lift), Vector2(x + 8, 12 - lift),
-					Vector2(x + 8, 30 - lift), Vector2(x, 30 + lift)]), folds[fold])
-			button.draw_line(Vector2(17, 18), Vector2(23, 24), Color("#e05a4a"), 2.0)
-			button.draw_line(Vector2(23, 18), Vector2(17, 24), Color("#e05a4a"), 2.0)
-		"controls":
-			button.draw_rect(Rect2(7, 14, 26, 14), Color("#5a6470"))
-			for row: int in 2:
-				for column: int in 4:
-					button.draw_rect(Rect2(9 + column * 6, 16 + row * 5, 4, 3), Color("#c8ccd0"))
-			button.draw_rect(Rect2(13, 26, 14, 1), Color("#c8ccd0"))
+	var hovered: bool = button.get_global_rect().has_point(button.get_global_mouse_position())
+	button.draw_rect(area, Color("#1a1612", 0.92))
+	button.draw_rect(area.grow(-2), Color("#2a231c") if not open else Color("#3a2e1e"))
+	button.draw_rect(Rect2(2, 2, area.size.x - 4, 1), Color(1, 1, 1, 0.08))
+	var frame: Color = ACCENT if open else (Color("#b89a5a") if hovered else Color("#6a5638"))
+	button.draw_rect(area, frame, false, 2.0 if open else 1.0)
+	var index: int = ICON_ORDER.find(action)
+	if index >= 0:
+		var inset: float = (SIZE - ICON) / 2.0
+		button.draw_texture_rect_region(ICONS, Rect2(inset, inset, ICON, ICON),
+			Rect2(index * ICON, 0, ICON, ICON), Color.WHITE if open or hovered else Color(0.88, 0.88, 0.88))

@@ -608,7 +608,8 @@ static func stats(level: int, equipment: Dictionary, vocation: String = Balance.
 	return result
 
 
-## Players and monsters block their tile and, while stepping, the tile they left.
+## Players and monsters on a tile and, while stepping, the tile they left. Players walk through
+## each other and monsters (World.move); this keeps spawns, arrivals, and monsters' own steps apart.
 func occupied(cell: Vector2i, now: float, except_id: int = 0) -> bool:
 	for group: Dictionary in [players, monsters]:
 		for id: int in group:
@@ -784,10 +785,9 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	if now < player["next_move"]:
 		return {"ok": false, "reason": "Movement cooldown", "retry": player["next_move"] - now}
 	var destination: Vector2i = player["cell"] + direction
+	# Only the land blocks a player: players and monsters are walked through.
 	if not walkable(destination):
 		return {"ok": false, "reason": "Blocked tile", "retry": MOVE_SECONDS}
-	if occupied(destination, now, id):
-		return {"ok": false, "reason": "Another player is in the way", "retry": MOVE_SECONDS}
 	player["from"] = player["cell"]
 	player["cell"] = destination
 	player["facing"] = direction

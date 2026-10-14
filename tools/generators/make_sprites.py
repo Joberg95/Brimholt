@@ -3451,6 +3451,101 @@ def furniture(kind):
     return image.outlined()
 
 
+# ---------------------------------------------------------------- micro menu icons
+# 32x32 icons for the buttons right of the action bar (game/ui/micro_menu.gd), shaded like
+# the item icons. Order: MENU_ICONS (MicroMenu.ENTRIES actions).
+
+MENU_ICONS = ["character", "spell_book", "professions", "quest_list", "lexicon", "world_map", "controls"]
+
+
+def menu_icon(kind):
+    image = Image(TILE, TILE)
+    leather = (rgba("b0623e"), rgba("8a4630"), rgba("5e2c20"))
+    parchment = (rgba("f2e4c0"), rgba("dcc89a"), rgba("a8946a"))
+    gold = (rgba("f6d77a"), rgba("d4a73c"), rgba("8f6a1e"))
+    iron = (rgba("d0d4d8"), rgba("9aa0a8"), rgba("5e646c"))
+    wood = (rgba("b08a5a"), rgba("8a6440"), rgba("5a3f25"))
+    if kind == "character":
+        # A helmeted bust: shoulders in mail, a steel helm with a gold crest.
+        shade(image, {p for p in ellipse(16, 30, 12, 9) if p[1] <= 29}, (rgba("8a96a8"), rgba("5e6878"), rgba("3a4250")))
+        shade(image, box(13, 17, 6, 5), (rgba("e8c0a0"), rgba("c89878"), rgba("98684c")))
+        shade(image, {p for p in ellipse(16, 13, 7, 8) if p[1] <= 16} | box(9, 13, 14, 4), iron)
+        image.rect(11, 14, 10, 2, rgba("26282c"))
+        image.rect(15, 5, 2, 12, gold[1])
+        image.rect(15, 5, 1, 12, gold[0])
+        for x, y in ((12, 24), (20, 24), (16, 26)):
+            image.set(x, y, gold[1])
+    elif kind == "spell_book":
+        # A closed tome in red leather with gold corners and a glowing rune.
+        shade(image, box(7, 5, 18, 23), leather)
+        image.rect(23, 7, 3, 20, parchment[1])
+        image.rect(23, 7, 1, 20, parchment[2])
+        image.rect(7, 5, 3, 23, scale(leather[2], 0.85))
+        for x, y in ((10, 5), (21, 5), (10, 25), (21, 25)):
+            image.rect(x, y, 3, 3, gold[1])
+            image.set(x, y, gold[0])
+        rune = line(16, 10, 16, 23) | line(16, 12, 20, 15) | line(16, 15, 20, 18)
+        for x, y in thick(rune, ((0, 0), (1, 0))):
+            image.set(x, y, rgba("ffd86a"))
+        for x, y in ellipse(17, 16, 6, 8):
+            if image.get(x, y) == leather[1] and (x + y) % 3 == 0:
+                image.set(x, y, scale(leather[1], 1.25))
+    elif kind == "professions":
+        # A crossed pickaxe and hammer.
+        for x, y in thick(line(8, 26, 24, 8), ((0, 0), (1, 0), (0, 1))):
+            image.set(x, y, wood[1] if (x + y) % 4 else wood[0])
+        for x, y in thick(line(8, 8, 24, 26), ((0, 0), (1, 0), (0, 1))):
+            image.set(x, y, wood[1] if (x + y) % 4 else wood[0])
+        shade(image, {(x, y) for x in range(16, 30) for y in range(3, 12) if abs((x - 23) * 0.55 - (y - 7)) < 1.6 + abs(x - 23) * 0.12}, iron)
+        shade(image, box(3, 4, 9, 6), iron)
+        image.rect(3, 4, 9, 1, iron[0])
+    elif kind == "quest_list":
+        # A parchment scroll with wooden rollers and a red wax seal.
+        shade(image, box(9, 7, 14, 19), parchment)
+        for y in (6, 25):
+            shade(image, box(7, y, 18, 3), wood, False)
+        for y in range(11, 22, 3):
+            image.rect(11, y, 9 if y != 20 else 5, 1, rgba("8a7650"))
+        shade(image, ellipse(20, 22, 3.2, 3.2), (rgba("e06a5a"), rgba("b03a32"), rgba("7a2420")), False)
+    elif kind == "lexicon":
+        # A green bestiary with a monster's eye on the cover.
+        cover = (rgba("6a9a6a"), rgba("3e6a48"), rgba("24402c"))
+        shade(image, box(7, 5, 18, 23), cover)
+        image.rect(23, 7, 3, 20, parchment[1])
+        image.rect(7, 5, 3, 23, scale(cover[2], 0.85))
+        shade(image, ellipse(17, 16, 6, 4), (rgba("f8f0d8"), rgba("e0d0a0"), rgba("a89870")), False)
+        shade(image, ellipse(17, 16, 2.6, 3.4), (rgba("ffb060"), rgba("e07a2a"), rgba("8a3a10")), False)
+        image.rect(17, 14, 1, 5, rgba("1a1010"))
+    elif kind == "world_map":
+        # A folded map: three panels of land and sea, a red route and a cross.
+        folds = [(rgba("b8c890"), rgba("98a870"), rgba("6a7a4a")), (rgba("90b8d0"), rgba("6a98b8"), rgba("4a7090")),
+                 (rgba("b8c890"), rgba("98a870"), rgba("6a7a4a"))]
+        for index, tones3 in enumerate(folds):
+            x0 = 4 + index * 8
+            lift = 2 if index % 2 == 0 else -2
+            panel = {(x, y) for x in range(x0, x0 + 8) for y in range(8 + lift + (x - x0) * -lift // 4, 26 + lift + (x - x0) * -lift // 4)}
+            shade(image, panel, tones3)
+        for x, y in line(7, 20, 14, 14) | line(14, 14, 22, 18):
+            if (x + y) % 2 == 0:
+                image.set(x, y, rgba("c03a32"))
+        for x, y in thick(line(20, 9, 25, 14) | line(25, 9, 20, 14), ((0, 0), (1, 0))):
+            image.set(x, y, rgba("c03a32"))
+    elif kind == "controls":
+        # A brass cog with a key across it.
+        cog = set()
+        for step in range(8):
+            angle = step * math.pi / 4
+            cog |= box(round(16 + math.cos(angle) * 10) - 2, round(16 + math.sin(angle) * 10) - 2, 4, 4)
+        cog |= ellipse(16, 16, 9, 9)
+        shade(image, cog - ellipse(16, 16, 3.5, 3.5), gold)
+        for x, y in thick(line(6, 26, 22, 10), ((0, 0), (1, 0), (0, 1))):
+            image.set(x, y, iron[1] if (x + y) % 3 else iron[0])
+        shade(image, ellipse(23, 9, 3.5, 3.5) - ellipse(23, 9, 1.5, 1.5), iron, False)
+        image.rect(7, 23, 2, 3, iron[2])
+        image.rect(10, 20, 2, 3, iron[2])
+    return image.outlined()
+
+
 # ---------------------------------------------------------------- title painting
 # The start screen's backdrop (400x267, shown at 3x): a castle on a hill above a lake at dusk,
 # mountains and a moon behind, pines framing a grassy ledge in front where the game draws the
@@ -3962,6 +4057,7 @@ def main():
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan")]),
         "title.png": title_painting(),
+        "menu_icons.png": sheet_row([menu_icon(kind) for kind in MENU_ICONS]),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
         "terrain_palette.png": terrain_palette(),

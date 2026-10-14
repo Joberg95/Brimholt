@@ -215,14 +215,18 @@ func _client_tick(now: float) -> void:
 				game.move_local(Vector2i.LEFT)
 				advance()
 		4:
-			if game.last_action_message == "Another player is in the way":
+			# Players walk through each other: the client steps onto the host's tile.
+			if state(own)["cell"] == Vector2i(5, 6) and now - stage_since > 0.25:
 				if state(1)["cell"] != Vector2i(5, 6):
 					fail("Remote input moved the host")
 					return
 				game.move_local(Vector2i.RIGHT)
 				advance()
 		5:
-			if state(own)["cell"] == Vector2i(7, 6) and now - stage_since > 0.25:
+			if state(own)["cell"] == Vector2i(6, 6) and now - stage_since > 0.25:
+				game.move_local(Vector2i.RIGHT)
+				stage_since = now
+			elif state(own)["cell"] == Vector2i(7, 6) and now - stage_since > 0.25:
 				game.move_local(Vector2i.RIGHT)
 				advance()
 		6:

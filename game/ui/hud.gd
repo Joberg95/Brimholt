@@ -1,6 +1,6 @@
 extends Node
-## Heads-up display around the game window: the title row (Host, address, Join, Leave,
-## Controls), the connection status line, the centred action message, the zone
+## Heads-up display around the game window: the title row (Controls and Leave game; hosting
+## and joining happen on the start screen), the connection status line, the centred action message, the zone
 ## banner, the health and mana bars, and the Controls menu.
 
 const World = preload("res://game/core/world.gd")
@@ -9,13 +9,16 @@ const Layout = preload("res://game/ui/layout.gd")
 const ControlsMenu = preload("res://game/ui/controls_menu.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Regions = preload("res://game/data/regions.gd")
+const UiTheme = preload("res://game/ui/ui_theme.gd")
 const MESSAGE_SECONDS: float = 4.0
 
 var game: Node
+## The host's LAN address for Join, edited on the start screen (kept here, hidden, for main.gd).
 var address: LineEdit
 var controls: PanelContainer
-## Shown only to the host: opens the Bots panel.
-var bots_button: Button
+## The title row's buttons.
+var controls_button: Button
+var leave_button: Button
 var zone_label: Label
 var vitals: Control
 var _status: Label
@@ -30,25 +33,29 @@ var _message_since: float = 0.0
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
-	var row := HBoxContainer.new()
-	row.position = Vector2(16, 12)
-	layer.add_child(row)
 	var title := Label.new()
-	title.text = "BRIMHOLT  ·  " + World.WORLD_NAME + "   "
-	title.add_theme_font_size_override("font_size", 20)
-	row.add_child(title)
-	_add_button(row, "Host", Callable(game, "host_game"))
+	title.text = "BRIMHOLT"
+	title.position = Vector2(16, 8)
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", UiTheme.GOLD)
+	title.add_theme_color_override("font_outline_color", Color("#1a1420"))
+	title.add_theme_constant_override("outline_size", 6)
+	layer.add_child(title)
 	address = LineEdit.new()
 	address.text = "127.0.0.1"
-	address.placeholder_text = "Host LAN IP"
-	address.custom_minimum_size.x = 200
-	row.add_child(address)
-	_add_button(row, "Join", Callable(game, "join_game"))
-	_add_button(row, "Leave", Callable(game, "leave_game"))
-	_add_button(row, "Controls", func() -> void: controls.visible = not controls.visible)
-	bots_button = _add_button(row, "Bots", func() -> void: game.bot_panel.visible = not game.bot_panel.visible)
-	bots_button.tooltip_text = "Add player bots to this world (host only)"
-	bots_button.visible = false
+	address.visible = false
+	layer.add_child(address)
+	var row := HBoxContainer.new()
+	row.theme = UiTheme.build()
+	row.add_theme_constant_override("separation", 8)
+	row.alignment = BoxContainer.ALIGNMENT_END
+	row.position = Vector2(Layout.PANEL_ORIGIN.x - 8, 12)
+	row.size = Vector2(1184 - (Layout.PANEL_ORIGIN.x - 8), 32)
+	layer.add_child(row)
+	controls_button = _add_button(row, "Controls", func() -> void: controls.visible = not controls.visible)
+	controls_button.tooltip_text = "Rebind your keys"
+	leave_button = _add_button(row, "Leave game", Callable(game, "leave_game"))
+	leave_button.tooltip_text = "Save and return to the start screen"
 	vitals = Control.new()
 	vitals.position = Layout.VIEW_ORIGIN + Vector2(10, 8)
 	vitals.size = Vector2(220, 34)
@@ -96,7 +103,6 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 
 ## Per frame: the zone banner and the vitals.
 func refresh() -> void:
-	bots_button.visible = game.hosting and game.connected
 	_update_zone()
 	vitals.queue_redraw()
 

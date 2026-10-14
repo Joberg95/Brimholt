@@ -264,7 +264,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks, host bots panel")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1013,7 +1013,7 @@ func _check_town_torches() -> bool:
 		"A town wall torch does not cast warm light on its wall")
 
 
-## Silkhollow is pitch dark: a lantern lights an arm's length, a held torch three tiles and more.
+## Silkhollow is pitch dark: without a torch you see nothing; a held torch lights three tiles and more.
 func _check_dark_cave() -> bool:
 	var player: Dictionary = game.world.players[1]
 	var home: Vector2i = player["cell"]
@@ -1241,30 +1241,22 @@ func _check_lexicon_and_marks() -> bool:
 		"Harbourmaster Ilse shows no quest mark, or the quest list no next stop (%s)" % [listed])
 
 
-## The host's Bots button opens the panel; adding a bot puts a "Bot" player beside you that the
-## panel lists; removing it takes it out of the world.
+## The top bar offers only Controls and Leave game (hosting, joining, and bots are on the start
+## screen or automatic now); a host-added bot still appears beside you with a "Bot" nameplate.
 func _check_bots() -> bool:
-	var button: Button = game.hud.bots_button
-	if not _expect(button.visible, "The host has no Bots button"):
+	var buttons: Array = game.hud.leave_button.get_parent().get_children().filter(func(node: Node) -> bool: return node is Button)
+	var labels: Array = buttons.map(func(button: Button) -> String: return button.text)
+	if not _expect(labels == ["Controls", "Leave game"] and buttons.all(func(button: Button) -> bool: return button.is_visible_in_tree()),
+			"The top bar should offer only Controls and Leave game (%s)" % [labels]):
 		return false
-	button.pressed.emit()
-	var panel: Control = game.bot_panel
-	panel.level.value = 30
-	panel.stance.select(0)
-	panel.add_button.pressed.emit()
-	await create_timer(0.6).timeout
-	await RenderingServer.frame_post_draw
-	screen.get_texture().get_image().save_png("res://.tools/visual-bots.png")
+	var refused: String = game.spawn_bot("knight", 30, "dummy")
+	await create_timer(0.4).timeout
 	var ids: Array = game.bots.bots.keys()
-	var text: PackedStringArray = []
-	_texts(panel, text)
-	var shown: bool = ids.size() == 1 and game.actors.has(ids[0]) and game.actors[ids[0]]["state"].get("bot", false) \
-		and "\n".join(text).contains("Bot Warrior 30") and Combat.distance(game.world.players[ids[0]]["cell"], game.world.players[1]["cell"]) <= 2
+	var shown: bool = refused.is_empty() and ids.size() == 1 and game.actors.has(ids[0]) and game.actors[ids[0]]["state"].get("bot", false) \
+		and Combat.distance(game.world.players[ids[0]]["cell"], game.world.players[1]["cell"]) <= 2
 	game.remove_bot(ids[0] if not ids.is_empty() else 0)
-	panel.hide()
 	await process_frame
-	return _expect(shown and game.bots.bots.is_empty() and not game.actors.has(ids[0] if not ids.is_empty() else 0),
-		"Adding a bot from the Bots panel did not put a bot beside you, or removing it failed (%s)" % [text])
+	return _expect(shown and game.bots.bots.is_empty(), "A host bot did not appear beside you, or removing it failed")
 
 
 func _texts(node: Node, into: PackedStringArray) -> void:
@@ -1465,8 +1457,8 @@ func _check_hollow_reach() -> bool:
 		Vector2(floor_cell) * World.TILE_SIZE + Vector2(2, 20)), "The throne room floor is not drawn with obsidian tiles")
 
 
-## Night in Cinder Crossing: darker world, a lantern around the player, unlit UI, and particle
-## bursts for a hit and a spell.
+## Night in Cinder Crossing: darker world, no light around a player without a torch but a warm
+## one with it, unlit UI, and particle bursts for a hit and a spell.
 func _check_night_and_particles() -> bool:
 	game.world.monsters.clear()
 	game.monsters.clear()
@@ -1489,8 +1481,18 @@ func _check_night_and_particles() -> bool:
 	if not _expect(night.get_pixelv(far).get_luminance() < day.get_pixelv(far).get_luminance() * 0.75,
 			"Night does not darken the world"):
 		return false
-	if not _expect(night.get_pixelv(near).get_luminance() > night.get_pixelv(far).get_luminance() * 1.3,
-			"The player's lantern does not light the ground around them"):
+	var worn: Dictionary = player["equipment"].duplicate()
+	player["equipment"]["off_hand"] = "torch"
+	game._publish_actor(1)
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	var torchlit: Image = screen.get_texture().get_image()
+	player["equipment"] = worn
+	game._publish_actor(1)
+	await create_timer(0.2).timeout
+	if not _expect(torchlit.get_pixelv(near).get_luminance() > night.get_pixelv(near).get_luminance() * 1.3,
+			"Only a held torch lights the ground around a player at night (%.3f -> %.3f)" % [
+				night.get_pixelv(near).get_luminance(), torchlit.get_pixelv(near).get_luminance()]):
 		return false
 	if not _expect(night.get_pixelv(panel).is_equal_approx(day.get_pixelv(panel)), "Night lighting leaked into the UI panel"):
 		return false

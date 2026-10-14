@@ -21,12 +21,14 @@ Drag a spell's rune from the book onto the action bar to put it there. Before yo
 shows the Adventurer's spells.
 
 The **micro menu** right of the action bar has a button for each panel: Character (C), Spell
-book (B), Professions (P), Quests (L), Lexicon (K), World map (M), and Controls. A gold frame marks the panels that are
+book (B), Professions (P), Quests (L), Lexicon (K), World map (M), and Controls, each with a painted icon (a helm, a red tome, pick and hammer,
+a sealed scroll, a bestiary, a folded map, and a cog). A gold frame marks the panels that are
 open; hover a button for its key. The **character window** explains every stat (your base
 value, what your gear adds, and what the stat does, such as how much your defense cuts
 damage), shows experience to the next level, and your status: gold and bank, party, skull,
 unjustified kills, town rest, your meal, and relic trophies waiting at a relic keeper. Change gear on the equipment panel; targeting, pick up, gathering (F), the professions window (P), the world map, and the
-health and mana potions (Q and E), the quest list (L), the spell book (B), and the character window (C) have their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
+health and mana potions (Q and E), the quest list (L), the spell book (B), and the character window (C) have their own keys. Click **Controls** in the top bar (beside **Leave game**, which saves and returns to the start
+screen) to rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
 position, so WASD stays under your hand on any keyboard layout. Bindings and bar contents
@@ -192,10 +194,11 @@ saves your character like hosting does, but brings the group game to you:
 Companions and rivals are bots (below): they play through the server's own rules and are never
 saved. Their nameplates show their name and level.
 
-## Player bots (host only)
+## Bots
 
-The host's top bar has a **Bots** button. Pick a class, a level (1–50), and a stance, then
-**Add a bot beside me**. Bots are real players on the host: they take player slots (twelve in
+Bots come with solo play (companions and rivals, above); there is no menu to add them. The
+host's `spawn_bot` (tests, the fight and duel simulators) still adds standalone bots in three
+stances. Bots are real players on the host: they take player slots (twelve in
 all), wear the best regular gear of their level (with accessories from level 20), carry 50
 health and 50 mana potions, and play through the server's own rules, so PvP zones, skulls,
 death penalties, and loot drops all apply. Their nameplates read "Bot Warrior 40" and so on.
@@ -205,7 +208,7 @@ below 25% mana; ranged bots step back from anything beside them.
 
 | Stance | Behaviour |
 | --- | --- |
-| Hunter | Hunts monsters (up to 3 levels above it) within 10 tiles of where you placed it, and fights back when a player attacks it |
+| Hunter | Hunts monsters (up to 3 levels above it) within 10 tiles of where it was placed, and fights back when a player attacks it |
 | PvP | Also attacks any player (bots too) within 7 tiles while both stand in a PvP zone: take one to Blackreed Isle to duel it |
 | Training dummy | Stands still and never fights back: test damage, spells, and skulls |
 
@@ -217,11 +220,9 @@ errand (rival band leaders: tasks, camps, ambushes), or walks back to its post. 
 `game/core/nav.gd`, an A* grid over the walkable overworld. Open the tree in
 the Godot editor's LimboAI tab to change how bots play; `make bot-tree` restores the default.
 
-A bot that dies comes back 6 seconds later where you placed it, with its level, gear, and
-potions restored, so a test can go on (what it dropped stays on the ground for you to loot).
-The panel lists each bot's stance, place, health, skull, and whether it is fighting, with
-**Remove** and **Remove all**. Bots are never saved and leave with the host; clients cannot
-create them.
+A standalone bot that dies comes back 6 seconds later where it was placed, with its level, gear,
+and potions restored, so a test can go on (what it dropped stays on the ground). Bots are never
+saved and leave with the host; clients cannot create them.
 
 ## Talking to people
 
@@ -358,7 +359,7 @@ to 2 levels above you and not more than 5 below), with its giver, town, and mons
 and when you turn in a giver's last task that suits you, they name the next giver to visit.
 Every level from 1 to 50 has a task that fits.
 
-**The Lexicon** (K, or the magnifier in the micro menu) lists every monster from the lowest
+**The Lexicon** (K, or the green bestiary in the micro menu) lists every monster from the lowest
 level up, coloured by rank: where it lives (regions, zones, and dungeons), its levels, the
 tasks it counts toward, and its drop table: each material and hunting weapon with its chance
 and what a vendor pays, the gold it usually drops, its chance of tier gear, and a final
@@ -450,7 +451,7 @@ and leaves you in town.
 | Highmoor deep mine | Highmoor, north-east house | 33–40 | cave crawlers, ember golems | Forgemaw |
 | Silkhollow | Thornfield Wilds, a cave mouth west of the lake | 15–20 | cave spiders, venom weavers (spit from 3 tiles) | The Silk Matron |
 
-**Silkhollow is pitch dark**: your lantern lights only an arm's length, so you will not see a
+**Silkhollow is pitch dark**: you carry no light of your own, so you will not see a
 spider until it bites. Hold a **Torch** (15 gold at any vendor, any class, no stats) in your
 off hand for a wide, flickering light that everyone nearby sees by. That means going without
 your shield or spellbook: the spiders come singly or in pairs (weavers alone), so the camps

@@ -38,14 +38,14 @@ game/
   ui/                    UI components; each gets the main node and builds controls into its UI layer
     layout.gd            Shared screen layout constants (game window, panel origin, zoom, bar slot)
     game_window.gd       Game window: world SubViewport, rain, vignette, overlay; forwards map input to main
-    hud.gd               Title row, status line, action message, zone banner, vitals, Controls menu
+    hud.gd               Title row (Controls, Leave game), status line, action message, zone banner, vitals, Controls menu
     inventory_panel.gd   Paperdoll, backpack, and bag slots, bag windows, drag-and-drop, stat sheet, item tooltips
     quest_list.gd        Quest list in the game window: active tasks, givers, progress
     spell_book.gd        Spell book (B): your vocation's spells explained (Spells.info), drag to the bar
     character_window.gd  Character window (C): stats explained, experience, and status (meal included)
     professions_window.gd Professions window (P): each skill's level, progress, and what it gathers or crafts
     lexicon_window.gd    Lexicon (K): searchable monster list with drop tables
-    bot_panel.gd         Host-only Bots panel: add, list, and remove player bots
+    ui_theme.gd          The dark-and-gold button and field look (start screen, top bar)
     micro_menu.gd        Buttons right of the action bar for the character, book, professions, quests, map, controls
     spell_rune.gd        A spell rune: drawing, coloured tooltip, drag and drop (bar and book)
     item_slot.gd         An item slot whose hover tooltip shows the rarity colour

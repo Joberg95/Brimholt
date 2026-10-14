@@ -40,6 +40,7 @@ filtering:
 | `furniture.png` | 32×48 shop, bank, and workshop furniture drawn 16 px above their tile: shop counter, bank counter, potion shelf, bookshelf, weapon rack, barrel, crate, strongbox, anvil, workbench, cauldron, loom, hearth (`SpriteArt.FURNITURE` order) |
 | `signs.png` | 32×32 hanging signs on an iron bracket: shop (flask and sword), bank (coins), workshop (hammer and green flask) |
 | `herbs.png` | 32×32 herb patches for herbalism, two variants per resource band (sunflax, mirereed, silverthistle, nightcotton, starpetal colours), drawn on their tile (`SpriteArt.draw_herb`) |
+| `menu_icons.png` | 7 painted 32×32 micro-menu icons in `MENU_ICONS` order (`make_sprites.py` `menu_icon`): character helm, spell book, professions pick and hammer, quest scroll, lexicon bestiary, world map, controls cog |
 | `title.png` | 400×267 start-screen painting shown at 3× (`make_sprites.py` `title_painting`): a castle on a hill above a lake at dusk, dithered sunset sky with stars and a moon, layered mountains, far-shore pines, and a grassy ledge framed by pines where the start screen draws your character from behind |
 | `torch.png` | 16×24 wall torches: unlit, then three flame frames; hung on the south faces of town buildings (`World.TORCHES`) |
 | `crags.png` | 64×64 boulder piles, the tile at (16..48, 24..56): eight for mountains (`L`) and clustered outcrops, six small piles for lone outcrops (`C` on the overworld). They spill past their tile and are drawn in depth order, so neighbours merge into one ragged rock mass; the ground below is grey grit (`tiles.png` 50–53) |
@@ -223,9 +224,9 @@ The world renders into its own `SubViewport` (`game/ui/game_window.gd`), so ligh
 `game/render/lighting.gd` tints it with a `CanvasModulate`: a day and night cycle on the
 host's clock (a 40-minute day; sessions start in the morning; clients sync the clock in the
 welcome snapshot), multiplied by a zone's `ambient` colour (the Hollow Reach is a permanent
-violet dusk). Pooled `PointLight2D`s follow players (lanterns, or a wider flickering torch light when a torch
-is held; in a `dark` dungeon such as Silkhollow the lantern shrinks to 1.4 tiles), NPCs, town wall torches (lit from dusk, flickering), relic wearers, glowing
-bosses and ground relics (coloured), missiles, and spell areas; lanterns fade in as the light
+violet dusk). Pooled `PointLight2D`s follow players who hold a torch (a wide flickering light; without one a
+player carries no light, so a `dark` dungeon such as Silkhollow is pitch black), NPCs, town wall torches (lit from dusk, flickering), relic wearers, glowing
+bosses and ground relics (coloured), missiles, and spell areas; lights fade in as the light
 fades. `game/render/fx.gd` emits one-shot `CPUParticles2D` bursts for hits, critical hits,
 heals, level-ups, monster deaths, spell areas, and missile impacts (sparks and magic blend
 additively). `game/render/world_overlay.gd` draws nameplates, NPC names, the target square,

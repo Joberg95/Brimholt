@@ -122,12 +122,13 @@ These are the default keys; every key can be changed (see below).
 | Right-click / click a bar slot | Choose its spell / cast it |
 | M | Open or close the world map (drag to move, mouse wheel to zoom) |
 | K | Open or close the Lexicon (monsters, where they live, and their drops) |
-| **Bots** (top bar, host only) | Add player bots that hunt or fight PvP by the game's rules (see [gameplay](docs/gameplay.md#player-bots-host-only)) |
+| F / P | Gather from the node beside you / open the Professions window |
 | L | Show or hide the quest list (your tasks, their givers, and your progress) |
 | Esc | Close menus, or release your target (cannot be rebound) |
-| Leave / close window | Disconnect; leaving the host ends the session |
+| **Leave game** (top bar) / close window | Save and return to the start screen; leaving the host ends the session |
 
-Walls, water, trees, townspeople, and players block movement. A gold ring marks your
+Walls, water, trees, rocks, and townspeople block movement; players and monsters do not (you
+walk past and through them). A gold ring marks your
 character; the minimap in the side panel follows you.
 
 More: [gameplay](docs/gameplay.md) (action bar, combat, parties, loot, death and skulls,
