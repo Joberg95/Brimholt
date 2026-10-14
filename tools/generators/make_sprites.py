@@ -172,6 +172,45 @@ class Image:
                 result.rect(x * factor, y * factor, factor, factor, self.pixels[y][x])
         return result
 
+    @staticmethod
+    def load(path):
+        """An 8-bit RGBA, non-interlaced PNG (what Godot's save_png writes)."""
+        data = path.read_bytes()
+        pos, chunks = 8, []
+        while pos < len(data):
+            length = struct.unpack(">I", data[pos:pos + 4])[0]
+            chunks.append((data[pos + 4:pos + 8], data[pos + 8:pos + 8 + length]))
+            pos += 12 + length
+        width, height, depth, kind = struct.unpack(">IIBB", chunks[0][1][:10])
+        if depth != 8 or kind != 6:
+            raise ValueError(f"{path}: expected 8-bit RGBA")
+        raw = zlib.decompress(b"".join(body for tag, body in chunks if tag == b"IDAT"))
+        stride, at, previous = width * 4, 0, bytearray(width * 4)
+        image = Image(width, height)
+        for y in range(height):
+            kind, row = raw[at], bytearray(raw[at + 1:at + 1 + stride])
+            at += 1 + stride
+            for x in range(stride):
+                a = row[x - 4] if x >= 4 else 0
+                b = previous[x]
+                c = previous[x - 4] if x >= 4 else 0
+                if kind == 1:
+                    row[x] = (row[x] + a) & 255
+                elif kind == 2:
+                    row[x] = (row[x] + b) & 255
+                elif kind == 3:
+                    row[x] = (row[x] + (a + b) // 2) & 255
+                elif kind == 4:
+                    guess = a + b - c
+                    pa, pb, pc = abs(guess - a), abs(guess - b), abs(guess - c)
+                    row[x] = (row[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+            for x in range(width):
+                pixel = tuple(row[x * 4:x * 4 + 4])
+                if pixel[3] >= 128:
+                    image.pixels[y][x] = pixel[:3] + (255,)
+            previous = row
+        return image
+
     def save(self, path):
         raw = bytearray()
         for row in self.pixels:
@@ -1502,6 +1541,132 @@ def framewise(sheet_image, cell_width, cell_height, transform):
         for x in range(0, sheet_image.width, cell_width):
             result.over(transform(sheet_image.crop(x, y, cell_width, cell_height)), x, y)
     return result
+
+
+# ---------------------------------------------------------------- painted gear
+# Items with a painted icon (assets/sprites/icons/<id>.png, imported from art/outfits by
+# `make outfits`) wear it: the generated silhouette of each pose is filled from the icon, row by
+# row, so the worn piece shows the icon's colours, trim, and pattern.
+
+PAINTED_SLOTS = ("helmet", "armor", "legs", "boots")
+ICON_DIR = ROOT / "assets" / "sprites" / "icons"
+
+
+def painted_icon(kind):
+    path = ICON_DIR / f"{kind}.png"
+    return Image.load(path) if ITEMS[kind].get("slot") in PAINTED_SLOTS and path.exists() else None
+
+
+def _spans(image, keep):
+    """{row: (first, last)} of the pixels where keep(color) holds."""
+    spans = {}
+    for y in range(image.height):
+        xs = [x for x in range(image.width) if keep(image.pixels[y][x])]
+        if xs:
+            spans[y] = (xs[0], xs[-1])
+    return spans
+
+
+def _luma(color):
+    return color[0] * 0.3 + color[1] * 0.59 + color[2] * 0.11
+
+
+def _average(icon, left, right, top, bottom):
+    """Mean colour of the icon's opaque, non-outline pixels in [left, right) x [top, bottom),
+    or None where it has none."""
+    found = []
+    for y in range(int(top), max(int(top) + 1, math.ceil(bottom))):
+        for x in range(int(left), max(int(left) + 1, math.ceil(right))):
+            pixel = icon.get(x, y)
+            if pixel is not None:
+                found.append(pixel)
+    if not found:
+        return None
+    lit = [pixel for pixel in found if _luma(pixel) >= 40] or found
+    return tuple(sum(pixel[channel] for pixel in lit) / len(lit) for channel in range(3))
+
+
+def palette_of(icon, size=5):
+    """The icon's main colours: k-means over its lit pixels, seeded at luminance quantiles."""
+    pixels = [pixel[:3] for row in icon.pixels for pixel in row if pixel is not None and _luma(pixel) >= 40]
+    if not pixels:
+        pixels = [pixel[:3] for row in icon.pixels for pixel in row if pixel is not None]
+    ordered = sorted(pixels, key=_luma)
+    centres = [ordered[min(len(ordered) - 1, (2 * k + 1) * len(ordered) // (2 * size))] for k in range(size)]
+    for _ in range(8):
+        groups = [[] for _ in centres]
+        for pixel in pixels:
+            nearest = min(range(len(centres)), key=lambda k: sum((pixel[c] - centres[k][c]) ** 2 for c in range(3)))
+            groups[nearest].append(pixel)
+        centres = [tuple(sum(pixel[c] for pixel in group) / len(group) for c in range(3)) if group else centres[k]
+                   for k, group in enumerate(groups)]
+    return [tuple(round(channel) for channel in centre) + (255,) for centre in centres]
+
+
+def textured(build, icon, kind):
+    """Wraps a gear builder: every non-outline pixel takes the icon's colour at the matching place,
+    snapped to the icon's main colours (palette_of) so flat areas stay flat.
+    Rows map top to bottom; within a row, the worn span maps onto the icon's span (seen from the
+    side, its middle 60%; from behind, mirrored and a little darker)."""
+    icon_spans = _spans(icon, lambda color: color is not None)
+    icon_top, icon_bottom = min(icon_spans), max(icon_spans)
+    tones = palette_of(icon)
+    # The generated layer's shading, relative to the item's main colour, lights the icon colours.
+    base_luma = max(1.0, _luma(tones_for_shading(kind)))
+
+    def nearest(mean):
+        return min(tones, key=lambda tone: sum((tone[c] - mean[c]) ** 2 for c in range(3)))
+
+    def wrapped(direction, frame):
+        image = build(direction, frame)
+        inside = lambda color: color is not None and color != OUTLINE and color[3] == 255
+        spans = _spans(image, inside)
+        if not spans:
+            return image
+        top, bottom = min(spans), max(spans)
+        rows = (icon_bottom - icon_top + 1) / (bottom - top + 1)
+        source = icon.mirrored() if direction == "up" else icon
+        shade_by = 0.82 if direction == "up" else 1.0
+        result = Image(FRAME, FRAME)
+        for y in range(FRAME):
+            for x in range(FRAME):
+                color = image.pixels[y][x]
+                if not inside(color):
+                    result.pixels[y][x] = color
+                    continue
+                v0 = icon_top + (y - top) * rows
+                row = icon_spans.get(min(icon_bottom, int(v0 + rows / 2)))
+                if row is None:
+                    row = (min(a for a, b in icon_spans.values()), max(b for a, b in icon_spans.values()))
+                if direction == "up":
+                    row = (icon.width - 1 - row[1], icon.width - 1 - row[0])
+                first, last = spans[y]
+                u_first, u_last = row
+                if direction == "left":
+                    middle, half = (u_first + u_last) / 2, (u_last - u_first) * 0.3
+                    u_first, u_last = middle - half, middle + half
+                columns = (u_last - u_first + 1) / (last - first + 1)
+                u0 = u_first + (x - first) * columns
+                # A window wider than the pixel smooths the painting's fine detail into areas.
+                mean = _average(source, u0 - columns * 0.6, u0 + columns * 1.6, v0 - rows * 0.6, v0 + rows * 1.6)
+                sampled = nearest(mean) if mean is not None else color
+                light = min(1.25, max(0.72, _luma(color) / base_luma))
+                sampled = scale(sampled, light)
+                result.pixels[y][x] = scale(sampled, shade_by) if shade_by != 1.0 else sampled
+        return result
+    return wrapped
+
+
+def gear_builder(kind):
+    slot = ITEMS[kind]["slot"]
+    icon = painted_icon(kind)
+    build = GEAR_BUILDERS[slot](kind)
+    return textured(build, icon, kind) if icon is not None else build
+
+
+def tones_for_shading(kind):
+    """The main colour the generated layers of `kind` are shaded around."""
+    return tones(kind)[0][1]
 
 
 GEAR_BUILDERS = {"helmet": helmet_builder, "armor": armor_builder, "legs": legs_builder, "boots": boots_builder,
@@ -3159,7 +3324,7 @@ def main():
                            + [wall(mask, CAVE_STONE) for mask in range(16)] + [thin_wall(mask) for mask in range(16)],
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
-        **{f"gear/{kind}.png": character_sheet(GEAR_BUILDERS[item["slot"]](kind), compact=True, columns=POSE_COLUMNS)
+        **{f"gear/{kind}.png": character_sheet(gear_builder(kind), compact=True, columns=POSE_COLUMNS)
            for kind, item in ITEMS.items() if item.get("slot") in VISIBLE_SLOTS},
         **{f"gear/{kind}_glow.png": None for kind, item in ITEMS.items()
            if item.get("glow") and item.get("slot") in VISIBLE_SLOTS},

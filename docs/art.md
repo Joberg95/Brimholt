@@ -79,7 +79,14 @@ the helmet, armor, legs, and boots icons of tiers 5–20). An entry with `"grid"
 and no region splits the whole image into cells, one item per cell in reading order;
 `icons_<group>_<n>.png` sheets (4×4) cover every other item and are skipped until their PNG
 exists, so painted icons can arrive a sheet at a time. Items without a painted icon keep their
-generated `items.png` cell. Its `outfits` list each painted figure: the
+generated `items.png` cell.
+
+Worn helmets, armor, legs, and boots with a painted icon take their look from it
+(`textured` in `make_sprites.py`): each pose keeps its generated silhouette and shading, and
+every pixel takes the icon's colour at the matching place (rows top to bottom, each row's span
+onto the icon's; the side view uses the icon's middle, the back view is mirrored and darker),
+smoothed and snapped to the icon's five main colours. `make outfits` regenerates the sheets,
+so new icons change the worn gear too. Weapons and shields are still generated models. Its `outfits` list each painted figure: the
 source file, the `figures` region and the facings in it (`order`), the `layout`, and optionally
 an `icons` region whose icons (left to right) replace the generated icons of `icon_items`.
 `make outfits` runs `tools/generators/import_outfits.gd`, which separates each figure from its
