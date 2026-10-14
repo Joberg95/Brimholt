@@ -340,8 +340,8 @@ def side_arm_x(frame):
 # hangs at the side; attacking it rises (wind-up) and then swings out (strike).
 WEAPON_SHOULDER = {"down": (39, 25), "up": (39, 25)}
 ATTACK_HANDS = {
-    WIND_UP: {"down": (43, 17), "up": (43, 17), "left": (28, 20)},
-    STRIKE: {"down": (35, 36), "up": (37, 15), "left": (22, 31)},
+    WIND_UP: {"down": (42, 22), "up": (42, 22), "left": (29, 24)},
+    STRIKE: {"down": (36, 35), "up": (37, 19), "left": (23, 31)},
 }
 
 
@@ -1347,16 +1347,46 @@ def weapon_icon(kind):
 
 
 # Weapon angle in degrees, clockwise from blade-up, by grip style, direction ("side" is facing
-# left), and pose column (stand, step A, step B, wind-up, strike). Melee weapons rest tilted
+# left), and pose column (stand, step A, step B, wind-up, strike). Seen from the side, blades lean
+# forward so they pass in front of the chest, and staves lean back past the head, not across the face. Melee weapons rest tilted
 # forward, are raised back, then cut down across the body; staves are raised and thrust;
 # bows are carried tilted and pushed out upright to shoot; crossbows are raised and aimed level.
 WEAPON_ANGLES = {
-    "melee": {"down": (12, 8, 16, 40, -135), "up": (12, 8, 16, 40, -20), "side": (-25, -35, -15, 45, -100)},
-    "staff": {"down": (6, 4, 8, 15, -25), "up": (6, 4, 8, 15, -15), "side": (-12, -18, -6, 10, -55)},
-    "bow": {"down": (0, 0, 0, 0, 0), "up": (0, 0, 0, 0, 0), "side": (-18, -24, -12, 0, 0)},
+    "melee": {"down": (28, 24, 32, 55, -120), "up": (20, 16, 24, 45, -25), "side": (-52, -58, -46, 40, -95)},
+    "wand": {"down": (22, 18, 26, 35, -40), "up": (18, 14, 22, 30, -15), "side": (-48, -54, -42, 15, -75)},
+    "staff": {"down": (8, 6, 10, 12, -20), "up": (8, 6, 10, 10, -12), "side": (18, 14, 22, 10, -40)},
+    "bow": {"down": (0, 0, 0, 0, 0), "up": (0, 0, 0, 0, 0), "side": (-6, -10, -2, 0, 0)},
     "crossbow": {"down": (0, 0, 0, 0, 0), "up": (0, 0, 0, 0, 0), "side": (-20, -26, -14, -60, -90)},
 }
-GRIP_STYLE = {"wand": "staff", "rod": "staff", "bow": "bow", "crossbow": "crossbow"}
+# Where the hand holds a weapon, as a share of its length from the bottom: swords and axes by
+# the hilt, wands near the end, staves a little below the middle (their foot by the boots), bows
+# in the middle. Painted weapons are drawn at LENGTHS pixels (before compact_humanoid).
+GRIP_AT = {"melee": 0.16, "wand": 0.18, "staff": 0.36, "bow": 0.5, "crossbow": 0.3}
+LENGTHS = {"sword": 22, "greatsword": 27, "axe": 22, "mace": 20, "hammer": 22, "wand": 16, "rod": 36, "bow": 30,
+           "crossbow": 22}
+
+
+def anchored(model, style):
+    """Moves an upright model so the GRIP_AT point of its length sits on WEAPON_GRIP."""
+    solid = [(x, y) for y in range(model.height) for x in range(model.width) if model.opaque(x, y)]
+    top, bottom = min(y for _, y in solid), max(y for _, y in solid) + 1
+    shift = round(WEAPON_GRIP[1] - (bottom - GRIP_AT[style] * (bottom - top)))
+    if shift == 0:
+        return model
+    result = Image(model.width, model.height)
+    result.over(model, 0, shift)
+    return result
+
+
+def gripped(image, direction, frame):
+    """A fist over the grip when the weapon is drawn in front of the body (not facing up), so the
+    hand wraps the handle instead of being hidden behind it."""
+    if direction == "up":
+        return image
+    hx, hy = weapon_hand(direction, frame)
+    fist = layer(box(hx - 1, hy - 1, 2, 2), SKIN_TONES, False)
+    return image.over(fist.outlined())
+GRIP_STYLE = {"wand": "wand", "rod": "staff", "bow": "bow", "crossbow": "crossbow"}
 
 
 def held_builder(kind):
@@ -1364,10 +1394,13 @@ def held_builder(kind):
     shape, _ = look(kind)
     style = GRIP_STYLE.get(shape, "melee")
 
+    model = anchored(model, style)
+
     def build(direction, frame):
         angle = WEAPON_ANGLES[style]["side" if direction == "left" else direction][frame]
         size = 0.85 if style == "bow" else 1.0
-        return pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle), size)
+        posed = pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle), size)
+        return gripped(posed, direction, frame)
     return build
 
 
@@ -1686,12 +1719,15 @@ def textured(build, icon, kind, cape=False):
 
 def painted_model(kind, icon):
     """An upright weapon model (tip up, like weapon_model) made from a painted icon: the icon's
-    long axis is found from its pixels, stood upright with its upper end as the tip, and fitted
-    into the generated model's bounds so grip, reach, and swings stay where they were."""
+    long axis is found from its pixels, stood upright with its upper end as the tip, scaled to the
+    kind's LENGTHS, and placed so its style's GRIP_AT point sits on WEAPON_GRIP."""
+    shape, _ = look(kind)
     model = weapon_model(kind)
-    solid = [(x, y) for y in range(model.height) for x in range(model.width) if model.opaque(x, y)]
-    left, right = min(x for x, _ in solid), max(x for x, _ in solid) + 1
-    top, bottom = min(y for _, y in solid), max(y for _, y in solid) + 1
+    span = LENGTHS.get(shape, 22)
+    grip = GRIP_AT[GRIP_STYLE.get(shape, "melee")]
+    top = round(WEAPON_GRIP[1] - (1 - grip) * span)
+    bottom = top + span
+    left = right = WEAPON_GRIP[0]
     points = [(x + 0.5, y + 0.5) for y in range(icon.height) for x in range(icon.width) if icon.pixels[y][x] is not None]
     mx = sum(x for x, _ in points) / len(points)
     my = sum(y for _, y in points) / len(points)
@@ -1739,8 +1775,8 @@ def painted_held(kind, icon):
 
     def build(direction, frame):
         angle = WEAPON_ANGLES[style]["side" if direction == "left" else direction][frame]
-        size = 0.85 if style == "bow" else 1.0
-        return pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle), size)
+        posed = pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle))
+        return gripped(posed, direction, frame)
     return build
 
 

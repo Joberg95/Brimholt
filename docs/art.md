@@ -167,6 +167,14 @@ replacement cloak. Back-facing armour has its own complete back, visible without
 
 ### Weapon construction
 
+Held weapons are posed from `WEAPON_ANGLES` (per grip style: melee, wand, staff, bow, crossbow)
+and held at `GRIP_AT`, a share of their length from the bottom: blades and axes by the hilt,
+wands near the end, staves a little below the middle (the foot by the boots), bows in the
+middle. A skin-toned fist is drawn over the grip whenever the weapon is in front of the body.
+Walking, blades rest angled out from the hip; side-on they lean forward across the chest
+and staves lean back over the shoulder. The attack wind-up raises the hand to shoulder height
+and the strike swings it forward and low. Painted weapons are drawn at `LENGTHS` pixels.
+
 `weapon_model` builds each weapon about a common grip: blade/head, socket/guard, haft and
 wrapped handle are separate material surfaces. `pose_weapon` uses inverse nearest-neighbour
 rasterization for the icon angle and worn poses, avoiding the diagonal gaps that forward
