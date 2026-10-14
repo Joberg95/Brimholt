@@ -307,7 +307,11 @@ func _late_tick(now: float) -> void:
 				fail("Late join backpack snapshot is wrong")
 				return
 			var own_cell: Vector2i = state(game.self_id)["cell"]
-			if game.monsters.is_empty() or game.monsters.keys().any(func(id: int) -> bool:
+			# Monsters must arrive when a camp lies well inside the interest radius; the start town's
+			# camps are outside its walls, and then none of the map's monsters may arrive at all.
+			var camp_near: bool = World.MONSTER_SPAWNS.any(func(spawn: Dictionary) -> bool:
+				return Combat.distance(spawn["cell"], own_cell) + int(spawn["radius"]) + 2 < game.INTEREST_RADIUS)
+			if (camp_near and game.monsters.is_empty()) or game.monsters.keys().any(func(id: int) -> bool:
 					return id >= 0 or Combat.distance(game.monsters[id]["state"]["cell"], own_cell) > game.INTEREST_RADIUS):
 				fail("Late join did not receive only its nearby monsters")
 				return
@@ -362,7 +366,7 @@ func _dedicated_host_tick() -> void:
 		elif ring_given_at >= 0.0 and game._now() - ring_given_at > 1.0 and player["level"] < Items.ACCESSORY_LEVEL:
 			player["level"] = Items.ACCESSORY_LEVEL
 			game._publish_actor(id)
-	# Test-only shortcut on the server: carry the client to Cinder Landing instead of a long walk.
+	# Test-only shortcut on the server: carry the client to Cinder Crossing harbour instead of a long walk.
 	for id: int in game.world.players:
 		var player: Dictionary = game.world.players[id]
 		if not ferried and saw_ring and player["cell"] == Vector2i(6, 7):

@@ -13,7 +13,7 @@ extends SceneTree
 const Buildings = preload("res://game/data/buildings.gd")
 ## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^K"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KR"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## The only town with a banker (and so the only bank and depot).
 const BANK_PLACE: String = "Reedmere"
@@ -32,7 +32,7 @@ const QUEST_GIVERS: Array = [
 	["foreman_dagny", "Foreman Dagny", "Highmoor", Vector2i(337, 75), Vector2i.RIGHT],
 	["trapper_maud", "Trapper Maud", "Thornfield Wilds", Vector2i(85, 165), Vector2i.LEFT],
 	# Quest hubs: one giver per hunting band, on the plaza of the town nearest its monsters.
-	["harbourmaster_ilse", "Harbourmaster Ilse", "Cinder Landing", Vector2i(33, 48), Vector2i.UP],
+	["harbourmaster_ilse", "Harbourmaster Ilse", "Cinder Crossing", Vector2i(33, 48), Vector2i.UP],
 	["fenwarden_ostrel", "Fenwarden Ostrel", "Reedmere", Vector2i(146, 196), Vector2i.UP],
 	["quartermaster_rhosyn", "Quartermaster Rhosyn", "Dunmere", Vector2i(192, 271), Vector2i.RIGHT],
 	["huntmaster_corvel", "Huntmaster Corvel", "Emberfall", Vector2i(286, 200), Vector2i.RIGHT],
@@ -158,11 +158,29 @@ static func apply(scene_root: Node) -> int:
 			return a["rect"].position.y < b["rect"].position.y or (a["rect"].position.y == b["rect"].position.y
 				and a["rect"].position.x < b["rect"].position.x))
 		var here: Array = keepers.filter(func(keeper: Node2D) -> bool: return rect.has_point(_cell_of(keeper)))
+		if free.size() < here.size():
+			push_error("%s needs a free building for each of its keepers" % zone.get("zone_name"))
+			return -1
+		# A keeper already inside a free building stays; the rest take the next unclaimed one
+		# (vendors from the north-west, the banker from the south-east). Each building holds one.
+		var claimed: Dictionary = {}
+		var homes: Dictionary = {}
 		for keeper: Node2D in here:
-			if free.size() < here.size():
-				push_error("%s needs a free building for each of its keepers" % zone.get("zone_name"))
-				return -1
-			var building: Dictionary = free[0] if String(keeper.get("role")) == "vendor" else free[-1]
+			for index: int in free.size():
+				if not claimed.has(index) and free[index]["interior"].has(_cell_of(keeper)):
+					claimed[index] = true
+					homes[keeper] = free[index]
+		for keeper: Node2D in here:
+			if homes.has(keeper):
+				continue
+			var order: Array = range(free.size()) if String(keeper.get("role")) == "vendor" else range(free.size() - 1, -1, -1)
+			for index: int in order:
+				if not claimed.has(index):
+					claimed[index] = true
+					homes[keeper] = free[index]
+					break
+		for keeper: Node2D in here:
+			var building: Dictionary = homes[keeper]
 			var door: Vector2i = building["doors"][0]
 			var outward: Vector2i = building["outward"][door]
 			var spot: Vector2i = door - outward

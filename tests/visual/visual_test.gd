@@ -1192,7 +1192,7 @@ func _check_training_hall() -> bool:
 
 
 ## The lexicon (K) searched for "silk" lists the spiders with their drops; a level-12 player
-## at Cinder Landing sees Harbourmaster Ilse's "!" and the quest list's next stop.
+## at Cinder Crossing harbour sees Harbourmaster Ilse's "!" and the quest list's next stop.
 func _check_lexicon_and_marks() -> bool:
 	await _press("lexicon")
 	var book: Control = game.lexicon

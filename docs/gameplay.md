@@ -241,7 +241,7 @@ monsters, paying experience and gold.
 
 | Giver | Town | Tasks | Monster levels |
 | --- | --- | --- | --- |
-| Harbourmaster Ilse | Cinder Landing | 20 road bandits; 20 grey wolves | 8–10; 11–14 |
+| Harbourmaster Ilse | Cinder Crossing (harbour) | 20 road bandits; 20 grey wolves | 8–10; 11–14 |
 | Fenwarden Ostrel | Reedmere | 25 bog lurkers | 15–18 |
 | Quartermaster Rhosyn | Dunmere | 25 stone golems; 25 cinder wraiths | 24–28; 29–32 |
 | Huntmaster Corvel | Emberfall | 25 mire stalkers; 25 fen beasts (reedfangs, bog hulks) | 36–44; 40–48 |
@@ -298,9 +298,12 @@ It never rains underground or in the desert. At dusk the torches on the town wal
 
 The overworld is 384×384 tiles: walking straight across takes about a minute and three
 quarters. Monster camps are dense (about 600 monsters), so levelling is close to town.
-**Cinder Crossing**, the starting town, sits in the north-west corner with gates to the east
-and south. A sea runs down the whole western edge with two ports: **Cinder Landing** at the
-top and **Lastlight** at the bottom, joined by one ferry. In the middle of the world lies a
+**Cinder Crossing**, the walled starting town, runs from its training hall in the north-west
+corner down to its harbour, with an open plaza between and gates to the east and south. A sea
+runs down the whole western edge with two ports: Cinder Crossing's harbour at the top and
+**Lastlight** at the bottom, joined by one ferry. Two-tile cobbled roads join the walled towns
+across woods, meadows, rock outcrops, and boulders; **Reedmere**, the capital, has a castle on
+its west side. In the middle of the world lies a
 great irregular lake with **Blackreed Isle** in it, a **level 40–50 PvP hunting ground** of open meadows and scattered trees
 reached only by the ferry from **Reedmere** on the west shore; entering it shows a red
 banner, and the island is tinted red on the minimap and world map.

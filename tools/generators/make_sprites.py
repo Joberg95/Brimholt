@@ -33,7 +33,7 @@ ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
 VISIBLE_SLOTS = ("helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
-TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K")
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R")
 
 
 def rgba(value, alpha=255):
@@ -2492,6 +2492,39 @@ def desert_plant(variant):
     return image
 
 
+ROCK = (rgba("a8a294"), rgba("8a8476"), rgba("6a6458"), rgba("4a463e"))
+MOSS = (rgba("7a9050"), rgba("5a7040"))
+
+
+def boulder(variant):
+    """Field rocks in the 64x96 tree cell, base on the tile centre at (32, 80): 0 a rounded
+    boulder, 1 a pair of rocks, 2 a flat mossy slab. Lit from the top-left like walls."""
+    image = Image(FRAME, 96)
+    rocks = {0: [(32, 72, 12, 10)], 1: [(27, 75, 9, 7), (40, 78, 6, 4)], 2: [(32, 76, 14, 6)]}[variant]
+    for x, y in ellipse(32, 82, 15, 3.5):
+        image.set(x, y, SHADOW)
+    stone = Image(FRAME, 96)
+    for cx, cy, rx, ry in rocks:
+        points = ellipse(cx, cy, rx, ry) - {(x, y) for x in range(FRAME) for y in range(96) if y > cy + ry * 0.6 and abs(x - cx) > rx * 0.8}
+        for x, y in sorted(points):
+            light = (cx - x) / rx * 0.45 + (cy - y) / ry * 0.6
+            facet = ((x // 4 * 5 + y // 3 * 3 + variant) % 5 - 2) * 0.08
+            value = light + facet
+            tone = ROCK[0] if value > 0.45 else ROCK[1] if value > 0.0 else ROCK[2] if value > -0.45 else ROCK[3]
+            if (x * 13 + y * 7) % 29 == 0:
+                tone = scale(tone, 0.88)
+            stone.set(x, y, tone)
+        for x, y in sorted(points):
+            if (x - cx + y - cy) % 9 == 0 and (x, y - 1) in points and abs(x - cx) < rx - 2:
+                stone.set(x, y, ROCK[3])
+        if variant == 2 or variant == 0:
+            for x, y in sorted(points):
+                if y < cy - ry * 0.35 and (x * 7 + y * 3) % 4 != 0 and (x < cx + 2 or variant == 2):
+                    stone.set(x, y, MOSS[(x + y) % 2])
+    image.over(stone.outlined(ROCK[3]))
+    return image
+
+
 def tree(variant):
     """64x96 cell; the trunk base sits on the tile centre at (32, 80)."""
     rng = random.Random(1000 + variant)
@@ -2550,13 +2583,15 @@ def terrain_palette():
     wall_tile = wall(0).crop(0, 0, TILE, TILE)
     cactus_tile = sand_tile(0)
     cactus_tile.over(desert_plant(0).crop(16, 52, TILE, TILE))
+    rock_tile = grass_tile(1)
+    rock_tile.over(boulder(0).crop(16, 56, TILE, TILE))
     dead_tile = dusk_tile(1)
     dead_tile.over(dead_tree(0).crop(16, 48, TILE, TILE))
     tiles = {".": grass_tile(0), ",": dirt_tile(0), "~": water_tile(0), "#": wall_tile, "T": tree_tile,
              ":": sand_tile(0), "=": cobble_tile(0), "b": plank_tile(False, 0), "d": dusk_tile(0),
              "o": obsidian_tile(0), "O": wall(0, OBSIDIAN_STONE).crop(0, 0, TILE, TILE), "D": dead_tile,
              "c": cave_tile(0), "C": wall(0, CAVE_STONE).crop(0, 0, TILE, TILE),
-             "v": stairs_tile(True), "^": stairs_tile(False), "K": cactus_tile}
+             "v": stairs_tile(True), "^": stairs_tile(False), "K": cactus_tile, "R": rock_tile}
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
@@ -3114,7 +3149,8 @@ def main():
                            + edge_set("sand"),
                            4, TILE),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
-                                 + [desert_plant(v) for v in range(3)] + [waystone()]),
+                                 + [desert_plant(v) for v in range(3)] + [waystone()]
+                                 + [boulder(v) for v in range(3)]),
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker")]),
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),

@@ -229,7 +229,8 @@ static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
 		index = DUSK_TILE + noise(cell, 8) % 4
 	elif tile == "o":
 		index = obsidian_variant(cell)
-	elif tile == "c" or tile == "C":
+	elif tile == "c" or tile == "C" and not World.OVERWORLD.has_point(cell):
+		# Rock outcrops on the overworld stand on grass; cave rock in dungeons on cave floor.
 		index = CAVE_TILE + noise(cell, 11) % 4
 	elif tile == "v":
 		index = STAIRS_DOWN_TILE
@@ -262,11 +263,16 @@ static func draw_tree(canvas: CanvasItem, cell: Vector2i) -> void:
 		variant = DEAD_TREE_FIRST + noise(cell, 7) % DEAD_TREE_VARIANTS
 	elif tile_at(cell) == "K":
 		variant = DESERT_PLANT_FIRST + noise(cell, 7) % DESERT_PLANT_VARIANTS
+	elif tile_at(cell) == "R":
+		variant = ROCK_FIRST + noise(cell, 7) % ROCK_VARIANTS
 	canvas.draw_texture_rect_region(OBJECTS, dest, Rect2(Vector2(variant * TREE_SIZE.x, 0), TREE_SIZE))
 
 
 ## A waystone (objects.png after the desert plants), standing on its tile like a tree.
 const WAYSTONE_OBJECT: int = 8
+## Boulders ("R", objects.png after the waystone): a rounded boulder, a pair of rocks, a mossy slab.
+const ROCK_FIRST: int = 9
+const ROCK_VARIANTS: int = 3
 
 
 static func draw_waystone(canvas: CanvasItem, cell: Vector2i) -> void:

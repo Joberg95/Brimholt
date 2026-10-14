@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim playtest check \
-	sprites outfits map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -102,6 +102,9 @@ endgame-zone: ## Repaint the Hollow Reach into the existing overworld (keeps oth
 
 map-force: ## Regenerate the overworld draft, overwriting game/maps/overworld.tscn
 	$(GODOT) --headless --path . --script res://tools/generators/make_map.gd -- --force
+
+landscape: ## One-time countryside pass: bigger walled towns, the capital castle, cobbled roads, woods, rocks (keeps other edits)
+	$(GODOT) --headless --path . --script res://tools/generators/landscape.gd
 
 towns: ## Build missing shops and banks and move vendors and bankers indoors (keeps other edits)
 	$(GODOT) --headless --path . --script res://tools/generators/towns.gd

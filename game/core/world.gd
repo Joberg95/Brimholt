@@ -16,12 +16,12 @@ const MAP_SCENE: String = "res://game/maps/overworld.tscn"
 ## the Hollow Reach's dusk soil, obsidian floor, obsidian wall, and dead tree, and the
 ## dungeons' cave floor, cave wall, stairs down (a dungeon entrance), and stairs up (its exit),
 ## and the desert's cacti and thorn scrub (on sand).
-const TERRAINS: String = ".,~#T:=bdoODcCv^K"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KR"
 const WALKABLE: String = ".,:=bdocv^"
 const LAND: String = ".,:=docv^"
 ## Drawn as oblique walls / as trees; both block movement and line of sight.
 const WALLS: String = "#OC"
-const TREES: String = "TDK"
+const TREES: String = "TDKR"
 ## Loaded from MAP_SCENE: terrain rows (" " for unpainted cells), spawn cells, starting
 ## ground items, and ferrymen {id: {name, place, cell, facing, routes: {id: fare}}}.
 static var ROWS: PackedStringArray
@@ -294,8 +294,9 @@ static func _place_torches() -> void:
 			var bottom: int = rect.end.y - 1
 			wanted.append_array([Vector2i(rect.position.x + 1, bottom), Vector2i(rect.end.x - 2, bottom)])
 		for cell: Vector2i in wanted:
+			# Only over a street of the same town (a house on a town wall faces the countryside).
 			if terrain(cell) in WALLS and not terrain(cell + Vector2i.DOWN) in WALLS \
-					and not signed.has(cell) and not placed.has(cell):
+					and zone_at(cell + Vector2i.DOWN).get("town", false) and not signed.has(cell) and not placed.has(cell):
 				placed[cell] = true
 				TORCHES.append(cell)
 

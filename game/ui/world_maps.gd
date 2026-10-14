@@ -26,6 +26,7 @@ const MAP_COLORS: Dictionary = {
 	"d": Color("#3a2c4a"), "o": Color("#2c2438"), "O": Color("#6a5a88"), "D": Color("#1e1626"),
 	"c": Color("#5a534c"), "C": Color("#85766a"), "v": Color("#f0d070"), "^": Color("#f0d070"),
 	"K": Color("#7c8450"),
+	"R": Color("#8a8478"),
 }
 
 var game: Node

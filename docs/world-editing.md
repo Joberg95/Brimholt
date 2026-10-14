@@ -7,8 +7,8 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
 1. **Terrain**: select the `Terrain` node and use the TileMap panel at the bottom to paint
    with the palette (`game/maps/terrain.tres`). Each tile's custom data `terrain` sets its
    gameplay: grass `.`, dirt road `,`, water `~`, stone wall `#`, tree `T`, sand `:`,
-   cobblestone `=`, pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
-   `o`, obsidian wall `O`, and dead tree `D`. Water, walls, and trees block movement. The editor
+   cobblestone `=`, boulder `R`, pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
+   `o`, obsidian wall `O`, and dead tree `D`. Water, walls, trees, and boulders block movement; cave rock `C` on the overworld is a rock outcrop. The editor
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
    plank piers. Keep the map at non-negative coordinates; unpainted cells are void.
 2. **Spawns**: the twelve `Marker2D` nodes under `Spawns`, one per player, in order.
@@ -78,6 +78,25 @@ an anchor to reshape regions; add one to split a region.
 **Blackreed Isle** is kept open for PvP: `tools/generators/island.gd` (`make island`) keeps about
 a quarter of the trees inside its zone (a fixed hash of each tile picks which) and turns the rest
 into grass. Re-running it changes nothing.
+
+**The landscape pass** (`tools/generators/landscape.gd`, `make landscape`) turned the first
+draft into settled countryside, once (the scene's `landscape` metadata stops a second run):
+- Every town grew outward where the land was free, with a stone town wall, three-tile gates
+  where roads enter (or one in the middle of a side without a road), a row of houses against
+  the wall, a cobbled street inside them, and more houses on open ground.
+- Cinder Landing was merged into Cinder Crossing (`MERGES`): one start town from the training
+  hall to the harbour, with a four-tile eastern district and an open cobbled plaza between the old
+  towns, kept free for a future starter guide.
+- Reedmere, the capital, has a walled castle on its west side (`CASTLE`): a keep, barracks and a
+  chapel around a courtyard, corner towers, and a gate toward the town.
+- Dirt roads between towns became two-tile cobblestone.
+- The speckled forest became woods and meadows (two layers of smooth noise), with rock outcrops
+  (`C`, drawn on grass outside dungeons) and boulders (`R`, a blocking object like trees),
+  more in the north-eastern highlands, and a few dry-stone pastures (`#`) outside towns.
+- Monster camps in the way were moved just outside, in the same region, and the shortest way
+  back to any marker cut off by trees or rock was cleared.
+Run `make towns` after it to move vendors into free buildings. Edit the constants and restore
+the scene from git to try again; otherwise paint over the result in Godot like any other edit.
 
 **Buildings** are found from the walls: a room of at most 48 tiles in a town zone, enclosed
 by `#` walls and doors (an open tile between two walls in a line). They get a roof, and
