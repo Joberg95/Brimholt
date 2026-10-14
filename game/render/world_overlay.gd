@@ -84,6 +84,9 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 			var state: Dictionary = actor["state"]
 			var title: String = "%s%s %d" % ["Bot " if state.get("bot", false) else "",
 				Balance.profile_of(state.get("vocation", ""))["name"], state.get("level", 1)]
+			if state.has("name"):
+				# Named bots (solo companions and rivals): the name and level; their look shows the class.
+				title = "%s %d" % [String(state["name"]).get_slice(" of ", 0), state.get("level", 1)]
 			SpriteArt.draw_nameplate(self, center, title, state["health"], state["max_health"], 1.0, state.get("skull", ""),
 				Color.TRANSPARENT, _party_mark(id, state), true)
 			if state.has("gathering"):

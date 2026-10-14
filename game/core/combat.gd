@@ -857,6 +857,8 @@ func share_bonus(members: Array[int]) -> float:
 
 func describe(id: int) -> String:
 	var player: Dictionary = world.players[id]
+	if not String(player.get("name", "")).is_empty():
+		return String(player["name"])
 	return "%s%s %d" % ["Bot " if player.get("bot", false) else "", Balance.profile_of(player["vocation"])["name"], player["level"]]
 
 
@@ -1106,7 +1108,8 @@ func _kill_player(id: int, now: float, events: Array, killer: int = 0) -> void:
 ## gold, and the depot always stay. Returns ["backpack", worn item names...] or [] if nothing was carried.
 func _drop_belongings(id: int, events: Array) -> Array[String]:
 	var player: Dictionary = world.players[id]
-	if player["level"] < PROTECTION_LEVEL:
+	# Solo companions come straight back to their player with what they carried.
+	if player["level"] < PROTECTION_LEVEL or player.get("companion", false):
 		return []
 	var dropped: Array[String] = []
 	var lost_worn: Array[String] = []

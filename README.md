@@ -15,6 +15,8 @@ and the 384×384 world) is original.
 - Gathering (mining, woodcutting, herbalism, fishing) and crafting (smithing, woodworking,
   tailoring, alchemy, cooking) at town artisans
 - A backpack plus three bag slots, a bank depot, vendors, potions, and food
+- **Play solo** with three AI companions who follow, heal, and tank for you, rival adventurer
+  bands who quest, level, and ambush you in PvP zones, and a ten-player AI raid for the final bosses
 
 ## About
 
@@ -47,7 +49,9 @@ from the command line: open the project in the Godot editor, or run `make import
 
 Without `--host` or `--join` (for example when you press F5 in the editor), the game opens
 on the start screen: pick one of your characters (or **Create new character** and give it a
-name), then click **Host a game** in one instance. In another instance, pick a character, enter
+name). **Play solo** starts a private world with AI companions and rivals (see
+[gameplay.md](docs/gameplay.md#playing-solo-companions-rivals-and-raids)); for LAN play click
+**Host a game** in one instance. In another instance, pick a character, enter
 the host's LAN IPv4 address and click **Join**. Use `127.0.0.1` only for two instances on the same
 computer. All computers must use the same project files. Allow inbound **UDP
 1234** through the host firewall; ENet does not use TCP/WebSockets.

@@ -19,7 +19,7 @@ const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": 
 	"runes": "Runes", "craft": "Craft"}
 const DEPOT_COLUMNS: int = 8
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
-	"join": "Join party", "leave": "Leave party"}
+	"join": "Join party", "leave": "Leave party", "raid": "Gather a raid (10 players)", "disband_raid": "Disband the raid"}
 
 var game: Node
 ## The dialog panel (travel routes or quests) and its rows.
@@ -64,7 +64,10 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_player_menu = PopupMenu.new()
 	_player_menu.id_pressed.connect(func(index: int) -> void:
 		var action: String = _player_menu.get_item_metadata(_player_menu.get_item_index(index))
-		game.party_local(action, 0 if action == "leave" else _player_menu_target))
+		if action in ["raid", "disband_raid"]:
+			game.raid_local(action == "raid")
+		else:
+			game.party_local(action, 0 if action == "leave" else _player_menu_target))
 	add_child(_player_menu)
 
 
@@ -159,7 +162,10 @@ func party_options(person: int) -> Array[String]:
 	var theirs: Dictionary = actors[person]["state"]
 	var my_party: int = mine.get("party", 0)
 	if person == self_id:
-		if my_party != 0:
+		# Solo: your companions always rejoin you, so your own menu gathers or disbands a raid.
+		if game.solo_mode:
+			options.append("disband_raid" if game.solo.raiding else "raid")
+		elif my_party != 0:
 			options.append("leave")
 		return options
 	if person in mine.get("invites", []) and my_party == 0:
@@ -177,7 +183,8 @@ func open_player_menu(person: int, at: Vector2i) -> bool:
 		return false
 	var state: Dictionary = game.actors[person]["state"]
 	_player_menu.clear()
-	_player_menu.add_separator("You" if person == game.self_id else "%s %d" % [
+	_player_menu.add_separator("You" if person == game.self_id else "%s%s %d" % [
+		String(state["name"]).get_slice(" of ", 0) + " · " if state.has("name") else "",
 		Balance.VOCATIONS.get(state.get("vocation", ""), {"name": "Player"})["name"], state.get("level", 1)])
 	for index: int in options.size():
 		_player_menu.add_item(PARTY_LABELS[options[index]], index)

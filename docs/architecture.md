@@ -14,7 +14,9 @@ game/
     crafting.gd          Professions on the host: herb patches, gathering (nodes, regrowth), crafting at artisans, skill training
     instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
-    bots.gd              Host player bots: hunter, PvP, and dummy stances through the real rules
+    bots.gd              Host player bots: hunter, PvP, dummy, companion, and rival stances through the real rules
+    solo.gd              Solo play: companions around your class, rival bands, PvP ambushes, raid fill and disband
+    nav.gd               Long-range bot navigation: AStarGrid2D over the walkable overworld
     ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
@@ -50,7 +52,7 @@ game/
     action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation (again after a trainer)
     world_maps.gd        Minimap and world map drawn from one terrain texture
     npc_dialogs.gd       NPC service menu; travel, trade, bank (depot), quest, runes, and craft dialogs; player party menu
-    start_panel.gd       Start screen until you host or join: painted backdrop, character list and creation, host/join
+    start_panel.gd       Start screen until you play: painted backdrop, character list and creation, play solo, host, or join
     controls_menu.gd     Key-binding window
   render/                Client-side drawing only
     floor_layer.gd       Floors drawn once into cached 16x16-tile chunks (one chunk per frame)

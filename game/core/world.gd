@@ -721,6 +721,8 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 	}
 	if player.get("bot", false):
 		state["bot"] = true
+		if player.has("name"):
+			state["name"] = player["name"]
 	if not player["gathering"].is_empty():
 		state["gathering"] = [player["gathering"]["cell"], maxf(0.0, player["gathering"]["until"] - now), player["gathering"]["profession"]]
 	if include_private:

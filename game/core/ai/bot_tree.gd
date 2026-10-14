@@ -9,6 +9,8 @@ extends RefCounted
 ##       UseSpellsAndPotions                    (heal, potions, attack spells)
 ##       Selector
 ##         Sequence: PickTarget, EngageTarget   (fight)
+##         FollowLeader                         (companions, rival band members)
+##         Sequence: IsStance rival, RunErrand  (rival band leaders: tasks, hunts, ambushes)
 ##         Sequence: AwayFromPost > 2, WalkToPost
 ##
 ## Blackboard (set at run time): "target" (int), the creature the bot fights.
@@ -19,12 +21,14 @@ const PickTarget = preload("res://game/core/ai/tasks/bt_pick_target.gd")
 const Engage = preload("res://game/core/ai/tasks/bt_engage.gd")
 const AwayFromPost = preload("res://game/core/ai/tasks/bt_away_from_post.gd")
 const WalkHome = preload("res://game/core/ai/tasks/bt_walk_home.gd")
+const FollowLeader = preload("res://game/core/ai/tasks/bt_follow_leader.gd")
+const RunPlan = preload("res://game/core/ai/tasks/bt_run_plan.gd")
 const PATH: String = "res://game/data/bot_behavior.tres"
 
 
 static func build() -> BehaviorTree:
 	var tree := BehaviorTree.new()
-	tree.description = "Brimholt player bot: dummies idle; others use resources, fight a target, or walk back to their post."
+	tree.description = "Brimholt player bot: dummies idle; others use resources, fight a target, follow their leader, run a rival errand, or walk back to their post."
 	var root := BTSelector.new()
 	root.custom_name = "Bot"
 	var dummy := BTSequence.new()
@@ -42,6 +46,14 @@ static func build() -> BehaviorTree:
 	fight.add_child(PickTarget.new())
 	fight.add_child(Engage.new())
 	choose.add_child(fight)
+	choose.add_child(FollowLeader.new())
+	var errand := BTSequence.new()
+	errand.custom_name = "Rival errand"
+	var rival: BTCondition = IsStance.new()
+	rival.set("stance", "rival")
+	errand.add_child(rival)
+	errand.add_child(RunPlan.new())
+	choose.add_child(errand)
 	var home := BTSequence.new()
 	home.custom_name = "Return to post"
 	home.add_child(AwayFromPost.new())

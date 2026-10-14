@@ -105,6 +105,11 @@ func setup(game_node: Node, address: LineEdit) -> void:
 	_play = VBoxContainer.new()
 	_play.add_theme_constant_override("separation", 6)
 	column.add_child(_play)
+	var solo := _button("Play solo", func() -> void: _start(true, true))
+	solo.tooltip_text = "A private world: three companions join your party, rival bands roam, quest, and hunt you in PvP zones"
+	solo.custom_minimum_size.y = 38
+	solo.add_theme_font_size_override("font_size", 17)
+	_play.add_child(solo)
 	var actions := HBoxContainer.new()
 	_play.add_child(actions)
 	var host := _button("Host a game", func() -> void: _start(true))
@@ -223,13 +228,15 @@ func _delete_pressed() -> void:
 	reload()
 
 
-func _start(hosting: bool) -> void:
+func _start(hosting: bool, alone: bool = false) -> void:
 	if not _have_selection:
 		game._status_message = "Create a character first."
 		_show_form(true)
 		return
 	game.select_character(selected)
-	if hosting:
+	if alone:
+		game.play_solo()
+	elif hosting:
 		game.host_game()
 	else:
 		game.join_game()
@@ -269,8 +276,8 @@ func _card(entry: Dictionary) -> Control:
 			_select(entry["profile"], true)
 			_show_form(false)
 			if event.double_click:
-				_start(true))
-	card.tooltip_text = "Double-click to host with %s" % entry["name"]
+				_start(true, true))
+	card.tooltip_text = "Double-click to play solo with %s" % entry["name"]
 	return card
 
 

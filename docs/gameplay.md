@@ -161,6 +161,37 @@ in red (critical hits in orange), healing in green, and experience in white. Ran
 fly as projectiles and area spells flash their tiles. Your health and mana bars sit in the
 top-left of the game window.
 
+## Playing solo: companions, rivals, and raids
+
+**Play solo** on the start screen opens a private world that only this computer can reach. It
+saves your character like hosting does, but brings the group game to you:
+
+- **Companions.** Three named companions join your party at once, completing a tank, healer,
+  and damage group around your class (a Warrior gets a Druid, a Hunter, and a Sorcerer, and so
+  on). They always match your level, wear the best regular gear of your tier, and follow you
+  everywhere: across the map, through waystones and ferries, after you die, and down dungeon
+  stairs into your party's copy. They fight what you target and whatever attacks the group.
+  Druids heal hurt allies, moving to them; Warriors **Challenge** monsters that turn on a softer
+  member. A companion who falls is back beside you six seconds later with what it carried.
+  Party experience is shared by the usual rules, so a full group levels as a real one does.
+- **Rival bands.** Two named adventurer bands of three (*the Ashen Hand* and *the
+  Thornwardens*) roam the world at about your level. Their leader takes a task from its giver,
+  hunts that monster at one of its camps, turns it in, and picks another; the band walks
+  where you can see it and travels far in one go where you cannot. When you enter a **PvP
+  zone**, one band comes for your group there (you are warned), arriving out of sight and
+  closing in, so Blackreed Isle and the Hollow Reach become group fights. Outside PvP zones
+  rivals cannot attack you, as for any player; skulls, death penalties, and loot drops all
+  apply to them (beat them for their potions). A band rests a few minutes between ambushes.
+- **Raids.** At level 50, right-click yourself and choose **Gather a raid**: your party fills to
+  the ten-player raid the final bosses are balanced for (two Warriors, three Hunters, three
+  Sorcerers, two Druids, you included). The raid's Warriors trade the boss when its wounds stack
+  on the tank (three or more), and the Druids keep everyone up through its pulses. The rival
+  bands step aside meanwhile, to stay within the twelve-player limit. **Disband the raid** sends
+  the extra companions home; your three stay.
+
+Companions and rivals are bots (below): they play through the server's own rules and are never
+saved. Their nameplates show their name and level.
+
 ## Player bots (host only)
 
 The host's top bar has a **Bots** button. Pick a class, a level (1–50), and a stance, then
@@ -179,8 +210,11 @@ below 25% mana; ranged bots step back from anything beside them.
 | Training dummy | Stands still and never fights back: test damage, spells, and skulls |
 
 A **LimboAI behavior tree** (`game/data/bot_behavior.tres`) makes each bot's decisions: dummies
-idle; everyone else uses spells and potions, then fights a target (picked from attackers, PvP
-victims, monsters after it, or prey near its post) or walks back to its post. Open the tree in
+idle; everyone else uses spells and potions (in a party: heals for hurt allies, Challenge for the
+group), then fights a target (its leader's, attackers of its group, PvP victims, monsters after
+it, or prey near its post), follows its leader (companions and rival band members), runs its
+errand (rival band leaders: tasks, camps, ambushes), or walks back to its post. Long trips use
+`game/core/nav.gd`, an A* grid over the walkable overworld. Open the tree in
 the Godot editor's LimboAI tab to change how bots play; `make bot-tree` restores the default.
 
 A bot that dies comes back 6 seconds later where you placed it, with its level, gear, and

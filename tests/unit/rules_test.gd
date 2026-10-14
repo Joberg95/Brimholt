@@ -21,6 +21,8 @@ const Biomes = preload("res://game/data/biomes.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Professions = preload("res://game/data/professions.gd")
+const Solo = preload("res://game/core/solo.gd")
+const Nav = preload("res://game/core/nav.gd")
 const SpriteArtSheets = preload("res://game/render/sprite_art.gd")
 var failures: int = 0
 var checks: int = 0
@@ -262,6 +264,7 @@ func _quest_hub_and_lexicon_checks() -> void:
 	_crafting_checks()
 	_bag_checks()
 	_character_profile_checks()
+	_solo_checks()
 	check(World.next_task({"level": 3, "vocation": "knight", "tasks": {}, "done_tasks": []}) != Quests.TRIAL_TASK
 		and World.task_open(Quests.TRIAL_TASK, {"vocation": Balance.ADVENTURER, "tasks": {}, "done_tasks": []}),
 		"only Adventurers are pointed to the trial")
@@ -912,6 +915,111 @@ func _crafting_checks() -> void:
 	fed_combat.tick(10.0)
 	check(fed.players[1]["health"] > hungry.players[1]["health"] and fed.players[1]["mana"] > hungry.players[1]["mana"],
 		"a meal regenerates health and mana faster")
+
+
+## Solo play: companions form your party at your level and follow you anywhere; rival bands
+## take tasks and ambush you in PvP zones; a raid fills to Balance.RAID at level 50.
+func _solo_checks() -> void:
+	var world := World.new()
+	var combat := Combat.new(world, 11)
+	var instances := Instances.new(world, combat)
+	var bots := Bots.new(world, combat)
+	bots.instances = instances
+	var solo := Solo.new(world, combat, bots)
+	world.add_player(1, 0.0, "knight")
+	var me: Dictionary = world.players[1]
+	me["level"] = 20
+	solo.start(1, 0.0)
+	var sim_clock: Array[float] = [0.0]
+	var run := func(seconds: float) -> void:
+		var end: float = sim_clock[0] + seconds
+		while sim_clock[0] < end:
+			sim_clock[0] += 0.1
+			combat.tick(sim_clock[0])
+			bots.tick(sim_clock[0])
+			solo.tick(sim_clock[0])
+			instances.tick(sim_clock[0])
+	var friends: Array[int] = solo.companions()
+	var vocations: Array = friends.map(func(id: int) -> String: return world.players[id]["vocation"])
+	vocations.sort()
+	check(friends.size() == 3 and vocations == ["druid", "paladin", "sorcerer"] and combat.party_members(1).size() == 4
+		and friends.all(func(id: int) -> bool: return world.players[id]["level"] == 20 and world.players[id].get("companion", false)),
+		"three companions complete your group, in your party at your level")
+	check(solo.bands.size() == 2 and solo.bands.values().all(func(band: Dictionary) -> bool:
+		return band["members"].size() == 3 and combat.party_members(band["leader"]).size() == 3), "two rival bands of three roam")
+	check(world.players.size() <= World.MAX_PLAYERS, "solo stays within the player limit")
+	check(world.export_player(friends[0], 0.0).has("name") and combat.describe(friends[0]) == world.players[friends[0]]["name"],
+		"bots have names")
+	# Following: across the meadow, then in one jump after you travel far.
+	var route: Array[Vector2i] = Nav.route(me["cell"], me["cell"] + Vector2i(14, 20))
+	check(route.size() > 20, "the navigation grid routes across the overworld")
+	for cell: Vector2i in route:
+		world.move(1, cell - me["cell"], sim_clock[0])
+		run.call(0.2)
+	run.call(5.0)
+	check(friends.all(func(id: int) -> bool: return Combat.distance(world.players[id]["cell"], me["cell"]) <= Bots.FOLLOW_RANGE + 1),
+		"companions keep up with you")
+	_place(world, 1, World.QUEST_GIVERS["lodgemaster_varga"]["cell"] + Vector2i(0, 2))
+	run.call(1.0)
+	check(friends.all(func(id: int) -> bool: return Combat.distance(world.players[id]["cell"], me["cell"]) <= Bots.FOLLOW_RANGE + 2),
+		"companions rejoin you after a long journey")
+	me["level"] = 23
+	run.call(1.0)
+	var paced: bool = true
+	for id: int in friends:
+		paced = paced and world.players[id]["level"] == 23 and world.players[id]["equipment"] == Bots.gear(23, world.players[id]["vocation"])
+	check(paced, "companions keep your level and gear tier")
+	# Down the stairs: companions follow you into your party's dungeon copy.
+	instances.enter(1, "cinder_cellar", sim_clock[0])
+	run.call(1.0)
+	check(friends.all(func(id: int) -> bool: return World.dungeon_at(world.players[id]["cell"]) == World.dungeon_at(me["cell"])),
+		"companions follow you into your dungeon copy")
+	instances.leave(1, sim_clock[0])
+	run.call(1.0)
+	check(friends.all(func(id: int) -> bool: return World.dungeon_at(world.players[id]["cell"]).is_empty()), "and back out")
+	# Group tactics.
+	var druid: int = friends.filter(func(id: int) -> bool: return world.players[id]["vocation"] == "druid")[0]
+	world.players[friends[1]]["health"] = 10
+	_place(world, druid, world.players[friends[1]]["cell"] + Vector2i(1, 0))
+	check(bots._hurt_ally(druid, 3, Bots.HEAL_ALLY_SHARE), "druids notice hurt allies")
+	var guard: int = combat.spawn_monster("grey_wolf", 20, me["cell"] + Vector2i(1, 0), sim_clock[0])
+	world.monsters[guard]["target"] = druid
+	_place(world, druid, me["cell"] + Vector2i(2, 0))
+	check(bots._should_taunt(1, 2, sim_clock[0]), "a warrior challenges a monster on a softer party member")
+	world.monsters[guard]["target"] = 1
+	check(not bots._should_taunt(1, 2, sim_clock[0]), "but not one already on the warrior")
+	combat.despawn(guard, [])
+	me["health"] = 100
+	var events: Array = []
+	world.players[druid]["level"] = 20
+	check(combat._drop_belongings(druid, events).is_empty(), "companions keep their belongings when they die")
+	# Rival bands go about their errands: a task from its giver, at a camp of its monster.
+	run.call(20.0)
+	var heads: Array = solo.bands.values().map(func(band: Dictionary) -> int: return band["leader"])
+	check(heads.any(func(head: int) -> bool: return not world.players[head]["tasks"].is_empty()), "rival bands take tasks")
+	# A raid at level 50: the balance check's composition, rival bands sent home to fit.
+	check(not solo.raid(true, sim_clock[0])["ok"], "raids wait for level 50")
+	me["level"] = Balance.MAX_LEVEL
+	run.call(0.5)
+	check(solo.raid(true, sim_clock[0])["ok"] and combat.party_members(1).size() == 10 and world.players.size() <= World.MAX_PLAYERS,
+		"a raid gathers ten")
+	var counts: Dictionary = {}
+	for id: int in combat.party_members(1):
+		counts[world.players[id]["vocation"]] = counts.get(world.players[id]["vocation"], 0) + 1
+	check(counts == Balance.RAID and Balance.raid_check(counts)["ok"], "the raid matches the balanced raid composition")
+	check(solo.raid(false, sim_clock[0])["ok"] and combat.party_members(1).size() == 4 and solo.bands.values().all(
+		func(band: Dictionary) -> bool: return band["members"].size() == 3), "disbanding keeps your companions and brings the rivals back")
+	# Ambush: a band comes for your group in a PvP zone.
+	var island: Vector2i = Vector2i(205, 197)
+	check(World.zone_at(island).get("pvp", false), "Blackreed Isle is a PvP zone")
+	for band: int in solo.bands:
+		solo.bands[band]["rest_until"] = 0.0  # disbanding a raid gives the bands a rest first
+	_place(world, 1, island)
+	run.call(25.0)
+	var hunted: bool = false
+	for id: int in [1] + friends:
+		hunted = hunted or not world.players[id]["aggressors"].is_empty()
+	check(hunted, "rivals ambush your group in a PvP zone")
 
 
 ## Start-menu characters: names are cleaned, and a profile's summary is read defensively.

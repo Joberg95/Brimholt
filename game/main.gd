@@ -29,6 +29,7 @@ const ProfessionsWindow = preload("res://game/ui/professions_window.gd")
 const MicroMenu = preload("res://game/ui/micro_menu.gd")
 const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 const Bots = preload("res://game/core/bots.gd")
+const Solo = preload("res://game/core/solo.gd")
 const BotPanel = preload("res://game/ui/bot_panel.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
@@ -69,6 +70,9 @@ var _ground_index := CellIndex.new()
 var self_id: int = 0
 var connected: bool = false
 var hosting: bool = false
+## Playing solo: a private world (bound to this computer only) with companions and rival bands.
+var solo_mode: bool = false
+var solo: Solo
 var dedicated: bool = false
 var port: int = World.PORT
 var last_action_message: String = ""
@@ -238,6 +242,8 @@ func _process(delta: float) -> void:
 	if hosting and not _leaving:
 		_handle_events(combat.tick(now))
 		_handle_events(bots.tick(now))
+		if solo_mode:
+			_handle_events(solo.tick(now))
 		_handle_events(instances.tick(now))
 		_handle_events(crafting.tick(now))
 		_handle_events(world.decay_ground(now))
@@ -397,6 +403,9 @@ func _reset_session() -> void:
 	worked_nodes.clear()
 	instances = Instances.new(world, combat)
 	bots = Bots.new(world, combat)
+	bots.instances = instances
+	solo = Solo.new(world, combat, bots)
+	solo_mode = false
 	_known_monsters.clear()
 	_next_interest = 0.0
 	store = null
@@ -431,10 +440,15 @@ func _fail(message: String) -> void:
 	_update_labels()
 
 
-func host_game() -> void:
+## Hosts a game on the LAN, or (private) a solo world only this computer can reach, with your
+## companions and rival bands (game/core/solo.gd).
+func host_game(private: bool = false) -> void:
 	_reset_session()
+	solo_mode = private
 	peer = ENetMultiplayerPeer.new()
-	var error: Error = peer.create_server(port, World.MAX_PLAYERS)
+	if private:
+		peer.set_bind_ip("127.0.0.1")
+	var error: Error = peer.create_server(0 if private else port, World.MAX_PLAYERS)
 	if error != OK:
 		_fail("Cannot host on UDP port %d: %s" % [port, error_string(error)])
 		return
@@ -461,8 +475,27 @@ func host_game() -> void:
 		_greetings.erase(1)
 	_handle_events(combat.populate(_now()))
 	_status_message = "Hosting on UDP %d%s" % [port, " (dedicated)" if dedicated else " — you are the host"]
+	if solo_mode and world.players.has(1):
+		_handle_events(solo.start(1, _now()))
+		_status_message = "Playing solo with your companions — rivals roam the world"
 	get_viewport().gui_release_focus()
 	print("BRIMHOLT_HOST_READY port=%d" % port)
+
+
+## Starts a private solo world (the start screen's Play solo).
+func play_solo() -> void:
+	host_game(true)
+
+
+## Solo only: gathers a full raid around you, or sends it home (Solo.raid).
+func raid_local(on: bool) -> void:
+	if not solo_mode or not hosting:
+		return
+	var result: Dictionary = solo.raid(on, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+	else:
+		last_action_message = result["reason"]
 
 
 func join_game() -> void:
@@ -1249,6 +1282,9 @@ func _handle_events(events: Array) -> void:
 				_publish_ground(event["cells"])
 			"message":
 				messages.append(event)
+			"bot_left":
+				actors.erase(event["id"])
+				actor_left.rpc(event["id"])
 			"node":
 				var regrowing: Dictionary = {event["cell"]: event["seconds"]}
 				nodes_worked(regrowing)
