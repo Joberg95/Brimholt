@@ -7,8 +7,8 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
 1. **Terrain**: select the `Terrain` node and use the TileMap panel at the bottom to paint
    with the palette (`game/maps/terrain.tres`). Each tile's custom data `terrain` sets its
    gameplay: grass `.`, dirt road `,`, water `~`, stone wall `#`, tree `T`, sand `:`,
-   cobblestone `=`, boulder `R`, pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
-   `o`, obsidian wall `O`, and dead tree `D`. Water, walls, trees, and boulders block movement; cave rock `C` on the overworld is a rock outcrop. The editor
+   cobblestone `=`, boulder `R`, mountain rock `L`, pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
+   `o`, obsidian wall `O`, and dead tree `D`. Water, walls, trees, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
    plank piers. Keep the map at non-negative coordinates; unpainted cells are void.
 2. **Spawns**: the twelve `Marker2D` nodes under `Spawns`, one per player, in order.
@@ -97,6 +97,13 @@ draft into settled countryside, once (the scene's `landscape` metadata stops a s
   back to any marker cut off by trees or rock was cleared.
 Run `make towns` after it to move vendors into free buildings. Edit the constants and restore
 the scene from git to try again; otherwise paint over the result in Godot like any other edit.
+
+**Mountains** (`L`: masses of grey boulders over grit) were added by
+`tools/generators/cliffs.gd` (`make cliffs`), once (scene metadata `cliffs`): they fill the high
+ground of a smooth height field, more in the north-eastern highlands, broken by passes, kept
+clear of roads, water, towns, markers, and camps, with no trees inside or at their foot. The same pass cut
+about 30% of the countryside trees. Ground a cliff closed off got a way in, and every marker
+stays reachable. Paint `L` by hand for more rock.
 
 **Buildings** are found from the walls: a room of at most 48 tiles in a town zone, enclosed
 by `#` walls and doors (an open tile between two walls in a line). They get a roof, and

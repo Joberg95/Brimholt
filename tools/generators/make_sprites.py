@@ -34,7 +34,7 @@ ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
 VISIBLE_SLOTS = ("helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
-TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R")
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L")
 
 
 def rgba(value, alpha=255):
@@ -2883,7 +2883,9 @@ def terrain_palette():
              ":": sand_tile(0), "=": cobble_tile(0), "b": plank_tile(False, 0), "d": dusk_tile(0),
              "o": obsidian_tile(0), "O": wall(0, OBSIDIAN_STONE).crop(0, 0, TILE, TILE), "D": dead_tile,
              "c": cave_tile(0), "C": wall(0, CAVE_STONE).crop(0, 0, TILE, TILE),
-             "v": stairs_tile(True), "^": stairs_tile(False), "K": cactus_tile, "R": rock_tile}
+             "v": stairs_tile(True), "^": stairs_tile(False), "K": cactus_tile, "R": rock_tile,
+             "L": gravel_tile(0).over(crag(0).crop(16, 24, TILE, TILE))}
+    tiles["C"] = grass_tile(0).over(crag(0, True).crop(16, 24, TILE, TILE))
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
@@ -2961,6 +2963,178 @@ def wall(mask, stone=None):
             image.set(31, y, OUTLINE)
     return image
 
+
+
+# Mountain rock: cool greys from highlight to crevice.
+CRAG = (rgba("a4a3a2"), rgba("7c7b7c"), rgba("5d5d61"), rgba("444449"), rgba("2e2e33"))
+CRAG_LINE = rgba("1c1c20")
+GRAVEL = (rgba("7c7a74"), rgba("6c6a65"), rgba("8e8c85"), rgba("5a5854"), rgba("9c9a92"))
+
+
+def gravel_tile(variant):
+    """Rocky ground under a mountain: grey grit with pebbles."""
+    rng = random.Random(1500 + variant)
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, GRAVEL[0])
+    for _ in range(170):
+        image.set(rng.randrange(TILE), rng.randrange(TILE), GRAVEL[rng.choice((1, 1, 2, 3))])
+    for _ in range(4):
+        x, y = rng.randrange(2, 28), rng.randrange(2, 28)
+        image.set(x, y, GRAVEL[4])
+        image.set(x + 1, y, GRAVEL[2])
+        image.set(x, y + 1, GRAVEL[3])
+    return image
+
+
+def boulder_shape(rng, cx, cy, rx, ry):
+    """An irregular rounded boulder: an ellipse whose radius wobbles with the angle."""
+    lobes = [rng.uniform(0.82, 1.08) for _ in range(7)]
+    points = set()
+    for y in range(int(cy - ry) - 2, int(cy + ry) + 3):
+        for x in range(int(cx - rx) - 2, int(cx + rx) + 3):
+            dx, dy = (x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry
+            angle = (math.atan2(dy, dx) / (2 * math.pi) + 1) % 1 * 7
+            low = int(angle)
+            wobble = lobes[low] + (lobes[(low + 1) % 7] - lobes[low]) * (angle - low)
+            if dx * dx + dy * dy <= wobble * wobble:
+                points.add((x, y))
+    return points
+
+
+def paint_boulder(image, points, cx, cy, rx, ry, seed):
+    """Faceted stone: lit from the top-left, darker toward the bottom-right, with a few crack
+    lines and a dark outline."""
+    rng = random.Random(seed)
+    facets = [(cx + rng.uniform(-rx, rx) * 0.6, cy + rng.uniform(-ry, ry) * 0.6) for _ in range(3)]
+    for x, y in points:
+        light = (cx - x) / rx * 0.55 + (cy - y) / ry * 0.75
+        nearest = min(range(len(facets)), key=lambda k: (x - facets[k][0]) ** 2 + (y - facets[k][1]) ** 2)
+        light += (-0.18, 0.0, 0.16)[nearest]
+        tone = 0 if light > 0.55 else 1 if light > 0.1 else 2 if light > -0.3 else 3 if light > -0.7 else 4
+        if (x * 13 + y * 7 + seed) % 31 < 2:
+            tone = min(4, tone + 1)
+        image.set(x, y, CRAG[tone])
+    # Facet edges: where the nearest facet changes, a darker seam on the lower side.
+    for x, y in points:
+        here = min(range(3), key=lambda k: (x - facets[k][0]) ** 2 + (y - facets[k][1]) ** 2)
+        below = min(range(3), key=lambda k: (x - facets[k][0]) ** 2 + (y + 1 - facets[k][1]) ** 2)
+        if here != below and (x, y + 1) in points and (x + y) % 3:
+            image.set(x, y, CRAG[3])
+    for x, y in points:
+        if any((x + dx, y + dy) not in points for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+            image.set(x, y, CRAG_LINE if (x - cx) / rx + (y - cy) / ry > -0.6 else CRAG[3])
+
+
+def crag(variant, small=False):
+    """A pile of boulders for one mountain ("L") or outcrop ("C") tile, in a 64x64 cell whose tile
+    is (16..48, 24..56): boulders fill the tile and spill past it, rising above it, so neighbouring
+    tiles drawn in row order merge into one ragged rock mass."""
+    rng = random.Random((900 if small else 700) + variant)
+    image = Image(FRAME, FRAME)
+    for x, y in ellipse(32, 52, 18 if not small else 13, 4):
+        image.set(x, y, SHADOW)
+    stones = []
+    if small:
+        stones.append((32 + rng.uniform(-3, 3), 42 + rng.uniform(-2, 2), rng.uniform(10, 13), rng.uniform(9, 11)))
+        for _ in range(rng.randrange(1, 3)):
+            stones.append((32 + rng.uniform(-11, 11), 47 + rng.uniform(-3, 4), rng.uniform(5, 8), rng.uniform(4, 6)))
+    else:
+        # A dark mass behind the boulders so no ground shows through the pile.
+        for x, y in ellipse(32, 36, 17, 15):
+            image.set(x, y, CRAG[4])
+        for row in range(3):
+            for column in range(3):
+                big = rng.random() < 0.3
+                stones.append((20 + column * 12 + rng.uniform(-4, 4), 22 + row * 12 + rng.uniform(-3, 3),
+                               rng.uniform(11, 15) if big else rng.uniform(7, 11), rng.uniform(9, 12) if big else rng.uniform(6, 9)))
+        stones.append((32 + rng.uniform(-4, 4), 34 + rng.uniform(-3, 3), rng.uniform(10, 13), rng.uniform(9, 11)))
+    stones.sort(key=lambda stone: stone[1] + stone[3])
+    for index, (cx, cy, rx, ry) in enumerate(stones):
+        points = {(x, y) for x, y in boulder_shape(rng, cx, cy, rx, ry) if 0 <= x < FRAME and 0 <= y < FRAME}
+        paint_boulder(image, points, cx, cy, rx, ry, variant * 17 + index)
+    return image
+
+
+CLIFF_FACE = (rgba("7a6e5c"), rgba("5e5446"), rgba("463e33"), rgba("948770"))
+CLIFF_SIDE = (rgba("5a5143"), rgba("443d33"), rgba("6a604f"))
+
+
+def cliff(mask, rocky=False):
+    """A cliff ("L"): the same oblique block as a wall, its top a meadow ledge with a rocky lip
+    and its open south and east sides craggy rock faces with vertical cracks and tufts of grass.
+    `rocky` gives a bare rock top instead: overworld rock outcrops ("C" outside dungeons)."""
+    open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
+    image = Image(WALL, WALL)
+
+    def crag(x, y, along, rise, side):
+        # Irregular boulders stacked in a face: cells of varying width per band, each lit at its
+        # top-left and shaded at its bottom-right, with dark seams between them.
+        band = int(rise // 5)
+        width = 5 + (band * 7) % 4
+        offset = (band * 11) % width
+        cell_x = (along + offset) % width
+        cell_y = rise % 5
+        tones = CLIFF_SIDE if side else CLIFF_FACE
+        if cell_x < 1.0 or cell_y < 1.0:
+            return CLIFF_FACE[2] if not side else CLIFF_SIDE[1]
+        light = (cell_y > 3.0) + (cell_x < 2.2)
+        color = (tones[1], tones[0], CLIFF_FACE[3] if not side else tones[2])[min(light, 2)]
+        if cell_x > width - 1.2:
+            color = scale(color, 0.82)
+        if (x * 13 + y * 7) % 29 < 2:
+            color = scale(color, 0.9)
+        return color
+
+    if open_east:
+        for y in range(FRAME):
+            for x in range(32, 48):
+                depth = 48 - (x + 0.5)
+                if 16 - depth <= y + 0.5 < 48 - depth:
+                    level = y + 0.5 + depth - 16
+                    image.set(x, y, OUTLINE if level < 1.0 or x == 47 else crag(x, y, level, depth, True))
+    if open_south:
+        for y in range(32, 48):
+            rise = 48 - (y + 0.5)
+            for x in range(0, 48):
+                if 16 - rise <= x + 0.5 < 48 - rise:
+                    color = crag(x, y, x + 0.5 + rise - 16, rise, False)
+                    if rise > 13 and (x * 5) % 7 < 3:
+                        color = GRASS[3] if (x // 2) % 2 else GRASS[1]
+                    if y == 47 or x + 0.5 < 16 - rise + 1.0:
+                        color = OUTLINE
+                    image.set(x, y, color)
+    if rocky:
+        top = Image(TILE, TILE)
+        for x in range(32):
+            for y in range(32):
+                slab = (x // 7 + y // 5 * 3 + (y // 5) % 2) % 4
+                color = (CLIFF_FACE[3], CLIFF_FACE[0], CLIFF_FACE[0], CLIFF_FACE[1])[slab]
+                if (x + (y // 5) * 3) % 7 == 0 or y % 5 == 0 and (x * 3) % 4:
+                    color = CLIFF_FACE[2]
+                elif (x * 13 + y * 7) % 17 < 2:
+                    color = scale(color, 0.9)
+                elif (x * 5 + y * 11) % 41 < 2:
+                    color = MOSS[(x + y) % 2]
+                top.set(x, y, color)
+        image.over(top)
+    else:
+        image.over(grass_tile(mask % 4))
+    for x in range(32):
+        for y in range(32):
+            edge = min(y if open_north else 9, 31 - y if open_south else 9, x if open_west else 9, 31 - x if open_east else 9)
+            if edge < 2 and (x * 7 + y * 3) % 5 < 3:
+                image.set(x, y, CLIFF_FACE[3] if edge == 0 else CLIFF_FACE[0])
+    for x in range(32):
+        if open_north:
+            image.set(x, 0, OUTLINE)
+        if open_south:
+            image.set(x, 31, OUTLINE)
+    for y in range(32):
+        if open_west:
+            image.set(0, y, OUTLINE)
+        if open_east:
+            image.set(31, y, OUTLINE)
+    return image
 
 
 THIN_BAND = (11, 21)  # a thin wall's masonry band across its tile
@@ -3438,8 +3612,9 @@ def main():
                            + [plank_tile(False, 0), plank_tile(False, 1), plank_tile(True, 0), plank_tile(True, 1)]
                            + [dusk_tile(v) for v in range(4)] + [obsidian_tile(v) for v in range(4)]
                            + [cave_tile(v) for v in range(4)] + [stairs_tile(True), stairs_tile(False)]
-                           + edge_set("sand"),
+                           + edge_set("sand") + [gravel_tile(v) for v in range(4)],
                            4, TILE),
+        "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
                                  + [desert_plant(v) for v in range(3)] + [waystone()]
                                  + [boulder(v) for v in range(3)]),
@@ -3448,7 +3623,8 @@ def main():
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
         "terrain_palette.png": terrain_palette(),
         "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)]
-                           + [wall(mask, CAVE_STONE) for mask in range(16)] + [thin_wall(mask) for mask in range(16)],
+                           + [wall(mask, CAVE_STONE) for mask in range(16)] + [thin_wall(mask) for mask in range(16)]
+                           + [cliff(mask) for mask in range(16)] + [cliff(mask, True) for mask in range(16)],
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         **{f"gear/{kind}.png": character_sheet(gear_builder(kind), compact=True, columns=POSE_COLUMNS)

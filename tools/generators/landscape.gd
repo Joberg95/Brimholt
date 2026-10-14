@@ -18,7 +18,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/landscape.gd
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KR"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRL"
 const Regions = preload("res://game/data/regions.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILE: int = 32
@@ -115,22 +115,7 @@ func _initialize() -> void:
 
 ## Paints everything; returns counts of what changed, or {} (with an error) when it cannot.
 func apply(scene_root: Node) -> Dictionary:
-	_layer = scene_root.get_node("Terrain")
-	for group: String in MARKER_GROUPS:
-		if scene_root.has_node(group):
-			for marker: Node2D in scene_root.get_node(group).get_children():
-				var cell: Vector2i = _cell_of(marker)
-				for y: int in range(-1, 2):
-					for x: int in range(-1, 2):
-						_reserved[cell + Vector2i(x, y)] = true
-	for spawn: Node2D in scene_root.get_node("MonsterSpawns").get_children():
-		_camps.append([_cell_of(spawn), int(spawn.get("radius")), spawn])
-	var town_nodes: Array[Node2D] = []
-	for zone: Node2D in scene_root.get_node("Zones").get_children():
-		_zones.append([String(zone.get("zone_name")), Rect2i(Vector2i((zone.position / TILE).round()), zone.get("size_tiles")),
-			bool(zone.get("town"))])
-		if zone.get("town"):
-			town_nodes.append(zone)
+	var town_nodes: Array[Node2D] = _prepare(scene_root)
 	var report: Dictionary = {"towns": 0, "houses": 0, "castle": 0, "road": 0, "trees removed": 0, "outcrops": 0,
 		"boulders": 0, "pastures": 0, "merged": 0}
 	for merge: Array in MERGES:
@@ -193,7 +178,7 @@ func _reconnect(scene_root: Node) -> int:
 				if came.has(next) or not WORLD.has_point(next):
 					continue
 				var tile: String = _tile(next)
-				if tile.is_empty() or not (tile in walkable or tile in "TRC"):
+				if tile.is_empty() or not (tile in walkable or tile in "TRCL"):
 					continue
 				came[next] = cell
 				if reached.has(next):
@@ -206,7 +191,7 @@ func _reconnect(scene_root: Node) -> int:
 		var path: Array[Vector2i] = []
 		while true:
 			path.append(step)
-			if _tile(step) in "TRC":
+			if _tile(step) in "TRCL":
 				_paint(step, ".")
 				cleared += 1
 			if step == target:
@@ -232,6 +217,28 @@ func _flood(starts: Array[Vector2i], walkable: String, reached: Dictionary) -> v
 			if not reached.has(next) and not tile.is_empty() and tile in walkable:
 				reached[next] = true
 				queue.append(next)
+
+
+## Reads the terrain layer, markers (and the tiles around them), monster camps, and zones;
+## returns the town zone nodes.
+func _prepare(scene_root: Node) -> Array[Node2D]:
+	_layer = scene_root.get_node("Terrain")
+	for group: String in MARKER_GROUPS:
+		if scene_root.has_node(group):
+			for marker: Node2D in scene_root.get_node(group).get_children():
+				var cell: Vector2i = _cell_of(marker)
+				for y: int in range(-1, 2):
+					for x: int in range(-1, 2):
+						_reserved[cell + Vector2i(x, y)] = true
+	for spawn: Node2D in scene_root.get_node("MonsterSpawns").get_children():
+		_camps.append([_cell_of(spawn), int(spawn.get("radius")), spawn])
+	var town_nodes: Array[Node2D] = []
+	for zone: Node2D in scene_root.get_node("Zones").get_children():
+		_zones.append([String(zone.get("zone_name")), Rect2i(Vector2i((zone.position / TILE).round()), zone.get("size_tiles")),
+			bool(zone.get("town"))])
+		if zone.get("town"):
+			town_nodes.append(zone)
+	return town_nodes
 
 
 # ---------------------------------------------------------------- terrain helpers

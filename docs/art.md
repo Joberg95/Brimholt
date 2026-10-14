@@ -35,11 +35,12 @@ filtering:
 | `items.png` | 32×32 icons in `SpriteArt.ITEM_ORDER` |
 | `spells.png` | 32×32 rune stones, eight per row in `Spells.SPELLS` order: a weathered stone (its outline varies per spell) with the spell's Elder Futhark rune (`Spells.RUNES`, strokes in `RUNE_STROKES`) carved in and glowing in the spell's colour |
 | `tiles.png` | 32×32 cells: 4 grass, 4 dirt, 4 water frames, dirt edges and shorelines (N, E, S, W), 4 sand, 4 cobblestone, 2 horizontal and 2 vertical plank tiles, 4 dusk soil, 4 obsidian flagstones, 4 cave floors, stairs down/up, then dry-grass fringes on sand (N, E, S, W; tiles 46–49) |
-| `walls.png` | 48×48 oblique walls drawn 16 px up-left of their tile; index = open sides (1 N, 2 W, 4 S, 8 E); row 0 grey stone, row 1 obsidian, row 2 cave rock; row 3 thin town walls (`#`), indexed by connected sides (walls and doorways) instead, a 10 px masonry band through the tile centre |
+| `walls.png` | 48×48 oblique walls drawn 16 px up-left of their tile; index = open sides (1 N, 2 W, 4 S, 8 E); row 0 grey stone, row 1 obsidian, row 2 cave rock (dungeons), rows 4 and 5 (blocky cliffs and outcrops) are kept but unused on the overworld; row 3 thin town walls (`#`), indexed by connected sides (walls and doorways) instead, a 10 px masonry band through the tile centre |
 | `roofs.png` | Per material row (clay, slate, wooden shingle) four 32×32 swatches: near slope, far slope, timber gable, trim (ridge cap, eave board, chimney stone). `game/render/roof_art.gd` rasterizes each building's roof from them |
 | `furniture.png` | 32×48 shop and bank furniture drawn 16 px above their tile: shop counter, bank counter, potion shelf, bookshelf, weapon rack, barrel, crate, strongbox (`SpriteArt.FURNITURE` order) |
 | `signs.png` | 32×32 hanging signs on an iron bracket: shop (flask and sword), bank (coins) |
 | `torch.png` | 16×24 wall torches: unlit, then three flame frames; hung on the south faces of town buildings (`World.TORCHES`) |
+| `crags.png` | 64×64 boulder piles, the tile at (16..48, 24..56): eight for mountains (`L`) and clustered outcrops, six small piles for lone outcrops (`C` on the overworld). They spill past their tile and are drawn in depth order, so neighbours merge into one ragged rock mass; the ground below is grey grit (`tiles.png` 50–53) |
 | `objects.png` | 64×96 trees (three living, two dead for the Hollow Reach, then three desert plants: a columnar cactus, a barrel-cactus clump, and a thorn shrub for terrain `K`, then the waystone, a carved standing stone with a cyan rune); trunk base on the tile centre at cell pixel (32, 80) |
 | `terrain_palette.png` | 32×32 map-editor palette, one tile per terrain |
 

@@ -8,7 +8,7 @@ extends SceneTree
 ## tools/generators/make_map.gd applies the same painter to a freshly generated map.
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KR"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRL"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const ZONE_NAME: String = "Blackreed Isle"
 const KEEP_PER_HUNDRED: int = 25

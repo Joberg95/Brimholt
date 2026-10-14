@@ -105,6 +105,13 @@ const STAIRS_DOWN_TILE: int = 44
 const STAIRS_UP_TILE: int = 45
 ## Dry grass fringes on sand next to grass (north, east, south, west).
 const SAND_EDGE_TILE: int = 46
+## Grey grit under mountains ("L"), four variants.
+const GRAVEL_TILE: int = 50
+## crags.png: 64x64 boulder piles (tile at 16..48, 24..56): MOUNTAIN_VARIANTS for cliffs and
+## mountains ("L"), then OUTCROP_VARIANTS smaller piles for rock outcrops ("C" on the overworld).
+const CRAGS: Texture2D = preload("res://assets/sprites/crags.png")
+const MOUNTAIN_VARIANTS: int = 8
+const OUTCROP_VARIANTS: int = 6
 ## objects.png: three living trees, two dead trees of the Hollow Reach, then three desert
 ## plants (a columnar cactus, a clump of barrel cacti, and a thorn shrub).
 const DEAD_TREE_FIRST: int = 3
@@ -234,6 +241,8 @@ static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
 		index = DUSK_TILE + noise(cell, 8) % 4
 	elif tile == "o":
 		index = obsidian_variant(cell)
+	elif tile == "L":
+		index = GRAVEL_TILE + noise(cell, 12) % 4
 	elif tile == "c" or tile == "C" and not World.OVERWORLD.has_point(cell):
 		# Rock outcrops on the overworld stand on grass; cave rock in dungeons on cave floor.
 		index = CAVE_TILE + noise(cell, 11) % 4
@@ -296,10 +305,13 @@ static func wall_mask(cell: Vector2i) -> int:
 
 
 static func wall_region(cell: Vector2i) -> Rect2:
-	# Row 0: grey stone; row 1: obsidian; row 2: cave rock; row 3: thin walls ("#").
+	# Row 0: grey stone; row 1: obsidian; row 2: cave rock; row 3: thin walls ("#"); row 4: cliffs ("L");
+	# row 5: rock outcrops ("C" on the overworld).
 	if tile_at(cell) == "#":
 		return Rect2(thin_wall_mask(cell) * WALL_SIZE, THIN_WALL_ROW * WALL_SIZE, WALL_SIZE, WALL_SIZE)
-	var row: int = 1 if tile_at(cell) == "O" else 2
+	var row: int = {"O": 1, "L": 4}.get(tile_at(cell), 2)
+	if row == 2 and World.OVERWORLD.has_point(cell):
+		row = 5
 	return Rect2(wall_mask(cell) * WALL_SIZE, row * WALL_SIZE, WALL_SIZE, WALL_SIZE)
 
 
@@ -316,6 +328,17 @@ static func thin_wall_mask(cell: Vector2i) -> int:
 
 
 static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
+	var tile: String = tile_at(cell)
+	if tile == "L" or tile == "C" and World.OVERWORLD.has_point(cell):
+		# Natural rock: a boulder pile spilling past its tile, merging with its neighbours.
+		# Outcrop tiles in a cluster join up like mountains; a lone one is a small pile.
+		var clustered: bool = tile == "L" or [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT].any(
+			func(side: Vector2i) -> bool: return tile_at(cell + side) == "C")
+		var variant: int = noise(cell, 13) % MOUNTAIN_VARIANTS if clustered \
+			else MOUNTAIN_VARIANTS + noise(cell, 13) % OUTCROP_VARIANTS
+		var at: Vector2 = Vector2(cell) * TILE - Vector2(16, 24)
+		canvas.draw_texture_rect_region(CRAGS, Rect2(at, Vector2(64, 64)), Rect2(variant * 64, 0, 64, 64))
+		return
 	var dest: Rect2 = Rect2(Vector2(cell) * TILE - Vector2.ONE * WALL_RAISE, Vector2.ONE * WALL_SIZE)
 	canvas.draw_texture_rect_region(WALLS, dest, wall_region(cell))
 

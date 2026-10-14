@@ -13,7 +13,7 @@ extends SceneTree
 const Buildings = preload("res://game/data/buildings.gd")
 ## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KR"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRL"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## The only town with a banker (and so the only bank and depot).
 const BANK_PLACE: String = "Reedmere"
