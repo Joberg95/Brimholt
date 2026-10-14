@@ -1,7 +1,7 @@
 extends Node
 ## Right-click menus and the shared dialog panel: an NPC's services (Travel, Trade, Bank,
 ## Quests), a ferryman's routes and fares, a vendor's stock, the banker's gold and depot,
-## hunting tasks, the Relic keeper's quests, and party options for players. Trade, bank,
+## hunting tasks, the Relic keeper's quests, an artisan's crafting, and party options for players. Trade, bank,
 ## and quest dialogs rebuild when your gold, items, or task progress change.
 
 const World = preload("res://game/core/world.gd")
@@ -12,8 +12,11 @@ const Spells = preload("res://game/data/spells.gd")
 const Economy = preload("res://game/core/economy.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Layout = preload("res://game/ui/layout.gd")
+const Crafting = preload("res://game/core/crafting.gd")
+const Professions = preload("res://game/data/professions.gd")
+const Items = preload("res://game/data/items.gd")
 const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests", "vocation": "Class",
-	"runes": "Runes"}
+	"runes": "Runes", "craft": "Craft"}
 const DEPOT_COLUMNS: int = 8
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
 	"join": "Join party", "leave": "Leave party"}
@@ -32,6 +35,9 @@ var npc_menu: PopupMenu
 var npc_menu_target: String = ""
 var _player_menu: PopupMenu
 var _player_menu_target: int = 0
+## The craft dialog's chosen profession and gear tier (0: the highest you can craft).
+var craft_profession: String = "smithing"
+var craft_tier: int = 0
 
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
@@ -69,7 +75,7 @@ func refresh() -> void:
 	if not talking_to.is_empty() and (not actors.has(self_id) or not World.in_talk_range(
 			actors[self_id]["state"]["cell"], World.npc(talking_to)["cell"])):
 		close()
-	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests", "vocation", "runes"] and _state_key() != _shown_state:
+	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests", "vocation", "runes", "craft"] and _state_key() != _shown_state:
 		_open(mode, talking_to)
 
 
@@ -90,7 +96,8 @@ func _state_key() -> String:
 		return ""
 	var state: Dictionary = actors[game.self_id]["state"]
 	return str([state.get("gold"), state.get("bank"), state.get("backpack"), state.get("tasks"), state.get("done_tasks"),
-		state.get("trophies"), state.get("level"), state["equipment"].get("bag"), state.get("vocation"), state.get("spell_ranks")])
+		state.get("trophies"), state.get("level"), state["equipment"].get("bag"), state.get("vocation"), state.get("spell_ranks"),
+		state.get("skills"), craft_profession, craft_tier])
 
 
 func _open(kind: String, npc: String) -> void:
@@ -105,6 +112,8 @@ func _open(kind: String, npc: String) -> void:
 			open_vocation(npc)
 		"runes":
 			open_runes(npc)
+		"craft":
+			open_craft(npc)
 
 
 ## Right-clicking a person opens their services; there is no typed dialogue.
@@ -125,7 +134,7 @@ func _npc_service_chosen(id: int) -> void:
 	var service: Variant = npc_menu.get_item_metadata(npc_menu.get_item_index(id))
 	if service == "travel":
 		talk_to(npc_menu_target)
-	elif service in ["trade", "bank", "quests", "vocation"]:
+	elif service in ["trade", "bank", "quests", "vocation", "runes", "craft"]:
 		_open(service, npc_menu_target)
 
 
@@ -332,6 +341,98 @@ func open_runes(npc: String) -> void:
 				func() -> void: game.empower_local(npc, spell))
 	_farewell()
 	_show(npc, "runes")
+
+
+## An artisan's workshop: pick a crafting profession (and, for gear, a tier), then craft any
+## recipe your skill allows from the resources in your backpack. The host checks everything.
+func open_craft(npc: String) -> void:
+	if not _begin(npc) or not "craft" in World.npc(npc).get("services", []):
+		return
+	var state: Dictionary = game.actors[game.self_id]["state"]
+	var backpack: Array = state.get("backpack", [])
+	var skills: Dictionary = state.get("skills", {})
+	_wrapped("%s, artisan of %s\n\"Bring me what you gather in the wilds and use my tools. Practice makes the master.\"" % [
+		World.npc(npc)["name"], World.npc(npc)["place"]])
+	var tabs := HBoxContainer.new()
+	list.add_child(tabs)
+	for profession: String in Professions.CRAFTING:
+		var level: int = int(skills.get(profession, [1, 0])[0])
+		var tab: Button = _button("%s %d" % [Professions.NAMES[profession], level], profession != craft_profession, func() -> void:
+			craft_profession = profession
+			craft_tier = 0
+			open_craft(npc), tabs)
+		tab.tooltip_text = Professions.DESCRIPTIONS[profession]
+		tab.add_theme_color_override("font_disabled_color", Color("#ffcf6a"))
+	var skill: int = int(skills.get(craft_profession, [1, 0])[0])
+	var recipes: Array = Crafting.RECIPES.values().filter(func(recipe: Dictionary) -> bool:
+		return recipe["profession"] == craft_profession)
+	recipes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["skill"] < b["skill"])
+	var gear: bool = craft_profession in Professions.MATERIALS
+	if gear:
+		var tiers: Array[int] = []
+		for recipe: Dictionary in recipes:
+			if not recipe["skill"] in tiers:
+				tiers.append(recipe["skill"])
+		var shown: int = craft_tier
+		if shown == 0:
+			for tier: int in tiers:
+				if tier <= skill:
+					shown = tier
+		var row := HBoxContainer.new()
+		list.add_child(row)
+		for tier: int in tiers:
+			var button: Button = _button(str(tier), tier != shown, func() -> void:
+				craft_tier = tier
+				open_craft(npc), row)
+			button.tooltip_text = "Tier %d gear%s" % [tier, "" if tier <= skill else " (needs %s %d)" % [
+				Professions.NAMES[craft_profession], tier]]
+			button.add_theme_color_override("font_disabled_color", Color("#ffcf6a"))
+			if tier > skill:
+				button.modulate = Color(1, 1, 1, 0.5)
+		recipes = recipes.filter(func(recipe: Dictionary) -> bool: return recipe["skill"] == shown)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(500, mini(360, 46 * recipes.size()))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	list.add_child(scroll)
+	var rows := VBoxContainer.new()
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(rows)
+	for recipe: Dictionary in recipes:
+		var output: String = recipe["output"][0]
+		var row := HBoxContainer.new()
+		rows.add_child(row)
+		var picture := TextureRect.new()
+		picture.texture = icon(output)
+		picture.custom_minimum_size = Vector2(32, 32)
+		picture.tooltip_text = game.item_tooltip(output)
+		row.add_child(picture)
+		var text := VBoxContainer.new()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text)
+		var item: Dictionary = World.ITEMS[output]
+		var title := Label.new()
+		title.text = "%s%s%s" % [item["name"], "" if recipe["output"][1] == 1 else " ×%d" % recipe["output"][1],
+			"  (%s)" % item["armor"].capitalize() if item.has("armor") else ""]
+		var grade: Array = Items.rarity(item)
+		if not grade.is_empty():
+			title.add_theme_color_override("font_color", grade[1])
+		text.add_child(title)
+		var craftable: bool = skill >= recipe["skill"]
+		var parts: PackedStringArray = []
+		for entry: Array in recipe["inputs"]:
+			var have: int = World.carried(backpack, entry[0])
+			parts.append("%d/%d %s" % [mini(have, entry[1]), entry[1], World.ITEMS[entry[0]]["name"]])
+			craftable = craftable and have >= entry[1]
+		var needs := Label.new()
+		needs.text = ", ".join(parts) if skill >= recipe["skill"] else "Needs %s %d" % [Professions.NAMES[craft_profession], recipe["skill"]]
+		needs.add_theme_font_size_override("font_size", 11)
+		needs.add_theme_color_override("font_color", Color("#9fe07a") if craftable else Color("#a7b0b8"))
+		text.add_child(needs)
+		_button("Craft", craftable, func() -> void: game.craft_local(npc, recipe["id"], 1), row)
+		if not gear:
+			_button("×5", craftable, func() -> void: game.craft_local(npc, recipe["id"], 5), row)
+	_farewell()
+	_show(npc, "craft")
 
 
 func _wrapped(text: String, color: Color = Color.TRANSPARENT) -> Label:

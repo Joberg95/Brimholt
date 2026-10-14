@@ -115,8 +115,9 @@ changes nothing; move them in Godot like any other spawn.
 by `#` walls and doors (an open tile between two walls in a line). They get a roof, and
 nobody inside can be dealt with from outside. Paint houses at least three tiles wide inside.
 `tools/generators/towns.gd` (`make towns`) builds the shops and banks a town lacks (its
-`PATCHES`), removes bankers outside `BANK_PLACE`, and moves every vendor and the banker to the
+`PATCHES`), removes bankers outside `BANK_PLACE`, adds one artisan per town (`ARTISANS`,
+Townsfolk role `artisan`: the Craft service), and moves every vendor, artisan, and the banker to the
 back of a free building, facing the door: vendors to the first (north-west) building, the
-banker to the last, skipping buildings with stairs or other NPCs. A sign and furniture
+banker and artisans from the last, skipping buildings with stairs or other NPCs. A sign and furniture
 (`World.FURNISHINGS`) are added automatically at load. Re-run it after moving
 houses; a second run changes nothing, and it refuses to wall in any marker.

@@ -37,8 +37,9 @@ filtering:
 | `tiles.png` | 32×32 cells: 4 grass, 4 dirt, 4 water frames, dirt edges and shorelines (N, E, S, W), 4 sand, 4 cobblestone, 2 horizontal and 2 vertical plank tiles, 4 dusk soil, 4 obsidian flagstones, 4 cave floors, stairs down/up, then dry-grass fringes on sand (N, E, S, W; tiles 46–49) |
 | `walls.png` | 48×48 oblique walls drawn 16 px up-left of their tile; index = open sides (1 N, 2 W, 4 S, 8 E); row 0 grey stone, row 1 obsidian, row 2 cave rock (dungeons), rows 4 and 5 (blocky cliffs and outcrops) are kept but unused on the overworld; row 3 thin town walls (`#`), indexed by connected sides (walls and doorways) instead, a 10 px masonry band through the tile centre |
 | `roofs.png` | Per material row (clay, slate, wooden shingle) four 32×32 swatches: near slope, far slope, timber gable, trim (ridge cap, eave board, chimney stone). `game/render/roof_art.gd` rasterizes each building's roof from them |
-| `furniture.png` | 32×48 shop and bank furniture drawn 16 px above their tile: shop counter, bank counter, potion shelf, bookshelf, weapon rack, barrel, crate, strongbox (`SpriteArt.FURNITURE` order) |
-| `signs.png` | 32×32 hanging signs on an iron bracket: shop (flask and sword), bank (coins) |
+| `furniture.png` | 32×48 shop, bank, and workshop furniture drawn 16 px above their tile: shop counter, bank counter, potion shelf, bookshelf, weapon rack, barrel, crate, strongbox, anvil, workbench, cauldron, loom, hearth (`SpriteArt.FURNITURE` order) |
+| `signs.png` | 32×32 hanging signs on an iron bracket: shop (flask and sword), bank (coins), workshop (hammer and green flask) |
+| `herbs.png` | 32×32 herb patches for herbalism, two variants per resource band (sunflax, mirereed, silverthistle, nightcotton, starpetal colours), drawn on their tile (`SpriteArt.draw_herb`) |
 | `torch.png` | 16×24 wall torches: unlit, then three flame frames; hung on the south faces of town buildings (`World.TORCHES`) |
 | `crags.png` | 64×64 boulder piles, the tile at (16..48, 24..56): eight for mountains (`L`) and clustered outcrops, six small piles for lone outcrops (`C` on the overworld). They spill past their tile and are drawn in depth order, so neighbours merge into one ragged rock mass; the ground below is grey grit (`tiles.png` 50–53) |
 | `objects.png` | 64×96 trees (three living, two dead for the Hollow Reach, then three desert plants: a columnar cactus, a barrel-cactus clump, and a thorn shrub for terrain `K`, then the waystone, a carved standing stone with a cyan rune); trunk base on the tile centre at cell pixel (32, 80) |
@@ -102,7 +103,7 @@ follows its brightness on a ramp from the main to the light colour. Rings lose t
 dark middle. They are written to `assets/sprites/icons_derived/` every run. The extra templates
 (`template_*` icons) come from the unused weapon and off-hand cells of `class_sets.png` and the
 single pieces of `class_pieces.png`. Axes, maces, hammers, crossbows, torches, capes, packs,
-potions, and most materials have no template yet and keep their generated `items.png` cell.
+potions, food, gathered resources (looks `ore`, `log`, `herb`, `fish`, `food`), and most materials have no template yet and keep their generated `items.png` cell.
 
 Worn helmets, armor, legs, and boots with a painted icon wear that icon like a paper doll
 (`textured` in `make_sprites.py`): in every pose the icon is shrunk (area-averaged, with a little

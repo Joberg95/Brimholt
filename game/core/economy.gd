@@ -20,11 +20,11 @@ func _init(owner: World) -> void:
 	world = owner
 
 
-## What every vendor sells, potions first, then gear by tier.
+## What every vendor sells, potions first (crafted potions have no price), then gear by tier.
 static func stock() -> Array[String]:
 	var result: Array[String] = []
 	for kind: String in World.ITEMS:
-		if World.ITEMS[kind].has("drink"):
+		if World.ITEMS[kind].has("drink") and World.ITEMS[kind].has("price"):
 			result.append(kind)
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]

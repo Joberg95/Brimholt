@@ -3323,3 +3323,58 @@ position = Vector2(10288, 2416)
 script = ExtResource("7_yncsc")
 npc_name = "Merchant Rook"
 place = "Highmoor"
+
+[node name="artisan_cinder" type="Marker2D" parent="Townsfolk"]
+position = Vector2(1232, 1680)
+script = ExtResource("7_yncsc")
+npc_name = "Artisan Brenna"
+place = "Cinder Crossing"
+role = "artisan"
+facing = Vector2i(0, -1)
+
+[node name="artisan_lastlight" type="Marker2D" parent="Townsfolk"]
+position = Vector2(1104, 11408)
+script = ExtResource("7_yncsc")
+npc_name = "Artisan Odo"
+place = "Lastlight"
+role = "artisan"
+facing = Vector2i(0, -1)
+
+[node name="artisan_reedmere" type="Marker2D" parent="Townsfolk"]
+position = Vector2(4368, 6352)
+script = ExtResource("7_yncsc")
+npc_name = "Guildmistress Talia"
+place = "Reedmere"
+role = "artisan"
+
+[node name="artisan_ashford" type="Marker2D" parent="Townsfolk"]
+position = Vector2(6704, 4080)
+script = ExtResource("7_yncsc")
+npc_name = "Artisan Corwen"
+place = "Ashford"
+role = "artisan"
+facing = Vector2i(0, -1)
+
+[node name="artisan_emberfall" type="Marker2D" parent="Townsfolk"]
+position = Vector2(9584, 6640)
+script = ExtResource("7_yncsc")
+npc_name = "Artisan Hild"
+place = "Emberfall"
+role = "artisan"
+facing = Vector2i(0, -1)
+
+[node name="artisan_dunmere" type="Marker2D" parent="Townsfolk"]
+position = Vector2(6704, 9264)
+script = ExtResource("7_yncsc")
+npc_name = "Artisan Maelis"
+place = "Dunmere"
+role = "artisan"
+facing = Vector2i(0, -1)
+
+[node name="artisan_highmoor" type="Marker2D" parent="Townsfolk"]
+position = Vector2(10864, 3120)
+script = ExtResource("7_yncsc")
+npc_name = "Artisan Torvald"
+place = "Highmoor"
+role = "artisan"
+facing = Vector2i(0, -1)

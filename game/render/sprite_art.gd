@@ -26,16 +26,18 @@ const OBJECTS: Texture2D = preload("res://assets/sprites/objects.png")
 const ROOFS: Texture2D = preload("res://assets/sprites/roofs.png")
 const RoofArt = preload("res://game/render/roof_art.gd")
 const Buildings = preload("res://game/data/buildings.gd")
-## Shop and bank furniture, 32x48 cells drawn 16 px above their tile (make_sprites.py FURNITURE_KINDS).
+## Shop, bank, and workshop furniture, 32x48 cells drawn 16 px above their tile (make_sprites.py FURNITURE_KINDS).
 const FURNITURE_SHEET: Texture2D = preload("res://assets/sprites/furniture.png")
 const FURNITURE: Array[String] = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel",
-	"crate", "strongbox"]
+	"crate", "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth"]
+## Herb patches (Crafting.HERBS): two 32x32 variants per resource band (make_sprites.py herb_patch).
+const HERBS: Texture2D = preload("res://assets/sprites/herbs.png")
 ## Row 3 of walls.png: thin walls for "#", indexed by connected sides (1 N, 2 W, 4 S, 8 E).
 const THIN_WALL_ROW: int = 3
 static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
-const SIGN_KINDS: Array[String] = ["vendor", "banker"]
+const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan"]
 ## Wall torches (World.TORCHES): 16x24 frames, unlit then three flame frames.
 const TORCH: Texture2D = preload("res://assets/sprites/torch.png")
 ## Where a sign's centre hangs from its wall cell's corner, by the direction the door faces:
@@ -370,6 +372,12 @@ static func draw_furniture(canvas: CanvasItem, cell: Vector2i, kind: String) -> 
 		Rect2(index * TILE, 0, TILE, 48))
 
 
+## A herb patch of a resource band on its tile (the variant picked by the cell).
+static func draw_herb(canvas: CanvasItem, cell: Vector2i, band: int) -> void:
+	var variant: int = band * 2 + (cell.x + cell.y) % 2
+	canvas.draw_texture_rect_region(HERBS, Rect2(Vector2(cell) * TILE, Vector2(TILE, TILE)), Rect2(variant * TILE, 0, TILE, TILE))
+
+
 ## A shop or bank sign ({cell, outward, kind} from World.SIGNS) on the wall beside its door.
 static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
 	var centre: Vector2 = Vector2(sign["cell"]) * TILE + SIGN_OFFSETS[sign["outward"]]
@@ -388,12 +396,18 @@ static func draw_torch(canvas: CanvasItem, cell: Vector2i, frame: int) -> void:
 ## strike. A view whose "attack_born" is recent plays the attack, turned toward its target.
 const ATTACK_SECONDS: float = 0.4
 const WIND_UP_SECONDS: float = 0.14
+const GATHER_SWING: float = 0.75
 
 
 ## The state to draw for a creature view at `time`: during an attack, a copy facing the
 ## target with "attack" set to the attack's age; otherwise the state itself.
 static func posed(view: Dictionary, time: float) -> Dictionary:
 	var age: float = time - float(view.get("attack_born", -100.0))
+	if (age < 0.0 or age >= ATTACK_SECONDS) and view["state"].has("gathering"):
+		# Gathering swings a tool (or the line) at the node every GATHER_SWING seconds.
+		var swing: Dictionary = view["state"].duplicate()
+		swing["attack"] = fmod(time, GATHER_SWING)
+		return swing
 	if age < 0.0 or age >= ATTACK_SECONDS:
 		return view["state"]
 	var state: Dictionary = view["state"].duplicate()

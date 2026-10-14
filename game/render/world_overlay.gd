@@ -1,12 +1,14 @@
 extends Node2D
 ## Unlit layer above the world viewport, sharing the world view's map-pixel transform: target
-## square, nameplates, NPC names, missiles, and floating numbers stay readable at night.
+## square, nameplates, gathering progress, NPC names, missiles, and floating numbers stay readable at night.
 
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Balance = preload("res://game/data/balance.gd")
+const Professions = preload("res://game/data/professions.gd")
 const TARGET_COLOR: Color = Color("#ff3a2a")
+const GATHER_COLOR: Color = Color("#ffcf6a")
 
 var game: Node
 var view: Node2D
@@ -84,6 +86,12 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 				Balance.profile_of(state.get("vocation", ""))["name"], state.get("level", 1)]
 			SpriteArt.draw_nameplate(self, center, title, state["health"], state["max_health"], 1.0, state.get("skull", ""),
 				Color.TRANSPARENT, _party_mark(id, state), true)
+			if state.has("gathering"):
+				var left: float = float(state["gathering"][1]) - (game._now() - float(actor.get("received", game._now())))
+				var done: float = clampf(1.0 - left / Professions.GATHER_SECONDS, 0.0, 1.0)
+				var bar := Rect2(center + Vector2(-12, 15), Vector2(24, 3))
+				draw_rect(bar.grow(1), SpriteArt.OUTLINE)
+				draw_rect(Rect2(bar.position, Vector2(bar.size.x * done, bar.size.y)), GATHER_COLOR)
 	var font: Font = ThemeDB.fallback_font
 	for effect: Dictionary in game.effects:
 		var age: float = time - effect["born"]

@@ -750,7 +750,7 @@ func _credit_tasks(kind: String, credited: Array[int], events: Array) -> void:
 
 ## The cooldown timer key of a potion kind (shared with spell timers in player["cooldowns"]).
 static func potion_timer(kind: String) -> String:
-	return "potion:" + kind
+	return "potion:" + String(World.ITEMS.get(kind, {}).get("timer", kind))
 
 
 ## Drinks one potion from a backpack stack: restores its share of maximum health or mana.
@@ -762,6 +762,8 @@ func drink(id: int, index: Variant, now: float) -> Dictionary:
 	if typeof(index) != TYPE_INT or index < 0 or index >= backpack.size():
 		return {"ok": false, "reason": "Unknown item location", "events": []}
 	var kind: String = World.kind_of(backpack[index])
+	if World.ITEMS.get(kind, {}).has("eat"):
+		return _eat(id, index, kind, now)
 	if not World.ITEMS.get(kind, {}).has("drink"):
 		return {"ok": false, "reason": "You cannot drink that", "events": []}
 	# Each potion kind has its own cooldown (items.json), kept with the spell timers so the client sees it.
@@ -788,6 +790,27 @@ func drink(id: int, index: Variant, now: float) -> Dictionary:
 			events.append({"kind": "hit", "target": id, "cell": player["cell"], "amount": gained, "style": "mana"})
 	events.append({"kind": "player", "id": id})
 	return {"ok": true, "events": events}
+
+
+## Eats one food from a backpack stack: its "eat" regen share speeds health and mana
+## regeneration for its seconds, replacing any meal eaten before.
+func _eat(id: int, index: int, kind: String, now: float) -> Dictionary:
+	var player: Dictionary = world.players[id]
+	var backpack: Array = player["backpack"]
+	var meal: Dictionary = World.ITEMS[kind]["eat"]
+	backpack[index] = World.make_entry(kind, World.count_of(backpack[index]) - 1) if World.count_of(backpack[index]) > 1 else ""
+	player["fed"] = {"kind": kind, "until": now + meal["seconds"]}
+	var text: String = "You eat the %s: %d%% faster regeneration for %d minutes." % [World.ITEMS[kind]["name"],
+		roundi(meal["regen"] * 100.0), roundi(meal["seconds"] / 60.0)]
+	return {"ok": true, "events": [{"kind": "player", "id": id}, {"kind": "message", "id": id, "text": text}]}
+
+
+## The extra share of regeneration from the meal a player has eaten (0 when hungry).
+func meal_bonus(id: int, now: float) -> float:
+	var fed: Dictionary = world.players[id].get("fed", {})
+	if fed.is_empty() or fed["until"] <= now:
+		return 0.0
+	return World.ITEMS[fed["kind"]]["eat"]["regen"]
 
 
 # ---------------------------------------------------------------- parties
@@ -1149,6 +1172,7 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 		var rate: float = REGEN_SECONDS / 10.0 * (RESTING_MULTIPLIER if resting(id, now) else 1.0)
 		if _town_rest(id, limits, now, events):
 			rate = REGEN_SECONDS / 10.0 * TOWN_REST_MULTIPLIER
+		rate *= 1.0 + meal_bonus(id, now)
 		player["health"] = mini(limits["health"], player["health"] + maxi(1, roundi(limits["regen"] * rate * healing_factor(id, now))))
 		player["mana"] = mini(limits["mana"], player["mana"] + maxi(1, roundi(limits["mana"] * MANA_REGEN_FRACTION * rate)))
 		if [player["health"], player["mana"]] != before:

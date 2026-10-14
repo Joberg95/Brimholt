@@ -1,7 +1,7 @@
 extends PanelContainer
 ## The character window (Keybinds "character", C by default): your vocation and role,
 ## experience to the next level, each stat (base, gear, and what it does), and your status:
-## gold and bank, party, skull, town rest, and relic trophies. Its labels are built once and
+## gold and bank, party, skull, town rest, meal, and relic trophies. Its labels are built once and
 ## only their text changes, and only while it is open.
 
 const World = preload("res://game/core/world.gd")
@@ -102,16 +102,19 @@ func refresh() -> void:
 	var view: Dictionary = game.actors[game.self_id]
 	var state: Dictionary = view["state"]
 	var rest_left: int = ceili(state.get("town_rest_left", 0.0) - (game._now() - view.get("received", game._now())))
-	var key: String = "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % [state.get("level"), state.get("experience"), state.get("vocation"),
+	var meal_left: int = 0
+	if state.has("fed"):
+		meal_left = ceili(float(state["fed"][1]) - (game._now() - view.get("received", game._now())))
+	var key: String = "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % [state.get("level"), state.get("experience"), state.get("vocation"),
 		state.get("equipment"), state.get("health"), state.get("mana"), state.get("gold"), state.get("bank"),
-		state.get("party"), state.get("skull"), state.get("town_rest"), maxi(rest_left, 0)]
+		state.get("party"), state.get("skull"), state.get("town_rest"), maxi(rest_left, 0), maxi(meal_left, 0) / 60]
 	if key == _key:
 		return
 	_key = key
-	_write(state, maxi(rest_left, 0))
+	_write(state, maxi(rest_left, 0), maxi(meal_left, 0))
 
 
-func _write(state: Dictionary, rest_left: int) -> void:
+func _write(state: Dictionary, rest_left: int, meal_left: int) -> void:
 	var level: int = state.get("level", 1)
 	var vocation: String = state.get("vocation", Balance.DEFAULT_VOCATION)
 	var profile: Dictionary = Balance.profile_of(vocation)
@@ -147,11 +150,11 @@ func _write(state: Dictionary, rest_left: int) -> void:
 		_values[stat].text = text
 		_values[stat].add_theme_color_override("font_color", BONUS if bonus > 0 else TEXT)
 		_notes[stat].text = notes[stat]
-	_status.text = "\n".join(_status_lines(state, rest_left))
+	_status.text = "\n".join(_status_lines(state, rest_left, meal_left))
 	_status.add_theme_color_override("font_color", WARNING if not String(state.get("skull", "")).is_empty() else TEXT)
 
 
-func _status_lines(state: Dictionary, rest_left: int) -> PackedStringArray:
+func _status_lines(state: Dictionary, rest_left: int, meal_left: int) -> PackedStringArray:
 	var lines: PackedStringArray = []
 	lines.append("Gold %d carried · %d in the bank (%s)" % [state.get("gold", 0), state.get("bank", 0), World.bank_place()])
 	var party: int = state.get("party", 0)
@@ -178,6 +181,11 @@ func _status_lines(state: Dictionary, rest_left: int) -> PackedStringArray:
 		lines.append("Town rest: ready again in %d:%02d." % [rest_left / 60, rest_left % 60])
 	else:
 		lines.append("Town rest: ready; stand in a town while hurt.")
+	if meal_left > 0 and state.has("fed"):
+		lines.append("Well fed (%s): %d%% faster regeneration for %d more minutes." % [World.ITEMS[state["fed"][0]]["name"],
+			roundi(World.ITEMS[state["fed"][0]]["eat"]["regen"] * 100.0), ceili(meal_left / 60.0)])
+	else:
+		lines.append("Hungry: eat cooked food (Cooking, at an artisan) for faster regeneration.")
 	var trophies: Dictionary = state.get("trophies", {})
 	for boss: String in trophies:
 		var keeper: String = ""

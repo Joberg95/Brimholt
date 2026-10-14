@@ -1,6 +1,6 @@
 extends Node
 ## The panel right of the game window: the paperdoll and backpack slots (drag-and-drop,
-## right-click to equip, unequip, drink, or deposit), the stat sheet, and item tooltips.
+## right-click to equip, unequip, drink, eat, or deposit), the stat sheet, and item tooltips.
 ## Depot slots in the bank dialog are made here too (make_slot).
 
 const World = preload("res://game/core/world.gd")
@@ -9,6 +9,7 @@ const Balance = preload("res://game/data/balance.gd")
 const Items = preload("res://game/data/items.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const Professions = preload("res://game/data/professions.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const SLOT_STEP: float = 36.0
@@ -214,12 +215,24 @@ func item_tooltip(kind: String) -> String:
 				if entry[0] == kind:
 					sources.append(Monsters.MONSTERS[monster]["name"])
 		lines.append("%s drop: %s" % ["Mythic" if Items.mythic(item) else "Hunting", ", ".join(sources)])
-	if item.has("value"):
+	var gathered: String = ""
+	for profession: String in Professions.RESOURCES:
+		var band: int = Professions.RESOURCES[profession].find(kind)
+		if band >= 0:
+			gathered = "%s resource (%s %d, lands of level %d+); vendors buy it for %d gold" % [Professions.NAMES[profession],
+				Professions.NAMES[profession], Professions.BAND_LEVELS[band], Professions.BAND_LEVELS[band], item["value"]]
+	if not gathered.is_empty():
+		lines.append(gathered)
+	elif item.has("value"):
 		lines.append("Monster material; vendors buy it for %d gold" % item["value"])
+	if item.has("eat"):
+		lines.append("+%d%% health and mana regeneration for %d minutes" % [roundi(item["eat"]["regen"] * 100.0),
+			roundi(item["eat"]["seconds"] / 60.0)])
+		lines.append("Right-click to eat (replaces your last meal)")
 	if item.has("drink"):
 		for stat: String in item["drink"]:
 			lines.append("Restores %d%% of your maximum %s" % [roundi(item["drink"][stat] * 100.0), stat])
-		var key: String = game.keybinds.label(kind)
+		var key: String = game.keybinds.label(item["timer"])
 		lines.append("Right-click%s to drink  ·  %d s cooldown" % ["" if key.is_empty() else " or press " + key, roundi(item["cooldown"])])
 	if item.has("slots"):
 		lines.append("+%d backpack slots  ·  bound to you" % item["slots"])
@@ -341,7 +354,7 @@ func slot_input(event: InputEvent, location: Dictionary) -> void:
 		game.move_item_local(location, {"type": "backpack"})
 	elif game.dialogs.banking():
 		game.move_item_local(location, {"type": "depot"})
-	elif World.ITEMS[kind].has("drink"):
+	elif World.ITEMS[kind].has("drink") or World.ITEMS[kind].has("eat"):
 		game.drink_local(location["index"])
 	elif game.actors.has(game.self_id):
 		var slot: String = World.slot_for(kind, game.actors[game.self_id]["state"]["equipment"])

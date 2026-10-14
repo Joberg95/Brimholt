@@ -21,11 +21,11 @@ Drag a spell's rune from the book onto the action bar to put it there. Before yo
 shows the Adventurer's spells.
 
 The **micro menu** right of the action bar has a button for each panel: Character (C), Spell
-book (B), Quests (L), Lexicon (K), World map (M), and Controls. A gold frame marks the panels that are
+book (B), Professions (P), Quests (L), Lexicon (K), World map (M), and Controls. A gold frame marks the panels that are
 open; hover a button for its key. The **character window** explains every stat (your base
 value, what your gear adds, and what the stat does, such as how much your defense cuts
 damage), shows experience to the next level, and your status: gold and bank, party, skull,
-unjustified kills, town rest, and relic trophies waiting at a relic keeper. Change gear on the equipment panel; targeting, pick up, the world map, and the
+unjustified kills, town rest, your meal, and relic trophies waiting at a relic keeper. Change gear on the equipment panel; targeting, pick up, gathering (F), the professions window (P), the world map, and the
 health and mana potions (Q and E), the quest list (L), the spell book (B), and the character window (C) have their own keys. Click **Controls** in the top bar to rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
@@ -197,7 +197,8 @@ Ferrymen and waystones offer **Travel**, vendors **Trade**, bankers **Bank**, an
 
 ## Vendors, potions, and the bank
 
-Every town has a vendor (green on the maps) in a furnished shop. There is only **one bank**:
+Every town has a vendor (green on the maps) in a furnished shop, and an artisan (amber) in a
+workshop for crafting (see [Professions](#professions-gathering-and-crafting)). There is only **one bank**:
 Banker Orrin in **Reedmere** (pale blue on the maps), the lakeside hub with a waystone
 and the ferry to Blackreed Isle. Plan trips to deposit gold and store gear there. A hanging
 sign beside each door shows what is inside: a flask and a sword for the shop, a coin stack for
@@ -214,11 +215,11 @@ buy monster materials for their value (one stack, or **Sell all materials**) and
 for a quarter of its price; they never buy potions, relics, or packs.
 
 **Potions** stack like materials. A health potion restores 20% of your maximum health, a mana
-potion 25% of your maximum mana. Each kind has its own cooldown: 6 seconds for health
+potion 25% of your maximum mana; alchemists brew stronger ones. Each kind has its own cooldown: 6 seconds for health
 potions and 3 seconds for mana potions, so you can drink one of each together but cannot chain
 health potions to outlast a fight. The backpack slot shades while a potion cools down, and
 potions are refused at full health or mana.
-Right-click one in the backpack, or press Q (health) or E (mana) to drink the first one.
+Right-click one in the backpack, or press Q (health) or E (mana) to drink your strongest one.
 
 **The banker** keeps your gold and an item depot. Deposit
 or withdraw any amount; banked gold and depot items are never lost on death. The depot has
@@ -227,6 +228,52 @@ depot while the bank dialog is open, depot items come back). Stacks merge as usu
 reach the depot only through the backpack, never straight from equipment or the ground.
 Like the rest of your character, the bank and depot are saved on the host (see
 [Saved characters](../README.md#saved-characters)).
+
+## Professions: gathering and crafting
+
+When you would rather not fight, gather and craft. Every character can learn all nine
+**professions**; each skill starts at 1 and rises to 50 by doing it. Press **P** (or the hammer
+button by the action bar) for the Professions window: each skill's level, progress, what it
+gathers or crafts now, and what opens next.
+
+**Gathering.** Stand next to a node and press **F** (it picks the nearest one, the tile you face
+first), or right-click it. Work takes 3 seconds; moving cancels it, and a bar under your
+character shows the progress. The node then regrows for a minute.
+
+| Skill | Node | Resources by land level (1+, 10+, 20+, 30+, 40+) |
+| --- | --- | --- |
+| Mining | rock outcrops and mountains | Copper, Iron, Silver, Cobalt, Starmetal ore |
+| Woodcutting | trees (and the Hollow Reach's dead trees) | Pine, Oak, Yew, Ironbark, Elderwood log |
+| Herbalism | flowering herb patches in the wilds | Sunflax, Mirereed, Silverthistle, Nightcotton, Starpetal |
+| Fishing | water up to 3 tiles away | River perch, Marsh eel, Silver trout, Deep pike, Glimmerfin |
+
+The **land's level** (the middle of its region's or zone's monster levels, as on the location
+line) decides the resource, and a skill must reach that level to gather it: Mining 20 for
+silver ore in a level-20+ region. A gather teaches 4 skill experience at the land's level, 1
+less every 5 skill levels above it, so move on to harder land as you improve. A level takes
+4 + level experience. Nodes exist only outside dungeons; herb patches never grow in towns.
+Vendors buy resources for 2, 4, 7, 10, or 14 gold by band.
+
+**Crafting.** Every town has an **artisan** in a workshop (an anvil, workbench, cauldron, and
+loom; amber on the maps). Right-click them and choose **Craft**: pick a profession tab and, for
+gear, a tier, then craft any recipe your skill allows from the resources in your backpack
+(×5 crafts potions and food in a batch). Crafting teaches up to 4 experience times half the
+resources a recipe uses, less for recipes well below your skill.
+
+- **Smithing** (ore with logs): plate and mail armor, Warrior weapons, shields, amulets, rings.
+- **Woodworking** (logs with ore): bows, wands, rods, charms.
+- **Tailoring** (herbs with ore): leather and cloth armor, spellbooks, capes.
+- **Alchemy** (herbs): health and mana potions, and from skill 20 and 40 strong and great
+  potions (30% and 40% health, 35% and 45% mana) that vendors never sell.
+- **Cooking** (fish and herbs): food. Eating (right-click it) speeds health and mana
+  regeneration by 20%, 35%, 50%, 70%, or 100% for 15 minutes; a new meal replaces the last.
+  The character window shows your meal.
+
+Gear recipes exist for every regular tier piece (helmet, armor, legs, boots, weapon, off-hand,
+and accessories): skill = the tier's level, and the band's resources (more for higher bands).
+Crafted gear is the same item a vendor sells or a monster drops, so it never beats drops:
+mythic gear, relics, and named hunting weapons are never crafted. Potions sharing a kind
+share its cooldown, and Q/E drink your strongest health or mana potion first.
 
 ## Town tasks and packs
 

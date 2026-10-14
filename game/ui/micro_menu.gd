@@ -1,19 +1,22 @@
 extends Node
 ## The micro menu right of the action bar: small drawn buttons that open the character window,
-## spell book, quest list, lexicon, world map, and Controls menu, the same as their keys. Each button's
+## spell book, professions, quest list, lexicon, world map, and Controls menu, the same as their keys. Each button's
 ## tooltip names it and its key, and an open panel's button is framed in gold.
 
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Layout = preload("res://game/ui/layout.gd")
 
-const SIZE: float = 40.0
-const GAP: float = 4.0
+const SIZE: float = 36.0
+const GAP: float = 3.0
+## Icons are drawn on a 40-pixel grid and scaled to SIZE.
+const ICON_GRID: float = 40.0
 const ACCENT: Color = Color("#ffcf6a")
 ## [action, title, what it shows]; actions are Keybinds actions, except "controls" (no key).
 const ENTRIES: Array = [
 	["character", "Character", "Your stats explained, experience, party, skull, and town rest"],
 	["spell_book", "Spell book", "Every spell of your class; drag one onto the action bar"],
+	["professions", "Professions", "Gathering and crafting skills: what you can gather and craft now"],
 	["quest_list", "Quests", "Show or hide the quest list"],
 	["lexicon", "Lexicon", "Every monster: where it lives, its levels, and what it drops"],
 	["world_map", "World map", "Towns, ferries, dungeons, and PvP zones"],
@@ -69,6 +72,7 @@ func _draw_button(button: Control, action: String) -> void:
 	var open: bool = game.panel_open(action)
 	button.draw_rect(area, Color(0.08, 0.1, 0.12, 0.85))
 	button.draw_rect(area, ACCENT if open else Color("#4a5560"), false, 2.0 if open else 1.0)
+	button.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * SIZE / ICON_GRID)
 	match action:
 		"character":
 			button.draw_circle(Vector2(20, 14), 5.5, Color("#d8b48a"))
@@ -80,6 +84,12 @@ func _draw_button(button: Control, action: String) -> void:
 			button.draw_rect(Rect2(11, 9, 4, 23), Color("#4f2424"))
 			button.draw_rect(Rect2(27, 11, 2, 19), Color("#efe6cf"))
 			button.draw_circle(Vector2(21, 20), 4.0, Color("#ffcf6a"))
+		"professions":
+			button.draw_line(Vector2(12, 30), Vector2(26, 12), Color("#8a6440"), 3.0)
+			button.draw_colored_polygon(PackedVector2Array([Vector2(19, 8), Vector2(31, 14), Vector2(28, 17), Vector2(22, 12)]),
+				Color("#c8ccd0"))
+			button.draw_circle(Vector2(12, 26), 4.0, Color("#9ac050"))
+			button.draw_circle(Vector2(12, 26), 1.6, Color("#f0d040"))
 		"quest_list":
 			button.draw_rect(Rect2(12, 11, 16, 20), Color("#e6d6a8"))
 			button.draw_rect(Rect2(10, 8, 20, 4), Color("#c8b07a"))

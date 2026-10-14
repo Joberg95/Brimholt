@@ -2070,6 +2070,57 @@ def material_icon(image, shape, palette, accent):
         shade(image, {p for p in ellipse(16, 24, 11, 8) if p[1] <= 24}, palette)
         for x, y in ((12, 19), (19, 18), (16, 21)):
             image.rect(x, y, 2, 1, accent)
+    elif shape == "ore":
+        # A chunk of grey rock with nuggets of the metal breaking through.
+        rock = ellipse(16, 18, 11, 8) | ellipse(12, 14, 6, 5) | ellipse(21, 15, 6, 5)
+        shade(image, rock, (rgba("8e8b84"), rgba("6c6a64"), rgba("4a4844")))
+        for cx, cy, r in ((11, 14, 2.6), (19, 13, 2.2), (22, 20, 2.6), (14, 21, 2.2)):
+            shade(image, ellipse(cx, cy, r, r), palette, False)
+            image.set(int(cx) - 1, int(cy) - 1, accent)
+    elif shape == "log":
+        # A log lying across, bark on the body, rings on the cut end.
+        bark = (main, dark, scale(dark, 0.75))
+        shade(image, box(4, 11, 21, 11), bark)
+        for x in range(6, 24, 4):
+            image.rect(x, 12 + x % 3, 3, 1, scale(dark, 0.7))
+            image.rect(x + 1, 17 + x % 2, 3, 1, scale(dark, 0.7))
+        face = ellipse(25, 16.5, 4, 6)
+        shade(image, face, (light, scale(light, 0.9), main), False)
+        for x, y in ellipse(25, 16.5, 2.4, 3.8) - ellipse(25, 16.5, 1.6, 2.8):
+            image.set(x, y, accent)
+        image.set(25, 16, scale(accent, 0.8))
+    elif shape == "herb":
+        # A bundle of stems with leaves, tied at the base, flowering in the accent colour.
+        stems = [(16, 28, 9, 7), (16, 28, 16, 5), (16, 28, 23, 8), (16, 28, 12, 10), (16, 28, 21, 11)]
+        for x0, y0, x1, y1 in stems:
+            for x, y in line(x0, y0, x1, y1):
+                image.set(x, y, dark)
+        for x0, y0, x1, y1 in stems:
+            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            shade(image, ellipse(mx - 2, my, 2.4, 1.4) | ellipse(mx + 2, my + 2, 2.4, 1.4), (light, main, dark), False)
+            shade(image, ellipse(x1, y1, 1.8, 1.8), (scale(accent, 1.2), accent, scale(accent, 0.7)), False)
+        image.rect(14, 23, 5, 2, rgba("b08a5a"))
+    elif shape == "fish":
+        body = ellipse(15, 16, 9, 5)
+        tail = {(x, y) for x in range(3, 8) for y in range(10, 23) if abs(y - 16) <= (8 - x) * 1.4 + 1}
+        shade(image, body | tail, palette)
+        for x, y in body:
+            if y >= 18:
+                image.set(x, y, scale(light, 1.05))
+        for x in range(9, 22):
+            image.set(x, 15 - (1 if 12 < x < 19 else 0), accent)
+        shade(image, {(x, y) for x in range(12, 18) for y in range(9, 12) if y >= 9 + (x - 12) // 2}, (main, dark, dark), False)
+        image.rect(20, 14, 2, 2, (240, 240, 230, 255))
+        image.set(21, 15, OUTLINE)
+    elif shape == "food":
+        # A dish on a plate: the meal in its own colours and a garnish.
+        shade(image, ellipse(16, 21, 13, 6), (rgba("e2ded4"), rgba("c4bfb4"), rgba("8e8a80")), False)
+        image.rect(5, 21, 22, 1, rgba("a8a498"))
+        shade(image, ellipse(16, 17, 9, 5.5), palette)
+        for x, y in ((11, 15), (17, 13), (21, 16), (14, 18)):
+            image.rect(x, y, 2, 1, accent)
+        for x, y in ((12, 12), (19, 11)):
+            image.set(x, y, (240, 240, 240, 160))
     else:  # scale
         shade(image, {p for p in ellipse(16, 15, 9, 11) if p[1] >= 6}, palette)
         for y in range(9, 24, 4):
@@ -3216,7 +3267,7 @@ def thin_wall(mask, stone=None):
 # than a tile. Order: FURNITURE_KINDS (SpriteArt.FURNITURE must match).
 
 FURNITURE_KINDS = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel", "crate",
-                   "strongbox"]
+                   "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth"]
 OAK = (rgba("a07a4c"), rgba("82603a"), rgba("5f4429"), rgba("3f2c1b"))
 IRON = (rgba("8c8e8c"), rgba("5d605f"), rgba("3a3c3c"))
 
@@ -3248,11 +3299,11 @@ def furniture(kind):
                 image.template(x, 16, [".o.", "ogo", "occ", "occ", "ooo"], {"o": OUTLINE, "g": rgba("9fb7bf"), "c": color})
             image.template(22, 21, ["oooooo", "owwwwo", "oooooo"], {"o": OUTLINE, "w": rgba("d9cfb4")})
         else:
-            gold, shine, shade = rgba("d4a73c"), rgba("f3d77a"), rgba("8f6a1e")
+            gold, shine, shadow_gold = rgba("d4a73c"), rgba("f3d77a"), rgba("8f6a1e")
             for cx, cy in ((7, 25), (7, 23), (11, 25)):
                 image.rect(cx - 2, cy - 1, 5, 2, gold)
                 image.set(cx - 1, cy - 1, shine)
-                image.rect(cx - 2, cy + 1, 5, 1, shade)
+                image.rect(cx - 2, cy + 1, 5, 1, shadow_gold)
             image.rect(19, 11, 1, 13, IRON[1])
             image.rect(15, 12, 9, 1, IRON[0])
             for side in (15, 23):
@@ -3329,7 +3380,103 @@ def furniture(kind):
         image.rect(14, 33, 5, 5, IRON[0])
         image.set(16, 35, OUTLINE)
         image.set(16, 36, OUTLINE)
+    elif kind == "anvil":
+        # An iron anvil with a horn on a wooden stump, a hammer resting on it.
+        plank_block(image, 9, 33, 14, 13, 4)
+        iron = (scale(IRON[0], 1.15), IRON[1], IRON[2])
+        shade(image, box(7, 24, 19, 4) | {(x, y) for x in range(2, 7) for y in range(24, 27) if y - 24 <= (x - 2) // 2},
+              iron, False)
+        shade(image, box(12, 28, 9, 5) | box(9, 31, 15, 2), iron, False)
+        image.rect(8, 24, 17, 1, scale(IRON[0], 1.3))
+        for x, y in line(16, 22, 25, 18):
+            image.set(x, y, rgba("6b4a2c"))
+            image.set(x, y + 1, rgba("4a321c"))
+        image.rect(24, 15, 4, 4, IRON[1])
+        image.rect(24, 15, 4, 1, IRON[0])
+    elif kind == "workbench":
+        # A sturdy bench with a saw, a mallet, and offcuts on top.
+        plank_block(image, 1, 26, 30, 20, 7)
+        image.rect(4, 22, 12, 2, rgba("c9cfd2"))
+        for x in range(4, 16, 2):
+            image.set(x, 24, rgba("8c9294"))
+        image.rect(15, 21, 4, 4, rgba("6b4a2c"))
+        image.rect(21, 20, 7, 4, light)
+        image.rect(21, 23, 7, 1, dark)
+        image.rect(23, 17, 2, 4, rgba("6b4a2c"))
+        image.rect(21, 15, 6, 3, base)
+    elif kind == "cauldron":
+        # An iron cauldron of bubbling green brew over embers.
+        for x in range(10, 23):
+            if x % 3 == 0:
+                image.rect(x, 43, 2, 2, rgba("ff9a3c"))
+            image.set(x, 45, rgba("5a2a14"))
+        for x in (8, 24):
+            image.rect(x, 38, 2, 8, IRON[2])
+        shade(image, {p for p in ellipse(16, 33, 12, 10) if p[1] >= 27}, (IRON[1], IRON[2], scale(IRON[2], 0.7)))
+        shade(image, ellipse(16, 27, 12, 3.5), (IRON[0], IRON[1], IRON[2]), False)
+        brew = ellipse(16, 27, 9.5, 2.4)
+        shade(image, brew, (rgba("b8f080"), rgba("6ac040"), rgba("3a8a2a")), False)
+        for x, y in ((12, 26), (19, 27), (16, 25)):
+            image.set(x, y, rgba("e8ffc0"))
+        for x, y in ((14, 21), (18, 18), (15, 15)):
+            image.set(x, y, rgba("b8f080", 170))
+    elif kind == "loom":
+        # A weaving loom: posts, beams, and half a striped cloth on the warp.
+        for x in (3, 27):
+            image.rect(x, 8, 2, 38, dark)
+            image.rect(x, 8, 1, 38, base)
+        for y in (8, 36):
+            image.rect(3, y, 26, 3, base)
+            image.rect(3, y + 2, 26, 1, deep)
+        for x in range(6, 27, 2):
+            image.rect(x, 11, 1, 25, rgba("d9cfb4"))
+        stripes = (rgba("a3332b"), rgba("d9cfb4"), rgba("3f62a8"), rgba("d9cfb4"))
+        for y in range(22, 36):
+            image.rect(5, y, 22, 1, stripes[(y // 3) % 4])
+        image.rect(5, 21, 22, 1, deep)
+        image.rect(8, 40, 16, 6, dark)
+        image.rect(8, 40, 16, 2, base)
+    elif kind == "hearth":
+        # A ring of stones round a fire, with a pot hanging from a tripod.
+        stone = (rgba("9a958c"), rgba("77736b"), rgba("55524c"))
+        for x, y in ((6, 41), (11, 43), (17, 43), (23, 41), (8, 37), (24, 37)):
+            shade(image, ellipse(x, y, 3.2, 2.4), stone, False)
+        for x, y, h, color in ((12, 41, 7, "ff8a2a"), (15, 41, 10, "ffb040"), (18, 41, 8, "ff8a2a"), (16, 41, 5, "fff0a0")):
+            for dy in range(h):
+                image.rect(x - max(0, (h - dy) // 4), y - dy, 1 + 2 * max(0, (h - dy) // 4), 1, rgba(color))
+        for x, y in line(5, 44, 16, 10) | line(27, 44, 16, 10):
+            image.set(x, y, rgba("4a321c"))
+        image.rect(16, 11, 1, 12, IRON[2])
+        shade(image, ellipse(16, 26, 5, 4), (IRON[1], IRON[2], scale(IRON[2], 0.7)), False)
     return image.outlined()
+
+
+# ---------------------------------------------------------------- herb patches
+# Map patches for herbalism (game/core/crafting.gd HERBS): two 32x32 variants per resource band,
+# in the band's herb colours. Order: HERB_KINDS (Professions.RESOURCES["herbalism"]).
+
+HERB_KINDS = ["sunflax", "mirereed", "silverthistle", "nightcotton", "starpetal"]
+
+
+def herb_patch(kind, variant):
+    main, light, accent = PALETTES[kind]
+    dark = scale(main, 0.6)
+    image = Image(TILE, TILE)
+    for x, y in ellipse(16, 27, 9, 2.5):
+        image.set(x, y, SHADOW)
+    tufts = ((16, 27, 16, 11), (16, 27, 9, 15), (16, 27, 23, 14), (16, 27, 12, 19), (16, 27, 20, 20))
+    if variant:
+        tufts = tuple((x0, y0, 32 - x1, y1 + 1) for x0, y0, x1, y1 in tufts)
+    for x0, y0, x1, y1 in tufts:
+        for x, y in line(x0, y0, x1, y1):
+            image.set(x, y, dark)
+    for index, (x0, y0, x1, y1) in enumerate(tufts):
+        mx, my = (x0 + x1) // 2, (y0 + y1) // 2
+        shade(image, ellipse(mx - 2, my, 2.6, 1.4) | ellipse(mx + 2, my + 2, 2.6, 1.4), (light, main, dark), False)
+        if index < 3:
+            shade(image, ellipse(x1, y1, 2, 2), (scale(accent, 1.2), accent, scale(accent, 0.7)), False)
+            image.set(x1 - 1, y1 - 1, scale(accent, 1.4))
+    return image.outlined(scale(main, 0.4))
 
 
 # ---------------------------------------------------------------- roofs and signs
@@ -3459,7 +3606,29 @@ def sign(kind):
     for x in range(6, 26):
         image.set(x, 12, light)
         image.set(x, 23, dark)
-    if kind == "vendor":
+    if kind == "artisan":
+        image.template(7, 12, [
+            "ooooooo",
+            "ossssso",
+            "ooooooo",
+            "..obo..",
+            "..obo..",
+            "..obo..",
+            "..obo..",
+            "..obo..",
+            "..ooo..",
+        ], {"o": OUTLINE, "s": rgba("aab3b8"), "b": rgba("8a6440")})
+        image.template(17, 13, [
+            "..ooo..",
+            "..oco..",
+            "..ogo..",
+            ".oogoo.",
+            "orrhrro",
+            "orrrrro",
+            "orrrrro",
+            ".ooooo.",
+        ], {"o": OUTLINE, "c": rgba("b08a5a"), "g": rgba("9fb7bf"), "r": rgba("4a9a3a"), "h": rgba("a8e080")})
+    elif kind == "vendor":
         image.template(8, 13, [
             "..ooo..",
             "..oco..",
@@ -3634,7 +3803,8 @@ def main():
                                  + [desert_plant(v) for v in range(3)] + [waystone()]
                                  + [boulder(v) for v in range(3)]),
         "roofs.png": roof_sheet(),
-        "signs.png": sheet_row([sign("vendor"), sign("banker")]),
+        "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan")]),
+        "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
         "terrain_palette.png": terrain_palette(),
         "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)]

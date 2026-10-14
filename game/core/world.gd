@@ -37,7 +37,8 @@ static var FERRYMEN: Dictionary = {}
 ## Quest NPCs by node name: name, place, cell, facing, services (["quests"]), and task (a
 ## Quests.TASKS id, or "" for the Relic keeper).
 static var QUEST_GIVERS: Dictionary = {}
-## Vendors and bankers by node name: name, place, cell, facing, role, services (["trade"] or ["bank"]).
+## Vendors, bankers, and artisans by node name: name, place, cell, facing, role, services
+## (["trade"], ["bank"], or ["craft"]).
 static var TOWNSFOLK: Dictionary = {}
 ## Cell -> NPC id (ferryman, quest giver, vendor, or banker); NPCs block their tile.
 static var NPC_CELLS: Dictionary = {}
@@ -76,12 +77,13 @@ static var REGION_INFO: Dictionary = {}
 const FURNISHINGS: Dictionary = {
 	"vendor": [[1, 0, "counter_shop"], [0, 1, "shelf_potions"], [0, -1, "weapon_rack"], [0, 2, "barrel"], [0, -2, "crate"]],
 	"banker": [[1, 0, "counter_bank"], [0, 1, "shelf_books"], [0, -1, "strongbox"], [0, 2, "shelf_books"], [0, -2, "strongbox"]],
+	"artisan": [[0, 1, "anvil"], [0, -1, "workbench"], [1, 1, "cauldron"], [1, -1, "loom"], [0, 2, "hearth"], [0, -2, "barrel"]],
 }
 static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 const MAX_PLAYERS: int = 12
 const PORT: int = 1234
-const PROTOCOL: int = 11
+const PROTOCOL: int = 12
 ## Tasks are suggested (and marked "!") up to this many levels above you, and until you are
 ## this many levels past their monsters.
 const NEXT_TASK_AHEAD: int = 2
@@ -202,7 +204,7 @@ static func _static_init() -> void:
 			TOWNSFOLK[String(marker.name)] = {
 				"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
 				"cell": _cell_of(marker), "facing": marker.get("facing"), "role": role,
-				"services": ["bank"] if role == "banker" else ["trade"],
+				"services": {"banker": ["bank"], "artisan": ["craft"]}.get(role, ["trade"]),
 			}
 			NPC_CELLS[_cell_of(marker)] = String(marker.name)
 	if scene.has_node("Zones"):
@@ -661,6 +663,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {},
 				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
+				"skills": {}, "gathering": {}, "next_craft": now, "fed": {},
 			}
 			var limits: Dictionary = stats(1, {}, vocation)
 			players[id]["health"] = limits["health"]
@@ -709,6 +712,8 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 	}
 	if player.get("bot", false):
 		state["bot"] = true
+	if not player["gathering"].is_empty():
+		state["gathering"] = [player["gathering"]["cell"], maxf(0.0, player["gathering"]["until"] - now), player["gathering"]["profession"]]
 	if include_private:
 		var invites: Array[int] = []
 		for leader: int in players:
@@ -735,6 +740,9 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["tasks"] = player["tasks"].duplicate()
 		state["done_tasks"] = player["done_tasks"].keys()
 		state["spell_ranks"] = player["spell_ranks"].duplicate()
+		state["skills"] = player["skills"].duplicate(true)
+		if not player["fed"].is_empty() and player["fed"]["until"] > now:
+			state["fed"] = [player["fed"]["kind"], player["fed"]["until"] - now]
 		state["experience"] = player["experience"]
 		state["gold"] = player["gold"]
 	return state
@@ -772,6 +780,7 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	player["cell"] = destination
 	player["facing"] = direction
 	player["next_move"] = now + MOVE_SECONDS
+	player["gathering"] = {}
 	return {"ok": true, "state": export_player(id, now)}
 
 

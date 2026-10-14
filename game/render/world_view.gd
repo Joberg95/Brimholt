@@ -14,6 +14,7 @@ const GlowLayer = preload("res://game/render/glow_layer.gd")
 const Lighting = preload("res://game/render/lighting.gd")
 const Fx = preload("res://game/render/fx.gd")
 const FloorLayer = preload("res://game/render/floor_layer.gd")
+const Crafting = preload("res://game/core/crafting.gd")
 const FERRYMAN_GEAR: Dictionary = {"helmet": "ember_cap"}
 const NPC_NAME: Color = Color("#9fe0c8")
 ## Quest givers stand out: gold cloth, a starweave cape, and a gold name.
@@ -25,6 +26,7 @@ const WAYSTONE_NAME: Color = Color("#8fe8f0")
 const TOWNSFOLK_LOOKS: Dictionary = {
 	"vendor": [{"helmet": "ember_cap", "armor": "moss_coat"}, Color("#8a6a3a")],
 	"banker": [{"armor": "bronze_scale_coat"}, Color("#4a4a6a")],
+	"artisan": [{"armor": "hide_jerkin", "helmet": "hide_hood"}, Color("#7a5a3a")],
 }
 ## Extra tiles drawn around the view: tall sprites below the view reach up into it.
 const MARGIN: Rect2i = Rect2i(-2, -2, 4, 6)
@@ -37,7 +39,7 @@ var fx: Node2D
 var npc_names: Array = []
 
 
-## Walls, trees, and NPCs of the cached area (the view plus TALL_MARGIN tiles) by cell,
+## Walls, trees, NPCs, furniture, and herb patches of the cached area (the view plus TALL_MARGIN tiles) by cell,
 ## rebuilt only when the view leaves it.
 const TALL_MARGIN: int = 8
 var _tall: Dictionary = {}
@@ -183,6 +185,8 @@ func _draw() -> void:
 			_draw_stack(cell, game.ground_view[cell])
 		if tile == "furniture":
 			SpriteArt.draw_furniture(self, cell, World.FURNITURE[cell])
+		elif tile == "herb" and not game.node_worked(cell):
+			SpriteArt.draw_herb(self, cell, Crafting.HERBS[cell])
 		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") == "waystone":
 			SpriteArt.draw_waystone(self, cell)
 			if not covered(cell):
@@ -226,6 +230,10 @@ func _cache_tall(area: Rect2i) -> void:
 	for cell: Vector2i in World.FURNITURE:
 		if area.has_point(cell):
 			_tall[cell] = "furniture"
+	for y: int in range(area.position.y, area.end.y):
+		for x: int in range(area.position.x, area.end.x):
+			if Crafting.HERBS.has(Vector2i(x, y)):
+				_tall[Vector2i(x, y)] = "herb"
 
 
 ## The top entry of a ground stack, with its stack count (or the number of entries beneath).

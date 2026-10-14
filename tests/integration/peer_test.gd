@@ -3,6 +3,7 @@ extends SceneTree
 const World = preload("res://game/core/world.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Items = preload("res://game/data/items.gd")
+const Crafting = preload("res://game/core/crafting.gd")
 ## The druid client drops its spare armor for the late-joining paladin to pick up and wear.
 const DROPPED: String = "moss_coat"
 const DROPPED_INDEX: int = 1
@@ -38,6 +39,8 @@ var saw_task: bool = false
 var saw_dungeon: bool = false
 var hunting_weapon_given: bool = false
 var saw_hunting_weapon: bool = false
+var saw_crafted: bool = false
+var saw_gathered: bool = false
 var finishing: bool = false
 ## Persistence: whether the host has seen a character in the world.
 var had_player: bool = false
@@ -60,7 +63,7 @@ func _process(_delta: float) -> bool:
 	if game == null or finishing:
 		return false
 	var now: float = Time.get_ticks_msec() / 1000.0
-	var deadline: float = 32.0 if role.begins_with("dedicated") else 20.0
+	var deadline: float = 40.0 if role.begins_with("dedicated") else 20.0
 	if now - started > deadline:
 		fail("Timeout stage %d feedback='%s' peers=%s equipped=%s unequipped=%s late_move=%s drop=%s pickup=%s" % [
 			stage, game.last_action_message, game.actors.keys(),
@@ -416,6 +419,32 @@ func _dedicated_host_tick() -> void:
 			next = "warden_brask"
 		elif errand == "warden_brask" and player["tasks"].has("boar_cull"):
 			next = "cinder_cellar"
+		elif errand == "cinder_cellar" and saw_hunting_weapon and not player["equipment"].has("main_hand"):
+			next = "artisan_cinder"
+			# Test-only: resources for one rusted breastplate.
+			player["backpack"][-2] = "copper_ore#6"
+			player["backpack"][-1] = "pine_log#2"
+		elif errand == "artisan_cinder" and player["backpack"].has("rusted_breastplate") and World.carried(player["backpack"], "copper_ore") == 0:
+			saw_crafted = true
+			next = "copper_rock"
+		saw_gathered = saw_gathered or (errand == "copper_rock" and World.carried(player["backpack"], "copper_ore") > 0
+			or World.carried(player["backpack"], "pine_log") > 0 or World.carried(player["backpack"], "sunflax") > 0)
+		if next == "copper_rock":
+			# Test-only: the nearest copper rock to Cinder Crossing with open ground beside it.
+			for distance: int in range(1, 120):
+				for dx: int in range(-distance, distance + 1):
+					for dy: int in [-distance, distance]:
+						var rock := Vector2i(30, 30) + Vector2i(dx, dy)
+						if errand != "copper_rock" and Crafting.node_at(rock) == "mining" and Crafting.band_at(rock) == 0:
+							for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
+								if errand != "copper_rock" and World.walkable(rock + step) and World.zone_at(rock + step).is_empty() \
+										and not game.world.occupied(rock + step, game._now()):
+									player["cell"] = rock + step
+									player["from"] = rock + step
+									player["facing"] = -step
+									errand = "copper_rock"
+			game._publish_actor(id)
+			next = ""
 		saw_dungeon = saw_dungeon or World.dungeon_at(player["cell"]) == ["cinder_cellar", 0]
 		if saw_dungeon and World.OVERWORLD.has_point(player["cell"]) and not hunting_weapon_given:
 			var free: int = player["backpack"].find("")
@@ -445,7 +474,8 @@ func _dedicated_host_tick() -> void:
 			game._publish_actor(id)
 			errand = next
 	if saw_late_move and saw_drop and saw_pickup and saw_ring and saw_voyage and sparring != 0 and saw_relic \
-			and saw_task and saw_dungeon and saw_hunting_weapon and not game.world.monsters.has(sparring) and game.actors.is_empty():
+			and saw_task and saw_dungeon and saw_hunting_weapon and saw_crafted and saw_gathered and not game.world.monsters.has(sparring) \
+			and game.actors.is_empty():
 		finish()
 
 
@@ -627,7 +657,36 @@ func _dedicated_client_tick(now: float) -> void:
 				game.move_item_local({"type": "equipment", "slot": "main_hand"}, {"type": "backpack"})
 				advance()
 		34:
-			if not state(own)["equipment"].has("main_hand") and state(own)["backpack"].has("alder_crook"):
+			if state(own)["backpack"].has("copper_ore#6") and World.chebyshev(state(own)["cell"], World.npc("artisan_cinder")["cell"]) <= World.TALK_RANGE:
+				game.request_craft.rpc_id(1, "artisan_cinder", "voidrend", 1)
+				advance()
+		35:
+			if stage_messages.has("Unknown recipe"):
+				game.craft_local("artisan_cinder", "rusted_breastplate", 1)
+				advance()
+		36:
+			if state(own)["backpack"].has("rusted_breastplate") and not state(own)["backpack"].has("copper_ore#6") \
+					and int(state(own).get("skills", {}).get("smithing", [1, 0])[1]) > 0 and now - stage_since > 0.2:
+				advance()
+		37:
+			if Crafting.node_at(state(own)["cell"] + state(own)["facing"]) == "mining":
+				game.request_gather.rpc_id(1, "a rock")
+				advance()
+		38:
+			if stage_messages.has("Unknown place"):
+				game.gather_nearby()
+				advance()
+		39:
+			if state(own).has("gathering"):
+				advance()
+		40:
+			if not state(own).has("gathering") and not game.worked_nodes.is_empty() and now - stage_since > 0.2:
+				var gathered: int = 0
+				for kind: String in ["copper_ore", "pine_log", "sunflax", "river_perch"]:
+					gathered += World.carried(state(own)["backpack"], kind)
+				if gathered == 0:
+					fail("Gathering finished without a resource")
+					return
 				finish()
 
 

@@ -17,6 +17,7 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Spells = preload("res://game/data/spells.gd")
+const Professions = preload("res://game/data/professions.gd")
 
 ## Version 2 added armor types; version 1 saves still load and are migrated (_migrate_armor).
 const VERSION: int = 2
@@ -125,6 +126,7 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 		"depot": player["depot"].duplicate(), "trophies": player["trophies"].duplicate(),
 		"tasks": player["tasks"].duplicate(), "done_tasks": player["done_tasks"].keys(),
 		"spell_ranks": player["spell_ranks"].duplicate(),
+		"skills": player["skills"].duplicate(true),
 		"skull": player["skull"], "skull_left": maxf(0.0, player["skull_until"] - now) if not player["skull"].is_empty() else 0.0,
 		"unjustified_ages": ages,
 	}
@@ -201,6 +203,15 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 			var rank: int = clampi(_int(ranks[spell], 1), 1, Spells.MAX_RANK)
 			if typeof(spell) == TYPE_STRING and Spells.rankable(spell) and Spells.allows(spell, player["vocation"]) and rank > 1:
 				player["spell_ranks"][spell] = rank
+	var skills: Variant = data.get("skills")
+	if typeof(skills) == TYPE_DICTIONARY:
+		for profession: Variant in skills:
+			var entry: Variant = skills[profession]
+			if Professions.is_profession(profession) and typeof(entry) == TYPE_ARRAY and entry.size() == 2:
+				var skill: int = clampi(_int(entry[0], 1), 1, Professions.SKILL_MAX)
+				var progress: int = clampi(_int(entry[1], 0), 0, maxi(0, Professions.experience_to_next(skill) - 1))
+				if skill > 1 or progress > 0:
+					player["skills"][profession] = [skill, progress]
 	var skull: Variant = data.get("skull")
 	var left: float = _float(data.get("skull_left"))
 	if skull in ["white", "red"] and left > 0.0:

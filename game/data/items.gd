@@ -49,7 +49,8 @@ const RARITIES: Array = [
 
 
 ## id -> {name, slot, level, vocations, look, colors, stats, [armor], [outfit], [gold], [value], [price], [sell],
-## [drink], [bound], [slots], [loot_only]} in file order. "price" is the tier valuation,
+## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only]} in file order. Potions sharing a
+## "timer" share one cooldown (a strong health potion waits on the health potion's timer). "price" is the tier valuation,
 ## "sell" what vendors pay; loot_only items are never vendor stock or generic gear rolls.
 static func load_catalog() -> Dictionary:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(PATH))
@@ -83,6 +84,9 @@ static func load_catalog() -> Dictionary:
 				drink[stat] = float(entry["drink"][stat])
 			item["drink"] = drink
 			item["cooldown"] = float(entry.get("cooldown", 1.0))
+			item["timer"] = String(entry.get("timer", entry["id"]))
+		if entry.has("eat"):
+			item["eat"] = {"regen": float(entry["eat"]["regen"]), "seconds": float(entry["eat"]["seconds"])}
 		if not item["slot"].is_empty() and not item.has("bound") and not item.has("price"):
 			item["price"] = gear_price(item["level"], item["slot"])
 		if item.has("value"):

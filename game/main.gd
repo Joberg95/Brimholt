@@ -7,6 +7,8 @@ const World = preload("res://game/core/world.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Economy = preload("res://game/core/economy.gd")
+const Crafting = preload("res://game/core/crafting.gd")
+const Professions = preload("res://game/data/professions.gd")
 const Instances = preload("res://game/core/instances.gd")
 const CharacterStore = preload("res://game/persistence/character_store.gd")
 const Identity = preload("res://game/persistence/identity.gd")
@@ -23,6 +25,7 @@ const CellIndex = preload("res://game/render/cell_index.gd")
 const QuestList = preload("res://game/ui/quest_list.gd")
 const SpellBook = preload("res://game/ui/spell_book.gd")
 const CharacterWindow = preload("res://game/ui/character_window.gd")
+const ProfessionsWindow = preload("res://game/ui/professions_window.gd")
 const MicroMenu = preload("res://game/ui/micro_menu.gd")
 const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 const Bots = preload("res://game/core/bots.gd")
@@ -38,6 +41,9 @@ const MAP_COLORS: Dictionary = WorldMaps.MAP_COLORS
 var world := World.new()
 var combat := Combat.new(world)
 var economy := Economy.new(world)
+var crafting := Crafting.new(world)
+## Gathering nodes this peer knows are regrowing: cell -> local _now() when they regrow.
+var worked_nodes: Dictionary = {}
 var instances := Instances.new(world, combat)
 ## Clients receive monsters and combat effects only within INTEREST_RADIUS tiles of their
 ## character; peer id -> {monster id: true} they currently know about.
@@ -101,6 +107,7 @@ var hud: Hud
 var quest_list: QuestList
 var spell_book: SpellBook
 var character_window: CharacterWindow
+var professions_window: ProfessionsWindow
 var micro_menu: MicroMenu
 var lexicon: LexiconWindow
 var bot_panel: BotPanel
@@ -228,6 +235,7 @@ func _process(delta: float) -> void:
 		_handle_events(combat.tick(now))
 		_handle_events(bots.tick(now))
 		_handle_events(instances.tick(now))
+		_handle_events(crafting.tick(now))
 		_handle_events(world.decay_ground(now))
 		if now >= _next_interest:
 			_next_interest = now + INTEREST_SECONDS
@@ -261,6 +269,7 @@ func _process(delta: float) -> void:
 	quest_list.refresh()
 	spell_book.refresh()
 	character_window.refresh()
+	professions_window.refresh()
 	bot_panel.refresh()
 	start_panel.refresh()
 	action_bar.redraw()
@@ -281,13 +290,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
 		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
-				and not character_window.visible and not lexicon.visible and not bot_panel.visible and own_target() != 0:
+				and not character_window.visible and not professions_window.visible and not lexicon.visible \
+				and not bot_panel.visible and own_target() != 0:
 			target_local(0)
 		_world_map.hide()
 		_close_travel()
 		_controls.hide()
 		spell_book.hide()
 		character_window.hide()
+		professions_window.hide()
 		lexicon.hide()
 		bot_panel.hide()
 		return
@@ -321,6 +332,8 @@ func panel_open(action: String) -> bool:
 	match action:
 		"character":
 			return character_window.visible
+		"professions":
+			return professions_window.visible
 		"lexicon":
 			return lexicon.visible
 		"spell_book":
@@ -349,6 +362,8 @@ func _run_action(action: String) -> void:
 		spell_book.toggle()
 	elif action == "character":
 		character_window.toggle()
+	elif action == "professions":
+		professions_window.toggle()
 	elif action == "lexicon":
 		lexicon.toggle()
 	elif not connected:
@@ -359,6 +374,8 @@ func _run_action(action: String) -> void:
 		target_nearest()
 	elif action in ["health_potion", "mana_potion"]:
 		drink_kind(action)
+	elif action == "gather":
+		gather_nearby()
 
 
 func _reset_session() -> void:
@@ -369,6 +386,8 @@ func _reset_session() -> void:
 	world = World.new()
 	combat = Combat.new(world)
 	economy = Economy.new(world)
+	crafting = Crafting.new(world)
+	worked_nodes.clear()
 	instances = Instances.new(world, combat)
 	bots = Bots.new(world, combat)
 	_known_monsters.clear()
@@ -620,6 +639,10 @@ func hello(map_signature: Variant, vocation: Variant, token: Variant) -> void:
 		_reject_connection(sender, refused)
 		return
 	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), _interest_snapshot(sender, _now()), world_clock())
+	var regrowing: Dictionary = {}
+	for cell: Vector2i in crafting.depleted:
+		regrowing[cell] = crafting.depleted[cell] - _now()
+	nodes_worked.rpc_id(sender, regrowing)
 	_publish_actor(sender)
 	if _greetings.has(sender):
 		_send_feedback(sender, _greetings[sender], 0.0, false)
@@ -744,6 +767,56 @@ func task_local(npc: String, task: String, action: String) -> void:
 		request_task.rpc_id(1, npc, task, action)
 
 
+## Whether this peer knows a gathering node is regrowing.
+func node_worked(cell: Vector2i) -> bool:
+	return worked_nodes.get(cell, -INF) > _now()
+
+
+## Starts gathering at a node (the host checks reach, skill, and the node).
+func gather_local(cell: Vector2i) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_gather(1, cell)
+	else:
+		request_gather.rpc_id(1, cell)
+
+
+## Gathers from the nearest unworked node within reach: the tile you face first.
+func gather_nearby() -> void:
+	if not actors.has(self_id):
+		return
+	var state: Dictionary = actors[self_id]["state"]
+	var own: Vector2i = state["cell"]
+	var best := Vector2i(-1, -1)
+	var best_score: int = 1 << 30
+	for dy: int in range(-3, 4):
+		for dx: int in range(-3, 4):
+			var cell: Vector2i = own + Vector2i(dx, dy)
+			var profession: String = Crafting.node_at(cell)
+			if profession.is_empty() or World.chebyshev(own, cell) > Professions.REACH[profession] \
+					or node_worked(cell):
+				continue
+			var score: int = World.chebyshev(own, cell) * 10 + (0 if cell == own + state["facing"] else 1)
+			if score < best_score:
+				best_score = score
+				best = cell
+	if best.x < 0:
+		last_action_message = "Nothing to gather within reach."
+		return
+	gather_local(best)
+
+
+## Asks an artisan to craft `count` of a recipe (the host checks the skill and resources).
+func craft_local(npc: String, recipe: String, count: int) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_craft(1, npc, recipe, count)
+	else:
+		request_craft.rpc_id(1, npc, recipe, count)
+
+
 ## Asks your class trainer to raise a spell's rank for rune shards (the host checks everything).
 func empower_local(npc: String, spell: String) -> void:
 	if not connected or self_id == 0:
@@ -801,15 +874,26 @@ func drink_local(index: int) -> void:
 		request_drink.rpc_id(1, index)
 
 
-## Drinks the first potion of `kind` in the backpack (the potion keys).
+## Drinks the strongest potion sharing `kind`'s timer in the backpack (the potion keys: a
+## great health potion before a strong one before a plain one).
 func drink_kind(kind: String) -> void:
 	if not actors.has(self_id):
 		return
 	var backpack: Array = actors[self_id]["state"].get("backpack", [])
+	var best: int = -1
+	var strength: float = 0.0
 	for index: int in backpack.size():
-		if World.kind_of(backpack[index]) == kind:
-			drink_local(index)
-			return
+		var item: Dictionary = World.ITEMS.get(World.kind_of(backpack[index]), {})
+		if item.get("timer", "") == kind:
+			var share: float = 0.0
+			for stat: String in item["drink"]:
+				share += item["drink"][stat]
+			if best < 0 or share > strength:
+				best = index
+				strength = share
+	if best >= 0:
+		drink_local(best)
+		return
 	last_action_message = "You have no %ss." % World.ITEMS[kind]["name"].to_lower()
 
 
@@ -966,6 +1050,45 @@ func _handle_empower(id: int, npc: Variant, spell: Variant) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
+func request_gather(cell: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_gather(sender, cell)
+
+
+func _handle_gather(id: int, cell: Variant) -> void:
+	var result: Dictionary = crafting.start_gather(id, cell, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_craft(npc: Variant, recipe: Variant, count: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_craft(sender, npc, recipe, count)
+
+
+func _handle_craft(id: int, npc: Variant, recipe: Variant, count: Variant) -> void:
+	var result: Dictionary = crafting.craft(id, npc, recipe, count, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+		_save_player(id)
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
+
+
+## Nodes being worked, with seconds until they regrow (one when worked, all on joining).
+@rpc("authority", "call_remote", "reliable")
+func nodes_worked(regrowing: Dictionary) -> void:
+	for cell: Variant in regrowing:
+		if typeof(cell) == TYPE_VECTOR2I and typeof(regrowing[cell]) in [TYPE_INT, TYPE_FLOAT]:
+			worked_nodes[cell] = _now() + float(regrowing[cell])
+
+
+@rpc("any_peer", "call_remote", "reliable")
 func request_vocation(npc: Variant) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	if _valid_sender(sender):
@@ -1091,6 +1214,11 @@ func _handle_events(events: Array) -> void:
 				_publish_ground(event["cells"])
 			"message":
 				messages.append(event)
+			"node":
+				var regrowing: Dictionary = {event["cell"]: event["seconds"]}
+				nodes_worked(regrowing)
+				for peer_id: int in _remote_players():
+					nodes_worked.rpc_id(peer_id, regrowing)
 			_:
 				_show_effect(event)
 				var at: Vector2i = _event_cell(event)
@@ -1447,6 +1575,9 @@ func _build_ui() -> void:
 	character_window = CharacterWindow.new()
 	character_window.game = self
 	layer.add_child(character_window)
+	professions_window = ProfessionsWindow.new()
+	professions_window.game = self
+	layer.add_child(professions_window)
 	lexicon = LexiconWindow.new()
 	lexicon.game = self
 	layer.add_child(lexicon)
@@ -1459,7 +1590,7 @@ func _build_ui() -> void:
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
 	# list, location line, spell book, character window, lexicon, world map, dialog panel, and Controls menu.
 	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, character_window,
-			lexicon, bot_panel, maps.world_map, dialogs.panel, hud.controls]:
+			professions_window, lexicon, bot_panel, maps.world_map, dialogs.panel, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_controls = hud.controls
@@ -1562,6 +1693,9 @@ func _map_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_RIGHT and connected:
 			var person: int = creature if creature > 0 else (self_id if dialogs.is_self_at(cell) else 0)
 			if person > 0 and dialogs.open_player_menu(person, Vector2i(VIEW_ORIGIN + event.position)):
+				return
+			if person == 0 and not Crafting.node_at(cell).is_empty() and not ground_view.has(cell):
+				gather_local(cell)
 				return
 		if event.button_index == MOUSE_BUTTON_LEFT and creature != 0:
 			target_local(0 if creature == own_target() else creature)

@@ -19,6 +19,8 @@ const Instances = preload("res://game/core/instances.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Regions = preload("res://game/data/regions.gd")
+const Crafting = preload("res://game/core/crafting.gd")
+const Professions = preload("res://game/data/professions.gd")
 const SpriteArtSheets = preload("res://game/render/sprite_art.gd")
 var failures: int = 0
 var checks: int = 0
@@ -255,6 +257,9 @@ func _quest_hub_and_lexicon_checks() -> void:
 		and World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": ["wolf_winter", "lodge_wolves"]})
 		== "highway_robbers", "the suggestion moves to the best remaining fit")
 	_hunters_lodge_checks()
+	_profession_data_checks()
+	_gathering_checks()
+	_crafting_checks()
 	check(World.next_task({"level": 3, "vocation": "knight", "tasks": {}, "done_tasks": []}) != Quests.TRIAL_TASK
 		and World.task_open(Quests.TRIAL_TASK, {"vocation": Balance.ADVENTURER, "tasks": {}, "done_tasks": []}),
 		"only Adventurers are pointed to the trial")
@@ -656,6 +661,254 @@ func _stacking_checks() -> void:
 	check(World.stack_onto(stack, "wolf_pelt#2") and stack == ["wolf_pelt#99", "wolf_pelt#2"],
 		"ground stacks never exceed the stack limit")
 	check(World.bound("abyssal_greathelm") and World.bound("abyssal_greathelm#1") and not World.bound("wolf_pelt#3"), "bound checks use the item id")
+
+
+## Professions: resources, derived recipes, and what crafting may make.
+func _profession_data_checks() -> void:
+	check(Professions.NAMES.size() == 9 and Professions.GATHERING.size() + Professions.CRAFTING.size() == 9,
+		"four gathering and five crafting professions")
+	for profession: String in Professions.GATHERING:
+		var previous: int = 0
+		for band: int in Professions.BAND_LEVELS.size():
+			var kind: String = Professions.RESOURCES[profession][band]
+			check(World.ITEMS.has(kind) and World.stackable(kind) and World.ITEMS[kind]["value"] > previous
+				and not Economy.stock().has(kind), "%s is a stackable resource worth more than the band below" % kind)
+			previous = World.ITEMS[kind]["value"]
+	var crafted: Dictionary = {}
+	for recipe: Dictionary in Crafting.RECIPES.values():
+		var output: Dictionary = World.ITEMS[recipe["output"][0]]
+		check(Crafting.RECIPES[recipe["id"]] == recipe and recipe["id"] == recipe["output"][0] and recipe["profession"] in Professions.CRAFTING
+			and recipe["skill"] >= 1 and recipe["skill"] <= Professions.SKILL_MAX, "%s is a well-formed recipe" % recipe["id"])
+		check(not output.get("loot_only", false) and not output.has("glow") and not Items.mythic(output) and not World.bound(recipe["id"]),
+			"%s is never hunting, mythic, or relic gear" % recipe["id"])
+		var value: int = 0
+		for entry: Array in recipe["inputs"]:
+			var gathered: bool = false
+			for profession: String in Professions.RESOURCES:
+				gathered = gathered or entry[0] in Professions.RESOURCES[profession]
+			check(gathered and entry[1] >= 1, "%s is made from gathered resources" % recipe["id"])
+			value += entry[1]
+		if not output["slot"].is_empty():
+			crafted[recipe["id"]] = true
+			check(recipe["skill"] == maxi(1, output["level"]), "%s needs the skill of its tier" % recipe["id"])
+			check(Economy.sell_price(recipe["id"]) <= value * 30, "selling crafted %s pays at most 30 gold per resource" % recipe["id"])
+	for kind: String in World.ITEMS:
+		if not Professions.gear_profession(World.ITEMS[kind]).is_empty():
+			check(crafted.has(kind), "%s can be crafted" % kind)
+	for vocation: String in Balance.VOCATIONS:
+		for tier: int in Items.TIER_LEVELS:
+			for slot: String in ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]:
+				var piece: String = World.class_piece(slot, tier, vocation)
+				check(not piece.is_empty() and crafted.has(piece), "%ss can have their tier-%d %s crafted" % [vocation, tier, slot])
+	for profession: String in Professions.CRAFTING:
+		check(Crafting.RECIPES.values().any(func(recipe: Dictionary) -> bool: return recipe["profession"] == profession),
+			"%s has recipes" % profession)
+	for kind: String in ["strong_health_potion", "great_mana_potion"]:
+		check(not Economy.stock().has(kind) and Crafting.RECIPES.has(kind), "%s is crafted, never sold" % kind)
+	check(Economy.stock().has("health_potion") and Economy.stock().has("mana_potion"), "vendors still sell the plain potions")
+	check(Combat.potion_timer("great_health_potion") == Combat.potion_timer("health_potion")
+		and Combat.potion_timer("strong_mana_potion") == Combat.potion_timer("mana_potion"), "stronger potions share the plain potion's timer")
+	# Herb patches grow outside towns and markers, and every band of every gathering skill has reachable nodes.
+	for cell: Vector2i in Crafting.HERBS:
+		check(World.zone_at(cell).is_empty() and not World.NPC_CELLS.has(cell) and not World.FURNITURE.has(cell)
+			and World.walkable(cell), "herb patch %s grows in the open wilds" % cell)
+	var found: Dictionary = {}
+	for y: int in range(0, World.OVERWORLD.size.y, 1):
+		for x: int in range(0, World.OVERWORLD.size.x, 1):
+			var cell := Vector2i(x, y)
+			var profession: String = Crafting.node_at(cell)
+			if profession.is_empty():
+				continue
+			var band: int = Crafting.HERBS[cell] if profession == "herbalism" else Crafting.band_at(cell)
+			if found.has("%s/%d" % [profession, band]):
+				continue
+			for step: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.ZERO]:
+				if World.walkable(cell + step) and World.zone_at(cell + step).is_empty():
+					found["%s/%d" % [profession, band]] = true
+	for profession: String in Professions.GATHERING:
+		for band: int in Professions.BAND_LEVELS.size():
+			check(found.has("%s/%d" % [profession, band]), "%s band %d can be gathered somewhere" % [profession, band])
+	# Every town has an artisan in a workshop.
+	var artisans: Dictionary = {}
+	for id: String in World.TOWNSFOLK:
+		var person: Dictionary = World.TOWNSFOLK[id]
+		if person["role"] != "artisan":
+			continue
+		artisans[person["place"]] = true
+		var pieces: Array = World.FURNITURE.keys().filter(func(cell: Vector2i) -> bool:
+			return World.ROOM_AT.get(cell, -1) == World.ROOM_AT.get(person["cell"], -2)).map(func(cell: Vector2i) -> String:
+				return World.FURNITURE[cell])
+		check(World.ROOM_AT.has(person["cell"]) and "anvil" in pieces and "workbench" in pieces and pieces.all(
+			func(kind: String) -> bool: return kind in SpriteArt.FURNITURE), "%s works in a furnished workshop" % person["name"])
+	for zone: Dictionary in World.ZONES:
+		if zone["town"]:
+			check(artisans.has(zone["name"]), "%s has an artisan" % zone["name"])
+
+
+## A node of `profession` in `band` with a free walkable tile beside it (outside zones).
+func _node_spot(profession: String, band: int) -> Array:
+	for y: int in World.OVERWORLD.size.y:
+		for x: int in World.OVERWORLD.size.x:
+			var cell := Vector2i(x, y)
+			if Crafting.node_at(cell) != profession:
+				continue
+			if (Crafting.HERBS[cell] if profession == "herbalism" else Crafting.band_at(cell)) != band:
+				continue
+			for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
+				if World.walkable(cell + step) and World.walkable(cell + step * 2) and World.zone_at(cell + step).is_empty():
+					return [cell, cell + step, step]
+	return []
+
+
+func _gathering_checks() -> void:
+	var world := World.new()
+	world.add_player(1, 0.0, "knight")
+	world.add_player(2, 0.0, "druid")
+	var crafting := Crafting.new(world)
+	var player: Dictionary = world.players[1]
+	var rock: Array = _node_spot("mining", 0)
+	check(not rock.is_empty(), "a copper rock to test on")
+	_place(world, 1, rock[1] + rock[2] * 2)
+	check(crafting.start_gather(1, rock[0], 1.0)["reason"] == "Walk closer to gather", "gathering needs the node within reach")
+	_place(world, 1, rock[1])
+	for bad: Variant in [7, "rock", [1, 2], Vector2(rock[0])]:
+		check(not crafting.start_gather(1, bad, 1.0)["ok"], "malformed gather targets are refused")
+	check(crafting.start_gather(1, rock[1] + rock[2], 1.0)["reason"] == "There is nothing to gather there"
+		or Crafting.node_at(rock[1] + rock[2]) != "", "open ground is not a node")
+	check(not crafting.start_gather(3, rock[0], 1.0)["ok"], "unknown players cannot gather")
+	var started: Dictionary = crafting.start_gather(1, rock[0], 1.0)
+	check(started["ok"] and world.export_player(1, 1.0).has("gathering") and player["facing"] == -rock[2], "gathering starts facing the rock")
+	check(crafting.tick(1.0 + Professions.GATHER_SECONDS - 0.1).is_empty() and _count(player["backpack"], "copper_ore") == 0,
+		"the work takes GATHER_SECONDS")
+	var events: Array = crafting.tick(1.0 + Professions.GATHER_SECONDS)
+	check(_count(player["backpack"], "copper_ore") == 1 and player["gathering"].is_empty() and crafting.worked(rock[0], 5.0)
+		and events.any(func(event: Dictionary) -> bool: return event["kind"] == "node" and event["cell"] == rock[0]),
+		"finished work yields copper ore and the rock regrows")
+	check(player["skills"]["mining"] == [1, Professions.gather_gain(1, 0)], "a gather trains the skill")
+	check(crafting.start_gather(1, rock[0], 6.0)["reason"].begins_with("It has been worked"), "a worked node waits to regrow")
+	crafting.tick(6.0 + Professions.REGROW_SECONDS)
+	check(crafting.start_gather(1, rock[0], 7.0 + Professions.REGROW_SECONDS)["ok"], "a regrown node can be worked again")
+	check(world.move(1, rock[2], 7.5 + Professions.REGROW_SECONDS)["ok"] and player["gathering"].is_empty(), "moving cancels gathering")
+	crafting.tick(20.0 + Professions.REGROW_SECONDS)
+	check(_count(player["backpack"], "copper_ore") == 1, "cancelled work yields nothing")
+	_place(world, 1, rock[1])
+	# Skill gates the bands: Mining 1 cannot work a band-2 rock.
+	var deep: Array = _node_spot("mining", 2)
+	_place(world, 1, deep[1])
+	check(crafting.start_gather(1, deep[0], 100.0)["reason"].begins_with("Mining 20 needed"), "high bands need the skill")
+	player["skills"]["mining"] = [20, 0]
+	check(crafting.start_gather(1, deep[0], 100.0)["ok"], "the skill opens the band")
+	crafting.tick(100.0 + Professions.GATHER_SECONDS)
+	check(_count(player["backpack"], "silver_ore") == 1, "band-2 rock yields silver ore")
+	# A full backpack refuses new resources.
+	for index: int in player["backpack"].size():
+		player["backpack"][index] = "copper_blade"
+	var tree: Array = _node_spot("woodcutting", 0)
+	_place(world, 1, tree[1])
+	check(crafting.start_gather(1, tree[0], 200.0)["reason"] == "Your backpack is full", "a full backpack refuses a gather")
+	# Herbs and water too, and never in a dungeon.
+	var herb: Array = _node_spot("herbalism", 0)
+	_place(world, 2, herb[1])
+	check(crafting.start_gather(2, herb[0], 300.0)["ok"], "herbs are picked")
+	crafting.tick(300.0 + Professions.GATHER_SECONDS)
+	check(_count(world.players[2]["backpack"], "sunflax") == 1, "a herb patch yields sunflax")
+	var water: Array = _node_spot("fishing", 0)
+	_place(world, 2, water[1] + water[2] * 2)
+	check(crafting.start_gather(2, water[0], 400.0)["ok"], "fishing reaches water a few tiles away")
+	check(Crafting.node_at(Dungeons.origin("silkhollow", 0)) == "", "dungeon rock is not a node")
+	# Training: each level needs experience_to_next, and the skill stops at SKILL_MAX.
+	var trainee: Dictionary = {"skills": {}}
+	check(Crafting.train(trainee, "fishing", Professions.experience_to_next(1)).contains("Fishing rose to 2")
+		and trainee["skills"]["fishing"] == [2, 0], "experience raises a skill")
+	trainee["skills"]["fishing"] = [Professions.SKILL_MAX, 0]
+	Crafting.train(trainee, "fishing", 1000)
+	check(trainee["skills"]["fishing"] == [Professions.SKILL_MAX, 0], "skills stop at their maximum")
+	check(Professions.gather_gain(1, 0) == 4 and Professions.gather_gain(30, 0) == 0 and Professions.gather_gain(20, 2) == 4,
+		"easy bands stop teaching")
+	# Skills are saved and sanitized.
+	player["skills"] = {"mining": [12, 3], "cooking": [5, 1]}
+	var saved: Dictionary = CharacterStore.capture(world, 1, 500.0)
+	var restored := World.new()
+	restored.add_player(1, 0.0, "knight")
+	CharacterStore.restore(restored, 1, JSON.parse_string(JSON.stringify(saved)), 0.0)
+	check(restored.players[1]["skills"] == {"mining": [12, 3], "cooking": [5, 1]}, "skills survive a save")
+	saved["skills"] = {"mining": [999, 999], "jumping": [9, 0], "fishing": "x", "cooking": [3, -5]}
+	var tampered := World.new()
+	tampered.add_player(1, 0.0, "knight")
+	CharacterStore.restore(tampered, 1, saved, 0.0)
+	check(tampered.players[1]["skills"] == {"mining": [Professions.SKILL_MAX, 0], "cooking": [3, 0]}, "saved skills are sanitized")
+
+
+func _crafting_checks() -> void:
+	var world := World.new()
+	world.add_player(1, 0.0, "knight")
+	var crafting := Crafting.new(world)
+	var combat := Combat.new(world, 77)
+	var player: Dictionary = world.players[1]
+	var artisan: String = ""
+	for id: String in World.TOWNSFOLK:
+		if World.TOWNSFOLK[id]["role"] == "artisan" and artisan.is_empty():
+			artisan = id
+	for index: int in player["backpack"].size():
+		player["backpack"][index] = ""
+	player["backpack"][0] = "copper_ore#10"
+	player["backpack"][1] = "pine_log#3"
+	_place(world, 1, World.SPAWNS[0] + Vector2i(40, 40))
+	check(crafting.craft(1, artisan, "rusted_breastplate", 1, 1.0)["reason"] == "Walk closer to an artisan", "crafting needs an artisan")
+	_place(world, 1, _beside(artisan))
+	for bad: Array in [[7, "rusted_breastplate", 1], [artisan, "relic", 1], [artisan, "voidrend", 1], [artisan, "rusted_breastplate", 0],
+			[artisan, "rusted_breastplate", 99], [artisan, "rusted_breastplate", "1"], ["relic_keeper", "rusted_breastplate", 1]]:
+		check(not crafting.craft(1, bad[0], bad[1], bad[2], 1.0)["ok"], "malformed or impossible craft requests are refused")
+	var before: Array = player["backpack"].duplicate()
+	check(crafting.craft(1, artisan, "bronze_breastplate", 1, 1.0)["reason"] == "Smithing 10 needed" and player["backpack"] == before,
+		"recipes above your skill are refused")
+	check(crafting.craft(1, artisan, "health_potion", 1, 1.0)["reason"] == "You need more Sunflax" and player["backpack"] == before,
+		"missing resources refuse the craft and change nothing")
+	var result: Dictionary = crafting.craft(1, artisan, "rusted_breastplate", 1, 1.0)
+	check(result["ok"] and _count(player["backpack"], "rusted_breastplate") == 1 and _count(player["backpack"], "copper_ore") == 4
+		and _count(player["backpack"], "pine_log") == 1 and int(player["skills"]["smithing"][0]) > 1, "crafting spends resources, makes gear, and trains")
+	check(crafting.craft(1, artisan, "rusted_breastplate", 1, 1.2)["reason"] == "You are still working", "crafts are paced")
+	player["backpack"][2] = "sunflax#5"
+	player["skills"]["alchemy"] = [3, 0]
+	result = crafting.craft(1, artisan, "health_potion", 5, 5.0)
+	check(result["ok"] and _count(player["backpack"], "health_potion") == 2 and _count(player["backpack"], "sunflax") == 1,
+		"a batch makes as many as the resources allow")
+	for index: int in player["backpack"].size():
+		player["backpack"][index] = "copper_blade"
+	player["backpack"][0] = "copper_ore#7"
+	player["backpack"][1] = "pine_log#3"
+	var full: Array = player["backpack"].duplicate()
+	check(crafting.craft(1, artisan, "rusted_breastplate", 1, 9.0)["reason"] == "Your backpack is full" and player["backpack"] == full,
+		"gear needs a free slot once its resources are spent")
+	player["backpack"][0] = "copper_ore#6"
+	check(crafting.craft(1, artisan, "rusted_breastplate", 1, 10.0)["ok"] and player["backpack"][0] == "rusted_breastplate",
+		"spent resources make room for the gear")
+	# Food and stronger potions.
+	player["backpack"][4] = "grilled_perch#2"
+	player["backpack"][5] = "strong_health_potion"
+	player["backpack"][6] = "health_potion"
+	check(combat.drink(1, 4, 20.0)["ok"] and player["fed"]["kind"] == "grilled_perch" and _count(player["backpack"], "grilled_perch") == 1
+		and is_equal_approx(combat.meal_bonus(1, 21.0), 0.2) and combat.meal_bonus(1, 20.0 + 901.0) == 0.0,
+		"food speeds regeneration for a while")
+	check(world.export_player(1, 21.0, true).has("fed") and not world.export_player(1, 21.0, false).has("fed"),
+		"only you see your meal")
+	player["health"] = 10
+	check(combat.drink(1, 5, 30.0)["ok"] and not combat.drink(1, 6, 31.0)["ok"], "a strong potion starts the plain potion's cooldown")
+	var hungry := World.new()
+	hungry.add_player(1, 0.0, "knight")
+	var fed := World.new()
+	fed.add_player(1, 0.0, "knight")
+	fed.players[1]["fed"] = {"kind": "glimmerfin_feast", "until": 1000.0}
+	var hungry_combat := Combat.new(hungry, 3)
+	var fed_combat := Combat.new(fed, 3)
+	for world_case: World in [hungry, fed]:
+		world_case.players[1]["health"] = 1
+		world_case.players[1]["mana"] = 0
+		world_case.players[1]["next_regen"] = 0.0
+	hungry_combat.tick(10.0)
+	fed_combat.tick(10.0)
+	check(fed.players[1]["health"] > hungry.players[1]["health"] and fed.players[1]["mana"] > hungry.players[1]["mana"],
+		"a meal regenerates health and mana faster")
 
 
 func _hunters_lodge_checks() -> void:
@@ -1214,15 +1467,15 @@ func _keybind_checks() -> void:
 	check(loaded.keys == binds.keys and loaded.bar == binds.bar, "bindings load back")
 	var config := ConfigFile.new()
 	config.set_value("keys", "slot_1", [KEY_ESCAPE, "x"])
-	config.set_value("keys", "slot_2", [KEY_P, KEY_NONE])
-	config.set_value("keys", "slot_3", [KEY_P, KEY_NONE])
+	config.set_value("keys", "slot_2", [KEY_O, KEY_NONE])
+	config.set_value("keys", "slot_3", [KEY_O, KEY_NONE])
 	config.set_value("bar", "slots", ["fireball"])
 	config.save(path)
 	var tampered := Keybinds.new(path)
 	tampered.load_saved()
 	check(tampered.keys["slot_1"] == [KEY_1, KEY_NONE] and tampered.bar == Keybinds.DEFAULT_BAR,
 		"malformed saved values fall back to defaults")
-	check(tampered.action_for(KEY_P) == "slot_2" and tampered.keys["slot_3"][0] == KEY_NONE, "duplicate saved keys are dropped")
+	check(tampered.action_for(KEY_O) == "slot_2" and tampered.keys["slot_3"][0] == KEY_NONE, "duplicate saved keys are dropped")
 	var detached := Keybinds.new(path)
 	detached.persistent = false
 	detached.load_saved()
@@ -1960,7 +2213,7 @@ func _town_checks() -> void:
 		towns.get(person["place"], []).append(person["role"])
 		check(World.NPC_CELLS.get(person["cell"], "") == id and not World.walkable(person["cell"]), "%s blocks its tile" % id)
 		check(_beside(id) != person["cell"], "%s can be reached" % id)
-		check(person["services"] == (["bank"] if person["role"] == "banker" else ["trade"]), "%s offers its service" % id)
+		check(person["services"] == {"banker": ["bank"], "artisan": ["craft"]}.get(person["role"], ["trade"]), "%s offers its service" % id)
 	var banks: Array = []
 	for town: String in towns:
 		check("vendor" in towns[town], "%s has a vendor" % town)
@@ -3288,7 +3541,8 @@ func _combat_checks() -> void:
 			check(World.ITEMS.has(entry[0]) and entry[0] != "gold_coins", "%s loot %s is a catalog item" % [kind, entry[0]])
 			check(float(entry[1]) > 0.0 and float(entry[1]) <= 1.0, "%s loot %s has a chance in (0, 1]" % [kind, entry[0]])
 	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["slot"].is_empty() and kind not in ["gold_coins", "glowcap"] and not World.ITEMS[kind].has("drink"):
+		if World.ITEMS[kind]["slot"].is_empty() and kind not in ["gold_coins", "glowcap"] and not World.ITEMS[kind].has("drink") \
+				and not World.ITEMS[kind].has("eat"):
 			check(int(World.ITEMS[kind].get("value", 0)) > 0, "material %s has a shop value" % kind)
 			check(SpriteArt.ITEM_ORDER.has(kind), "material %s has an icon" % kind)
 	var loot_a := Combat.new(World.new(), 77)

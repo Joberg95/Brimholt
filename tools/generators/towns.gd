@@ -1,5 +1,5 @@
 extends SceneTree
-## Puts every town's vendor (and the one banker, in BANK_PLACE) inside a building of their own,
+## Puts every town's vendor and artisan (and the one banker, in BANK_PLACE) inside a building of their own,
 ## in the existing overworld scene, and removes bankers from other towns. Buildings are found
 ## from the walls (game/data/buildings.gd); the patches below add the buildings a town lacks:
 ## Cinder Crossing's shop and a second house, and Reedmere's bank. Each keeper stands at the back of their building, facing the door; the
@@ -19,6 +19,18 @@ const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const BANK_PLACE: String = "Reedmere"
 const TILE: int = 32
 const QUEST_SCRIPT: Script = preload("res://game/maps/markers/quest_giver.gd")
+const TOWNSFOLK_SCRIPT: Script = preload("res://game/maps/markers/townsfolk.gd")
+## Artisans (World role "artisan", service "craft"): one per town, in a free building of their
+## own like the vendors, with a workshop (World.FURNISHINGS): node name, display name, town.
+const ARTISANS: Array = [
+	["artisan_cinder", "Artisan Brenna", "Cinder Crossing"],
+	["artisan_lastlight", "Artisan Odo", "Lastlight"],
+	["artisan_reedmere", "Guildmistress Talia", "Reedmere"],
+	["artisan_ashford", "Artisan Corwen", "Ashford"],
+	["artisan_emberfall", "Artisan Hild", "Emberfall"],
+	["artisan_dunmere", "Artisan Maelis", "Dunmere"],
+	["artisan_highmoor", "Artisan Torvald", "Highmoor"],
+]
 ## Quest givers this painter places (or moves): node name, display name, place, cell, facing.
 ## Relic keepers (one per final boss, game/data/quests.gd RELIC_KEEPERS) stand in the corners of
 ## Reedmere's north plaza (far enough apart that their names do not overlap), the town at the middle of the world; dungeon task givers stand by their stairway.
@@ -134,6 +146,10 @@ static func apply(scene_root: Node) -> int:
 		return -1
 	changed += placed
 	var terrain: Callable = func(cell: Vector2i) -> String: return _terrain(layer, cell)
+	var added: int = _add_artisans(scene_root)
+	if added < 0:
+		return -1
+	changed += added
 	var keepers: Array = []
 	if scene_root.has_node("Townsfolk"):
 		for keeper: Node2D in scene_root.get_node("Townsfolk").get_children():
@@ -193,6 +209,34 @@ static func apply(scene_root: Node) -> int:
 				keeper.position = position
 				keeper.set("facing", outward)
 				changed += 1
+	return changed
+
+
+## Creates missing ARTISANS markers inside their town (the keeper pass then moves them into a
+## free building); -1 when a town is unknown.
+static func _add_artisans(scene_root: Node) -> int:
+	var group: Node = scene_root.get_node("Townsfolk")
+	var towns: Dictionary = {}
+	for zone: Node2D in scene_root.get_node("Zones").get_children():
+		if bool(zone.get("town")):
+			towns[String(zone.get("zone_name"))] = Rect2i(_cell_of_corner(zone), zone.get("size_tiles"))
+	var changed: int = 0
+	for entry: Array in ARTISANS:
+		if group.has_node(String(entry[0])):
+			continue
+		if not towns.has(entry[2]):
+			push_error("%s has no town %s" % [entry[1], entry[2]])
+			return -1
+		var marker := Marker2D.new()
+		marker.name = String(entry[0])
+		marker.set_script(TOWNSFOLK_SCRIPT)
+		group.add_child(marker)
+		marker.owner = scene_root
+		marker.position = Vector2((Vector2(towns[entry[2]].get_center()) + Vector2(0.5, 0.5)) * TILE)
+		marker.set("npc_name", entry[1])
+		marker.set("place", entry[2])
+		marker.set("role", "artisan")
+		changed += 1
 	return changed
 
 

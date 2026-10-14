@@ -11,6 +11,7 @@ game/
     world.gd             Map loading, item catalog, movement, inventory and depot, packs, travel
     combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
     economy.gd           Vendors (stock, buying, selling) and the banker (gold accounts)
+    crafting.gd          Professions on the host: herb patches, gathering (nodes, regrowth), crafting at artisans, skill training
     instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
     bots.gd              Host player bots: hunter, PvP, and dummy stances through the real rules
@@ -27,6 +28,7 @@ game/
     buildings.gd         Finds buildings (rooms, doors, roof footprints) from walls
     monsters.gd          Monster catalog, loot tables, bosses and their relics
     spells.gd            Spell catalog and cooldown groups
+    professions.gd       Gathering and crafting skills, resource bands, skill curve, recipe derivation, food
   persistence/           Host-side saves and the client identity
     character_store.gd   Signed per-character save files; capture, restore, and sanitizing
     identity.gd          This computer's secret identity token (user://identity.cfg)
@@ -38,15 +40,16 @@ game/
     inventory_panel.gd   Paperdoll and backpack slots, drag-and-drop, stat sheet, item tooltips
     quest_list.gd        Quest list in the game window: active tasks, givers, progress
     spell_book.gd        Spell book (B): your vocation's spells explained (Spells.info), drag to the bar
-    character_window.gd  Character window (C): stats explained, experience, and status
+    character_window.gd  Character window (C): stats explained, experience, and status (meal included)
+    professions_window.gd Professions window (P): each skill's level, progress, and what it gathers or crafts
     lexicon_window.gd    Lexicon (K): searchable monster list with drop tables
     bot_panel.gd         Host-only Bots panel: add, list, and remove player bots
-    micro_menu.gd        Buttons right of the action bar for the character, book, quests, map, controls
+    micro_menu.gd        Buttons right of the action bar for the character, book, professions, quests, map, controls
     spell_rune.gd        A spell rune: drawing, coloured tooltip, drag and drop (bar and book)
     item_slot.gd         An item slot whose hover tooltip shows the rarity colour
     action_bar.gd        Nine-slot spell bar, its spell menu, and filling slots for a vocation (again after a trainer)
     world_maps.gd        Minimap and world map drawn from one terrain texture
-    npc_dialogs.gd       NPC service menu; travel, trade, bank (depot), and quest dialogs; player party menu
+    npc_dialogs.gd       NPC service menu; travel, trade, bank (depot), quest, runes, and craft dialogs; player party menu
     start_panel.gd       Start menu shown until you host or join
     controls_menu.gd     Key-binding window
   render/                Client-side drawing only
