@@ -958,6 +958,18 @@ func _check_dungeons() -> bool:
 	game.world.ground.clear()
 	game.ground_view.clear()
 	var player: Dictionary = game.world.players[1]
+	# Every dungeon's stairway from the overworld, as you find it: one hole per entrance.
+	for dungeon: String in World.ENTRANCE_OF:
+		var hole: Vector2i = World.ENTRANCE_OF[dungeon]
+		for side: Vector2i in [Vector2i(0, 2), Vector2i(0, -2), Vector2i(2, 0), Vector2i(-2, 0), Vector2i(0, 1), Vector2i(1, 0)]:
+			if World.walkable(hole + side) and World.terrain(hole + side) != "v":
+				player["cell"] = hole + side
+				break
+		player["from"] = player["cell"]
+		game._publish_actor(1)
+		await create_timer(0.4).timeout
+		await RenderingServer.frame_post_draw
+		screen.get_texture().get_image().save_png("res://.tools/visual-entrance-%s.png" % dungeon)
 	var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
 	var step: Vector2i = Vector2i.ZERO
 	for candidate: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:

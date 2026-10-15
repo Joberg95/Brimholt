@@ -88,13 +88,14 @@ const PATCHES: Array = [
 		"#===#",
 		"#####",
 	]],
-	# Silkhollow's cave mouth in Thornfield Wilds: a ring of cave rock, open to the south, around
-	# the stairway (painted by dungeons.gd at Dungeons.DUNGEONS["silkhollow"]["entrance"]), in a
-	# small clearing where the trail from the coast road (silkhollow.gd) arrives.
+	# Silkhollow's cave mouth in Thornfield Wilds: a ring of cave rock, open to the south and
+	# south-east, around the stairway (painted by dungeons.gd at Dungeons.DUNGEONS["silkhollow"]
+	# ["entrance"]), in a small clearing where the trail from the coast road (silkhollow.gd)
+	# arrives. No rock stands east or south of the stairway: it would lean over the hole.
 	[Vector2i(79, 161), [
 		"   .....  ",
 		"   .CCC.  ",
-		"  .CC CC. ",
+		"  .CC .C. ",
 		"  ,C,..C. ",
 		",,,,,.....",
 		"..........",

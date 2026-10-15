@@ -1845,6 +1845,14 @@ func _zone_checks() -> void:
 	filled.populate(0.0)
 	check(filled.respawns.size() * 100 < filled.world.monsters.size(),
 		"populate places nearly every camp monster at once (%d waiting, %d placed)" % [filled.respawns.size(), filled.world.monsters.size()])
+	# Raised walls, rock, and trees lean up and left over the cells west and north of them, so a
+	# stairway beside one would be half hidden (and read as two holes).
+	for dungeon: String in World.ENTRANCE_OF:
+		var hole: Vector2i = World.ENTRANCE_OF[dungeon]
+		var covered: Array = [Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)].filter(func(side: Vector2i) -> bool:
+			var tile: String = World.terrain(hole + side)
+			return not tile.is_empty() and (tile in World.WALLS or tile in World.TREES))
+		check(World.terrain(hole) == "v" and covered.is_empty(), "%s's stairway at %s lies in the open (covered from %s)" % [dungeon, hole, covered])
 	check(World.zone_at(Vector2i(-50, -50)).is_empty(), "outside the map is no zone")
 	check(World.zone_at(World.SPAWNS[0]).get("town", false) and not World.zone_at(World.SPAWNS[0])["pvp"],
 		"Cinder Crossing is a safe town")

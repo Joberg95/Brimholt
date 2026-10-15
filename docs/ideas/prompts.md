@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-lets make sure the cellar entrances are not 2 downward paths, it looks like there are 2 holes in the ground for some of them currently when it should just be 1. I think the art for the cellar "holes" could be updated. open tibia is a great resource to use and take inspiration from! (plan 07)
-
 lets do a performance pass on the core of the game, something is a little choppy and feels laggy. (plan 08)
 
 lets add a taunt for warriors so they can target a enemy to gain their focus from another player (plan 09)

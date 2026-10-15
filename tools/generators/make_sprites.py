@@ -2631,22 +2631,92 @@ def cave_tile(variant):
 
 
 def stairs_tile(down):
-    """A stairway set in a stone frame: steps descend into darkness ("v") or rise toward the
-    light ("^")."""
+    """A stairway set in the floor, framed by a stone lip lit from the top-left. Going down ("v",
+    a town cellar), the steps drop away into darkness and the shaded far wall of the shaft shows
+    above them; going up ("^"), they climb toward the light."""
     image = Image(TILE, TILE)
     bevel(image, box(0, 0, TILE, TILE), COBBLE[1], COBBLE[0], COBBLE[3])
-    for step in range(6):
-        y = 4 + step * 4
-        shade = (5 - step) / 5 if down else (step + 1) / 6
-        tread = scale(COBBLE[1], 0.25 + 0.75 * shade)
-        riser = scale(COBBLE[2], 0.2 + 0.6 * shade)
-        image.rect(4, y, 24, 3, tread)
-        image.rect(4, y + 3, 24, 1, riser)
-    for y in range(4, 28):
-        image.set(3, y, OUTLINE)
-        image.set(28, y, OUTLINE)
-    image.rect(3, 3, 26, 1, OUTLINE)
-    image.rect(3, 28, 26, 1, OUTLINE)
+    # Ashlar joints in the lip so it reads as dressed stone.
+    for x in (9, 21):
+        image.set(x, 1, COBBLE[2])
+        image.set(x + 2, TILE - 2, COBBLE[2])
+    for y in (10, 22):
+        image.set(1, y, COBBLE[2])
+        image.set(TILE - 2, y + 1, COBBLE[2])
+    image.rect(3, 3, 26, 26, OUTLINE)
+    if down:
+        image.rect(4, 4, 24, 24, rgba("15130f"))
+        # The far wall of the shaft, in shadow, then steps dropping into the dark.
+        image.rect(4, 4, 24, 3, scale(COBBLE[3], 0.7))
+        image.rect(4, 7, 24, 1, scale(COBBLE[3], 0.45))
+        for step in range(5):
+            y = 8 + step * 4
+            shade = (4 - step) / 4
+            image.rect(5, y, 22, 2, scale(COBBLE[1], 0.2 + 0.75 * shade))
+            image.rect(5, y + 2, 22, 1, scale(COBBLE[2], 0.15 + 0.55 * shade))
+            image.rect(5, y + 3, 22, 1, rgba("15130f"))
+        # The left side wall throws its shadow over the steps.
+        for y in range(8, 28):
+            image.set(4, y, rgba("15130f"))
+            image.set(5, y, scale(image.get(5, y), 0.6))
+    else:
+        for step in range(6):
+            y = 4 + step * 4
+            shade = (step + 1) / 6
+            image.rect(4, y, 24, 3, scale(COBBLE[1], 0.25 + 0.75 * shade))
+            image.rect(4, y + 3, 24, 1, scale(COBBLE[2], 0.2 + 0.6 * shade))
+    return image
+
+
+def cave_hole_tile():
+    """A hole into a cave in the wilds ("v" outside towns), seen from above at the oblique angle:
+    a wide pit in an apron of worn earth, the far wall of earth sliding down into the dark, rough
+    steps cut into the near side, and a broken rim of dull stones lit from the top-left."""
+    rng = random.Random(2701)
+    image = grass_tile(1)
+    cx, cy = 15.5, 16.0
+    for py in range(TILE):
+        for px in range(TILE):
+            d = ((px - cx) / 15.0) ** 2 + ((py - cy) / 12.5) ** 2
+            if d < 1.0 - rng.random() * 0.18:
+                image.set(px, py, DIRT[0] if d > 0.55 else DIRT[1])
+    pit = set()
+    for py in range(TILE):
+        for px in range(TILE):
+            ragged = 0.1 * (((px * 13 + py * 7) % 5) / 4)
+            if ((px - cx) / 11.0) ** 2 + ((py - cy - 1) / 8.0) ** 2 < 1.0 - ragged:
+                pit.add((px, py))
+    top = {}
+    for px, py in pit:
+        top[px] = min(top.get(px, py), py)
+    dark = rgba("120f0c")
+    for px, py in pit:
+        depth = py - top[px]
+        if depth < 6:
+            color = blend(scale(DIRT[3], 0.8), dark, depth / 6)
+            if (px + py) % 4 == 0 and depth < 4:
+                color = scale(DIRT[3], 0.6)
+        else:
+            color = dark
+        image.set(px, py, color)
+    # Three rough steps on the near side, fading as they go down.
+    for step in range(3):
+        y = 22 - step * 3
+        for x in range(11 + step * 2, 21 - step * 2):
+            if (x, y) in pit and (x, y + 1) in pit:
+                image.set(x, y, scale(DIRT[1], 0.7 - step * 0.18))
+                image.set(x, y + 1, scale(DIRT[3], 0.5 - step * 0.12))
+    for px, py in pit:
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if (px + dx, py + dy) not in pit:
+                image.set(px + dx, py + dy, OUTLINE)
+    # A broken rim of stones: mostly on the far side, dull, lit on their top-left.
+    for angle in range(200, 520, 38):
+        radians = math.radians(angle + rng.randrange(-10, 10))
+        x = round(cx + math.cos(radians) * 11.5)
+        y = round(cy + 1 + math.sin(radians) * 8.5)
+        size = rng.choice((1.5, 2.0))
+        shade(image, ellipse(x, y, size, size * 0.75), (ROCK[2], ROCK[3], ROCK[5]), False)
     return image
 
 
@@ -4529,7 +4599,7 @@ def main():
                            + [plank_tile(False, 0), plank_tile(False, 1), plank_tile(True, 0), plank_tile(True, 1)]
                            + [dusk_tile(v) for v in range(4)] + [obsidian_tile(v) for v in range(4)]
                            + [cave_tile(v) for v in range(4)] + [stairs_tile(True), stairs_tile(False)]
-                           + edge_set("sand") + [gravel_tile(v) for v in range(4)],
+                           + edge_set("sand") + [gravel_tile(v) for v in range(4)] + [cave_hole_tile()],
                            4, TILE),
         "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]

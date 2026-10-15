@@ -50,7 +50,7 @@ const TOWNSFOLK: Dictionary = {
 }
 ## Stairways down into the instanced dungeons, inside a house of their town: Cinder Crossing's
 ## north-east house, an Ashford house (the chapel), and a Highmoor house.
-const DUNGEON_ENTRANCES: Dictionary = {"cinder_cellar": Vector2i(18, 4)}
+const DUNGEON_ENTRANCES: Dictionary = {"cinder_cellar": Vector2i(17, 5)}
 ## Coach-town dungeons: dungeon id -> [town dock id, offset from the plaza centre].
 const TOWN_DUNGEONS: Dictionary = {"ashford_crypt": ["ashford", Vector2i(-9, 10)], "highmoor_mine": ["highmoor", Vector2i(9, -10)]}
 ## Cinder Crossing's vendor (and a spare spot) flank the south road.

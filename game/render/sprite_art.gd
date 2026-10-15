@@ -119,6 +119,8 @@ const STAIRS_UP_TILE: int = 45
 const SAND_EDGE_TILE: int = 46
 ## Grey grit under mountains ("L"), four variants.
 const GRAVEL_TILE: int = 50
+## A cave hole in the wilds (a stairway "v" outside towns): a ragged pit in worn earth.
+const CAVE_HOLE_TILE: int = 54
 ## mountains.png: Tibia-style rock blocks for mountains ("L") and rock outcrops ("C" on the
 ## overworld), 48x48 frames drawn like walls: 16 columns by open sides (1 N, 2 W, 4 S, 8 E, see
 ## rock_mask), and ROCK_SPAN x ROCK_SPAN rows that are the parts of one seamless rock texture
@@ -242,7 +244,8 @@ static func _draw_wall_floor(canvas: CanvasItem, cell: Vector2i, dest: Rect2) ->
 	var inside: String = ""
 	for side: Vector2i in EDGES:
 		var tile: String = tile_at(cell + side)
-		if tile.is_empty() or tile in World.WALLS or tile in World.TREES or tile == "~" or tile == "b":
+		# Never a stairway: a wall beside one would show a second hole under it.
+		if tile.is_empty() or tile in World.WALLS or tile in World.TREES or tile in ["~", "b", "v", "^"]:
 			continue
 		if World.ROOM_AT.has(cell + side):
 			inside = tile if inside.is_empty() and tile in World.LAND and tile != "v" else inside
@@ -280,7 +283,8 @@ static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
 		# Rock outcrops on the overworld stand on grass; cave rock in dungeons on cave floor.
 		index = CAVE_TILE + noise(cell, 11) % 4
 	elif tile == "v":
-		index = STAIRS_DOWN_TILE
+		# Town cellars have built stairs; anywhere else the way down is a hole in the ground.
+		index = STAIRS_DOWN_TILE if World.zone_at(cell).get("town", false) else CAVE_HOLE_TILE
 	elif tile == "^":
 		index = STAIRS_UP_TILE
 	return index

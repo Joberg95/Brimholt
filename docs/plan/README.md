@@ -11,7 +11,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 07 | [One cellar hole per entrance](07-cellar-entrances.md) | M | References in the art skill |
 | 08 | [Performance pass](08-performance.md) | M | |
 | 09 | [Single-target warrior taunt](09-warrior-taunt.md) | S-M | |
 | 10 | [Armor types, new stats, class counters](10-armor-and-class-counters.md) | L | |
