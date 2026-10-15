@@ -49,6 +49,13 @@ const REACH: Dictionary = {"mining": 1, "woodcutting": 1, "herbalism": 1, "fishi
 ## Seconds of work per gather (moving cancels it), and how long a worked node needs to regrow.
 const GATHER_SECONDS: float = 3.0
 const REGROW_SECONDS: float = 60.0
+## A gather yields 1-5 resources: chances for 1..5 at the band's own skill level, shifting to
+## GATHER_MASTERED once the skill is GATHER_MASTERY levels past it (about 2.1 then 2.7 on average).
+const GATHER_COUNTS: Array[float] = [0.40, 0.28, 0.17, 0.10, 0.05]
+const GATHER_MASTERED: Array[float] = [0.20, 0.30, 0.25, 0.15, 0.10]
+const GATHER_MASTERY: int = 20
+## One cell in RESTING_SHARE (by a fixed hash) is never a node, so nodes are about 10% rarer.
+const RESTING_SHARE: int = 10
 ## Herb patches grow on grass, sand, and dusk soil outside towns: one cell in HERB_SPACING.
 const HERB_GROUND: String = ".:d"
 const HERB_SPACING: int = 89
@@ -105,6 +112,22 @@ static func band_for_level(level: int) -> int:
 
 
 ## Skill experience for one gather: 4 at the band's level, 1 less every 5 levels above it.
+## How many resources one gather yields, for a roll in [0, 1).
+static func gather_count(roll: float, skill: int, band: int) -> int:
+	var mastery: float = clampf(float(skill - BAND_LEVELS[band]) / GATHER_MASTERY, 0.0, 1.0)
+	var total: float = 0.0
+	for index: int in GATHER_COUNTS.size():
+		total += lerpf(GATHER_COUNTS[index], GATHER_MASTERED[index], mastery)
+		if roll < total:
+			return index + 1
+	return GATHER_COUNTS.size()
+
+
+## Whether a cell rests (is never a gathering node): a fixed hash, the same on every peer.
+static func resting(cell: Vector2i) -> bool:
+	return posmod(cell.x * 73856093 ^ cell.y * 19349663, RESTING_SHARE) == 0
+
+
 static func gather_gain(skill: int, band: int) -> int:
 	return clampi(4 - (skill - BAND_LEVELS[band]) / 5, 0, 4)
 

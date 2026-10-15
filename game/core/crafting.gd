@@ -2,7 +2,8 @@ extends RefCounted
 ## Gathering, crafting, and profession skills on the host (game/data/professions.gd). A player
 ## works a node next to them (an ore vein, a tree, a herb patch, or water within reach) for
 ## Professions.GATHER_SECONDS; moving cancels it. The node then regrows for REGROW_SECONDS and
-## the resource of the land's band lands in the backpack. Crafting happens at a town artisan
+## 1-5 of the land's band's resource (Professions.gather_count) land in the backpack. One cell
+## in ten rests and is never a node (Professions.resting). Crafting happens at a town artisan
 ## (World service "craft"): the recipe's resources leave the backpack and its output arrives.
 ## Skills are player["skills"]: profession -> [level, experience]. Results are {ok, events} or
 ## {ok: false, reason, events}, like Combat.
@@ -21,10 +22,16 @@ static var ORES: Dictionary = _find_ores()
 var world: World
 ## Worked nodes: cell -> host time when they regrow.
 var depleted: Dictionary = {}
+## Gather yields; tests seed it for repeatable rolls.
+var rng := RandomNumberGenerator.new()
 
 
-func _init(owner: World) -> void:
+func _init(owner: World, seed_value: int = -1) -> void:
 	world = owner
+	if seed_value >= 0:
+		rng.seed = seed_value
+	else:
+		rng.randomize()
 
 
 static func _find_herbs() -> Dictionary:
@@ -45,7 +52,8 @@ static func _find_herbs() -> Dictionary:
 			if not code in ground:
 				continue
 			var cell := Vector2i(x, y)
-			if Professions.herb_at(cell, World.terrain(cell)) and not blocked.has(cell) and World.zone_at(cell).is_empty():
+			if Professions.herb_at(cell, World.terrain(cell)) and not blocked.has(cell) and World.zone_at(cell).is_empty() \
+					and not Professions.resting(cell):
 				herbs[cell] = band_at(cell)
 	return herbs
 
@@ -59,7 +67,7 @@ static func _find_ores() -> Dictionary:
 			var zone: Dictionary = World.zone_at(cell)
 			var tile: String = World.terrain(cell)
 			if tile.is_empty() or not tile in Professions.SOURCES["mining"] or zone.get("town", false) \
-					or zone.get("underground", false) \
+					or zone.get("underground", false) or Professions.resting(cell) \
 					or not Professions.ore_at(cell, tile, World.walkable(cell + Vector2i.DOWN), band_at(cell)):
 				continue
 			var crowded: bool = false
@@ -92,7 +100,7 @@ static func node_at(cell: Vector2i) -> String:
 		return "herbalism"
 	if ORES.has(cell):
 		return "mining"
-	return Professions.source_of(World.terrain(cell))
+	return "" if Professions.resting(cell) else Professions.source_of(World.terrain(cell))
 
 
 ## What a node yields, by its land's band.
@@ -162,14 +170,22 @@ func _finish_gather(id: int, now: float, events: Array) -> void:
 	if player["cell"] != work["from"] or player["health"] <= 0 or worked(cell, now):
 		return
 	var kind: String = resource_at(cell, profession)
-	var slot: int = World.receiving_slot(player["backpack"], kind, 1)
-	if slot < 0:
+	var band: int = HERBS[cell] if profession == "herbalism" else band_at(cell)
+	var count: int = Professions.gather_count(rng.randf(), skill_of(player, profession), band)
+	var gathered: int = 0
+	while gathered < count:
+		var slot: int = World.receiving_slot(player["backpack"], kind, 1)
+		if slot < 0:
+			break
+		player["backpack"][slot] = World.make_entry(kind, World.count_of(player["backpack"][slot]) + 1)
+		gathered += 1
+	if gathered == 0:
 		events.append({"kind": "message", "id": id, "text": "Your backpack is full."})
 		return
-	player["backpack"][slot] = World.make_entry(kind, World.count_of(player["backpack"][slot]) + 1)
 	depleted[cell] = now + Professions.REGROW_SECONDS
-	var band: int = HERBS[cell] if profession == "herbalism" else band_at(cell)
-	var text: String = "You gather 1 %s." % World.ITEMS[kind]["name"]
+	var text: String = "You gather %d %s." % [gathered, World.ITEMS[kind]["name"]]
+	if gathered < count:
+		text += " Your backpack is full; %d more stay behind." % (count - gathered)
 	text += train(player, profession, Professions.gather_gain(skill_of(player, profession), band))
 	events.append({"kind": "message", "id": id, "text": text})
 	events.append({"kind": "node", "cell": cell, "seconds": Professions.REGROW_SECONDS})

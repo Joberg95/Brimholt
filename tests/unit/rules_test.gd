@@ -903,7 +903,7 @@ func _gathering_checks() -> void:
 	var world := World.new()
 	world.add_player(1, 0.0, "knight")
 	world.add_player(2, 0.0, "druid")
-	var crafting := Crafting.new(world)
+	var crafting := Crafting.new(world, 11)
 	var player: Dictionary = world.players[1]
 	var rock: Array = _node_spot("mining", 0)
 	check(not rock.is_empty(), "a copper rock to test on")
@@ -920,7 +920,8 @@ func _gathering_checks() -> void:
 	check(crafting.tick(1.0 + Professions.GATHER_SECONDS - 0.1).is_empty() and _count(player["backpack"], "copper_ore") == 0,
 		"the work takes GATHER_SECONDS")
 	var events: Array = crafting.tick(1.0 + Professions.GATHER_SECONDS)
-	check(_count(player["backpack"], "copper_ore") == 1 and player["gathering"].is_empty() and crafting.worked(rock[0], 5.0)
+	var mined: int = _count(player["backpack"], "copper_ore")
+	check(mined >= 1 and mined <= 5 and player["gathering"].is_empty() and crafting.worked(rock[0], 5.0)
 		and events.any(func(event: Dictionary) -> bool: return event["kind"] == "node" and event["cell"] == rock[0]),
 		"finished work yields copper ore and the rock regrows")
 	check(player["skills"]["mining"] == [1, Professions.gather_gain(1, 0)], "a gather trains the skill")
@@ -929,7 +930,7 @@ func _gathering_checks() -> void:
 	check(crafting.start_gather(1, rock[0], 7.0 + Professions.REGROW_SECONDS)["ok"], "a regrown node can be worked again")
 	check(world.move(1, rock[2], 7.5 + Professions.REGROW_SECONDS)["ok"] and player["gathering"].is_empty(), "moving cancels gathering")
 	crafting.tick(20.0 + Professions.REGROW_SECONDS)
-	check(_count(player["backpack"], "copper_ore") == 1, "cancelled work yields nothing")
+	check(_count(player["backpack"], "copper_ore") == mined, "cancelled work yields nothing")
 	_place(world, 1, rock[1])
 	# Skill gates the bands: Mining 1 cannot work a band-2 rock.
 	var deep: Array = _node_spot("mining", 2)
@@ -938,7 +939,40 @@ func _gathering_checks() -> void:
 	player["skills"]["mining"] = [20, 0]
 	check(crafting.start_gather(1, deep[0], 100.0)["ok"], "the skill opens the band")
 	crafting.tick(100.0 + Professions.GATHER_SECONDS)
-	check(_count(player["backpack"], "silver_ore") == 1, "band-2 rock yields silver ore")
+	check(_count(player["backpack"], "silver_ore") >= 1, "band-2 rock yields silver ore")
+	# A gather that does not all fit fills what it can and the rest stays behind.
+	for index: int in player["backpack"].size():
+		player["backpack"][index] = "copper_blade"
+	player["backpack"][0] = World.make_entry("silver_ore", World.STACK_MAX - 1)
+	crafting.tick(200.0 + Professions.REGROW_SECONDS)
+	# A seed whose first roll yields at least two, so one cannot fit.
+	var lucky: int = 0
+	crafting.rng.seed = lucky
+	while Professions.gather_count(crafting.rng.randf(), 20, 2) < 2:
+		lucky += 1
+		crafting.rng.seed = lucky
+	crafting.rng.seed = lucky
+	check(crafting.start_gather(1, deep[0], 300.0)["ok"], "a nearly full stack can still be added to")
+	var partial: Array = crafting.tick(300.0 + Professions.GATHER_SECONDS)
+	check(player["backpack"][0] == World.make_entry("silver_ore", World.STACK_MAX) and partial.any(func(event: Dictionary) -> bool:
+		return event["kind"] == "message" and event["text"].contains("stay behind")), "a partial gather fills the stack and says so")
+	# Yields: 1-5, about 2.1 on average at the band's level and more with mastery.
+	var sums: Array[float] = [0.0, 0.0]
+	var spread: Dictionary = {}
+	for roll: int in 1000:
+		var value: float = (roll + 0.5) / 1000.0
+		var plain: int = Professions.gather_count(value, 10, 1)
+		spread[plain] = true
+		sums[0] += plain
+		sums[1] += Professions.gather_count(value, 10 + Professions.GATHER_MASTERY, 1)
+	check(spread.keys().all(func(count: int) -> bool: return count >= 1 and count <= 5) and spread.size() == 5
+		and absf(sums[0] / 1000.0 - 2.12) < 0.05 and absf(sums[1] / 1000.0 - 2.65) < 0.05,
+		"gathers yield 1-5, about 2.1 at the band's level and 2.65 mastered (%s)" % [sums])
+	var rest: int = 0
+	for x: int in 100:
+		for y: int in 100:
+			rest += 1 if Professions.resting(Vector2i(x, y)) else 0
+	check(rest > 850 and rest < 1150, "about one cell in ten rests (%d of 10000)" % rest)
 	# A full backpack refuses new resources.
 	for index: int in player["backpack"].size():
 		player["backpack"][index] = "copper_blade"
@@ -950,7 +984,7 @@ func _gathering_checks() -> void:
 	_place(world, 2, herb[1])
 	check(crafting.start_gather(2, herb[0], 300.0)["ok"], "herbs are picked")
 	crafting.tick(300.0 + Professions.GATHER_SECONDS)
-	check(_count(world.players[2]["backpack"], "sunflax") == 1, "a herb patch yields sunflax")
+	check(_count(world.players[2]["backpack"], "sunflax") >= 1, "a herb patch yields sunflax")
 	var water: Array = _node_spot("fishing", 0)
 	_place(world, 2, water[1] + water[2] * 2)
 	check(crafting.start_gather(2, water[0], 400.0)["ok"], "fishing reaches water a few tiles away")

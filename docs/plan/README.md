@@ -11,7 +11,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 04 | [Gathering yields 1-5, fewer nodes](04-gathering-yield.md) | S | |
 | 05 | [Tighter monster groups of 5-7](05-mob-density.md) | S | |
 | 06 | [Bots level alongside you](06-bot-leveling.md) | S-M | |
 | 07 | [One cellar hole per entrance](07-cellar-entrances.md) | M | References in the art skill |

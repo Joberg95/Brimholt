@@ -302,7 +302,10 @@ gathers or crafts now, and what opens next.
 
 **Gathering.** Stand next to a node and press **F** (it picks the nearest one, the tile you face
 first), or right-click it. Work takes 3 seconds; moving cancels it, and a bar under your
-character shows the progress. The node then regrows for a minute.
+character shows the progress. A gather yields 1-5 resources (about 2 on average, closer to 3
+once your skill is 20 levels past the land's band); what does not fit stays behind. The node
+then regrows for a minute. One tree, rock, patch, or shore cell in ten rests and cannot be
+worked (`Professions.resting`), so nodes are a little scarcer than the land suggests.
 
 | Skill | Node | Resources by land level (1+, 10+, 20+, 30+, 40+) |
 | --- | --- | --- |
