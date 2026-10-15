@@ -82,6 +82,7 @@ func _run() -> void:
 	_spawn_and_rest_checks()
 	_armor_and_control_checks()
 	_rune_checks()
+	_map_guidance_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -4132,6 +4133,30 @@ func _rune_checks() -> void:
 	world.players[bot]["target"] = pack[4]
 	check(bots._rune_to_use(bot) == "", "but not at a lone monster")
 	check(BotLoot.sellable_index({"backpack": ["fire_rune#2", "wolf_pelt"]}) == 1, "bots keep their runes when they sell")
+
+
+## The painted world map is baked from the current map, and every task points somewhere.
+func _map_guidance_checks() -> void:
+	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://assets/sprites/world_map.json"))
+	var baked: Texture2D = load("res://assets/sprites/world_map.png")
+	check(typeof(meta) == TYPE_DICTIONARY and meta.get("terrain", "") == World.overworld_hash()
+		and baked.get_width() == World.OVERWORLD.size.x * int(meta["scale"]),
+		"the painted world map matches the map (re-bake with make world-map after editing it)")
+	for task: String in Quests.TASKS:
+		var definition: Dictionary = Quests.TASKS[task]
+		if not definition.has("monster"):
+			continue
+		var targets: Array[Vector2i] = World.task_targets(task, {"tasks": {task: 0}})
+		check(not targets.is_empty(), "%s points to somewhere to hunt" % task)
+		var done: Array[Vector2i] = World.task_targets(task, {"tasks": {task: definition["count"]}})
+		check(done.size() == 1 and done[0] == World.QUEST_GIVERS[definition["giver"]]["cell"],
+			"a finished %s points back to its giver" % task)
+	var cellar: String = ""
+	for task: String in Quests.TASKS:
+		if Quests.dungeon_of(task) == "cinder_cellar" and cellar.is_empty():
+			cellar = task
+	check(not cellar.is_empty() and World.task_targets(cellar, {"tasks": {cellar: 0}}) == [World.ENTRANCE_OF["cinder_cellar"]],
+		"a cellar task points to the cellar stairway")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

@@ -1,12 +1,19 @@
 extends Node
 ## The minimap under the stat sheet and the full world map over the game window, drawn from
-## one terrain texture with PvP zones tinted red. The world map opens centred on you at
+## the painted map (assets/sprites/world_map.png, baked by tools/generators/world_map.gd; a flat
+## one-pixel-per-tile map when the bake is older than the map) with PvP zones tinted red. You are
+## an arrow pointing the way you face; gold rings mark where your tasks send you (World.task_targets),
+## and the minimap's edge points toward your first task when it lies off the minimap. The world map opens centred on you at
 ## OPEN_ZOOM pixels per tile; the mouse wheel (or + and −) zooms around the cursor, dragging
 ## pans, and its key, Esc, or Close closes it. Quest givers show their "!"/"?" marks.
 
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
+const BAKED_PNG: String = "res://assets/sprites/world_map.png"
+const BAKED_META: String = "res://assets/sprites/world_map.json"
+const SELF_COLOR: Color = Color("#ffd04a")
+const GUIDE_COLOR: Color = Color("#ffd84a")
 const MINIMAP_SCALE: float = 2.0
 ## World map zoom in pixels per tile: it opens at OPEN_ZOOM; each wheel step multiplies by
 ## ZOOM_STEP, between the whole map fitting the window and MAX_ZOOM.
@@ -34,6 +41,8 @@ var game: Node
 var minimap: Control
 var world_map: Control
 var _texture: ImageTexture
+## Texture pixels per tile: the bake's scale, or 1 for the flat fallback.
+var _texel: float = 1.0
 ## Pixels per tile, and the tile at the centre of the map area.
 var zoom: float = OPEN_ZOOM
 var center: Vector2 = Vector2.ZERO
@@ -42,6 +51,45 @@ var _dragging: bool = false
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
+	var image: Image = _baked_map()
+	if image == null:
+		image = _flat_map()
+	else:
+		_texel = image.get_width() / float(World.OVERWORLD.size.x)
+	var texel: int = int(_texel)
+	for zone: Dictionary in World.ZONES:
+		if not zone["pvp"]:
+			continue
+		var area: Rect2i = zone["rect"].intersection(World.OVERWORLD)
+		for y: int in range(area.position.y, area.end.y):
+			for x: int in range(area.position.x, area.end.x):
+				if World.terrain(Vector2i(x, y)) in ["~", " "]:
+					continue
+				for py: int in texel:
+					for px: int in texel:
+						var at := Vector2i(x * texel + px, y * texel + py)
+						image.set_pixelv(at, image.get_pixelv(at).lerp(PVP_TINT, 0.45))
+	_texture = ImageTexture.create_from_image(image)
+	_build_controls(layer)
+
+
+## The painted map, if its bake matches the current map (World.overworld_hash), else null.
+func _baked_map() -> Image:
+	if not FileAccess.file_exists(BAKED_META) or not ResourceLoader.exists(BAKED_PNG):
+		return null
+	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(BAKED_META))
+	if typeof(meta) != TYPE_DICTIONARY or meta.get("terrain", "") != World.overworld_hash():
+		push_warning("The painted world map is older than the map; run make world-map. Showing the flat map.")
+		return null
+	var image: Image = (load(BAKED_PNG) as Texture2D).get_image()
+	if image.is_compressed():
+		image.decompress()
+	image.convert(Image.FORMAT_RGB8)
+	return image
+
+
+## One pixel per tile in MAP_COLORS: the fallback when the painted map is stale.
+func _flat_map() -> Image:
 	# Terrain byte -> RGB, then one pass over raw bytes (far faster than set_pixel per tile).
 	var lookup := PackedByteArray()
 	lookup.resize(128 * 3)
@@ -62,17 +110,12 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 			pixels[base + x * 3] = lookup[source]
 			pixels[base + x * 3 + 1] = lookup[source + 1]
 			pixels[base + x * 3 + 2] = lookup[source + 2]
-	var image := Image.create_from_data(width, World.height(), false, Image.FORMAT_RGB8, pixels)
-	for zone: Dictionary in World.ZONES:
-		if not zone["pvp"]:
-			continue
-		var area: Rect2i = zone["rect"].intersection(Rect2i(0, 0, World.width(), World.height()))
-		for y: int in range(area.position.y, area.end.y):
-			for x: int in range(area.position.x, area.end.x):
-				if World.terrain(Vector2i(x, y)) not in ["~", " "]:
-					image.set_pixel(x, y, image.get_pixel(x, y).lerp(PVP_TINT, 0.45))
-	_texture = ImageTexture.create_from_image(image)
+	return Image.create_from_data(width, World.height(), false, Image.FORMAT_RGB8, pixels)
+
+
+func _build_controls(layer: CanvasLayer) -> void:
 	minimap = Control.new()
+	minimap.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	minimap.position = Layout.PANEL_ORIGIN + Vector2(0, 578)
 	minimap.size = Vector2(184, 102)
 	minimap.clip_contents = true
@@ -83,6 +126,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	world_map.position = Layout.VIEW_ORIGIN
 	world_map.size = Layout.VIEW_SIZE
 	world_map.clip_contents = true
+	world_map.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	world_map.visible = false
 	world_map.draw.connect(_draw_world_map)
 	world_map.gui_input.connect(_world_map_input)
@@ -205,11 +249,60 @@ func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2) 
 	var actors: Dictionary = game.actors
 	for id: int in actors:
 		var at: Vector2 = origin + (actors[id]["visual"] + Vector2(0.5, 0.5)) * scale
-		var mine: bool = id == game.self_id
-		var radius: float = 2.5 if mine else 1.5
+		if id != game.self_id and area.has_point(at):
+			canvas.draw_rect(Rect2(at - Vector2.ONE * 1.5, Vector2.ONE * 3.0), Color.WHITE)
+	if actors.has(game.self_id):
+		var me: Dictionary = actors[game.self_id]
+		var at: Vector2 = origin + (me["visual"] + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
-			canvas.draw_rect(Rect2(at - Vector2.ONE * radius, Vector2.ONE * radius * 2.0),
-				Color("#f2cf6a") if mine else Color.WHITE)
+			_draw_self(canvas, at, Vector2(me["state"].get("facing", Vector2i.DOWN)), 6.0 if canvas == world_map else 5.0)
+
+
+## You: a gold arrow with a dark outline pointing the way you face, in a softly pulsing ring.
+func _draw_self(canvas: Control, at: Vector2, facing: Vector2, size: float) -> void:
+	var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 260.0)
+	canvas.draw_arc(at, size + 2.0 + pulse * 2.0, 0.0, TAU, 20, Color(SELF_COLOR, 0.35 + 0.3 * pulse), 1.5)
+	var ahead: Vector2 = facing.normalized() if facing != Vector2.ZERO else Vector2.DOWN
+	var side := Vector2(-ahead.y, ahead.x)
+	var points := PackedVector2Array([at + ahead * size, at - ahead * size * 0.6 + side * size * 0.75,
+		at - ahead * size * 0.25, at - ahead * size * 0.6 - side * size * 0.75])
+	canvas.draw_colored_polygon(points, SELF_COLOR)
+	points.append(points[0])
+	canvas.draw_polyline(points, Color("#1a140a"), 1.0)
+
+
+## Gold rings where your tasks send you (World.task_targets); on the minimap, an arrow at its
+## edge toward the nearest place for your first task when none of them is on it.
+func _draw_guidance(canvas: Control, origin: Vector2, scale: float, area: Rect2) -> void:
+	if not game.actors.has(game.self_id):
+		return
+	var state: Dictionary = game.actors[game.self_id]["state"]
+	var tasks: Array = state.get("tasks", {}).keys()
+	tasks.sort()
+	var radius: float = maxf(4.0, 2.5 * scale)
+	var first: Array[Vector2] = []
+	for index: int in tasks.size():
+		for cell: Vector2i in World.task_targets(tasks[index], state):
+			var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
+			if index == 0:
+				first.append(at)
+			if area.grow(radius).has_point(at):
+				canvas.draw_circle(at, radius, Color(GUIDE_COLOR, 0.16))
+				canvas.draw_arc(at, radius, 0.0, TAU, 24, Color(GUIDE_COLOR, 0.85 if index == 0 else 0.45), 1.5)
+	if canvas != minimap or first.is_empty() or first.any(func(at: Vector2) -> bool: return area.has_point(at)):
+		return
+	var centre: Vector2 = area.get_center()
+	var nearest: Vector2 = first[0]
+	for at: Vector2 in first:
+		if at.distance_to(centre) < nearest.distance_to(centre):
+			nearest = at
+	var toward: Vector2 = (nearest - centre).normalized()
+	var reach_x: float = absf((area.size.x / 2.0 - 7.0) / toward.x) if toward.x != 0.0 else INF
+	var reach_y: float = absf((area.size.y / 2.0 - 7.0) / toward.y) if toward.y != 0.0 else INF
+	var tip: Vector2 = centre + toward * minf(reach_x, reach_y)
+	var side := Vector2(-toward.y, toward.x)
+	canvas.draw_colored_polygon(PackedVector2Array([tip + toward * 5.0, tip - toward * 3.0 + side * 4.0,
+		tip - toward * 3.0 - side * 4.0]), GUIDE_COLOR)
 
 
 func _draw_minimap() -> void:
@@ -226,7 +319,10 @@ func _draw_minimap() -> void:
 	var visible := region.intersection(shown)
 	if visible.has_area():
 		minimap.draw_texture_rect_region(_texture,
-			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE), visible)
+			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE),
+			Rect2(visible.position * _texel, visible.size * _texel))
+	if place.is_empty():
+		_draw_guidance(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
 	_draw_markers(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
 	minimap.draw_rect(view, Color("#3a4450"), false, 1.0)
 
@@ -239,7 +335,8 @@ func _draw_world_map() -> void:
 	var origin: Vector2 = map_point(Vector2.ZERO).round()
 	world_map.draw_rect(Rect2(Vector2.ZERO, view_size), Color(0.03, 0.04, 0.05))
 	var shown := Rect2(origin, map_size * scale).intersection(_map_area())
-	world_map.draw_texture_rect_region(_texture, Rect2(origin, map_size * scale), Rect2(Vector2.ZERO, map_size))
+	world_map.draw_texture_rect_region(_texture, Rect2(origin, map_size * scale), Rect2(Vector2.ZERO, map_size * _texel))
+	_draw_guidance(world_map, origin, scale, shown)
 	_draw_markers(world_map, origin, scale, shown)
 	_draw_quest_marks(origin, scale, shown)
 	var font: Font = ThemeDB.fallback_font
@@ -286,8 +383,8 @@ func _draw_world_map() -> void:
 		taken.append(_draw_label(font, at, title[0], title[3], title[2], shift, true))
 		taken.append(_draw_label(font, at + Vector2(0, 13), levels[0], levels[3], levels[2], shift, true))
 	world_map.draw_rect(Rect2(Vector2.ZERO, Vector2(view_size.x, HEADER)), Color(0.03, 0.04, 0.05))
-	world_map.draw_string(font, Vector2(12, 22), "Gold = you, cyan = ferrymen, green = towns, orange = dungeons, red = PvP, ! = quests."
-		+ "  Drag to move, wheel to zoom.", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
+	world_map.draw_string(font, Vector2(12, 22), "Arrow = you · rings = your tasks · ! = quests · orange = dungeons · red = PvP"
+		+ " · drag, wheel to zoom", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
 
 
 ## Gold "!" and "?" over quest givers that have something for you (World.quest_mark).

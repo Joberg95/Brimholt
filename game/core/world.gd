@@ -514,6 +514,38 @@ static func height() -> int:
 	return GRID_SIZE.y
 
 
+## The overworld's terrain and buildings, hashed: what the baked world map (tools/generators/
+## world_map.gd) was painted from, so a map edited since shows its stale bake.
+static func overworld_hash() -> String:
+	var rows: PackedStringArray = []
+	for y: int in OVERWORLD.size.y:
+		rows.append(ROWS[y].substr(0, OVERWORLD.size.x))
+	return ("".join(rows) + str(ROOF_AT.keys().size())).sha256_text()
+
+
+## Where to go for a task you have (the quest guidance on the maps): its giver once it is done,
+## its dungeon's stairway for a dungeon task, else the camps of its monster in the task's level
+## band (Quests.counts), or [] when there is nowhere to point.
+static func task_targets(task: String, state: Dictionary) -> Array[Vector2i]:
+	var targets: Array[Vector2i] = []
+	if not Quests.TASKS.has(task):
+		return targets
+	var definition: Dictionary = Quests.TASKS[task]
+	if int(state.get("tasks", {}).get(task, 0)) >= definition["count"]:
+		if QUEST_GIVERS.has(definition["giver"]):
+			targets.append(QUEST_GIVERS[definition["giver"]]["cell"])
+		return targets
+	var dungeon: String = Quests.dungeon_of(task)
+	if not dungeon.is_empty() and ENTRANCE_OF.has(dungeon):
+		targets.append(ENTRANCE_OF[dungeon])
+		return targets
+	var band: Vector2i = task_levels(task)
+	for spawn: Dictionary in MONSTER_SPAWNS:
+		if Quests.counts(task, spawn["monster"]) and spawn["level"] >= band.x and spawn["level"] <= band.y:
+			targets.append(spawn["cell"])
+	return targets
+
+
 static func terrain(cell: Vector2i) -> String:
 	if cell.x < 0 or cell.y < 0 or cell.x >= GRID_SIZE.x or cell.y >= GRID_SIZE.y:
 		return ""

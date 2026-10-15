@@ -710,8 +710,25 @@ func _check_ferry_and_maps() -> bool:
 	var here: Vector2i = game.world.players[1]["cell"]
 	var probe: Vector2i = here + Vector2i(3, 2)
 	var pixel: Vector2 = game.VIEW_ORIGIN + maps.map_point(Vector2(probe) + Vector2(0.5, 0.5))
-	if not _expect(game._world_map.visible and maps.zoom >= maps.OPEN_ZOOM and world_map.get_pixelv(Vector2i(pixel)).is_equal_approx(
-			maps._texture.get_image().get_pixelv(probe)), "The world map key did not open the world map zoomed in on you (zoom %s)" % maps.zoom):
+	# The painted map has several texels per tile and is filtered, so compare near the tile's middle.
+	var texel: Vector2i = Vector2i((Vector2(probe) + Vector2(0.5, 0.5)) * maps._texel)
+	var expected: Color = maps._texture.get_image().get_pixelv(texel)
+	var shown: Color = world_map.get_pixelv(Vector2i(pixel))
+	if not _expect(game._world_map.visible and maps.zoom >= maps.OPEN_ZOOM and absf(shown.r - expected.r) + absf(shown.g - expected.g)
+			+ absf(shown.b - expected.b) < 0.2, "The world map key did not open the world map zoomed in on you (zoom %s, %s vs %s)" % [
+			maps.zoom, shown, expected]):
+		return false
+	# With a hunting task, gold rings mark its camps on the world map and the minimap points to them.
+	player["tasks"]["outlaw_bounty"] = 0
+	game._publish_actor(1)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-map-task.png")
+	player["tasks"].erase("outlaw_bounty")
+	game._publish_actor(1)
+	if not _expect(not World.task_targets("outlaw_bounty", {"tasks": {"outlaw_bounty": 0}}).is_empty(),
+			"An outlaw bounty has no camps to point to"):
 		return false
 	# Wheel in around a point (it stays under the cursor), drag (the map follows the mouse), then
 	# wheel out until the whole map fits, where it can no longer pan.

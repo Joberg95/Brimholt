@@ -463,7 +463,12 @@ shows where you are and the monster levels there, coloured white, yellow, or red
 compare to your level (hover it for a description); crossing into a new region is announced.
 The world map (M) opens zoomed in on you; scroll (or + and −) to zoom around the cursor down
 to the whole map, drag to move it, and close it with M, Esc, or Close. It labels every region with its levels. A region's levels come from the
-monsters placed in it, so they stay correct when spawns move.
+monsters placed in it, so they stay correct when spawns move. The map is painted: sea and
+shallows, forests, ridges, desert, and towns with their roofs. You are a gold arrow pointing the
+way you face, on the world map and the minimap. **Gold rings mark where your tasks send you**:
+the camps of a hunting task's monster in its level band, a dungeon task's stairway, or the giver
+once a task is done. When none of your first task's places is on the minimap, an arrow at the
+minimap's edge points toward the nearest.
 
 The sky follows a 40-minute day and night and changing weather: clear, overcast, rain, and
 thunderstorms with lightning, the same for everyone in the session. Weather is only for looks.

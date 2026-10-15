@@ -111,6 +111,11 @@ suits each prey (`HUNTS`), on open meadow that can be walked to, away from zones
 the elite rows also keep seven tiles from roads. Existing camps are kept, so running it again
 changes nothing; move them in Godot like any other spawn.
 
+**The world map** is painted from the map by `tools/generators/world_map.gd` (`make world-map`):
+four pixels per tile in `assets/sprites/world_map.png`, with the map's hash in
+`world_map.json`. After editing the terrain or buildings, bake it again; until then the game
+shows a flat one-pixel-per-tile map, and the rules check fails with a reminder.
+
 **Camp density**: `tools/generators/camp_density.gd` (`make camp-density`) made every camp of a
 normal monster from level 11 a tight pack of 5-7 within two tiles, so a 25-kill task is two or
 three camp clears. The starter camps stay at 3-4. It ran once (scene metadata `camp_density`);
