@@ -11,7 +11,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 14 | [Open Redmeere with castle houses](14-redmeere.md) | L | References in the art skill |
 | 15 | [House decorations](15-house-decorations.md) | M-L | References in the art skill |
 | 16 | [Town design and cobblestone streets](16-town-design.md) | M-L | |
 | 17 | [World textures overhaul](17-world-textures.md) | L | References in the art skill |

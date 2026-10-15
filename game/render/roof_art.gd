@@ -5,7 +5,10 @@ extends RefCounted
 ## rises with the same up-left lean as the walls (less steep), so the lit south slope, a sliver
 ## of the shaded north slope, and the east gable show. The eave throws a soft shadow below.
 
+const World = preload("res://game/core/world.gd")
 const TILE: int = 32
+## The castle town: its houses all wear slate (material 1), like its castle wall.
+const SLATE_TOWN: String = "Reedmere"
 const SWATCH: int = 32
 const MATERIALS: int = 3
 ## A house wall's band top face, relative to its cell corner: centre +-5, raised RAISE px up-left
@@ -31,6 +34,8 @@ static func build(building: Dictionary, sheet: Texture2D) -> Dictionary:
 		_load_strips(sheet)
 	var rect: Rect2i = building["rect"]
 	var material: int = posmod(rect.position.x * 7 + rect.position.y * 13, MATERIALS)
+	if World.zone_at(rect.position).get("name", "") == SLATE_TOWN:
+		material = 1
 	var far: Image = _strips[material][1]
 	var gable: Image = _strips[material][2]
 	var trim: Image = _strips[material][3]

@@ -111,6 +111,11 @@ suits each prey (`HUNTS`), on open meadow that can be walked to, away from zones
 the elite rows also keep seven tiles from roads. Existing camps are kept, so running it again
 changes nothing; move them in Godot like any other spawn.
 
+**Reedmere** was rebuilt by `tools/generators/reedmere.gd` (`make reedmere`): its west half,
+once a walled castle compound, is an open quarter of streets around a square with four stone
+houses (slate roofs, `RoofArt.SLATE_TOWN`), the town wall is castle wall, and a west gate opens
+on the main street beside the old south-west one. Edit its `LAYOUT` and run it again.
+
 **Caves** (Highmoor deep mine, Silkhollow) are grown by `tools/generators/cave_layouts.py`:
 irregular chambers joined by winding two-wide tunnels, the stairs at the north-west end, the
 boss in the farthest open chamber, monsters spread through the rest. It writes the layout's

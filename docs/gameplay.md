@@ -291,7 +291,9 @@ Ferrymen and waystones offer **Travel**, vendors **Trade**, bankers **Bank**, an
 Every town has a vendor (green on the maps) in a furnished shop, and an artisan (amber) in a
 workshop for crafting (see [Professions](#professions-gathering-and-crafting)). There is only **one bank**:
 Banker Orrin in **Reedmere** (pale blue on the maps), the lakeside hub with a waystone
-and the ferry to Blackreed Isle. Plan trips to deposit gold and store gear there. A hanging
+and the ferry to Blackreed Isle. Plan trips to deposit gold and store gear there. Reedmere is the
+castle town: a castle wall with gates to the west, north, and south and the harbour to the east,
+an open quarter of streets and a square in its west half, and stone houses under slate roofs. A hanging
 sign beside each door shows what is inside: a flask and a sword for the shop, a coin stack for
 the bank. Step inside to deal with them; you cannot trade or bank through
 a wall. Town buildings have roofs that hide whoever is inside, and every doorway has a

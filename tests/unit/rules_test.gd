@@ -3885,6 +3885,16 @@ func _spawn_and_rest_checks() -> void:
 	var Trail: GDScript = load("res://tools/generators/silkhollow.gd")
 	check(Castle.TERRAINS == World.TERRAINS and Castle.apply(isle_scene) == 0, "Cinder Crossing's castle is built (a re-run changes nothing)")
 	check(Trail.TERRAINS == World.TERRAINS and Trail.apply(isle_scene) == 0, "the trail to Silkhollow is cut (a re-run changes nothing)")
+	var Capital: GDScript = load("res://tools/generators/reedmere.gd")
+	check(Capital.TERRAINS == World.TERRAINS and Capital.rebuild(isle_scene) == 0, "Reedmere is rebuilt as an open town (a re-run changes nothing)")
+	# The open quarter: every house has a roof, and the west, north, and south gates lead in.
+	var quarter: int = 0
+	for building: Dictionary in World.BUILDINGS:
+		if building["rect"].position.x < 133 and World.zone_at(building["rect"].position).get("name", "") == "Reedmere":
+			quarter += 1
+	check(quarter == 4, "Reedmere's west quarter has four roofed houses (%d)" % quarter)
+	for gate: Vector2i in [Vector2i(108, 194), Vector2i(150, 180), Vector2i(150, 207)]:
+		check(World.walkable(gate), "Reedmere's gate at %s is open" % gate)
 	isle_scene.free()
 	var towers: int = 0
 	var castle: Dictionary = Castle.plan()
