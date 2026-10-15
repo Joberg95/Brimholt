@@ -393,8 +393,22 @@ func panel_open(action: String) -> bool:
 
 ## Casts the spell in an action-bar slot (0-8).
 func use_bar_slot(slot: int) -> void:
-	if slot >= 0 and slot < Keybinds.SLOTS and keybinds.bar[slot].begins_with("spell:") and connected:
+	if slot < 0 or slot >= Keybinds.SLOTS or not connected:
+		return
+	if keybinds.bar[slot].begins_with("spell:"):
 		cast_local(keybinds.bar[slot].trim_prefix("spell:"))
+	elif keybinds.bar[slot].begins_with("item:"):
+		rune_local(keybinds.bar[slot].trim_prefix("item:"))
+
+
+## Casts a rune item from your backpack at your target (Combat.use_rune).
+func rune_local(kind: String) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_rune(1, kind)
+	else:
+		request_rune.rpc_id(1, kind)
 
 
 func _run_action(action: String) -> void:
@@ -1296,6 +1310,21 @@ func request_spell(spell: Variant) -> void:
 		_handle_spell(sender, spell)
 
 
+@rpc("any_peer", "call_remote", "reliable")
+func request_rune(kind: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_rune(sender, kind)
+
+
+func _handle_rune(id: int, kind: Variant) -> void:
+	var result: Dictionary = combat.use_rune(id, kind, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
+
+
 func _handle_target(id: int, target: Variant) -> void:
 	var result: Dictionary = combat.set_target(id, target, _now())
 	if result["ok"]:
@@ -1500,7 +1529,8 @@ func _show_effect(event: Dictionary) -> void:
 				if _world_view != null:
 					_world_view.fx.burst("impact", landing, tint))
 		"area":
-			effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born})
+			effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born,
+				"element": event.get("element", "")})
 			_world_view.fx.area(event["cells"], event["color"])
 
 

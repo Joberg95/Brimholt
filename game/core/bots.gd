@@ -50,6 +50,8 @@ const STANCE_NAMES: Dictionary = {"hunter": "Hunter", "pvp": "PvP", "dummy": "Tr
 ## also refuses a peer whose id a bot holds (see main.gd).
 const FIRST_ID: int = 2000000001
 const THINK_SECONDS: float = 0.2
+## A bot casts a rune it carries at a monster only with this many more enemies around it.
+const RUNE_CROWD: int = 2
 const RESTORE_SECONDS: float = 6.0
 ## Monsters a hunter goes for: within HUNT_RADIUS of it and HOME_RADIUS of its post, at most
 ## LEVEL_MARGIN levels above it. Players are attacked within PVP_RADIUS.
@@ -385,6 +387,11 @@ func use_resources(id: int, now: float, events: Array) -> void:
 			var cast: Dictionary = combat.cast(id, spell, now)
 			if cast["ok"]:
 				events.append_array(cast["events"])
+	var rune: String = _rune_to_use(id)
+	if not rune.is_empty():
+		var used: Dictionary = combat.use_rune(id, rune, now)
+		if used["ok"]:
+			events.append_array(used["events"])
 	var potion: String = ""
 	if share < POTION_SHARE:
 		potion = "health_potion"
@@ -486,6 +493,23 @@ func _hurt_ally(id: int, radius: int, share: float) -> bool:
 
 ## A warrior in a party challenges when a monster within `radius` attacks a member who is not
 ## a warrior, or when a boss has wounded the other tank SWAP_WOUNDS times (the tank swap).
+## A rune the bot carries and should cast now: at a player, or at a target with at least
+## RUNE_CROWD more enemies around it; "" otherwise.
+func _rune_to_use(id: int) -> String:
+	var player: Dictionary = world.players[id]
+	var target: int = player["target"]
+	if target == 0 or not combat.exists(target):
+		return ""
+	var crowd: int = combat._enemies_near(id, combat.creature(target)["cell"], 2).size() - 1
+	if target < 0 and crowd < RUNE_CROWD:
+		return ""
+	for entry: String in player["backpack"]:
+		var kind: String = World.kind_of(entry)
+		if World.ITEMS.get(kind, {}).has("rune") and player["level"] >= World.ITEMS[kind]["level"]:
+			return kind
+	return ""
+
+
 ## The nearest monster within `reach` that is after a party member who is not a warrior, or 0.
 func _loose_monster(id: int, reach: int) -> int:
 	var group: Array[int] = _group(id)

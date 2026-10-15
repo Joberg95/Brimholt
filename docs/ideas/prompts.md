@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-lets create a new different type of spell, that is a rune item you can drop from 40+ monsters that you hunt, the item is a area of effect damage spell as fire, lightning or frost damage and this you can drag to your action bar and use from there but it needs a inventory space. (plan 11)
-
 can adding some sort of map indication of where to go for quests be a good idea? we should update the world map with better graphics and art style I think. and improve the visibility of where your char are on the map, maybe an arrow or something minimal. (plan 12)
 
 lets expand the cellars and caves with more mobs and caves needs the rock textures and to be twice as large I think. Cellars need a more cellar theme and I will give you art direction from tibia images in the prompt (plan 13)

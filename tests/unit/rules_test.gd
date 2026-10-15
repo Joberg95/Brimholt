@@ -81,6 +81,7 @@ func _run() -> void:
 	_dungeon_task_and_region_checks()
 	_spawn_and_rest_checks()
 	_armor_and_control_checks()
+	_rune_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -4044,6 +4045,93 @@ func _armor_and_control_checks() -> void:
 	var boss: int = combat.spawn_monster("morvain", 50, arena + Vector2i(3, 3), 0.0)
 	combat.restrain(boss, "root", 3.0, 50.0, [])
 	check(not world.monsters[boss].has("rooted_until"), "bosses cannot be rooted or slowed")
+
+
+## Rune spells (Combat.use_rune): items that level 40+ hunts drop, cast by any class from the
+## action bar, used up, with Tibia-style round areas and a chain.
+func _rune_checks() -> void:
+	for kind: String in ["fire_rune", "frost_rune", "lightning_rune"]:
+		var item: Dictionary = World.ITEMS[kind]
+		check(World.stackable(kind) and item["level"] == 40 and not Spells.rune_of(item).is_empty()
+			and not Spells.rune_text(item).is_empty() and Keybinds.valid_bar_entry("item:" + kind),
+			"%s is a stackable level-40 rune that goes on the action bar" % kind)
+	check(not Keybinds.valid_bar_entry("item:wolf_pelt") and not Keybinds.valid_bar_entry("item:nothing"),
+		"only runes go on the action bar as items")
+	check(Combat.circle(Vector2i(60, 40), 3).size() <= 37 and Combat.circle(Vector2i(60, 40), 3).all(func(cell: Vector2i) -> bool:
+		return (cell - Vector2i(60, 40)).length_squared() <= 12), "a radius-3 rune area is round: dx² + dy² <= r² + r")
+	var open: int = 0
+	for dy: int in range(-3, 4):
+		for dx: int in range(-3, 4):
+			open += 1 if dx * dx + dy * dy <= 12 else 0
+	check(open == 37, "a full radius-3 circle is 37 tiles, as in Tibia")
+	# Drops: only from monsters of level 40 and up.
+	var looter := Combat.new(World.new(), 5)
+	var low: int = 0
+	var high: int = 0
+	for roll: int in 3000:
+		low += looter.roll_loot("mire_stalker", 36).count("frost_rune")
+		high += looter.roll_loot("mire_stalker", 44).count("frost_rune")
+	check(low == 0 and high > 20, "runes drop only from level-40+ monsters (%d at 36, %d at 44)" % [low, high])
+	# Casting: a fire rune at a pack, from a few tiles off; used up; the shared rune cooldown.
+	var world := World.new()
+	var combat := Combat.new(world, 9)
+	world.monsters.clear()
+	# A camp in the wilds with open ground all around (no zone: no PvP, no town).
+	var field := Vector2i(-1, -1)
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var clear: bool = World.zone_at(spawn["cell"]).is_empty() and field.x < 0
+		for dy: int in range(-4, 5):
+			for dx: int in range(-4, 5):
+				clear = clear and World.walkable(spawn["cell"] + Vector2i(dx, dy))
+		if clear:
+			field = spawn["cell"]
+	check(field.x >= 0, "an open camp in the wilds to try runes on")
+	world.add_player(1, 0.0, "knight")
+	var me: Dictionary = world.players[1]
+	me["level"] = 45
+	_place(world, 1, field + Vector2i(-3, 0))
+	var pack: Array[int] = []
+	for offset: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(2, 1), Vector2i(3, 3)]:
+		pack.append(combat.spawn_monster("behemoth", 45, field + offset, 0.0))
+	me["target"] = pack[0]
+	check(combat.use_rune(1, "fire_rune", 1.0)["reason"].begins_with("You have no"), "a rune needs a rune in your backpack")
+	me["backpack"][0] = World.make_entry("fire_rune", 3)
+	var health: Array[int] = []
+	for monster: int in pack:
+		health.append(world.monsters[monster]["health"])
+	var cast: Dictionary = combat.use_rune(1, "fire_rune", 1.0)
+	var hit: Array = pack.filter(func(monster: int) -> bool: return world.monsters[monster]["health"] < health[pack.find(monster)])
+	check(cast["ok"] and me["backpack"][0] == "fire_rune#2" and hit.size() == 4 and pack[4] not in hit,
+		"a Warrior's fire rune burns every monster within its circle and is used up (%d hit, %s)" % [hit.size(), cast.get("reason", "")])
+	check(cast["events"].any(func(event: Dictionary) -> bool: return event["kind"] == "area" and event.get("element", "") == "fire"),
+		"the burst shows as fire on every tile")
+	check(combat.use_rune(1, "fire_rune", 2.0)["reason"] == "You are exhausted" and combat.use_rune(1, "fire_rune", 3.1)["ok"],
+		"runes share a two-second cooldown")
+	_place(world, 1, field + Vector2i(-9, 0))
+	check(combat.use_rune(1, "fire_rune", 6.0)["reason"] == "You need a target in range", "runes reach seven tiles")
+	me["level"] = 30
+	check(combat.use_rune(1, "fire_rune", 9.0)["reason"].contains("needs level 40"), "runes need level 40")
+	me["level"] = 45
+	# Lightning leaps to two more; frost slows what it hits.
+	_place(world, 1, field + Vector2i(-3, 0))
+	me["backpack"][1] = World.make_entry("lightning_rune", 1)
+	me["backpack"][2] = World.make_entry("frost_rune", 1)
+	for monster: int in pack:
+		world.monsters[monster]["health"] = 100000
+	var chained: Dictionary = combat.use_rune(1, "lightning_rune", 20.0)
+	var struck: int = pack.filter(func(monster: int) -> bool: return world.monsters[monster]["health"] < 100000).size()
+	check(chained["ok"] and struck == 3 and me["backpack"][1] == "", "a lightning rune strikes its target and leaps to two more")
+	check(combat.use_rune(1, "frost_rune", 30.0)["ok"] and world.monsters[pack[0]].get("slowed_until", 0.0) == 32.0,
+		"a frost rune slows what it hits")
+	# Bots cast the runes they carry at a crowd (or a player), not at a lone monster.
+	var bots := Bots.new(world, combat)
+	var bot: int = bots.add("paladin", 45, "hunter", field + Vector2i(-3, 1), 40.0)["id"]
+	world.players[bot]["backpack"][3] = World.make_entry("fire_rune", 2)
+	world.players[bot]["target"] = pack[0]
+	check(bots._rune_to_use(bot) == "fire_rune", "a bot casts a rune at a pack")
+	world.players[bot]["target"] = pack[4]
+	check(bots._rune_to_use(bot) == "", "but not at a lone monster")
+	check(BotLoot.sellable_index({"backpack": ["fire_rune#2", "wolf_pelt"]}) == 1, "bots keep their runes when they sell")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

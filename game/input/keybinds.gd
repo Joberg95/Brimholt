@@ -4,6 +4,7 @@ extends RefCounted
 ## Bindings are saved per user in user://keybinds.cfg.
 
 const Spells = preload("res://game/data/spells.gd")
+const World = preload("res://game/core/world.gd")
 const PATH: String = "user://keybinds.cfg"
 const SLOTS: int = 9
 ## Action id -> [label, primary default, secondary default]; KEY_NONE means unbound.
@@ -36,13 +37,14 @@ const DEFAULTS: Dictionary = {
 }
 ## Escape always closes menus and cannot be bound.
 const RESERVED: Array[Key] = [KEY_ESCAPE]
-## The action bar holds spells only, stored as "spell:<id>"; "" is an empty slot. Other
+## The action bar holds spells, stored as "spell:<id>", and rune items, stored as "item:<kind>"
+## (cast from the backpack, Combat.use_rune); "" is an empty slot. Other
 ## actions (target nearest, pick up, gather, world map, quest list, spell book, character, lexicon, professions, party, potions) have their own key bindings above.
 const DEFAULT_BAR: Array[String] = ["", "", "", "", "", "", "", "", ""]
 
 ## Action id -> [primary, secondary] physical keycodes.
 var keys: Dictionary = {}
-## Nine action-bar entries: "" or "spell:<id>".
+## Nine action-bar entries: "", "spell:<id>", or "item:<rune kind>".
 var bar: Array[String] = []
 var path: String = PATH
 ## False keeps the defaults and never reads or writes `path` (tests: the player's own bindings stay untouched).
@@ -92,6 +94,8 @@ func bind(action: String, index: int, key: Key) -> bool:
 
 
 static func valid_bar_entry(entry: String) -> bool:
+	if entry.begins_with("item:"):
+		return World.ITEMS.has(entry.trim_prefix("item:")) and World.ITEMS[entry.trim_prefix("item:")].has("rune")
 	return entry.is_empty() or (entry.begins_with("spell:") and Spells.SPELLS.has(entry.trim_prefix("spell:")))
 
 

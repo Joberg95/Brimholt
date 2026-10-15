@@ -87,6 +87,8 @@ static func load_catalog() -> Dictionary:
 			item["armor"] = String(entry["armor"])
 		if entry.has("outfit"):
 			item["outfit"] = String(entry["outfit"])
+		if entry.has("rune"):
+			item["rune"] = String(entry["rune"])
 		if bool(entry.get("loot_only", false)):
 			item["loot_only"] = true
 		if bool(entry.get("sold", false)):

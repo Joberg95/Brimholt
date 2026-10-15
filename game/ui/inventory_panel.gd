@@ -11,6 +11,7 @@ const Items = preload("res://game/data/items.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Professions = preload("res://game/data/professions.gd")
+const Spells = preload("res://game/data/spells.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
@@ -320,6 +321,8 @@ func item_tooltip(kind: String) -> String:
 		lines.append("Quest reward (%s); bound to you (never dropped or lost)" % _quest_source(item["quest"]))
 	if item.has("gold"):
 		lines.append("Worth %d gold; picked up into your purse" % item["gold"])
+	if item.has("rune"):
+		lines.append(Spells.rune_text(item))
 	if item.get("loot_only", false) or Items.mythic(item):
 		var sources: PackedStringArray = []
 		for monster: String in Monsters.LOOT:

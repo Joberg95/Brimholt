@@ -433,8 +433,9 @@ func attack_of(id: int) -> float:
 	return Balance.mob_damage(monster["level"], monster_def(id)["rank"]) * (ENRAGE_MULTIPLIER if monster["enraged"] else 1.0)
 
 
-func _hit(attacker: int, target: int, power: float, now: float, events: Array) -> void:
-	var raw: float = attack_of(attacker) * power * rng.randf_range(0.85, 1.15)
+## One hit for `power` times the attacker's attack, or times `rune_base` for a rune spell (always magic).
+func _hit(attacker: int, target: int, power: float, now: float, events: Array, rune_base: float = 0.0) -> void:
+	var raw: float = (rune_base if rune_base > 0.0 else attack_of(attacker)) * power * rng.randf_range(0.85, 1.15)
 	if attacker < 0 and target > 0 and monster_def(attacker)["rank"] == "boss":
 		raw *= 1.0 + WOUND_STEP * wound_stacks(attacker, target, now)
 		var wounds: Dictionary = world.monsters[attacker]["wounds"]
@@ -444,7 +445,7 @@ func _hit(attacker: int, target: int, power: float, now: float, events: Array) -
 	var critical: bool = attacker > 0 and rng.randi_range(1, 100) <= world.player_stats(attacker)["critical"]
 	if critical:
 		raw *= CRITICAL_MULTIPLIER
-	var amount: int = maxi(1, Balance.damage_taken(roundi(raw), defense_of(target, magic_attacker(attacker))))
+	var amount: int = maxi(1, Balance.damage_taken(roundi(raw), defense_of(target, rune_base > 0.0 or magic_attacker(attacker))))
 	_damage(attacker, target, amount, "critical" if critical else "damage", now, events)
 
 
@@ -535,6 +536,82 @@ func healing_factor(id: int, now: float) -> float:
 		return 1.0
 	var fading: float = 1.0 - (now - player.get("pvp_since", now)) / Balance.PVP_DAMPENING_SECONDS
 	return Balance.PVP_HEALING * clampf(fading, 0.0, 1.0)
+
+
+## Casts the rune spell of a rune item from the backpack at your target (Spells.RUNES_BY_ELEMENT):
+## it is used up, starts the shared "rune" cooldown, and hits as magic for a geared attack of your
+## level times its power, whatever your class.
+func use_rune(id: int, kind: Variant, now: float) -> Dictionary:
+	if not world.players.has(id):
+		return {"ok": false, "reason": "Unknown player", "events": []}
+	if typeof(kind) != TYPE_STRING or not World.ITEMS.has(kind) or Spells.rune_of(World.ITEMS[kind]).is_empty():
+		return {"ok": false, "reason": "That is not a rune", "events": []}
+	var player: Dictionary = world.players[id]
+	var item: Dictionary = World.ITEMS[kind]
+	var rune: Dictionary = Spells.rune_of(item)
+	if player["level"] < item["level"]:
+		return {"ok": false, "reason": "%s needs level %d" % [item["name"], item["level"]], "events": []}
+	if now < player["groups"].get("rune", -INF):
+		return {"ok": false, "reason": "You are exhausted", "events": []}
+	var slot: int = player["backpack"].find_custom(func(entry: String) -> bool: return World.kind_of(entry) == kind)
+	if slot < 0:
+		return {"ok": false, "reason": "You have no %s left" % item["name"].to_lower(), "events": []}
+	var target: int = player["target"]
+	if target == 0 or not hostile(id, target) or not in_reach(player["cell"], creature(target)["cell"], Spells.RUNE_RANGE):
+		return {"ok": false, "reason": "You need a target in range", "events": []}
+	var left: int = World.count_of(player["backpack"][slot]) - 1
+	player["backpack"][slot] = World.make_entry(kind, left) if left > 0 else ""
+	player["groups"]["rune"] = now + Spells.GROUP_SECONDS["rune"]
+	var events: Array = [{"kind": "player", "id": id}]
+	var base: float = Balance.geared_attack(player["level"])
+	var center: Vector2i = creature(target)["cell"]
+	_missile(player["cell"], center, rune["color"], events)
+	var struck: Array[int] = []
+	if rune["shape"] == "circle":
+		var cells: Array[Vector2i] = circle(center, rune["radius"])
+		events.append({"kind": "area", "cells": cells, "color": rune["color"], "element": item["rune"]})
+		for victim: int in _enemies_near(id, center, rune["radius"]):
+			if creature(victim)["cell"] in cells:
+				struck.append(victim)
+				_hit(id, victim, rune["power"], now, events, base)
+	else:
+		struck.append(target)
+		_hit(id, target, rune["power"], now, events, base)
+		events.append({"kind": "area", "cells": [center], "color": rune["color"], "element": item["rune"]})
+		var from: Vector2i = center
+		for jump: int in rune["jumps"]:
+			var next: int = 0
+			var nearest: int = rune["reach"] + 1
+			for other: int in _enemies_near(id, from, rune["reach"]):
+				var gap: int = distance(creature(other)["cell"], from)
+				if other not in struck and gap < nearest:
+					next = other
+					nearest = gap
+			if next == 0:
+				break
+			struck.append(next)
+			_missile(from, creature(next)["cell"], rune["color"], events)
+			events.append({"kind": "area", "cells": [creature(next)["cell"]], "color": rune["color"], "element": item["rune"]})
+			from = creature(next)["cell"]
+			_hit(id, next, rune["chain_power"], now, events, base)
+	if rune.has("slow"):
+		for victim: int in struck:
+			if exists(victim):
+				restrain(victim, "slow", rune["slow"], now, events)
+	return {"ok": true, "events": events}
+
+
+## Tiles of a round area, as Tibia's: every tile with dx² + dy² <= r² + r (radius 2: 21 tiles,
+## radius 3: 37), skipping walls and the void.
+static func circle(center: Vector2i, radius: int) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for dy: int in range(-radius, radius + 1):
+		for dx: int in range(-radius, radius + 1):
+			var cell: Vector2i = center + Vector2i(dx, dy)
+			var tile: String = World.terrain(cell)
+			if dx * dx + dy * dy <= radius * radius + radius and tile not in [" ", ""] and tile not in World.WALLS:
+				cells.append(cell)
+	return cells
 
 
 func _missile(from: Vector2i, to: Vector2i, color: Color, events: Array) -> void:
@@ -990,7 +1067,8 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 	var loot: Array[String] = []
 	for entry: Array in Monsters.LOOT.get(kind, []):
 		var item: Dictionary = World.ITEMS[entry[0]]
-		if rng.randf() < float(entry[1]) and (item["slot"].is_empty() or level >= item["level"]):
+		# Equipment and runes only drop from monsters of their level.
+		if rng.randf() < float(entry[1]) and (item["slot"].is_empty() and not item.has("rune") or level >= item["level"]):
 			loot.append(entry[0])
 	var definition: Dictionary = Monsters.MONSTERS[kind]
 	if rng.randf() < float(definition.get("gear_chance", GEAR_DROP_CHANCE.get(definition["rank"], 0.0))):

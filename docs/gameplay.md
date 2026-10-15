@@ -53,6 +53,16 @@ times the spell's power):
 | Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
 | Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Entangling roots (12, roots your target in place for 3 s), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
 
+**Rune spells.** Level 40+ hunting grounds drop runes: small carved stones of fire, frost, or
+lightning (behemoths and obsidian golems fire, bog hulks and mire stalkers frost, reedfangs and
+void wraiths lightning; the level-50 elites more often). Any class from level 40 casts one at its
+target up to 7 tiles away: drag it from your backpack onto the action bar (or right-click a
+slot), and each cast uses one up. A fire rune burns every enemy within 3 tiles of the target (a
+round area of 37 tiles, as in Tibia), a frost rune freezes 2 tiles around and slows what it hits,
+and a lightning rune strikes the target and leaps to two more enemies nearby. Runes are magic and
+hit for a geared attack of your level, whatever your class, and all runes share a 2-second
+cooldown. Bots carry the runes they find and cast them at packs.
+
 **Roots and slows.** Entangling roots holds its target in place and Crippling arrow halves its
 pace; both also hit it. Bosses shrug them off, and a player who was just held cannot be held
 again until 6 seconds after it ended.

@@ -2134,6 +2134,8 @@ def item_icon(kind):
     shape, extras = look(kind)
     if shape in WEAPON_SHAPES:
         return weapon_icon(kind)
+    if shape == "runestone":
+        return runestone_icon(kind)
     image = Image(TILE, TILE)
     gem = (scale(accent, 1.12), accent, scale(accent, 0.65))
     if shape == "cap":
@@ -4517,16 +4519,134 @@ RUNE_STROKES = {
 RUNE_HEIGHT = 18
 
 
-def rune_sign(rune):
-    """The rune's strokes, 2 pixels wide, centred on the stone."""
+def rune_sign(rune, height=RUNE_HEIGHT, width_px=2):
+    """The rune's strokes, `width_px` pixels wide, centred on the stone."""
     strokes = RUNE_STROKES[rune]
-    width = max(x for stroke in strokes for x, _ in stroke) * RUNE_HEIGHT
-    left, top = 16 - width / 2 - 0.5, 16.5 - RUNE_HEIGHT / 2
+    width = max(x for stroke in strokes for x, _ in stroke) * height
+    left, top = 16 - width / 2 - 0.5, 16.5 - height / 2
     points = set()
     for stroke in strokes:
         for (ax, ay), (bx, by) in zip(stroke, stroke[1:]):
-            points |= _line(left + ax * RUNE_HEIGHT, top + ay * RUNE_HEIGHT, left + bx * RUNE_HEIGHT, top + by * RUNE_HEIGHT)
-    return thick(points, ((0, 0), (1, 0), (0, 1), (1, 1)))
+            points |= _line(left + ax * height, top + ay * height, left + bx * height, top + by * height)
+    return thick(points, ((0, 0), (1, 0), (0, 1), (1, 1)) if width_px == 2 else ((0, 0),))
+
+
+def runestone_icon(kind):
+    """A rune item (items.json "rune"): a small squared tablet of grey stone, bevelled and lit from
+    the top-left, its element's rune carved one pixel wide and glowing in the element's colour.
+    Smaller and squarer than the round spell stones, so a rune you carry never reads as a spell."""
+    palette, accent = tones(kind)
+    light, main, dark = palette
+    _, extras = look(kind)
+    glyph = next(iter(extras))
+    image = Image(TILE, TILE)
+    stone = box(8, 6, 16, 20) - {(8, 6), (23, 6), (8, 25), (23, 25)}
+    for x, y in stone:
+        rim = (x - 1, y) not in stone or (x, y - 1) not in stone
+        shadow = (x + 1, y) not in stone or (x, y + 1) not in stone
+        tone = light if rim else dark if shadow else main
+        if (x * 7 + y * 11) % 19 == 0 and not rim and not shadow:
+            tone = scale(tone, 0.88)
+        image.set(x, y, tone)
+    sign = rune_sign(glyph, 12, 1) & stone
+    for x, y in sign:
+        for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+            if (x + dx, y + dy) in stone and (x + dx, y + dy) not in sign:
+                image.set(x + dx, y + dy, blend(image.get(x + dx, y + dy), accent, 0.35))
+    for x, y in sign:
+        image.set(x, y, blend(accent, rgba("ffffff"), 0.45) if (x + y) % 3 else accent)
+    return image.outlined(rgba("17140f"))
+
+
+RUNE_FX_ELEMENTS = ("fire", "frost", "lightning")
+RUNE_FX_FRAMES = 4
+
+
+def rune_fx(element, frame):
+    """One tile of a rune spell landing (game/render/world_view.gd draws one on every tile hit):
+    fire blooms into flame tongues and dies to embers; frost raises a cluster of ice shards that
+    shatter; lightning strikes down as a forked bolt and scatters sparks. Saturated colour and
+    glow are for magic only, per the art direction; outlines stay dark and coloured."""
+    rng = random.Random(9100 + RUNE_FX_ELEMENTS.index(element) * 10 + frame)
+    image = Image(TILE, TILE)
+    grow = (0.45, 0.85, 1.0, 0.8)[frame]
+    if element == "fire":
+        ramp = (rgba("fff6c0"), rgba("ffd050"), rgba("ff8a28"), rgba("d8461a"), rgba("7a2412"))
+        if frame < 3:
+            # Overlapping flame tongues that taper to points, hottest low in the middle.
+            tongues = [(16 + offset * grow, height * grow) for offset, height in
+                       ((-7, 9), (-3.5, 15), (0, 19), (3.5, 14), (7, 10), (-1.5, 12), (2, 11))]
+            for cx, height in tongues:
+                cx += rng.uniform(-0.8, 0.8)
+                for step in range(int(height)):
+                    rise = step / height
+                    half = 3.6 * grow * (1 - rise) ** 0.75
+                    sway = math.sin(rise * 3.0 + cx) * rise * 1.5
+                    for x in range(int(cx + sway - half), int(cx + sway + half) + 1):
+                        edge = abs(x - cx - sway) / max(half, 0.6)
+                        heat = 0.25 * edge + 0.75 * rise
+                        image.set(x, 25 - step, ramp[min(4, int(heat * 4.2))])
+            for x, y in ellipse(16, 25, 8.5 * grow, 2.2 * grow):
+                image.set(x, y, ramp[0] if frame == 1 else ramp[1])
+        else:
+            # Embers rising from a scorch mark, and a soft smudge of smoke (no dithering).
+            for x, y in ellipse(16, 24, 7, 2.5):
+                image.set(x, y, (48, 36, 30, 170))
+            for x, y in ellipse(15, 14, 4, 3) | ellipse(18, 10, 3, 2.5):
+                image.set(x, y, (70, 62, 58, 110))
+            for _ in range(9):
+                x, y = rng.randrange(8, 25), rng.randrange(8, 24)
+                image.set(x, y, rng.choice(ramp[1:4]))
+    elif element == "frost":
+        ramp = (rgba("ffffff"), rgba("c8f0ff"), rgba("8ad8ff"), rgba("4a90c8"), rgba("1c3c64"))
+        if frame < 3:
+            for shard in range(5 if frame else 2):
+                x = 9 + shard * 3.5 + rng.randrange(-1, 2)
+                height = (8 + rng.randrange(0, 10)) * grow
+                lean = rng.choice((-1, 0, 1))
+                for step in range(int(height)):
+                    half = max(0, round((height - step) / height * 2.5))
+                    for dx in range(-half, half + 1):
+                        tone = ramp[1] if dx < 0 else ramp[2] if dx == 0 else ramp[3]
+                        if step > height - 3:
+                            tone = ramp[0]
+                        image.set(int(x + dx + lean * step / 4), 26 - step, tone)
+            for x, y in ellipse(16, 26, 9 * grow, 2):
+                image.set(x, y, ramp[2])
+        else:
+            for _ in range(12):
+                x, y = rng.randrange(6, 26), rng.randrange(14, 27)
+                image.set(x, y, rng.choice(ramp[:3]))
+                image.set(x + 1, y, ramp[3])
+    else:
+        ramp = (rgba("ffffff"), rgba("fff6b0"), rgba("ffe060"), rgba("e0a020"), rgba("6a4a10"))
+        if frame < 2:
+            # A forked bolt in sharp zigzags: a white core, gold edges, one branch off the main stroke.
+            points = [(16 + rng.randrange(-2, 3), 0)]
+            while points[-1][1] < 22:
+                x, y = points[-1]
+                points.append((x + rng.choice((-5, -4, 4, 5)), y + rng.randrange(3, 5)))
+            points.append((16, 25))
+            fork = points[len(points) // 2]
+            branch = [fork, (fork[0] + 6, fork[1] + 4), (fork[0] + 4, fork[1] + 8)]
+            for path in (points, branch):
+                for (ax, ay), (bx, by) in zip(path, path[1:]):
+                    for px, py in line(ax, ay, bx, by):
+                        image.set(px - 1, py, ramp[2])
+                        image.set(px + 1, py, ramp[3])
+                    for px, py in line(ax, ay, bx, by):
+                        image.set(px, py, ramp[0])
+            if frame == 1:
+                for x, y in ellipse(16, 25, 6, 2):
+                    image.set(x, y, ramp[1])
+        sparks = (4, 10, 14, 6)[frame]
+        for _ in range(sparks):
+            angle = rng.random() * math.tau
+            reach = (3 + rng.random() * 9) * grow
+            x, y = round(16 + math.cos(angle) * reach), round(24 + math.sin(angle) * reach * 0.5)
+            image.set(x, y, ramp[1])
+            image.set(x + 1, y, ramp[2])
+    return image.outlined(rgba("26140a") if element == "fire" else rgba("0e1c30") if element == "frost" else rgba("2a2008"))
 
 
 RUNE_STONE = (rgba("a29a8e"), rgba("7e776d"), rgba("5a544c"))
@@ -4596,6 +4716,8 @@ def main():
         "marker.png": character_sheet(marker, columns=POSE_COLUMNS),
         "items.png": sheet([item_icon(kind) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
         "spells.png": sheet([spell_icon(spell, rune, color) for spell, rune, color in spell_catalog()], 8, TILE),
+        "rune_fx.png": sheet([rune_fx(element, frame) for element in RUNE_FX_ELEMENTS for frame in range(RUNE_FX_FRAMES)],
+                             RUNE_FX_FRAMES, TILE),
         "tiles.png": sheet([grass_tile(v) for v in range(4)] + [dirt_tile(v) for v in range(4)]
                            + [water_tile(f) for f in range(4)] + edge_set("dirt") + edge_set("shore")
                            + [sand_tile(v) for v in range(4)] + [cobble_tile(v) for v in range(4)]

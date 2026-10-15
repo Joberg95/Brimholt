@@ -43,6 +43,12 @@ static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
 const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan"]
+## Rune spells landing (Combat.use_rune): per element (fire, frost, lightning) a row of
+## RUNE_FX_FRAMES 32x32 frames, played once over RUNE_FX_SECONDS on every tile hit.
+const RUNE_FX: Texture2D = preload("res://assets/sprites/rune_fx.png")
+const RUNE_FX_ELEMENTS: Array[String] = ["fire", "frost", "lightning"]
+const RUNE_FX_FRAMES: int = 4
+const RUNE_FX_SECONDS: float = 0.6
 ## Wall torches (World.TORCHES): 16x24 frames, unlit then three flame frames.
 const TORCH: Texture2D = preload("res://assets/sprites/torch.png")
 ## Where a sign's centre hangs from its wall cell's corner, by the direction the door faces:
@@ -480,6 +486,17 @@ static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
 ## face for every wall, so a taller house wall puts it further up and left.
 static func torch_foot(cell: Vector2i) -> Vector2:
 	return Vector2(cell) * TILE + Vector2(16, 25) - Vector2.ONE * roundf((wall_raise(cell) - WALL_RAISE) * 0.6)
+
+
+## One tile of a rune spell `age` seconds after it landed; false once it has played out.
+static func draw_rune_fx(canvas: CanvasItem, cell: Vector2i, element: String, age: float) -> bool:
+	var row: int = RUNE_FX_ELEMENTS.find(element)
+	if row < 0 or age >= RUNE_FX_SECONDS:
+		return false
+	var frame: int = mini(RUNE_FX_FRAMES - 1, floori(age / RUNE_FX_SECONDS * RUNE_FX_FRAMES))
+	canvas.draw_texture_rect_region(RUNE_FX, Rect2(Vector2(cell) * TILE - Vector2(0, 6), Vector2.ONE * TILE),
+		Rect2(frame * TILE, row * TILE, TILE, TILE))
+	return true
 
 
 ## A wall torch on the south face of its wall cell; frame 0 is unlit, 1-3 flicker.

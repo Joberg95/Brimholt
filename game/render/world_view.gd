@@ -167,6 +167,8 @@ func _draw() -> void:
 	if not _tall_area.encloses(area):
 		_cache_tall(area.grow(TALL_MARGIN).intersection(Rect2i(0, 0, World.width(), World.height())))
 	for effect: Dictionary in game.effects:
+		if effect["kind"] == "area" and not effect.get("element", "").is_empty():
+			continue
 		if effect["kind"] == "area":
 			var fade: float = 1.0 - (time - effect["born"]) / 0.45
 			for cell: Vector2i in effect["cells"]:
@@ -239,6 +241,11 @@ func _draw() -> void:
 		_draw_roof(roofs[next_roof][1])
 		next_roof += 1
 	npc_names = names
+	# Rune spells play on top of everything they hit, one frame set per tile.
+	for effect: Dictionary in game.effects:
+		if effect["kind"] == "area" and not effect.get("element", "").is_empty():
+			for cell: Vector2i in effect["cells"]:
+				SpriteArt.draw_rune_fx(self, cell, effect["element"], time - effect["born"])
 	game._profiled("world draw", started)
 
 

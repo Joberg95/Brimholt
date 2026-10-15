@@ -11,7 +11,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 11 | [Rune spells from level 40+ monsters](11-rune-spells.md) | M-L | |
 | 12 | [World map: arrow, quest guidance, new look](12-world-map.md) | M | |
 | 13 | [Bigger cellars and caves](13-cellars-and-caves.md) | L | References in the art skill |
 | 14 | [Open Redmeere with castle houses](14-redmeere.md) | L | References in the art skill |

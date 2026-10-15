@@ -203,11 +203,15 @@ func sell_one(id: int, vendor: String, now: float, events: Array) -> bool:
 	return sold["ok"]
 
 
-## The first backpack index holding something a vendor buys, or -1.
+## The first backpack index holding something a vendor buys (runes aside), or -1.
 static func sellable_index(player: Dictionary) -> int:
 	var backpack: Array = player["backpack"]
 	for index: int in backpack.size():
-		if not backpack[index].is_empty() and Economy.sell_price(World.kind_of(backpack[index])) > 0:
+		if backpack[index].is_empty():
+			continue
+		var kind: String = World.kind_of(backpack[index])
+		# Runes are kept for casting (Bots._rune_to_use).
+		if Economy.sell_price(kind) > 0 and not World.ITEMS[kind].has("rune"):
 			return index
 	return -1
 

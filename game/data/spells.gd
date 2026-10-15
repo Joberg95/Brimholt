@@ -25,7 +25,20 @@ const RUNES: Dictionary = {
 	# From the Anglo-Saxon row, for spells past the Elder Futhark's twenty-four.
 	"ear": ["Ear", "the earth"], "yr": ["Yr", "the yew bow"],
 }
-const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0}
+const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0, "rune": 2.0}
+## Rune spells: items (items.json "rune") that level 40+ hunting grounds drop. Any class casts one
+## from the action bar at its target within RUNE_RANGE, using it up; all runes share the "rune"
+## cooldown group. They are magic, and their damage follows the caster's level, not class
+## (Balance.geared_attack x power). Shapes, as in Tibia: "circle" is every tile within `radius`
+## (radius 3 is 37 tiles; Combat.circle), "chain" hits the target and then `jumps` more enemies
+## within `reach` of it for `chain_power`. Frost also slows what it hits (Combat.restrain).
+const RUNE_RANGE: int = 7
+const RUNES_BY_ELEMENT: Dictionary = {
+	"fire": {"name": "Fire rune", "shape": "circle", "radius": 3, "power": 1.2, "color": Color("#ff7a2a")},
+	"frost": {"name": "Frost rune", "shape": "circle", "radius": 2, "power": 1.2, "slow": 2.0, "color": Color("#8ad8ff")},
+	"lightning": {"name": "Lightning rune", "shape": "chain", "power": 2.4, "jumps": 2, "reach": 3, "chain_power": 1.2,
+		"color": Color("#ffe060")},
+}
 ## Spell ranks: a class trainer raises a known spell one rank for rune shards (rank 2 costs
 ## RANK_COSTS[0], rank 3 RANK_COSTS[1]); each rank above 1 adds RANK_POWER to its power
 ## (damage or healing). Challenge has no power and cannot be empowered.
@@ -189,6 +202,31 @@ static func info(id: String, stats: Dictionary, level: int, rank: int = 1) -> Di
 		"cooldown": "Cooldown %s s, and %s s for all %s spells" % [number(spell["cooldown"]),
 			number(GROUP_SECONDS[spell["group"]]), spell["group"]],
 	}
+
+
+## A rune item's spell (RUNES_BY_ELEMENT), or {} for any other item.
+static func rune_of(item: Dictionary) -> Dictionary:
+	return RUNES_BY_ELEMENT.get(item.get("rune", ""), {})
+
+
+## A rune's tooltip lines: what it does, its reach, and its cooldown.
+static func rune_text(item: Dictionary) -> String:
+	var rune: Dictionary = rune_of(item)
+	if rune.is_empty():
+		return ""
+	var effect: String
+	if rune["shape"] == "circle":
+		effect = "Rune spell: hits every enemy within %d tiles of your target for %s× a geared attack of your level." % [
+			rune["radius"], number(rune["power"])]
+	else:
+		effect = "Rune spell: strikes your target for %s× a geared attack of your level, then leaps to %d more enemies within %d tiles for %s×." % [
+			number(rune["power"]), rune["jumps"], rune["reach"], number(rune["chain_power"])]
+	if rune.has("slow"):
+		effect += " Slows what it hits for %s s." % number(rune["slow"])
+	var lines: PackedStringArray = [effect,
+		"Magic damage, any class from level %d, range %d. Drag it to the action bar; each cast uses one." % [item["level"], RUNE_RANGE],
+		"Cooldown %s s for all runes." % number(GROUP_SECONDS["rune"])]
+	return "\n".join(lines)
 
 
 ## The tooltip text: name, requirement, effect, then the numbers.

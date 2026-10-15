@@ -265,9 +265,11 @@ func _run() -> void:
 		return
 	if not await _check_dark_cave():
 		return
+	if not await _check_rune_bar():
+		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1066,6 +1068,48 @@ func _check_town_torches() -> bool:
 
 
 ## Silkhollow is pitch dark: without a torch you see nothing; a held torch lights three tiles and more.
+## A fire rune dragged onto the action bar and cast with its key at a pack in the wilds: the
+## rune is used up, the slot shows how many are left, and every tile of the circle burns.
+func _check_rune_bar() -> bool:
+	var player: Dictionary = game.world.players[1]
+	var field := Vector2i(-1, -1)
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var clear: bool = World.zone_at(spawn["cell"]).is_empty() and field.x < 0
+		for dy: int in range(-4, 5):
+			for dx: int in range(-4, 5):
+				clear = clear and World.walkable(spawn["cell"] + Vector2i(dx, dy))
+		if clear:
+			field = spawn["cell"]
+	game.world.monsters.clear()
+	game.monsters.clear()
+	player["cell"] = field + Vector2i(-3, 0)
+	player["from"] = player["cell"]
+	player["level"] = 50
+	player["groups"] = {}
+	player["backpack"][0] = World.make_entry("fire_rune", 3)
+	var pack: Array[int] = []
+	for offset: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, -1)]:
+		var events: Array = []
+		var id: int = game.combat.spawn_monster("behemoth", 45, field + offset, game._now(), -1, events)
+		game.world.monsters[id]["health"] = 100000
+		game.world.monsters[id]["next_move"] = INF
+		game.world.monsters[id]["next_attack"] = INF
+		game._handle_events(events)
+		pack.append(id)
+	player["target"] = pack[0]
+	game._publish_actor(1)
+	game.keybinds.set_bar(8, "item:fire_rune")
+	await create_timer(0.3).timeout
+	await _press("slot_9")
+	await create_timer(0.15).timeout
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-rune.png")
+	var burned: int = pack.filter(func(id: int) -> bool: return game.world.monsters[id]["health"] < 100000).size()
+	var shown: bool = game.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "fire")
+	return _expect(player["backpack"][0] == "fire_rune#2" and burned == pack.size() and shown,
+		"The action bar's fire rune did not burn the pack (%s, %d burned)" % [player["backpack"][0], burned])
+
+
 func _check_dark_cave() -> bool:
 	var player: Dictionary = game.world.players[1]
 	var home: Vector2i = player["cell"]

@@ -20,6 +20,10 @@ var usable: bool = true
 var bar_slot: int = -1
 ## Called with (spell, from_bar_slot) when a rune is dropped here; null refuses drops.
 var on_drop: Callable
+## Called with an item drag's location ({"brimholt_item"} from the inventory): `accepts_item`
+## says whether it may land here (a rune item), `on_item_drop` takes it. Null refuses items.
+var accepts_item: Callable
+var on_item_drop: Callable
 var _frame := StyleBoxFlat.new()
 
 
@@ -63,8 +67,15 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	return on_drop.is_valid() and typeof(data) == TYPE_DICTIONARY and Spells.SPELLS.has(data.get("spell", ""))
+	if typeof(data) != TYPE_DICTIONARY:
+		return false
+	if data.has("brimholt_item"):
+		return accepts_item.is_valid() and accepts_item.call(data["brimholt_item"])
+	return on_drop.is_valid() and Spells.SPELLS.has(data.get("spell", ""))
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
-	on_drop.call(String(data["spell"]), int(data.get("from_bar_slot", -1)))
+	if data.has("brimholt_item"):
+		on_item_drop.call(data["brimholt_item"])
+	else:
+		on_drop.call(String(data["spell"]), int(data.get("from_bar_slot", -1)))

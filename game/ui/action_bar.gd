@@ -1,13 +1,15 @@
 extends Node
 ## The nine-slot spell bar under the game window: click or press a slot's key to cast,
-## right-click to choose one of your vocation's spells, or drag one in from the spell book
-## (or from another slot), with level and cooldown shading. Hovering a slot explains its spell.
+## right-click to choose one of your vocation's spells or a rune you carry, or drag one in from
+## the spell book, another slot, or (a rune item) your backpack, with level and cooldown shading
+## and a rune's count. Hovering a slot explains its spell or rune.
 
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const SpellRune = preload("res://game/ui/spell_rune.gd")
 const World = preload("res://game/core/world.gd")
+const SpriteArt = preload("res://game/render/sprite_art.gd")
 
 ## The right-click menu entry that opens the spell book instead of filling the slot.
 const BOOK_ENTRY: String = "book"
@@ -32,6 +34,11 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 		var button := SpellRune.new()
 		button.bar_slot = slot
 		button.on_drop = _dropped.bind(slot)
+		button.accepts_item = func(location: Dictionary) -> bool:
+			return World.ITEMS.get(World.kind_of(game.inventory.local_item(location)), {}).has("rune")
+		button.on_item_drop = func(location: Dictionary) -> void:
+			if keybinds.set_bar(slot, "item:" + World.kind_of(game.inventory.local_item(location))):
+				keybinds.save()
 		button.position = start + Vector2(slot * Layout.BAR_SLOT, 0)
 		button.size = Vector2.ONE * (Layout.BAR_SLOT - 4)
 		button.draw.connect(_draw_slot.bind(button, slot))
@@ -71,6 +78,9 @@ func redraw() -> void:
 		var entry: String = keybinds.bar[slot]
 		rune.spell = entry.trim_prefix("spell:") if Spells.SPELLS.has(entry.trim_prefix("spell:")) else ""
 		rune.tooltip_text = "" if rune.spell.is_empty() else spell_tooltip(rune.spell, state)
+		if entry.begins_with("item:") and World.ITEMS.has(entry.trim_prefix("item:")):
+			var item: Dictionary = World.ITEMS[entry.trim_prefix("item:")]
+			rune.tooltip_text = "\n".join([item["name"], Spells.rune_text(item)])
 
 
 ## A spell's tooltip with numbers for your current level and gear (none before you join).
@@ -124,6 +134,20 @@ func _open_menu(slot: int, at: Vector2i) -> void:
 				else "  (level %d)" % definition["level"]], entries.size() - 1)
 			_menu.set_item_metadata(_menu.get_item_index(entries.size() - 1), "spell:" + spell)
 		_menu.add_separator()
+	# Runes you carry can go on the bar too.
+	var carried: Array[String] = []
+	if actors.has(self_id):
+		for entry: String in actors[self_id]["state"].get("backpack", []):
+			var kind: String = World.kind_of(entry)
+			if World.ITEMS.get(kind, {}).has("rune") and kind not in carried:
+				carried.append(kind)
+	if not carried.is_empty():
+		_menu.add_separator("Runes")
+		for kind: String in carried:
+			entries.append("item:" + kind)
+			_menu.add_item(World.ITEMS[kind]["name"], entries.size() - 1)
+			_menu.set_item_metadata(_menu.get_item_index(entries.size() - 1), "item:" + kind)
+		_menu.add_separator()
 	entries.append("")
 	_menu.add_item("Clear slot", entries.size() - 1)
 	_menu.set_item_metadata(_menu.get_item_index(entries.size() - 1), "")
@@ -141,9 +165,36 @@ func _draw_slot(button: Control, slot: int) -> void:
 	var font: Font = ThemeDB.fallback_font
 	if entry.begins_with("spell:") and Spells.SPELLS.has(entry.trim_prefix("spell:")):
 		_draw_spell_slot(button, entry.trim_prefix("spell:"))
+	elif entry.begins_with("item:") and World.ITEMS.has(entry.trim_prefix("item:")):
+		_draw_rune_slot(button, entry.trim_prefix("item:"))
 	var key: String = Keybinds.key_name(keybinds.keys["slot_%d" % (slot + 1)][0])
 	button.draw_string_outline(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color.BLACK)
 	button.draw_string(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#f2e6c4"))
+
+
+## A rune item slot: its icon, how many you carry (dimmed at none or below its level), and the
+## shared rune cooldown.
+func _draw_rune_slot(button: Control, kind: String) -> void:
+	var view: Dictionary = game.actors.get(game.self_id, {})
+	var state: Dictionary = view.get("state", {})
+	var count: int = 0
+	for entry: String in state.get("backpack", []):
+		if World.kind_of(entry) == kind:
+			count += World.count_of(entry)
+	var usable: bool = count > 0 and state.get("level", 1) >= World.ITEMS[kind]["level"]
+	SpriteArt.draw_item(button, button.size / 2.0 + Vector2(0, 2), kind, Color.WHITE if usable else Color(0.5, 0.5, 0.5, 0.7))
+	var font: Font = ThemeDB.fallback_font
+	var label: String = str(count)
+	var at := Vector2(button.size.x - 4 - font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x, button.size.y - 4)
+	button.draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color.BLACK)
+	button.draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#f2e6c4"))
+	if state.is_empty():
+		return
+	var left: float = state.get("groups", {}).get("rune", 0.0) - (game._now() - view.get("received", game._now()))
+	if left > 0.0:
+		var share: float = clampf(left / Spells.GROUP_SECONDS["rune"], 0.0, 1.0)
+		button.draw_rect(Rect2(Vector2(0, button.size.y * (1.0 - share)), Vector2(button.size.x, button.size.y * share)),
+			Color(0, 0, 0, 0.6))
 
 
 ## A spell slot: coloured rune with initials, dimmed when unusable, with a cooldown shade.
