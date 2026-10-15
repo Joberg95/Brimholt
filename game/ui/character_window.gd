@@ -64,7 +64,7 @@ func _init() -> void:
 	grid.add_theme_constant_override("v_separation", 3)
 	column.add_child(grid)
 	for stat: String in Balance.STATS:
-		var stat_name: Label = _label(stat.capitalize(), 13, MUTED)
+		var stat_name: Label = _label("Magic defense" if stat == "magic_defense" else stat.capitalize(), 13, MUTED)
 		stat_name.autowrap_mode = TextServer.AUTOWRAP_OFF
 		grid.add_child(stat_name)
 		_values[stat] = _label("", 13, TEXT)
@@ -131,7 +131,9 @@ func _write(state: Dictionary, rest_left: int, meal_left: int) -> void:
 		"health": "Damage you can take. At 0 you die and lose %d%% of your experience." % roundi(Combat.DEATH_PENALTY * 100.0),
 		"mana": "Pays for spells. Regenerates over time; mana potions restore a quarter.",
 		"attack": "Damage of your auto-attack every 2 s, and the base of spell damage.",
-		"defense": "Cuts damage you take by %d%% (100 defense halves it)." % reduction,
+		"defense": "Cuts physical damage (blades, arrows, most monsters) by %d%% (100 defense halves it). Plate gives the most." % reduction,
+		"magic_defense": "Cuts magic damage (Sorcerers, Druids, runes, casting monsters) by %d%%. Cloth, capes, and amulets give it." % (
+			100 - Balance.damage_taken(100, stats["magic_defense"])),
 		"critical": "Chance per hit to deal %s× damage." % Spells.number(Combat.CRITICAL_MULTIPLIER),
 		"regen": "Health regained every 10 s; %s× after %d s out of combat, %d× resting in town." % [
 			Spells.number(Combat.RESTING_MULTIPLIER), int(Combat.RESTING_SECONDS), Combat.TOWN_REST_MULTIPLIER],

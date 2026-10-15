@@ -80,6 +80,7 @@ func _run() -> void:
 	_pvp_and_spell_checks()
 	_dungeon_task_and_region_checks()
 	_spawn_and_rest_checks()
+	_armor_and_control_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -2334,9 +2335,7 @@ func _quest_piece_checks() -> void:
 		check(World.bound(kind) and not Economy.stock().has(kind) and Economy.sell_price(kind) == 0 and not pool.has(kind)
 			and not Monsters.LOOT.values().any(func(table: Array) -> bool: return table.any(func(entry: Array) -> bool: return entry[0] == kind)),
 			"%s is bound: never sold, bought, or dropped by monsters" % kind)
-		var derived: Dictionary = Items.tier_stats(item)
-		for stat: String in derived:
-			derived[stat] = roundi(derived[stat] * Items.QUEST_BONUS)
+		var derived: Dictionary = Items.with_bonus(Items.tier_stats(item), Items.QUEST_BONUS)
 		check(item["stats"] == derived, "%s derives its tier stats with the quest bonus" % kind)
 	# A skulled death drops what was found but keeps what was earned.
 	var world := World.new()
@@ -2378,9 +2377,7 @@ func _mythic_checks(by_key: Dictionary) -> void:
 		check(Items.rarity(item)[0] == "Mythic", "%s shows as Mythic" % kind)
 		check(not World.bound(kind) and not World.stackable(kind) and not Economy.stock().has(kind) and Economy.sell_price(kind) > 0,
 			"%s is tradeable loot that vendors buy but never sell" % kind)
-		var derived: Dictionary = Items.tier_stats(item)
-		for stat: String in derived:
-			derived[stat] = roundi(derived[stat] * Items.MYTHIC_BONUS)
+		var derived: Dictionary = Items.with_bonus(Items.tier_stats(item), Items.MYTHIC_BONUS)
 		check(item["stats"] == derived, "%s derives its stats at level 50 with the small mythic bonus" % kind)
 		check(sources.get(kind, []).size() == 1 and farms.has(sources.get(kind, [""])[0]),
 			"%s has exactly one placed level-50 source" % kind)
@@ -3971,6 +3968,82 @@ func _spawn_and_rest_checks() -> void:
 	rest._player_tick(1, clock_now + seconds + 1.0 + Combat.TOWN_REST_COOLDOWN, [])
 	check(not player["town_rest"] and player["town_rest_ready"] > clock_now + seconds + Combat.TOWN_REST_COOLDOWN,
 		"leaving town ends the rest and starts its cooldown")
+
+
+## Armor types and the two kinds of damage (Balance.ARMOR_TYPES), the new gear stats, and the
+## control spells: Entangling roots and Crippling arrow.
+func _armor_and_control_checks() -> void:
+	# Plate stops blades and arrows, cloth stops spells; capes, amulets, and books add magic defense.
+	var helmets: Dictionary = {}
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] == "helmet" and item["level"] == 45 and item.has("armor") and not item.has("quest"):
+			helmets[item["armor"]] = item["stats"]
+	check(helmets.size() == 4 and helmets["plate"]["defense"] > helmets["mail"]["defense"]
+		and helmets["mail"]["defense"] > helmets["leather"]["defense"] and helmets["leather"]["defense"] > helmets["cloth"]["defense"]
+		and helmets["cloth"]["magic_defense"] > helmets["leather"]["magic_defense"]
+		and helmets["leather"]["magic_defense"] > helmets["mail"]["magic_defense"] and not helmets["plate"].has("magic_defense"),
+		"plate has the most defense and no magic defense; cloth the most magic defense (%s)" % [helmets])
+	var cape: Dictionary = Items.tier_stats({"level": 30, "slot": "cape", "look": "cape", "vocations": []})
+	var amulet: Dictionary = Items.tier_stats({"level": 30, "slot": "necklace", "look": "amulet", "vocations": []})
+	check(cape.get("magic_defense", 0) > 0 and amulet.get("magic_defense", 0) > 0 and not cape.has("defense"),
+		"capes and amulets give magic defense")
+	var bow: Dictionary = Items.tier_stats({"level": 30, "slot": "main_hand", "look": "bow", "vocations": ["paladin"]})
+	var wand: Dictionary = Items.tier_stats({"level": 30, "slot": "main_hand", "look": "wand", "vocations": ["sorcerer"]})
+	var rod: Dictionary = Items.tier_stats({"level": 30, "slot": "main_hand", "look": "rod", "vocations": ["druid"]})
+	var blade: Dictionary = Items.tier_stats({"level": 30, "slot": "main_hand", "look": "sword", "vocations": ["knight"]})
+	var ring: Dictionary = Items.tier_stats({"level": 30, "slot": "ring", "look": "ring", "vocations": []})
+	check(bow["critical"] > Items.CRITICAL_WEAPON and wand["critical"] == bow["critical"] and rod["healing"] > 0
+		and not blade.has("critical") and ring["critical"] == Items.CRITICAL_RING,
+		"Hunters' and Sorcerers' weapons and rings add critical chance, Druids' rods healing")
+	# Physical hits meet defense, magic hits magic defense.
+	var world := World.new()
+	var combat := Combat.new(world, 21)
+	world.monsters.clear()
+	var arena: Vector2i = _open_cell(true)
+	for spec: Array in [[1, "knight"], [2, "paladin"], [3, "sorcerer"]]:
+		world.add_player(spec[0], 0.0, spec[1])
+		world.players[spec[0]]["level"] = 45
+		world.players[spec[0]]["equipment"] = Bots.gear(45, spec[1])
+		_place(world, spec[0], arena + Vector2i(spec[0] - 1, 0))
+	check(not combat.magic_attacker(1) and not combat.magic_attacker(2) and combat.magic_attacker(3),
+		"Warriors and Hunters hit physically, Sorcerers and Druids with magic")
+	check(combat.defense_of(1) > 2 * combat.defense_of(3) and combat.defense_of(1, true) < combat.defense_of(3, true),
+		"a Warrior in plate has far more defense, and less magic defense, than a Sorcerer in cloth")
+	var wraith: int = combat.spawn_monster("cinder_wraith", 30, arena + Vector2i(0, 2), 0.0)
+	var wolf: int = combat.spawn_monster("grey_wolf", 30, arena + Vector2i(1, 2), 0.0)
+	check(combat.magic_attacker(wraith) and not combat.magic_attacker(wolf), "wraiths cast; wolves bite")
+	# Entangling roots holds a player in place, then they cannot be held again for a while.
+	world.add_player(4, 0.0, "druid")
+	world.players[4]["level"] = 45
+	_place(world, 4, arena + Vector2i(0, 1))
+	world.players[4]["mana"] = 999999
+	world.players[4]["target"] = 2
+	var rooted: Dictionary = combat.cast(4, "entangling_roots", 10.0)
+	check(rooted["ok"] and world.players[2]["rooted_until"] == 13.0, "Entangling roots strikes and roots a player for 3 s")
+	world.players[2]["next_move"] = 0.0
+	check(world.move(2, Vector2i.DOWN, 11.0)["reason"] == "You are rooted in place" and world.move(2, Vector2i.DOWN, 13.1)["ok"],
+		"a rooted player cannot step until the roots let go")
+	world.players[4]["cooldowns"] = {}
+	world.players[4]["groups"] = {}
+	combat.cast(4, "entangling_roots", 14.0)
+	check(world.players[2]["rooted_until"] == 13.0, "a player is immune to being held again for RESTRAIN_IMMUNITY after it ends")
+	# Crippling arrow halves a pace; bosses shrug both off.
+	world.players[2]["cooldowns"] = {}
+	world.players[2]["groups"] = {}
+	world.players[2]["mana"] = 999999
+	world.players[2]["target"] = wolf
+	_place(world, 2, arena + Vector2i(1, 0))
+	check(combat.cast(2, "crippling_arrow", 30.0)["ok"] and world.monsters[wolf]["slowed_until"] == 34.0,
+		"Crippling arrow slows a monster for 4 s")
+	world.players[1]["next_move"] = 0.0
+	combat.restrain(1, "slow", 4.0, 40.0, [])
+	world.move(1, Vector2i.UP, 40.0)
+	check(is_equal_approx(world.players[1]["next_move"], 40.0 + World.MOVE_SECONDS * World.SLOWED_STEP)
+		and world.export_player(1, 40.0)["duration"] == World.MOVE_SECONDS * World.SLOWED_STEP, "a slowed player steps at half pace")
+	var boss: int = combat.spawn_monster("morvain", 50, arena + Vector2i(3, 3), 0.0)
+	combat.restrain(boss, "root", 3.0, 50.0, [])
+	check(not world.monsters[boss].has("rooted_until"), "bosses cannot be rooted or slowed")
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

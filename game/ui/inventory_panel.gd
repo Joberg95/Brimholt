@@ -27,7 +27,7 @@ const PAPERDOLL: Dictionary = {
 const BACKPACK_COLUMNS: int = 5
 const LOCKED_TOOLTIP: String = "Locked: finish a town hunting task for a bigger pack"
 const STAT_LABELS: Dictionary = {
-	"health": "Health", "mana": "Mana", "attack": "Attack", "defense": "Defense", "critical": "Critical",
+	"health": "Health", "mana": "Mana", "attack": "Attack", "defense": "Defense", "magic_defense": "Magic def.", "critical": "Critical",
 	"regen": "Regen", "healing": "Healing",
 }
 
@@ -206,7 +206,8 @@ func _build_stat_sheet(layer: CanvasLayer) -> void:
 	grid.columns = 2
 	grid.position = Layout.PANEL_ORIGIN + Vector2(0, 364)
 	grid.add_theme_constant_override("h_separation", 16)
-	grid.add_theme_constant_override("v_separation", 0)
+	# Twelve rows must end above the minimap: lines sit a little closer than a label's own height.
+	grid.add_theme_constant_override("v_separation", -2)
 	layer.add_child(grid)
 	for stat: String in ["vocation", "level", "experience", "gold"] + Array(Balance.STATS):
 		var stat_label := Label.new()
@@ -252,7 +253,7 @@ func update_stats() -> void:
 			text = "%d / %d" % [state[stat], stats[stat]]
 		if stat == "critical":
 			text += "%"
-		elif stat == "defense":
+		elif stat in ["defense", "magic_defense"]:
 			text += "  (-%d%%)" % (100 - Balance.damage_taken(100, stats[stat]))
 		elif stat == "regen":
 			text += " / 10 s"

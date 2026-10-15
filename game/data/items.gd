@@ -37,6 +37,14 @@ const CAPE_MANA: float = 0.06
 const CHARM_REGEN: float = 0.02
 const CHARM_HEALING: float = 0.01
 const RING_SHARE: float = 0.03
+## Magic defense of capes, amulets, and books, as shares of their tier's set defense.
+const MAGIC_SHARE: Dictionary = {"cape": 0.15, "necklace": 0.10, "book": 0.10}
+## Critical chance (percent) on Hunters' and Sorcerers' weapons: CRITICAL_WEAPON, plus one more
+## every other tier; rings add CRITICAL_RING. Druids' rods add healing power instead
+## (ROD_HEALING of the reference health).
+const CRITICAL_WEAPON: int = 2
+const CRITICAL_RING: int = 2
+const ROD_HEALING: float = 0.015
 ## Vendor price of equipment: GEAR_PRICE x level^PRICE_EXPONENT (weapons x WEAPON_PRICE),
 ## rounded to 5 gold. Vendors buy unbound equipment back for SELL_SHARE of it.
 const GEAR_PRICE: float = 40.0
@@ -116,8 +124,7 @@ static func load_catalog() -> Dictionary:
 			if item.has("glow") or mythic(item) or item.has("quest"):
 				var bonus: float = float(entry.get("bonus", RELIC_BONUS)) if item.has("glow") \
 					else QUEST_BONUS if item.has("quest") else MYTHIC_BONUS
-				for stat: String in stats:
-					stats[stat] = roundi(stats[stat] * bonus)
+				stats = with_bonus(stats, bonus)
 		item["stats"] = stats
 		catalog[String(entry["id"])] = item
 	return catalog
@@ -126,6 +133,15 @@ static func load_catalog() -> Dictionary:
 static func gear_price(level: int, slot: String) -> int:
 	var price: float = GEAR_PRICE * pow(level, PRICE_EXPONENT) * (WEAPON_PRICE if slot == "main_hand" else 1.0)
 	return maxi(5, 5 * roundi(price / 5.0))
+
+
+## Tier stats raised by a relic, mythic, or quest bonus: at least one point better in every stat,
+## so the bonus shows even on small numbers.
+static func with_bonus(stats: Dictionary, bonus: float) -> Dictionary:
+	var raised: Dictionary = {}
+	for stat: String in stats:
+		raised[stat] = maxi(roundi(stats[stat] * bonus), stats[stat] + 1)
+	return raised
 
 
 ## Rises linearly through the tiers and continues to RELIC_LEVEL.
@@ -154,27 +170,57 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 			var budget: float = Balance.gear_attack_budget_exact(mini(level + WEAPON_LEVEL_OFFSET, Balance.MAX_LEVEL))
 			# Low tiers have budgets of a point or two, so a floor that rises one per tier keeps
 			# every tier an upgrade; from about tier 25 the balance curve dominates.
-			var floor_attack: int = 2 + maxi(0, TIER_LEVELS.find(tier_for(level)))
-			return {"attack": maxi(floor_attack, roundi(budget * Balance.VOCATIONS[vocation]["damage"]))}
-		"helmet":
-			return {"defense": _defense(level, "helmet")}
-		"armor":
-			return {"defense": _defense(level, "armor"), "regen": maxi(1, roundi(reference_health(level) * ARMOR_REGEN))}
-		"legs", "boots":
-			return {"defense": _defense(level, item["slot"])}
+			var tier: int = maxi(0, TIER_LEVELS.find(tier_for(level)))
+			var floor_attack: int = 2 + tier
+			var weapon: Dictionary = {"attack": maxi(floor_attack, roundi(budget * Balance.VOCATIONS[vocation]["damage"]))}
+			if vocation in ["paladin", "sorcerer"]:
+				weapon["critical"] = CRITICAL_WEAPON + (tier + 1) / 2
+			elif vocation == "druid":
+				weapon["healing"] = maxi(1, roundi(reference_health(level) * ROD_HEALING))
+			return weapon
+		"helmet", "armor", "legs", "boots":
+			var piece: Dictionary = _armor(level, item["slot"], item.get("armor", ""))
+			if item["slot"] == "armor":
+				piece["regen"] = maxi(1, roundi(reference_health(level) * ARMOR_REGEN))
+			return piece
 		"off_hand":
 			if item["look"] == "book":
-				return {"defense": _defense(level, "book"), "mana": maxi(5, roundi(reference_mana(level) * BOOK_MANA))}
+				return {"defense": _defense(level, "book"), "magic_defense": _magic(level, "book"),
+					"mana": maxi(5, roundi(reference_mana(level) * BOOK_MANA))}
 			return {"defense": _defense(level, "shield")}
 		"necklace":
-			return {"health": roundi(reference_health(level) * AMULET_HEALTH)}
+			return {"health": roundi(reference_health(level) * AMULET_HEALTH), "magic_defense": _magic(level, "necklace")}
 		"cape":
-			return {"defense": _defense(level, "cape"), "mana": roundi(reference_mana(level) * CAPE_MANA)}
+			return {"magic_defense": _magic(level, "cape"), "mana": roundi(reference_mana(level) * CAPE_MANA)}
 		"charm":
 			return {"regen": roundi(reference_health(level) * CHARM_REGEN), "healing": roundi(reference_health(level) * CHARM_HEALING)}
 		"ring":
-			return {"health": roundi(reference_health(level) * RING_SHARE), "mana": roundi(reference_mana(level) * RING_SHARE)}
+			return {"health": roundi(reference_health(level) * RING_SHARE), "mana": roundi(reference_mana(level) * RING_SHARE),
+				"critical": CRITICAL_RING}
 	return {}
+
+
+## A helmet, armor, legs, or boots piece: its share of the set defense, split into defense and
+## magic defense by its armor type (Balance.ARMOR_TYPES). A piece without a type (a relic that
+## fits everyone) serves every wearer as well as their own type would: the best of each. The
+## total is rounded once and then split, so every tier stays an upgrade on the one below.
+static func _armor(level: int, slot: String, armor: String) -> Dictionary:
+	var kind: Dictionary = Balance.ARMOR_TYPES.get(armor, {})
+	if kind.is_empty():
+		for type: String in Balance.ARMOR_TYPES:
+			for stat: String in Balance.ARMOR_TYPES[type]:
+				kind[stat] = maxf(kind.get(stat, 0.0), Balance.ARMOR_TYPES[type][stat])
+	var share: float = set_defense(level) * DEFENSE_SHARE[slot]
+	var total: int = roundi(share * (kind["defense"] + kind["magic_defense"]))
+	var magic: int = mini(total, roundi(share * kind["magic_defense"]))
+	var piece: Dictionary = {"defense": total - magic}
+	if magic > 0:
+		piece["magic_defense"] = magic
+	return piece
+
+
+static func _magic(level: int, part: String) -> int:
+	return maxi(1, roundi(set_defense(level) * MAGIC_SHARE[part]))
 
 
 ## [name, colour] of an item's quality, or [] for gold. Gear grades by tier (two tiers per

@@ -1190,7 +1190,7 @@ func _check_micro_menu() -> bool:
 	var bar_right: float = game.action_bar._slots[-1].get_global_rect().end.x
 	var placed: bool = menu.buttons.all(func(button: Control) -> bool:
 		return button.position.x > bar_right and button.get_global_rect().end.x <= Layout.VIEW_ORIGIN.x + Layout.VIEW_SIZE.x)
-	if not _expect(window.visible and game.panel_open("character") and joined.contains("Defense") and joined.contains("Cuts damage")
+	if not _expect(window.visible and game.panel_open("character") and joined.contains("Defense") and joined.contains("Cuts physical damage") and joined.contains("Magic defense")
 			and joined.contains("Town rest") and joined.contains("Experience"), "The micro menu does not open a character window with stats explained"):
 		return false
 	if not _expect(placed and menu.buttons[1].tooltip_text.begins_with("Spell book  (B)"),

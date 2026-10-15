@@ -82,6 +82,8 @@ const FURNISHINGS: Dictionary = {
 }
 static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
+## A slowed creature's steps take this many times longer (Combat.restrain).
+const SLOWED_STEP: float = 2.0
 const MAX_PLAYERS: int = 24
 const PORT: int = 1234
 const PROTOCOL: int = 13
@@ -716,7 +718,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 	var state: Dictionary = {
 		"id": id, "cell": player["cell"],
 		"from": player["from"] if remaining > 0.0 else player["cell"],
-		"remaining": remaining, "facing": player["facing"],
+		"remaining": remaining, "duration": player.get("step", MOVE_SECONDS), "facing": player["facing"],
 		"equipment": player["equipment"].duplicate(), "level": player["level"], "vocation": player["vocation"],
 		"health": player["health"], "max_health": player_stats(id)["health"], "skull": player["skull"],
 		"party": player["party"],
@@ -785,6 +787,8 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	var player: Dictionary = players[id]
 	if now < player["next_move"]:
 		return {"ok": false, "reason": "Movement cooldown", "retry": player["next_move"] - now}
+	if now < player.get("rooted_until", -INF):
+		return {"ok": false, "reason": "You are rooted in place", "retry": player["rooted_until"] - now}
 	var destination: Vector2i = player["cell"] + direction
 	# Only the land blocks a player: players and monsters are walked through.
 	if not walkable(destination):
@@ -792,7 +796,8 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	player["from"] = player["cell"]
 	player["cell"] = destination
 	player["facing"] = direction
-	player["next_move"] = now + MOVE_SECONDS
+	player["step"] = MOVE_SECONDS * (SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0)
+	player["next_move"] = now + player["step"]
 	player["gathering"] = {}
 	return {"ok": true, "state": export_player(id, now)}
 

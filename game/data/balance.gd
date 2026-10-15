@@ -50,7 +50,7 @@ const HEAL_FRACTION: float = 0.04
 ## "class" and these names; the ids (knight = Warrior, paladin = Hunter) stay for saves and data.
 const VOCATIONS: Dictionary = {
 	"knight": {"name": "Warrior", "role": "Tank", "health": 1.5, "mana": 0.5, "damage": 0.6,
-		"healing": 0.0, "defense": 20},
+		"healing": 0.0, "defense": 35},
 	"paladin": {"name": "Hunter", "role": "Ranged damage, light healing", "health": 1.0, "mana": 1.0,
 		"damage": 1.0, "healing": 0.1, "defense": 5},
 	"sorcerer": {"name": "Sorcerer", "role": "Burst damage", "health": 0.6, "mana": 1.6, "damage": 1.3,
@@ -62,6 +62,20 @@ const DEFAULT_VOCATION: String = "paladin"
 ## The helmet and armor type each class wears (and only that type): Warriors plate, Hunters
 ## mail, Druids leather, Sorcerers cloth. Items without an "armor" type (relics) fit everyone.
 const ARMOR_OF: Dictionary = {"knight": "plate", "paladin": "mail", "druid": "leather", "sorcerer": "cloth"}
+## Damage comes in two kinds. Physical hits (Warriors' and Hunters' attacks and spells, most
+## monsters) are cut by defense; magic (Sorcerers' and Druids' attacks and spells, rune spells,
+## casting monsters) by magic defense. Each armor type turns a helmet, armor, legs, or boots
+## piece's share of its tier's defense into these two: plate stops blades and arrows but not
+## spells (Sorcerers counter Warriors), cloth the other way round; Warriors' plate makes them
+## hard for Hunters and Druids to wear down. Mail, the reference Hunter's, keeps full defense.
+const ARMOR_TYPES: Dictionary = {
+	"plate": {"defense": 2.2, "magic_defense": 0.0},
+	"mail": {"defense": 0.85, "magic_defense": 0.25},
+	"leather": {"defense": 0.7, "magic_defense": 0.6},
+	"cloth": {"defense": 0.5, "magic_defense": 1.0},
+}
+## Classes whose attacks and spells are magic.
+const MAGIC_VOCATIONS: Array[String] = ["sorcerer", "druid"]
 ## New characters start as Adventurers: no vocation yet. They pass the trial (Quests.TRIAL_TASK)
 ## and, from CHOOSE_LEVEL, pick a vocation at its trainer in Cinder Crossing, for good. Until
 ## then they stop at ADVENTURER_MAX_LEVEL, may use every vocation's tier-1 gear, and only know
@@ -90,7 +104,7 @@ const RANKS: Dictionary = {
 	"champion": {"health": 10.0, "damage": 1.8, "experience": 25.0},
 	"boss": {"health": 0.0, "damage": 2.5, "experience": 100.0},
 }
-const STATS: Array[String] = ["health", "mana", "attack", "defense", "critical", "regen", "healing"]
+const STATS: Array[String] = ["health", "mana", "attack", "defense", "magic_defense", "critical", "regen", "healing"]
 
 
 static func raid_damage(composition: Dictionary) -> float:
@@ -210,7 +224,7 @@ static func base_stats(level: int, vocation: String = DEFAULT_VOCATION) -> Dicti
 		"health": health,
 		"mana": roundi(PLAYER_MANA_LEVEL_1 * _scale(level) * profile["mana"]),
 		"attack": maxi(1, roundi(MOB_HEALTH_LEVEL_1 * _scale(level) / BASE_HITS_PER_KILL * profile["damage"])),
-		"defense": profile["defense"], "critical": BASE_CRITICAL,
+		"defense": profile["defense"], "magic_defense": 0, "critical": BASE_CRITICAL,
 		"regen": maxi(1, roundi(health * REGEN_FRACTION)),
 		"healing": roundi(player_health(level) * HEAL_FRACTION * profile["healing"]),
 	}
@@ -245,4 +259,5 @@ static func signature() -> String:
 		HITS_TO_FALL, MOB_HEALTH_LEVEL_1, PLAYER_HEALTH_LEVEL_1, PLAYER_MANA_LEVEL_1, BASE_CRITICAL,
 		REGEN_FRACTION, HEAL_FRACTION, EARLY_DAMAGE_LEVELS, VOCATIONS, RAID, RAID_FIGHT_SECONDS, ENRAGE_SECONDS,
 		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_EVEN, CHASE_SECONDS_FAST, CHASE_GAP_LEVELS,
-		PVP_DAMAGE, PVP_HEALING, PVP_COMBAT_SECONDS, PVP_DAMPENING_SECONDS, KILL_COINS, KILL_COINS_PER_LEVEL, RANKED_KILL_COINS])
+		PVP_DAMAGE, PVP_HEALING, PVP_COMBAT_SECONDS, PVP_DAMPENING_SECONDS, KILL_COINS, KILL_COINS_PER_LEVEL, RANKED_KILL_COINS,
+		ARMOR_TYPES, MAGIC_VOCATIONS])

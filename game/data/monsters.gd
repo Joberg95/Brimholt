@@ -168,3 +168,6 @@ const AGGRO_RANGE: int = 3
 const CHASE_RANGE: int = 12
 const LEASH: int = 12
 const RESPAWN_SECONDS: float = 45.0
+## Monsters whose attacks are magic (cut by magic defense, not defense): wraiths, the lich, and
+## the Hollow Bloom. Every other monster hits physically (Balance.ARMOR_TYPES).
+const MAGIC_ATTACKERS: Array[String] = ["cinder_wraith", "void_wraith", "barrow_lich", "sylvaine"]

@@ -6,6 +6,9 @@ extends RefCounted
 ## "taunt" (Challenge) turns nearby monsters, bosses included, onto the caster: the tank swap.
 ## "taunt_target" (Provoke) turns one monster, your target, onto the caster from a few tiles away:
 ## pull it off a healer before it reaches them. Monsters keep a target until they lose it.
+## "root" (Entangling roots) and "slow" (Crippling arrow) hit the target and then hold it in
+## place, or halve its pace, for the spell's "seconds" (Combat.restrain); bosses shrug them off,
+## and a player cannot be held again until RESTRAIN_IMMUNITY seconds after it ends.
 
 const Balance = preload("res://game/data/balance.gd")
 ## Each spell is carved as one Elder Futhark rune (its icon in assets/sprites/spells.png, drawn by
@@ -19,6 +22,8 @@ const RUNES: Dictionary = {
 	"tiwaz": ["Tiwaz", "Tyr's spear"], "berkano": ["Berkano", "the birch"], "ehwaz": ["Ehwaz", "the horse"],
 	"mannaz": ["Mannaz", "kinship"], "laguz": ["Laguz", "water"], "ingwaz": ["Ingwaz", "the hearth"],
 	"dagaz": ["Dagaz", "the dawn"], "othala": ["Othala", "the homeland"],
+	# From the Anglo-Saxon row, for spells past the Elder Futhark's twenty-four.
+	"ear": ["Ear", "the earth"], "yr": ["Yr", "the yew bow"],
 }
 const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0}
 ## Spell ranks: a class trainer raises a known spell one rank for rune shards (rank 2 costs
@@ -77,6 +82,10 @@ const SPELLS: Dictionary = {
 		"power": 5.0, "mana": 0.3, "cooldown": 8.0, "group": "healing", "color": Color("#60e070")},
 	"mass_mend": {"rune": "gebo", "name": "Mass mend", "vocations": ["druid"], "level": 1, "kind": "heal_area", "radius": 3,
 		"power": 3.0, "mana": 0.2, "cooldown": 2.0, "group": "healing", "color": Color("#a6f0b0")},
+	"entangling_roots": {"rune": "ear", "name": "Entangling roots", "vocations": ["druid"], "level": 12, "kind": "root", "range": 5,
+		"power": 0.6, "seconds": 3.0, "mana": 0.12, "cooldown": 12.0, "group": "attack", "color": Color("#6ab04a")},
+	"crippling_arrow": {"rune": "yr", "name": "Crippling arrow", "vocations": ["paladin"], "level": 12, "kind": "slow", "range": 6,
+		"power": 1.0, "seconds": 4.0, "mana": 0.1, "cooldown": 10.0, "group": "attack", "color": Color("#c8b070")},
 	"provoke": {"rune": "ansuz", "name": "Provoke", "vocations": ["knight"], "level": 8, "kind": "taunt_target", "range": 4,
 		"power": 0.0, "mana": 0.05, "cooldown": 6.0, "group": "attack", "color": Color("#f08a50")},
 }
@@ -147,6 +156,14 @@ static func info(id: String, stats: Dictionary, level: int, rank: int = 1) -> Di
 			effect = "Turns every monster within %s of you, bosses included, onto you: take a boss off a wounded ally." % area
 		"taunt_target":
 			effect = "Turns your target monster (up to %d tiles away), bosses included, onto you: pull it off a friend." % reach
+		"root":
+			effect = "Strikes your target (up to %d tiles away) for %s× your attack and roots it in place for %s s." % [
+				reach, number(power), number(spell["seconds"])]
+			amount = hit
+		"slow":
+			effect = "Strikes your target (up to %d tiles away) for %s× your attack and halves its pace for %s s." % [
+				reach, number(power), number(spell["seconds"])]
+			amount = hit
 		"heal_self":
 			effect = "Heals you for %d%% of your max health." % roundi(power * 100.0)
 			amount = "Heals about %d" % roundi(float(stats.get("health", 0)) * power)

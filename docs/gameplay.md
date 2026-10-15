@@ -49,9 +49,21 @@ times the spell's power):
 | Class | Spells (unlock level) |
 | --- | --- |
 | Warrior | Brutal blow (1), Provoke (8, turns your target monster onto you from up to 4 tiles), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
-| Hunter | Piercing shot (1), Holy mend (8), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
+| Hunter | Piercing shot (1), Holy mend (8), Crippling arrow (12, halves your target's pace for 4 s), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
 | Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
-| Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
+| Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Entangling roots (12, roots your target in place for 3 s), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
+
+**Roots and slows.** Entangling roots holds its target in place and Crippling arrow halves its
+pace; both also hit it. Bosses shrug them off, and a player who was just held cannot be held
+again until 6 seconds after it ended.
+
+**Armor and the two kinds of damage.** Warriors' and Hunters' attacks and spells, and most
+monsters, hit physically; Sorcerers' and Druids', rune spells, and casting monsters (wraiths,
+the lich, the Hollow Bloom) hit with magic. Defense cuts physical damage and magic defense
+cuts magic. Plate gives Warriors the most defense and no magic defense, cloth gives Sorcerers
+the most magic defense and the least defense; mail and leather sit between. Capes, amulets,
+and spellbooks add magic defense. So a Warrior shrugs off a Hunter's arrows but not a
+Sorcerer's fire ([balance](balance.md#pvp)).
 
 New spells fill empty action-bar slots when you reach their level (or right-click a slot to
 choose one).

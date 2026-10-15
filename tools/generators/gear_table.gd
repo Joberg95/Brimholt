@@ -6,7 +6,7 @@ const World = preload("res://game/core/world.gd")
 const Items = preload("res://game/data/items.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
-const SHORT: Dictionary = {"health": "hp", "mana": "mana", "attack": "atk", "defense": "def", "regen": "regen",
+const SHORT: Dictionary = {"health": "hp", "mana": "mana", "attack": "atk", "defense": "def", "magic_defense": "mdef", "regen": "regen",
 	"healing": "heal", "critical": "crit"}
 
 

@@ -1643,7 +1643,7 @@ func _apply_actor(state: Dictionary, movement: bool = false) -> void:
 	var id: int = state["id"]
 	var remaining: float = state["remaining"]
 	var start: Vector2 = Vector2(state["from"]).lerp(
-		Vector2(state["cell"]), 1.0 - remaining / World.MOVE_SECONDS)
+		Vector2(state["cell"]), 1.0 - clampf(remaining / state.get("duration", World.MOVE_SECONDS), 0.0, 1.0))
 	if actors.has(id) and actors[id]["state"]["cell"] == state["cell"]:
 		start = actors[id]["visual"]
 	if actors.has(id) and state.get("level", 1) > actors[id]["state"].get("level", 1) and _world_view != null:

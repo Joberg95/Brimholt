@@ -48,6 +48,8 @@ const AGGRESSION_SECONDS: float = 900.0
 const UNJUSTIFIED_WINDOW_SECONDS: float = 86400.0
 const RED_SKULL_KILLS: int = 3
 const CRITICAL_MULTIPLIER: float = 1.5
+## After a root or slow on a player ends, that player cannot be held again for this long.
+const RESTRAIN_IMMUNITY: float = 6.0
 const VOCATION_RANGE: Dictionary = {"knight": 1, "paladin": 6, "sorcerer": 5, "druid": 5}
 const MISSILE_COLORS: Dictionary = {"paladin": Color("#e8dcb0"), "sorcerer": Color("#ff9a5a"),
 	"druid": Color("#9ad8ff"), "monster": Color("#c8e070")}
@@ -346,7 +348,7 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	if player["mana"] < cost:
 		return {"ok": false, "reason": "Not enough mana (%d needed)" % cost, "events": []}
 	var target: int = player["target"]
-	var needs_target: bool = definition["kind"] in ["target", "area_target", "taunt_target"]
+	var needs_target: bool = definition["kind"] in ["target", "area_target", "taunt_target", "root", "slow"]
 	if needs_target and (target == 0 or not hostile(id, target)
 			or not in_reach(player["cell"], creature(target)["cell"], definition.get("range", 1))):
 		return {"ok": false, "reason": "You need a target in range", "events": []}
@@ -372,12 +374,19 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 				if distance(world.monsters[monster]["cell"], player["cell"]) <= definition["radius"]:
 					world.monsters[monster]["target"] = id
 			events.append({"kind": "message", "id": id, "text": "You challenge every monster around you."})
+		"root", "slow":
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
+			_hit(id, target, power, now, events)
+			if exists(target):
+				restrain(target, definition["kind"], definition["seconds"], now, events)
 		"taunt_target":
 			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
 			_area(creature(target)["cell"], 0, definition["color"], events)
 			world.monsters[target]["target"] = id
 			events.append({"kind": "monster", "id": target, "movement": false})
-			events.append({"kind": "message", "id": id, "text": "You provoke %s." % describe(target)})
+			var provoked: Dictionary = monster_def(target)
+			events.append({"kind": "message", "id": id, "text": "You provoke %s." % (provoked["name"] if provoked["rank"] == "boss"
+				else "the " + provoked["name"].to_lower())})
 		"heal_self":
 			_heal(id, roundi(limits["health"] * power * rng.randf_range(0.9, 1.1)), events, id, now)
 			_area(player["cell"], 0, definition["color"], events)
@@ -404,8 +413,17 @@ func _enemies_near(id: int, center: Vector2i, radius: int) -> Array[int]:
 
 # ---------------------------------------------------------------- damage and death
 
-func defense_of(id: int) -> int:
-	return world.player_stats(id)["defense"] if id > 0 else 0
+## What cuts a hit on `id`: its defense against physical hits, its magic defense against magic.
+func defense_of(id: int, magic: bool = false) -> int:
+	return world.player_stats(id)["magic_defense" if magic else "defense"] if id > 0 else 0
+
+
+## Whether `attacker`'s attacks and spells are magic: Sorcerers, Druids, and casting monsters
+## (Balance.ARMOR_TYPES, Monsters.MAGIC_ATTACKERS).
+func magic_attacker(attacker: int) -> bool:
+	if attacker > 0:
+		return world.players.has(attacker) and world.players[attacker]["vocation"] in Balance.MAGIC_VOCATIONS
+	return world.monsters.has(attacker) and world.monsters[attacker]["kind"] in Monsters.MAGIC_ATTACKERS
 
 
 func attack_of(id: int) -> float:
@@ -426,7 +444,7 @@ func _hit(attacker: int, target: int, power: float, now: float, events: Array) -
 	var critical: bool = attacker > 0 and rng.randi_range(1, 100) <= world.player_stats(attacker)["critical"]
 	if critical:
 		raw *= CRITICAL_MULTIPLIER
-	var amount: int = maxi(1, Balance.damage_taken(roundi(raw), defense_of(target)))
+	var amount: int = maxi(1, Balance.damage_taken(roundi(raw), defense_of(target, magic_attacker(attacker))))
 	_damage(attacker, target, amount, "critical" if critical else "damage", now, events)
 
 
@@ -1413,8 +1431,27 @@ func _occupancy(now: float) -> Dictionary:
 	return _taken
 
 
+## Roots ("root": no steps) or slows ("slow": World.SLOWED_STEP times slower) a player or monster
+## for `seconds`. Bosses shrug it off; a player who was just held is immune for RESTRAIN_IMMUNITY.
+func restrain(id: int, kind: String, seconds: float, now: float, events: Array) -> void:
+	var held: Dictionary = creature(id)
+	if id < 0 and monster_def(id)["rank"] == "boss":
+		return
+	if id > 0 and now < held.get("restrain_immune_until", -INF):
+		events.append({"kind": "message", "id": id, "text": "You shake off the %s." % ("roots" if kind == "root" else "slowing")})
+		return
+	held["rooted_until" if kind == "root" else "slowed_until"] = now + seconds
+	if id > 0:
+		held["restrain_immune_until"] = now + seconds + RESTRAIN_IMMUNITY
+		events.append({"kind": "message", "id": id, "text": "You are %s for %s s." % [
+			"rooted in place" if kind == "root" else "slowed", Spells.number(seconds)]})
+	events.append({"kind": "player" if id > 0 else "monster", "id": id, "movement": false})
+
+
 func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 	var monster: Dictionary = world.monsters[id]
+	if now < monster.get("rooted_until", -INF):
+		return
 	var home: Vector2i = monster["home"]
 	var taken: Dictionary = _occupancy(now)
 	var own: Dictionary = {monster["cell"]: 1}
@@ -1429,6 +1466,8 @@ func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 	var pace: float = monster["step"]
 	if hunted > 0 and world.players.has(hunted):
 		pace = minf(pace, Balance.chase_seconds(monster["level"], world.players[hunted]["level"]))
+	if now < monster.get("slowed_until", -INF):
+		pace *= World.SLOWED_STEP
 	# Steps happen on ticks; carry the leftover so a steady chase keeps its real pace between ticks.
 	var since: float = now - monster["next_move"]
 	monster["next_move"] = (monster["next_move"] if since >= 0.0 and since < pace else now) + pace
