@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim playtest check \
-	sprites outfits landscape cliffs hunts map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape cliffs hunts camp-density map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -107,6 +107,9 @@ map-force: ## Regenerate the overworld draft, overwriting game/maps/overworld.ts
 
 hunts: ## Place the Hunters' Lodge and level-50 elite hunting camps (keeps existing camps)
 	$(GODOT) --headless --path . --script res://tools/generators/hunts.gd
+
+camp-density: ## One-time pass: hunting camps from level 11 become tight packs of 5-7
+	$(GODOT) --headless --path . --script res://tools/generators/camp_density.gd
 
 cliffs: ## One-time pass: cliffs along the high ground and 30% fewer forest trees (keeps other edits)
 	$(GODOT) --headless --path . --script res://tools/generators/cliffs.gd

@@ -1807,6 +1807,17 @@ func _zone_checks() -> void:
 		var zone: Dictionary = World.zone_at(spawn["cell"])
 		if not zone.is_empty():
 			check(spawn["level"] >= zone["min_level"] and spawn["level"] <= zone["max_level"], "monster level fits its zone")
+	# Hunting camps from level 11 are tight packs of 5-7 (tools/generators/camp_density.gd), and
+	# populate fills every one of them on the first pass.
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		if Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal" and spawn["level"] >= 11:
+			check(spawn["count"] >= 5 and spawn["count"] <= 7 and spawn["radius"] <= 3,
+				"%s camp at %s is a tight pack of 5-7 (%d within %d)" % [spawn["monster"], spawn["cell"], spawn["count"], spawn["radius"]])
+	var filled := Combat.new(World.new(), 5)
+	filled.world.monsters.clear()
+	filled.populate(0.0)
+	check(filled.respawns.size() * 100 < filled.world.monsters.size(),
+		"populate places nearly every camp monster at once (%d waiting, %d placed)" % [filled.respawns.size(), filled.world.monsters.size()])
 	check(World.zone_at(Vector2i(-50, -50)).is_empty(), "outside the map is no zone")
 	check(World.zone_at(World.SPAWNS[0]).get("town", false) and not World.zone_at(World.SPAWNS[0])["pvp"],
 		"Cinder Crossing is a safe town")

@@ -111,6 +111,11 @@ suits each prey (`HUNTS`), on open meadow that can be walked to, away from zones
 the elite rows also keep seven tiles from roads. Existing camps are kept, so running it again
 changes nothing; move them in Godot like any other spawn.
 
+**Camp density**: `tools/generators/camp_density.gd` (`make camp-density`) made every camp of a
+normal monster from level 11 a tight pack of 5-7 within two tiles, so a 25-kill task is two or
+three camp clears. The starter camps stay at 3-4. It ran once (scene metadata `camp_density`);
+set `count` and `radius` on a marker by hand from then on, and the rules check keeps them at 5-7.
+
 **Buildings** are found from the walls: a room of at most 48 tiles in a town zone, enclosed
 by `#` walls and doors (an open tile between two walls in a line). They get a roof, and
 nobody inside can be dealt with from outside. Paint houses at least three tiles wide inside.
