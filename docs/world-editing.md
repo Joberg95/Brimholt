@@ -127,7 +127,14 @@ open in the mud, each crossed both ways by plank walkways. The scene remembers i
 **Reedmere** was rebuilt by `tools/generators/reedmere.gd` (`make reedmere`): its west half,
 once a walled castle compound, is an open quarter of streets around a square with four stone
 houses (slate roofs, `RoofArt.SLATE_TOWN`), the town wall is castle wall, and a west gate opens
-on the main street beside the old south-west one. Edit its `LAYOUT` and run it again.
+on the main street beside the old south-west one. The east quarter keeps its buildings without
+the trees that crowded them, and the waystone stands in an open square beside the bank. Edit its
+`LAYOUT` and run it again.
+
+**Door paths** (`tools/generators/town_paths.gd`, `make town-paths`): every town door gets a
+cobbled path to the nearest street, the shortest walk over open ground (a tree is cut only if
+there is no other way). After adding a house, run it; the rules check fails while a door opens
+onto grass with no street.
 
 **Caves** (Highmoor deep mine, Silkhollow) are grown by `tools/generators/cave_layouts.py`:
 irregular chambers joined by winding two-wide tunnels, the stairs at the north-west end, the

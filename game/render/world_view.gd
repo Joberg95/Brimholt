@@ -56,8 +56,6 @@ const ORE_GLINT: float = 0.35
 const ORE_GLINT_EVERY: float = 2.6
 var _roof_alpha: Dictionary = {}
 var _signs_of: Dictionary = {}
-## Wall torches by building index, like _signs_of.
-var _torches_of: Dictionary = {}
 var _last_draw: float = 0.0
 ## This frame's creatures by cell.
 var _occupants: Dictionary = {}
@@ -123,12 +121,6 @@ func _roofs_in(area: Rect2i, time: float) -> Array:
 			if not _signs_of.has(building):
 				_signs_of[building] = []
 			_signs_of[building].append(sign)
-	if _torches_of.is_empty():
-		for cell: Vector2i in World.TORCHES:
-			var building: int = World.ROOF_AT.get(cell, -1)
-			if not _torches_of.has(building):
-				_torches_of[building] = []
-			_torches_of[building].append(cell)
 	var step: float = clampf(time - _last_draw, 0.0, 0.1) * ROOF_FADE_PER_SECOND
 	_last_draw = time
 	var inside: int = inside_building()
@@ -152,10 +144,6 @@ func _draw_roof(index: int) -> void:
 		SpriteArt.draw_roof(self, index, World.BUILDINGS[index], alpha)
 	for sign: Dictionary in _signs_of.get(index, []):
 		SpriteArt.draw_sign(self, sign)
-	var lit: bool = lighting.darkness > Lighting.TORCH_DARKNESS
-	var time: float = Time.get_ticks_msec() / 1000.0
-	for cell: Vector2i in _torches_of.get(index, []):
-		SpriteArt.draw_torch(self, cell, 1 + (int(time * 7.0) + cell.x * 3 + cell.y) % 3 if lit else 0)
 
 
 func _draw() -> void:

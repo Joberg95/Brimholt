@@ -56,12 +56,13 @@ static func at(clock: float) -> Dictionary:
 
 
 ## The weather where the camera is: none underground, no rain in the desert, and low cloud and
-## drizzle all but always over the fen.
+## drizzle all but always over the fen's open country (not its zones: the Hollow Reach lies in
+## the fen's region but keeps the sky's own weather).
 static func local(clock: float, cell: Vector2i) -> Dictionary:
 	var weather: Dictionary = at(clock)
 	if World.zone_at(cell).get("underground", false):
 		return {"kind": "underground", "cloud": 0.0, "rain": 0.0, "storm": 0.0, "flash": 0.0}
-	if World.region_at(cell) == Biomes.SWAMP_REGION:
+	if World.region_at(cell) == Biomes.SWAMP_REGION and World.zone_at(cell).is_empty():
 		# The fen: low cloud nearly always, and rain more often than not.
 		weather["cloud"] = maxf(weather["cloud"], 0.55)
 		weather["rain"] = maxf(weather["rain"], 0.3)

@@ -46,7 +46,6 @@ filtering:
 | `herbs.png` | 32×32 herb patches for herbalism, two variants per resource band (sunflax, mirereed, silverthistle, nightcotton, starpetal colours), drawn on their tile (`SpriteArt.draw_herb`) |
 | `menu_icons.png` | 8 painted 32×32 micro-menu icons in `MENU_ICONS` order (`make_sprites.py` `menu_icon`): character helm, spell book, professions pick and hammer, quest scroll, lexicon bestiary, world map, party trio under a pennant, controls cog |
 | `title.png` | 400×267 start-screen painting shown at 3× (`make_sprites.py` `title_painting`): a castle on a hill above a lake at dusk, dithered sunset sky with stars and a moon, layered mountains, far-shore pines, and a grassy ledge framed by pines where the start screen draws your character from behind |
-| `torch.png` | 16×24 wall torches: unlit, then three flame frames; hung on the south faces of town buildings (`World.TORCHES`) |
 | `mountains.png` | 48×48 Tibia-style rock blocks for mountains (`L`) and overworld outcrops (`C`), drawn like walls 16 px up and left: 16 columns by open sides (`SpriteArt.rock_mask`), 16 rows that are the parts of one seamless 128×128 rock texture (a tile draws row `x % 4 + (y % 4) * 4`). A lumpy cracked stone top, ragged where it meets open ground, with cliff faces of rock columns (`make_sprites.py` `mountain`) |
 | `ores.png` | 48×48 ore vein overlays for a rock block's south face (`Crafting.ORES`): one column per band (copper, iron, silver, cobalt, starmetal), row 0 plain and row 1 glinting (`ore_vein`) |
 | `house_walls.png` | 64x64 frames drawn 32 px up and left of their tile: house and town walls (`#`) a full tile tall as in Tibia, 16 thin walls by connected sides, then a doorway in a west-east and a north-south wall, a timber-framed plank door ajar in the wall face (`house_door`) |
@@ -233,7 +232,7 @@ The world renders into its own `SubViewport` (`game/ui/game_window.gd`), so ligh
 host's clock (a 40-minute day; sessions start in the morning; clients sync the clock in the
 welcome snapshot), multiplied by a zone's `ambient` colour (the Hollow Reach is a permanent
 violet dusk). Pooled `PointLight2D`s follow players who hold a torch (a wide flickering light; without one a
-player carries no light, so a `dark` dungeon such as Silkhollow is pitch black), NPCs, town wall torches (lit from dusk, flickering), relic wearers, glowing
+player carries no light, so a `dark` dungeon such as Silkhollow is pitch black), NPCs, town lamp posts (lit from dusk), relic wearers, glowing
 bosses and ground relics (coloured), missiles, and spell areas; lights fade in as the light
 fades. `game/render/fx.gd` emits one-shot `CPUParticles2D` bursts for hits, critical hits,
 heals, level-ups, monster deaths, spell areas, and missile impacts (sparks and magic blend

@@ -261,7 +261,7 @@ func _run() -> void:
 		return
 	if not await _check_night_and_particles():
 		return
-	if not await _check_town_torches():
+	if not await _check_town_lamps():
 		return
 	if not await _check_dark_cave():
 		return
@@ -269,7 +269,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town wall torches lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1046,42 +1046,50 @@ func _check_waystone() -> bool:
 	return _expect(World.FERRYMEN["cinder_coach"]["vehicle"] == "waystone" and named, "The Cinder Crossing waystone is not drawn")
 
 
-## Wall torches: unlit by day, a flame and warm light on the wall at night.
-func _check_town_torches() -> bool:
-	var torch: Vector2i = World.TORCHES[0]
-	for cell: Vector2i in World.TORCHES:
-		if Vector2(cell).distance_to(Vector2(World.SPAWNS[0])) < Vector2(torch).distance_to(Vector2(World.SPAWNS[0])):
-			torch = cell
+## Lamp posts: at night the street beside a lamp is lit well above the darkest ground on screen.
+func _check_town_lamps() -> bool:
+	var lamp: Vector2i = World.LAMPS[0]
+	for cell: Vector2i in World.LAMPS:
+		if Vector2(cell).distance_to(Vector2(World.SPAWNS[0])) < Vector2(lamp).distance_to(Vector2(World.SPAWNS[0])):
+			lamp = cell
 	var player: Dictionary = game.world.players[1]
-	var stand: Vector2i = torch + Vector2i.DOWN
+	var stand: Vector2i = lamp + Vector2i.DOWN
 	for offset: Vector2i in [Vector2i(3, 2), Vector2i(-3, 2), Vector2i(2, 3), Vector2i(-2, 3), Vector2i(0, 3), Vector2i(3, 1), Vector2i(-3, 1)]:
-		if World.walkable(torch + offset):
-			stand = torch + offset
+		if World.walkable(lamp + offset):
+			stand = lamp + offset
 			break
 	player["cell"] = stand
 	player["from"] = stand
 	game._publish_actor(1)
-	await create_timer(0.8).timeout
 	var lighting: Node2D = game._world_view.lighting
-	var flame: Vector2i = Vector2i(game.map_to_screen(SpriteArt.torch_foot(torch) - Vector2(0, 17)))
-	var wall: Vector2i = Vector2i(game.map_to_screen(SpriteArt.torch_foot(torch) - Vector2(12, 3)))
-	await create_timer(0.3).timeout
-	await RenderingServer.frame_post_draw
-	var day: Image = screen.get_texture().get_image()
 	lighting.time_override = 0.0
-	await create_timer(0.3).timeout
+	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	var night: Image = screen.get_texture().get_image()
-	night.save_png("res://.tools/visual-torches.png")
+	night.save_png("res://.tools/visual-lamps.png")
 	lighting.time_override = 0.5
-	var lit: Color = night.get_pixelv(flame)
-	var unlit: Color = day.get_pixelv(flame)
-	# Warmth rather than brightness: by day the flame point may land on pale wall stone.
-	if not _expect(lit.r > 0.75 and lit.r > lit.b + 0.3 and lit.r - lit.b > unlit.r - unlit.b + 0.3,
-			"A town wall torch does not burn at night (%s at %s, %s by day)" % [lit, torch, unlit]):
+	# The ground on screen farthest from every lamp and lantern-carrying NPC.
+	var far: Vector2i = lamp
+	var darkest: int = 0
+	var visible_area := Rect2(Vector2(40, 120), Vector2(night.get_size()) - Vector2(80, 240))
+	for dy: int in range(-8, 9):
+		for dx: int in range(-12, 13):
+			var cell: Vector2i = stand + Vector2i(dx, dy)
+			var at: Vector2 = game.map_to_screen((Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE)
+			if not World.terrain(cell) in World.LAND or not visible_area.has_point(at):
+				continue
+			var gap: int = 99
+			for other: Vector2i in World.LAMPS + World.NPC_CELLS.keys():
+				gap = mini(gap, World.chebyshev(other, cell))
+			if gap > darkest:
+				darkest = gap
+				far = cell
+	if not _expect(darkest >= 4, "No dark ground on screen near the lamp at %s" % lamp):
 		return false
-	return _expect(night.get_pixelv(wall).r > night.get_pixelv(wall).b,
-		"A town wall torch does not cast warm light on its wall")
+	var near: Color = night.get_pixelv(Vector2i(game.map_to_screen((Vector2(lamp) + Vector2(1.5, 0.5)) * World.TILE_SIZE)))
+	var dark: Color = night.get_pixelv(Vector2i(game.map_to_screen((Vector2(far) + Vector2(0.5, 0.5)) * World.TILE_SIZE)))
+	return _expect(near.get_luminance() > dark.get_luminance() + 0.08,
+		"A town lamp post does not light the street at night (%s beside %s, %s at %s)" % [near, lamp, dark, far])
 
 
 ## Silkhollow is pitch dark: without a torch you see nothing; a held torch lights three tiles and more.

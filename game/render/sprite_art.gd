@@ -51,8 +51,6 @@ const RUNE_FX: Texture2D = preload("res://assets/sprites/rune_fx.png")
 const RUNE_FX_ELEMENTS: Array[String] = ["fire", "frost", "lightning"]
 const RUNE_FX_FRAMES: int = 4
 const RUNE_FX_SECONDS: float = 0.6
-## Wall torches (World.TORCHES): 16x24 frames, unlit then three flame frames.
-const TORCH: Texture2D = preload("res://assets/sprites/torch.png")
 ## Where a sign's centre hangs from its wall cell's corner, by the direction the door faces:
 ## at mid-height on the visible south or east face (a face point leans one px up-left per px of
 ## height), or standing on the roof edge for a north or west door.
@@ -517,12 +515,6 @@ static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
 
 
 
-## Where a wall torch's bracket meets the south face of its wall cell: the same height up the
-## face for every wall, so a taller house wall puts it further up and left.
-static func torch_foot(cell: Vector2i) -> Vector2:
-	return Vector2(cell) * TILE + Vector2(16, 25) - Vector2.ONE * roundf((wall_raise(cell) - WALL_RAISE) * 0.6)
-
-
 ## One tile of a rune spell `age` seconds after it landed; false once it has played out.
 static func draw_rune_fx(canvas: CanvasItem, cell: Vector2i, element: String, age: float) -> bool:
 	var row: int = RUNE_FX_ELEMENTS.find(element)
@@ -532,12 +524,6 @@ static func draw_rune_fx(canvas: CanvasItem, cell: Vector2i, element: String, ag
 	canvas.draw_texture_rect_region(RUNE_FX, Rect2(Vector2(cell) * TILE - Vector2(0, 6), Vector2.ONE * TILE),
 		Rect2(frame * TILE, row * TILE, TILE, TILE))
 	return true
-
-
-## A wall torch on the south face of its wall cell; frame 0 is unlit, 1-3 flicker.
-static func draw_torch(canvas: CanvasItem, cell: Vector2i, frame: int) -> void:
-	var foot: Vector2 = torch_foot(cell)
-	canvas.draw_texture_rect_region(TORCH, Rect2(foot - Vector2(8, 24), Vector2(16, 24)), Rect2(frame * 16, 0, 16, 24))
 
 
 ## Character sheets have five columns per facing: stand, step A, step B, attack wind-up, and

@@ -19,6 +19,8 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const Instances = preload("res://game/core/instances.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
+const TownPaths = preload("res://tools/generators/town_paths.gd")
+const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Professions = preload("res://game/data/professions.gd")
@@ -3278,6 +3280,7 @@ func _swamp_checks() -> void:
 			break
 	check(dry >= 0.0 and Weather.local(dry, mud[0])["rain"] >= 0.3 and Weather.local(dry, mud[0])["cloud"] >= 0.55,
 		"it drizzles over the fen even when the sky is dry elsewhere")
+	check(Weather.local(dry, EndgameZone.THRONE_SEAT)["rain"] == 0.0, "the fen's drizzle stays out of the Hollow Reach")
 
 func _remove_tree(path: String) -> void:
 	var folder := DirAccess.open(path)
@@ -3458,12 +3461,21 @@ func _building_checks() -> void:
 	for town: String in towns:
 		check(towns[town] >= 2, "%s has at least two buildings" % town)
 	check(World.SIGNS.size() == World.TOWNSFOLK.size(), "every vendor and banker has a sign")
-	var torch_towns: Dictionary = {}
-	for torch: Vector2i in World.TORCHES:
-		check(World.terrain(torch) in World.WALLS and World.ROOF_AT.has(torch)
-			and not World.terrain(torch + Vector2i.DOWN) in World.WALLS, "wall torches hang on the open south face of a town building")
-		torch_towns[World.zone_at(torch + Vector2i.DOWN).get("name", "")] = true
-	check(torch_towns.size() == towns.size(), "every town has wall torches")
+	var stuck: Array[Vector2i] = []
+	for zone: Dictionary in World.ZONES:
+		if not zone["town"]:
+			continue
+		var buildings: Array = World.BUILDINGS.filter(func(building: Dictionary) -> bool:
+			return zone["rect"].grow(1).encloses(building["rect"]))
+		for front: Vector2i in TownPaths.door_fronts(buildings, zone["rect"]):
+			var found: Dictionary = TownPaths.path_to_street(front, World.terrain, zone["rect"], buildings)
+			if not found["ok"] or not found["cells"].is_empty():
+				stuck.append(front)
+	check(stuck.is_empty(), "every town door opens onto a street (tools/generators/town_paths.gd): %s" % [stuck])
+	var lamp_towns: Dictionary = {}
+	for lamp: Vector2i in World.LAMPS:
+		lamp_towns[World.zone_at(lamp).get("name", "")] = true
+	check(lamp_towns.size() == towns.size(), "every town has lamp posts")
 	var used: Dictionary = {}
 	for id: String in World.TOWNSFOLK:
 		var keeper: Dictionary = World.TOWNSFOLK[id]

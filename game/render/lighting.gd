@@ -40,8 +40,8 @@ var weather: Dictionary = {"kind": "clear", "cloud": 0.0, "rain": 0.0, "storm": 
 const MAX_LIGHTS: int = 64
 const WAYSTONE_GLOW: Color = Color("#7fe8f0")
 const TORCH_GLOW: Color = Color(1.0, 0.66, 0.32)
-## Town wall torches burn once the darkness passes this (dusk onward).
-const TORCH_DARKNESS: float = 0.12
+## Town lamp posts burn once the darkness passes this (dusk onward).
+const LAMP_DARKNESS: float = 0.12
 ## How dark the world is this frame, 0 by day to about 1 at night or in a dark zone.
 var darkness: float = 0.0
 var _pool: Array[PointLight2D] = []
@@ -105,11 +105,7 @@ func _process(_delta: float) -> void:
 		for cell: Vector2i in World.NPC_CELLS:
 			if area.has_point(cell) and not World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
 				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness)
-	if darkness > TORCH_DARKNESS:
-		for cell: Vector2i in World.TORCHES:
-			if area.has_point(cell):
-				var flicker: float = 0.9 + 0.1 * sin(time * 9.0 + cell.x * 1.7) * sin(time * 5.3 + cell.y)
-				_light(SpriteArt.torch_foot(cell) - Vector2(0, 5), TORCH_GLOW, 3.2 * flicker, 1.1 * darkness)
+	if darkness > LAMP_DARKNESS:
 		for cell: Vector2i in World.LAMPS:
 			if area.has_point(cell):
 				_light(_centre(Vector2(cell)) - Vector2(0, 30), LANTERN, 3.6, 1.0 * darkness)

@@ -61,10 +61,7 @@ static var ROOM_AT: Dictionary = {}
 ## A sign hangs on the wall beside the door of each vendor's and banker's building:
 ## {cell (that wall), outward (door direction), kind (the keeper's role)}.
 static var SIGNS: Array = []
-## Wall torches on the visible south faces of town buildings, lit at night: wall cells beside
-## each south door (where no sign hangs), or near the corners of a wall without a door.
-static var TORCHES: Array[Vector2i] = []
-## Lamp posts on town streets (World._decorate_streets), lit at night like the torches.
+## Lamp posts on town streets (World._decorate_streets), lit at night.
 static var LAMPS: Array[Vector2i] = []
 ## Shop and bank furniture: cell -> kind (SpriteArt.FURNITURE). It blocks movement like an NPC.
 static var FURNITURE: Dictionary = {}
@@ -306,30 +303,7 @@ static func _find_buildings() -> void:
 				break
 		_furnish(building, keeper)
 	_furnish_homes()
-	_place_torches()
 	_decorate_streets()
-
-
-static func _place_torches() -> void:
-	var signed: Dictionary = {}
-	for sign: Dictionary in SIGNS:
-		signed[sign["cell"]] = true
-	var placed: Dictionary = {}
-	for building: Dictionary in BUILDINGS:
-		var rect: Rect2i = building["rect"]
-		var wanted: Array[Vector2i] = []
-		for door: Vector2i in building["doors"]:
-			if building["outward"][door] == Vector2i.DOWN:
-				wanted.append_array([door + Vector2i.LEFT, door + Vector2i.RIGHT])
-		if wanted.is_empty():
-			var bottom: int = rect.end.y - 1
-			wanted.append_array([Vector2i(rect.position.x + 1, bottom), Vector2i(rect.end.x - 2, bottom)])
-		for cell: Vector2i in wanted:
-			# Only over a street of the same town (a house on a town wall faces the countryside).
-			if terrain(cell) in WALLS and not terrain(cell + Vector2i.DOWN) in WALLS \
-					and zone_at(cell + Vector2i.DOWN).get("town", false) and not signed.has(cell) and not placed.has(cell):
-				placed[cell] = true
-				TORCHES.append(cell)
 
 
 ## Barrels and crates from the dungeon layouts (Dungeons.props), in every copy.
@@ -418,8 +392,6 @@ static func _decorate_streets() -> void:
 		keep[cell] = true
 	for entry: Array in GROUND_ITEMS:
 		keep[entry[0]] = true
-	for cell: Vector2i in TORCHES:
-		keep[cell] = true
 	var free: Callable = func(cell: Vector2i) -> bool:
 		if terrain(cell) != "=" or ROOM_AT.has(cell) or not walkable(cell) or keep.has(cell):
 			return false
@@ -463,9 +435,7 @@ static func _decorate_streets() -> void:
 				var cell := Vector2i(x, y)
 				if not free.call(cell) or _walls_beside(cell) == 0 and terrain(cell + Vector2i.UP) == "=":
 					continue
-				var lonely: bool = LAMPS.all(func(lamp: Vector2i) -> bool: return chebyshev(lamp, cell) >= LAMP_GAP) \
-					and TORCHES.all(func(torch: Vector2i) -> bool: return chebyshev(torch, cell) >= LAMP_GAP / 2)
-				if lonely:
+				if LAMPS.all(func(lamp: Vector2i) -> bool: return chebyshev(lamp, cell) >= LAMP_GAP):
 					FURNITURE[cell] = "lamp_post"
 					LAMPS.append(cell)
 

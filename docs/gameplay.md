@@ -480,7 +480,7 @@ minimap's edge points toward the nearest.
 The sky follows a 40-minute day and night and changing weather: clear, overcast, rain, and
 thunderstorms with lightning, the same for everyone in the session. Weather is only for looks.
 It never rains underground or in the desert, and over Mirewood Fen low cloud and drizzle hang
-whatever the sky does elsewhere. At dusk the torches on the town walls are lit.
+whatever the sky does elsewhere. At dusk the lamp posts along the town streets are lit.
 
 The overworld is 384×384 tiles: walking straight across takes about a minute and three
 quarters. Monster camps are dense (about 1,000 monsters, in packs of three or more), so levelling is close to town.

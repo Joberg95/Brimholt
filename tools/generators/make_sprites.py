@@ -2937,34 +2937,6 @@ SPINE = rgba("d4cca4")
 THORN_WOOD = (rgba("a28c6c"), rgba("7c6852"), rgba("554638"))
 
 
-def wall_torch(frame):
-    """A torch in an iron bracket for town walls, 16x24: frame 0 unlit (charred head), frames 1-3 a
-    flickering flame. The bracket's foot sits at the bottom centre."""
-    image = Image(16, 24)
-    iron, iron_light = rgba("3b3a38"), rgba("5d5c58")
-    image.rect(5, 20, 6, 2, iron)
-    image.rect(6, 19, 4, 1, iron_light)
-    image.rect(7, 12, 2, 8, rgba("6b4a2c"))
-    image.rect(7, 12, 1, 8, rgba("8a6440"))
-    image.rect(6, 11, 4, 2, rgba("3a2a1c"))
-    if frame == 0:
-        image.rect(7, 10, 2, 1, rgba("2a2420"))
-        return image.outlined()
-    sway = (0, -1, 1)[frame - 1]
-    height = (8, 7, 9)[frame - 1]
-    outer, mid, inner = rgba("d0581c"), rgba("f09a2a"), rgba("fff0a0")
-    for y in range(height):
-        row = 11 - y
-        half = max(0, round(2.6 * (1 - y / height) + 0.4))
-        shift = round(sway * y / height)
-        for x in range(8 - half + shift, 8 + half + shift):
-            image.set(x, row, outer)
-        if half > 1:
-            for x in range(8 - half + 1 + shift, 8 + half - 1 + shift):
-                image.set(x, row, mid)
-        if y < height // 2 and half > 1:
-            image.set(8 + shift, row, inner)
-    return image.outlined(rgba("5a2010"))
 
 
 def waystone():
@@ -5010,7 +4982,6 @@ def main():
         "title.png": title_painting(),
         "menu_icons.png": sheet_row([menu_icon(kind) for kind in MENU_ICONS]),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
-        "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
         "house_walls.png": sheet([thin_wall(mask, height=HOUSE_RAISE) for mask in range(16)]
                                   + [house_door(False), house_door(True)], 18, TILE + HOUSE_RAISE),
         "cellar_walls.png": sheet([thin_wall(mask, stone=CELLAR_STONE, height=HOUSE_RAISE) for mask in range(16)], 16,

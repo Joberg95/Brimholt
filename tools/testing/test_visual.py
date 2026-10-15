@@ -38,7 +38,7 @@ CAPTURES = (
     ("visual-ore.png", "A copper vein near Cinder Crossing: orange ore in the mountain's cliff face"),
     ("visual-shop-inside.png", "Inside Ashford's shop: its roof fades away and the merchant shows"),
     ("visual-cellar.png", "Cinder cellar: entered by the town stairway; rats and the Rat King in a private copy"),
-    ("visual-torches.png", "Night in town: wall torches burn beside the doors and light the walls"),
+    ("visual-lamps.png", "Night in town: lamp posts light the streets"),
     ("visual-cave-mouth.png", "Silkhollow's mouth in Thornfield Wilds: a rock ring round the stairway, Trapper Maud beside it"),
     ("visual-cave.png", "Silkhollow without a torch: only an arm's length of lantern light"),
     ("visual-cave-torch.png", "Silkhollow with a torch in the off hand: a wide warm light"),
