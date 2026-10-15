@@ -3841,7 +3841,9 @@ def house_door(vertical):
 FURNITURE_KINDS = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel", "crate",
                    "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth",
                    # Homes (World._furnish_homes): every house without a keeper is lived in.
-                   "bed", "table", "chair", "plant", "chest"]
+                   "bed", "table", "chair", "plant", "chest",
+                   # Streets (World._decorate_streets): lamp posts, a well on each square, benches, stalls.
+                   "lamp_post", "well", "bench", "stall"]
 OAK = (rgba("a07a4c"), rgba("82603a"), rgba("5f4429"), rgba("3f2c1b"))
 IRON = (rgba("8c8e8c"), rgba("5d605f"), rgba("3a3c3c"))
 
@@ -4060,6 +4062,65 @@ def furniture(kind):
             image.rect(x, 25, 1, 21, IRON[0])
         image.rect(14, 34, 5, 5, rgba("c9a24a"))
         image.set(16, 36, OUTLINE)
+    elif kind == "lamp_post":
+        # An iron lamp post on a stone foot, its glass lantern lit (the light comes from lighting.gd).
+        image.rect(12, 41, 9, 5, COBBLE[2])
+        image.rect(12, 41, 9, 1, COBBLE[0])
+        image.rect(15, 10, 3, 32, IRON[1])
+        image.rect(15, 10, 1, 32, IRON[0])
+        image.rect(17, 10, 1, 32, IRON[2])
+        image.rect(11, 3, 11, 2, IRON[2])
+        image.rect(12, 5, 9, 8, IRON[2])
+        image.rect(13, 6, 7, 6, rgba("ffd878"))
+        image.rect(14, 7, 5, 4, rgba("fff2b8"))
+        image.rect(16, 6, 1, 6, IRON[2])
+        image.rect(11, 13, 11, 1, IRON[2])
+        image.rect(15, 1, 3, 2, IRON[1])
+    elif kind == "well":
+        # A round stone well under a little shingled roof with a rope and bucket.
+        stone = (COBBLE[0], COBBLE[1], COBBLE[2])
+        ring = {p for p in ellipse(16, 38, 13, 8) if p[1] >= 33}
+        shade(image, ring | box(3, 33, 27, 6), stone)
+        for x, y in ellipse(16, 33, 11, 4):
+            image.set(x, y, rgba("1a2830") if y >= 32 else rgba("2a3a44"))
+        for x, y in ellipse(16, 33, 13, 5) - ellipse(16, 33, 11, 4):
+            image.set(x, y, stone[0] if x + y < 50 else stone[1])
+        for x in (5, 26):
+            image.rect(x, 12, 2, 23, OAK[2])
+            image.rect(x, 12, 1, 23, OAK[1])
+        for y in range(6, 13):
+            left, right = 3 + (12 - y), 29 - (12 - y)
+            image.rect(left, y, right - left, 1, OAK[0] if y % 2 else OAK[1])
+        image.rect(3, 12, 27, 1, OAK[3])
+        image.rect(16, 13, 1, 12, rgba("c8b890"))
+        image.rect(14, 25, 5, 4, OAK[2])
+        image.rect(14, 25, 5, 1, OAK[1])
+    elif kind == "bench":
+        # A wooden bench: a lit seat on two stone feet.
+        for x in (5, 24):
+            image.rect(x, 36, 4, 10, COBBLE[2])
+            image.rect(x, 36, 4, 1, COBBLE[0])
+        plank_block(image, 2, 30, 29, 7, 4)
+        image.rect(2, 26, 29, 3, OAK[1])
+        image.rect(2, 26, 29, 1, OAK[0])
+        for x in (4, 27):
+            image.rect(x, 28, 2, 3, OAK[2])
+    elif kind == "stall":
+        # A market stall: a striped awning on poles over a counter with fruit and cloth.
+        for x in (2, 29):
+            image.rect(x, 8, 2, 38, OAK[2])
+            image.rect(x, 8, 1, 38, OAK[1])
+        awning = (rgba("c8463a"), rgba("e8dcc0"))
+        for y in range(4, 14):
+            for x in range(1, 32):
+                image.set(x, y, awning[(x // 4) % 2] if y < 12 else scale(awning[(x // 4) % 2], 0.75))
+        for x in range(1, 32, 4):
+            image.set(x + 1, 14, awning[0])
+        plank_block(image, 3, 30, 27, 16, 5)
+        for x, color in ((7, rgba("d84a2a")), (11, rgba("e8b030")), (15, rgba("6aa83a")), (19, rgba("d84a2a"))):
+            shade(image, ellipse(x, 28, 2, 2), (scale(color, 1.2), color, scale(color, 0.7)), False)
+        image.rect(22, 25, 6, 5, rgba("3f62a8"))
+        image.rect(22, 25, 6, 1, rgba("6a8ad0"))
     elif kind == "loom":
         # A weaving loom: posts, beams, and half a striped cloth on the warp.
         for x in (3, 27):

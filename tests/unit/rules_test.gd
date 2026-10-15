@@ -3458,8 +3458,19 @@ func _building_checks() -> void:
 			check("chest" in pieces and World._room_open(building, entrance, entrance),
 				"the home at %s has a bed and a chest and every tile reaches its door" % building["rect"].position)
 	check(homes >= 30, "town houses are lived in (%d homes)" % homes)
+	# Streets: lamps, wells, benches, and stalls never split a town's ways (the same number of
+	# connected areas with them as without).
+	var street: Array[String] = ["lamp_post", "well", "bench", "stall"]
+	check(World.LAMPS.size() >= 40, "town streets have lamp posts (%d)" % World.LAMPS.size())
+	for zone: Dictionary in World.ZONES:
+		if zone["town"]:
+			var with_pieces: int = _town_areas(zone["rect"], street, false)
+			var without: int = _town_areas(zone["rect"], street, true)
+			check(with_pieces == without, "%s's street furniture splits no way (%d areas, %d without it)" % [
+				zone["name"], with_pieces, without])
 	for cell: Vector2i in World.FURNITURE:
-		check((World.ROOM_AT.has(cell) or not World.dungeon_at(cell).is_empty()) and not World.walkable(cell)
+		check((World.ROOM_AT.has(cell) or not World.dungeon_at(cell).is_empty() or World.FURNITURE[cell] in street)
+			and not World.walkable(cell)
 			and SpriteArt.FURNITURE.has(World.FURNITURE[cell]), "furniture stands inside a building (or a dungeon) and blocks")
 	for id: String in World.TOWNSFOLK:
 		var building: Dictionary = World.BUILDINGS[World.ROOM_AT[World.TOWNSFOLK[id]["cell"]]]
@@ -4208,6 +4219,34 @@ func _map_guidance_checks() -> void:
 			cellar = task
 	check(not cellar.is_empty() and World.task_targets(cellar, {"tasks": {cellar: 0}}) == [World.ENTRANCE_OF["cinder_cellar"]],
 		"a cellar task points to the cellar stairway")
+
+
+## Connected areas of walkable town ground in `rect`; with `ignore`, the pieces of those kinds
+## count as walkable.
+func _town_areas(rect: Rect2i, kinds: Array[String], ignore: bool) -> int:
+	var open: Callable = func(cell: Vector2i) -> bool:
+		if not rect.has_point(cell):
+			return false
+		if ignore and World.FURNITURE.get(cell, "") in kinds:
+			return true
+		return World.walkable(cell)
+	var seen: Dictionary = {}
+	var areas: int = 0
+	for y: int in range(rect.position.y, rect.end.y):
+		for x: int in range(rect.position.x, rect.end.x):
+			var start := Vector2i(x, y)
+			if seen.has(start) or not open.call(start):
+				continue
+			areas += 1
+			seen[start] = true
+			var queue: Array[Vector2i] = [start]
+			while not queue.is_empty():
+				var cell: Vector2i = queue.pop_back()
+				for step: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+					if not seen.has(cell + step) and open.call(cell + step):
+						seen[cell + step] = true
+						queue.append(cell + step)
+	return areas
 
 
 func _place(world: World, id: int, cell: Vector2i) -> void:

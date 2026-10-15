@@ -64,6 +64,8 @@ static var SIGNS: Array = []
 ## Wall torches on the visible south faces of town buildings, lit at night: wall cells beside
 ## each south door (where no sign hangs), or near the corners of a wall without a door.
 static var TORCHES: Array[Vector2i] = []
+## Lamp posts on town streets (World._decorate_streets), lit at night like the torches.
+static var LAMPS: Array[Vector2i] = []
 ## Shop and bank furniture: cell -> kind (SpriteArt.FURNITURE). It blocks movement like an NPC.
 static var FURNITURE: Dictionary = {}
 ## Named regions (game/data/regions.gd) on a grid of REGION_BLOCK x REGION_BLOCK tiles (an index
@@ -86,6 +88,12 @@ const FURNISHINGS: Dictionary = {
 const HOME_PIECES: Array[String] = ["bed", "chest", "table", "chair", "plant", "shelf_books", "barrel", "plant"]
 const HOME_TILES: int = 4
 const HOME_MIN: int = 3
+## Street furniture: a lamp post every LAMP_GAP tiles or more along the cobbled streets, and on
+## each town's most open square a well with benches and market stalls around it. Nothing is placed
+## where it could split a street (World._splits) or beside a door.
+const LAMP_GAP: int = 7
+const SQUARE_PIECES: Array = [[Vector2i(0, 0), "well"], [Vector2i(-2, 1), "bench"], [Vector2i(2, 1), "bench"],
+	[Vector2i(-3, -2), "stall"], [Vector2i(3, -2), "stall"], [Vector2i(0, -3), "stall"]]
 static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 ## A slowed creature's steps take this many times longer (Combat.restrain).
@@ -299,6 +307,7 @@ static func _find_buildings() -> void:
 		_furnish(building, keeper)
 	_furnish_homes()
 	_place_torches()
+	_decorate_streets()
 
 
 static func _place_torches() -> void:
@@ -396,6 +405,105 @@ static func _furnish_homes() -> void:
 						table = cell
 					break
 				FURNITURE.erase(cell)
+
+
+## Lamp posts along each town's cobbled streets and a furnished square around a well.
+static func _decorate_streets() -> void:
+	var doors: Dictionary = {}
+	for building: Dictionary in BUILDINGS:
+		for door: Vector2i in building["doors"]:
+			doors[door] = true
+	var keep: Dictionary = {}
+	for cell: Vector2i in SPAWNS:
+		keep[cell] = true
+	for entry: Array in GROUND_ITEMS:
+		keep[entry[0]] = true
+	for cell: Vector2i in TORCHES:
+		keep[cell] = true
+	var free: Callable = func(cell: Vector2i) -> bool:
+		if terrain(cell) != "=" or ROOM_AT.has(cell) or not walkable(cell) or keep.has(cell):
+			return false
+		# Never in or beside a doorway or a gate (an opening in a wall line) or a person.
+		for side: Vector2i in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT, Vector2i(1, 1),
+				Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
+			var near: Vector2i = cell + side
+			if doors.has(near) or NPC_CELLS.has(near) or terrain(near) in ["v", "b"] or Buildings.is_door(terrain, near):
+				return false
+			if side.x * side.y == 0 and _in_gap(near):
+				return false
+		return not _splits(cell)
+	for zone: Dictionary in ZONES:
+		if not zone["town"]:
+			continue
+		var rect: Rect2i = zone["rect"]
+		# The square: the cobbled tile with the most open cobble around it.
+		var best := Vector2i(-1, -1)
+		var best_open: int = 0
+		for y: int in range(rect.position.y + 3, rect.end.y - 3):
+			for x: int in range(rect.position.x + 3, rect.end.x - 3):
+				var cell := Vector2i(x, y)
+				if terrain(cell) != "=" or ROOM_AT.has(cell):
+					continue
+				var open: int = 0
+				for dy: int in range(-3, 4):
+					for dx: int in range(-3, 4):
+						var near: Vector2i = cell + Vector2i(dx, dy)
+						open += 1 if terrain(near) == "=" and walkable(near) and not ROOM_AT.has(near) else 0
+				if open > best_open:
+					best = cell
+					best_open = open
+		if best_open >= 40:
+			for piece: Array in SQUARE_PIECES:
+				var cell: Vector2i = best + piece[0]
+				if free.call(cell):
+					FURNITURE[cell] = piece[1]
+		# Lamps: street tiles beside a wall, a building, or the street's edge, LAMP_GAP apart.
+		for y: int in range(rect.position.y, rect.end.y):
+			for x: int in range(rect.position.x, rect.end.x):
+				var cell := Vector2i(x, y)
+				if not free.call(cell) or _walls_beside(cell) == 0 and terrain(cell + Vector2i.UP) == "=":
+					continue
+				var lonely: bool = LAMPS.all(func(lamp: Vector2i) -> bool: return chebyshev(lamp, cell) >= LAMP_GAP) \
+					and TORCHES.all(func(torch: Vector2i) -> bool: return chebyshev(torch, cell) >= LAMP_GAP / 2)
+				if lonely:
+					FURNITURE[cell] = "lamp_post"
+					LAMPS.append(cell)
+
+
+## Whether blocking `cell` could cut a way: its walkable neighbours (all eight, in a ring) must
+## form a single run, and at least four of them must be walkable.
+static func _splits(cell: Vector2i) -> bool:
+	var ring: Array[Vector2i] = [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1), Vector2i(1, 0), Vector2i(1, 1),
+		Vector2i(0, 1), Vector2i(-1, 1), Vector2i(-1, 0)]
+	var open: Array[bool] = []
+	for step: Vector2i in ring:
+		open.append(walkable(cell + step))
+	var count: int = open.count(true)
+	if count < 4:
+		return true
+	var runs: int = 0
+	for index: int in ring.size():
+		if open[index] and not open[index - 1]:
+			runs += 1
+	# A diagonal-only connection does not count: an open corner needs an open side next to it.
+	for index: int in [0, 2, 4, 6]:
+		if open[index] and not open[index - 1] and not open[(index + 1) % 8]:
+			return true
+	return runs > 1
+
+
+## Whether a cell lies in a narrow opening of a wall line (a gate up to three tiles wide):
+## walls within two steps on both sides along a row or a column.
+static func _in_gap(cell: Vector2i) -> bool:
+	for axis: Vector2i in [Vector2i.RIGHT, Vector2i.DOWN]:
+		var ahead: bool = false
+		var behind: bool = false
+		for step: int in range(1, 3):
+			ahead = ahead or terrain(cell + axis * step) in WALLS
+			behind = behind or terrain(cell - axis * step) in WALLS
+		if ahead and behind:
+			return true
+	return false
 
 
 static func _walls_beside(cell: Vector2i) -> int:

@@ -110,6 +110,9 @@ func _process(_delta: float) -> void:
 			if area.has_point(cell):
 				var flicker: float = 0.9 + 0.1 * sin(time * 9.0 + cell.x * 1.7) * sin(time * 5.3 + cell.y)
 				_light(SpriteArt.torch_foot(cell) - Vector2(0, 5), TORCH_GLOW, 3.2 * flicker, 1.1 * darkness)
+		for cell: Vector2i in World.LAMPS:
+			if area.has_point(cell):
+				_light(_centre(Vector2(cell)) - Vector2(0, 30), LANTERN, 3.6, 1.0 * darkness)
 	# Coloured light from relics, glowing bosses, and waystone runes, faint even by day.
 	var tint: float = maxf(darkness, 0.18)
 	for id: String in World.FERRYMEN:
