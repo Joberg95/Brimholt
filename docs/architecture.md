@@ -83,7 +83,7 @@ tests/
   visual/                Offscreen rendering checks
 tools/
   generators/            make_sprites.py, import_outfits.gd, make_map.gd, endgame_zone.gd, dungeons.gd, desert.gd, towns.gd, balance_table.gd, gear_table.gd
-  testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd
+  testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd, bench.gd
 docs/                    Gameplay, world editing, art, balance, testing, this file
 .tools/                  Ignored: test reports, captures, downloads
 ```
@@ -161,7 +161,7 @@ cannot bind its UDP port or the supplied join address is empty.
 
 ## Performance and memory
 
-The host holds every monster (about 640) and every ground stack, so per-frame and per-tick
+The host holds every monster (about 1,800) and every ground stack, so per-frame and per-tick
 code must not scan them all:
 
 - Rendering asks `main.monsters_in(area)` and `main.ground_in(area)` (chunked
@@ -179,3 +179,21 @@ code must not scan them all:
   path: peer data is dropped on disconnect, monster fight records die with the monster or its
   reset, aggressor entries are pruned when they expire, and ground stacks decay
   (`World.decay_ground`). `make soak` checks that nothing keeps growing.
+- The client slides only the monsters that are still between tiles (`main._moving_monsters`);
+  one standing still costs nothing per frame.
+- Bots take their turns at their own moment in each `Bots.THINK_SECONDS`
+  (`Bots.think_phase`), so twenty raid bots never all think in the same frame.
+
+**Measuring.** `make bench` plays solo offscreen without vsync through three scenes and
+prints the frame time and where it goes (`main.frame_profile`, opt-in per frame section):
+
+| Scene | Before (avg / worst) | After (avg / worst) |
+| --- | --- | --- |
+| Town: you, companions, two rival bands | 4.9 ms / 17.8 ms | 3.5 ms / 8.5 ms |
+| Hunt: your group at an outlaw camp | 4.9 ms / 20.1 ms | 3.5 ms / 12.9 ms |
+| Raid: twenty players at level 50 | 5.9 ms / 31.0 ms | 4.4 ms / 9.3 ms |
+
+The choppiness was spikes, not the average: every bot thought in the same frame (up to 23 ms
+of bot work at once in a raid), and the client re-slid all 1,800 monsters every frame (1.3 ms).
+What is left in the worst frames is path search (`Combat.path_step`, up to 900 cells when a
+goal cannot be reached) and the combat tick every 0.1 s.

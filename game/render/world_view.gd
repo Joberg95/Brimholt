@@ -159,6 +159,7 @@ func _draw_roof(index: int) -> void:
 
 
 func _draw() -> void:
+	var started: int = Time.get_ticks_usec()
 	var time: float = Time.get_ticks_msec() / 1000.0
 	var area: Rect2i = visible_cells()
 	var roofs: Array = _roofs_in(area, time)
@@ -238,6 +239,7 @@ func _draw() -> void:
 		_draw_roof(roofs[next_roof][1])
 		next_roof += 1
 	npc_names = names
+	game._profiled("world draw", started)
 
 
 ## Walls, trees, and NPCs in the area: the static things drawn in depth order with creatures.

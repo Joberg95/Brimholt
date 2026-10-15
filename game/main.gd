@@ -54,6 +54,11 @@ var _known_monsters: Dictionary = {}
 ## Shown to a player when someone else is refused for joining with their identity.
 const DUPLICATE_LOGIN_WARNING: String = "Someone tried to join as your character from another computer and was turned away."
 var _next_interest: float = 0.0
+## Opt-in frame profile (tools/testing/bench.gd): section -> [microseconds, frames, worst]. Off in play.
+var profiling: bool = false
+var frame_profile: Dictionary = {}
+## Monsters whose view is still sliding between tiles; the rest stand still and are skipped.
+var _moving_monsters: Dictionary = {}
 var actors: Dictionary = {}
 ## Client view of monsters, interpolated like actors.
 var monsters: Dictionary = {}
@@ -241,28 +246,30 @@ func _process(delta: float) -> void:
 			elif not world.players.has(id) and not _pending_peers.has(id):
 				if not _closing_peers.has(id):
 					_pending_peers[id] = now
+	var mark: int = Time.get_ticks_usec()
 	if hosting and not _leaving:
 		_handle_events(combat.tick(now))
+		mark = _profiled("combat", mark)
 		_handle_events(bots.tick(now))
+		mark = _profiled("bots", mark)
 		if solo_mode:
 			_handle_events(solo.tick(now))
 		_handle_events(instances.tick(now))
 		_handle_events(crafting.tick(now))
 		_handle_events(world.decay_ground(now))
+		mark = _profiled("other ticks", mark)
 		if now >= _next_interest:
 			_next_interest = now + INTEREST_SECONDS
 			_sync_interest(now)
+		mark = _profiled("interest", mark)
 		if store != null and now >= _next_autosave:
 			_next_autosave = now + CharacterStore.AUTOSAVE_SECONDS
 			save_all()
-	for group: Dictionary in [actors, monsters]:
-		for id: int in group:
-			var actor: Dictionary = group[id]
-			actor["elapsed"] = minf(actor["elapsed"] + delta, actor["duration"])
-			var weight: float = 1.0
-			if actor["duration"] > 0.0:
-				weight = actor["elapsed"] / actor["duration"]
-			actor["visual"] = actor["start"].lerp(Vector2(actor["state"]["cell"]), weight)
+	for id: int in actors:
+		_slide(actors[id], delta)
+	for id: int in _moving_monsters.keys():
+		if not monsters.has(id) or _slide(monsters[id], delta):
+			_moving_monsters.erase(id)
 	var clock: float = Time.get_ticks_msec() / 1000.0
 	effects = effects.filter(func(effect: Dictionary) -> bool: return clock - effect["born"] < 1.1)
 	if connected and self_id != 0 and not typing() and not _controls.visible \
@@ -272,11 +279,13 @@ func _process(delta: float) -> void:
 			direction = _chase_direction()
 		if direction != Vector2i.ZERO:
 			move_local(direction)
+	mark = _profiled("actors and input", mark)
 	_update_labels()
 	inventory.redraw_slots()
 	inventory.refresh_bags()
 	_world_view.position = (VIEW_SIZE / 2.0 - camera_focus() * ZOOM).round()
 	_world_view.queue_redraw()
+	mark = _profiled("labels and inventory", mark)
 	dialogs.refresh()
 	hud.refresh()
 	quest_list.refresh()
@@ -288,6 +297,24 @@ func _process(delta: float) -> void:
 	action_bar.redraw()
 	micro_menu.redraw()
 	maps.redraw()
+	_profiled("windows and maps", mark)
+
+
+## Moves a creature's view along its step; true once it stands on its tile.
+static func _slide(view: Dictionary, delta: float) -> bool:
+	view["elapsed"] = minf(view["elapsed"] + delta, view["duration"])
+	var weight: float = view["elapsed"] / view["duration"] if view["duration"] > 0.0 else 1.0
+	view["visual"] = view["start"].lerp(Vector2(view["state"]["cell"]), weight)
+	return weight >= 1.0
+
+
+## Adds the time since `since` to a profile section (when profiling); returns now.
+func _profiled(section: String, since: int) -> int:
+	var now: int = Time.get_ticks_usec()
+	if profiling:
+		var entry: Array = frame_profile.get(section, [0, 0, 0])
+		frame_profile[section] = [entry[0] + now - since, entry[1] + 1, maxi(entry[2], now - since)]
+	return now
 
 
 func _input_direction() -> Vector2i:
@@ -1423,6 +1450,7 @@ func _apply_monster(state: Dictionary) -> void:
 		start = monsters[id]["visual"]
 	var previous: Dictionary = monsters.get(id, {})
 	monsters[id] = {"state": state.duplicate(true), "start": start, "visual": start, "duration": remaining, "elapsed": 0.0}
+	_moving_monsters[id] = true
 	_monster_index.put(id, state["cell"])
 	_keep_attack(previous, monsters[id])
 

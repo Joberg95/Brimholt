@@ -148,7 +148,7 @@ func add(vocation: String, level: int, stance: String, near: Vector2i, now: floa
 		return {"ok": false, "reason": "The world is full (%d players)" % World.MAX_PLAYERS}
 	var post: Vector2i = free_cell_near(near, now, id)
 	bots[id] = {"vocation": vocation, "level": clampi(level, 1, Balance.MAX_LEVEL), "stance": stance, "post": post,
-		"next_think": now, "last_cell": post, "restore_at": -1.0, "leader": int(extra.get("leader", 0)),
+		"next_think": now + think_phase(id), "last_cell": post, "restore_at": -1.0, "leader": int(extra.get("leader", 0)),
 		"name": String(extra.get("name", "")), "plan": {}, "route": []}
 	world.players[id]["bot"] = true
 	if not bots[id]["name"].is_empty():
@@ -252,7 +252,8 @@ func tick(now: float) -> Array:
 			continue
 		if now < bot["next_think"]:
 			continue
-		bot["next_think"] = now + THINK_SECONDS
+		# Keep each bot's own phase (set when it was added) so their turns stay spread out.
+		bot["next_think"] = maxf(bot["next_think"] + THINK_SECONDS, now)
 		if bot["stance"] == "companion":
 			_keep_pace(id, now, events)
 		elif bot["stance"] == "rival" and player["level"] != bot["level"]:
@@ -263,6 +264,12 @@ func tick(now: float) -> Array:
 		_brains[id][1].update(THINK_SECONDS)
 		bot["last_cell"] = player["cell"]
 	return events
+
+
+## When in each THINK_SECONDS a bot takes its turn, spread by the golden ratio over its id, so a
+## raid's bots do not all think in the same frame.
+static func think_phase(id: int) -> float:
+	return THINK_SECONDS * fposmod(id * 0.6180339887, 1.0)
 
 
 ## Moves into reach of the bot's target along a real path; ranged vocations back off a step
@@ -310,19 +317,20 @@ func choose_target(id: int, now: float) -> int:
 		if wanted != 0 and combat.exists(wanted) and combat.hostile(id, wanted) \
 				and Combat.distance(player["cell"], combat.creature(wanted)["cell"]) <= Combat.TARGET_RANGE:
 			return wanted
+	# An ambushing band leader goes for the players it came for, even off a monster that got in
+	# the way; its members follow its target.
+	if bot["stance"] == "rival" and bot["plan"].get("state", "") == "ambush" and current <= 0:
+		var victim: int = _nearest_player(id, AMBUSH_RADIUS)
+		if victim != 0:
+			return victim
 	if current != 0 and combat.hostile(id, current) \
 			and Combat.distance(player["cell"], combat.creature(current)["cell"]) <= Combat.TARGET_RANGE:
 		return current
 	var defend: int = _defend_group(id, now)
 	if defend != 0 or leader != 0 and leader != id:
 		return defend
-	var ambushing: bool = bot["plan"].get("state", "") == "ambush"
 	if bot["stance"] == "rival":
-		# A band leader looks for players while ambushing, and for prey only at its camp.
-		if ambushing:
-			var victim: int = _nearest_player(id, AMBUSH_RADIUS)
-			if victim != 0:
-				return victim
+		# A band leader looks for prey only at its camp.
 		if bot["plan"].get("state", "") != "hunt":
 			return 0
 	var best: int = 0

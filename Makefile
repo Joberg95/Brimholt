@@ -8,7 +8,7 @@ PORT ?= 1234
 GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
-.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim playtest check \
+.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim bench playtest check \
 	sprites outfits landscape cliffs hunts camp-density map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
@@ -69,6 +69,9 @@ fight-sim: ## Balance a monster: MONSTER=field_vole LEVELS=1,10,20,30,40 COUNT=3
 duel-sim: ## Same-level PvP duels with spells and potions per vocation pair (LEVELS=20,30,45)
 	@$(GODOT) --headless --path . --script res://tools/testing/duel_sim.gd -- --levels=$(or $(LEVELS),20,30,45) 2>&1 \
 		| grep -vE '^Godot Engine|^$$'
+
+bench: ## Frame benchmark: solo town, hunt, and raid offscreen; prints frame times and where they go
+	$(GODOT) --position 99999,99999 --resolution 64x64 --path . --script res://tools/testing/bench.gd 2>&1 | grep BENCH
 
 playtest: ## Two-bot full-game playthrough (about 5 minutes); writes .tools/playtest/report.html
 	$(PYTHON) tools/testing/playtest.py --godot $(GODOT)

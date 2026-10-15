@@ -1207,6 +1207,13 @@ func _solo_checks() -> void:
 	run.call(0.5)
 	check(solo.raid(true, sim_clock[0])["ok"] and combat.party_members(1).size() == Solo.raid_target() and Solo.raid_target() == 20
 		and world.players.size() <= World.MAX_PLAYERS, "a raid gathers twenty")
+	# The raid's bots take their turns spread over THINK_SECONDS, not all in one frame.
+	var turns: Dictionary = {}
+	for id: int in combat.party_members(1):
+		if bots.is_bot(id):
+			var slot: int = floori(Bots.think_phase(id) / Bots.THINK_SECONDS * 10.0)
+			turns[slot] = turns.get(slot, 0) + 1
+	check(turns.size() >= 8 and turns.values().max() <= 4, "a raid's bots think at spread-out moments (%s)" % [turns])
 	var counts: Dictionary = {}
 	for id: int in combat.party_members(1):
 		counts[world.players[id]["vocation"]] = counts.get(world.players[id]["vocation"], 0) + 1
@@ -1220,10 +1227,15 @@ func _solo_checks() -> void:
 		solo.bands[band]["rest_until"] = 0.0  # disbanding a raid gives the bands a rest first
 	_place(world, 1, island)
 	var hunted: bool = false
+	# Whoever strikes first, a rival fighting one of your group in reach is the ambush.
+	var group: Array = [1] + friends
 	for step: int in 50:
 		run.call(0.5)
-		for id: int in [1] + friends:
-			hunted = hunted or not world.players[id]["aggressors"].is_empty()
+		for band: int in solo.bands:
+			for rival_id: int in solo.bands[band]["members"]:
+				if world.players.has(rival_id) and world.players[rival_id]["target"] in group \
+						and Combat.distance(world.players[rival_id]["cell"], me["cell"]) <= Combat.TARGET_RANGE:
+					hunted = true
 	check(hunted, "rivals ambush your group in a PvP zone")
 	# Choosing companions: a slot swaps to another class, and the raid plan follows your party.
 	_place(world, 1, World.SPAWNS[0])
