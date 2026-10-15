@@ -79,7 +79,7 @@ playtest: ## Two-bot full-game playthrough (about 5 minutes); writes .tools/play
 check: import test test-visual soak ## Everything except the long playthrough
 
 # --------------------------------------------------------------------- release
-export-windows: import ## Build build/windows/Brimholt.exe (needs Godot 4.5.1 export templates)
+export-windows: import ## Build build/windows/Brimholt.exe (needs Godot 4.7.2 export templates)
 	@mkdir -p build/windows
 	$(GODOT) --headless --path . --export-release "Windows Desktop" build/windows/Brimholt.exe
 	@cp docs/windows.md build/windows/README.txt
