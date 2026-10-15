@@ -42,8 +42,12 @@ var saw_hunting_weapon: bool = false
 var saw_crafted: bool = false
 var saw_gathered: bool = false
 var finishing: bool = false
-## Persistence: whether the host has seen a character in the world.
+## Persistence: whether the host has seen a character in the world. A restarted host (one that
+## found a save at start: 1, else 0, -1 before its first tick) also waits until it has refused the
+## second login with the same identity, which starts while the returning client plays.
 var had_player: bool = false
+var restarted: int = -1
+var refused_duplicate: bool = false
 
 
 func _initialize() -> void:
@@ -700,8 +704,13 @@ func _dedicated_client_tick(now: float) -> void:
 ## A dedicated host with a save folder: passes once a character has joined, left, and been
 ## written as exactly one signed save.
 func _persist_host_tick() -> void:
+	if restarted < 0:
+		var folder: String = game.store.dir + "/characters"
+		restarted = 1 if DirAccess.dir_exists_absolute(folder) and not DirAccess.get_files_at(folder).is_empty() else 0
 	had_player = had_player or not game.world.players.is_empty()
-	if had_player and game.world.players.is_empty() and multiplayer_peers_gone():
+	# A refused peer sits in _closing_peers until it is disconnected.
+	refused_duplicate = refused_duplicate or not game._closing_peers.is_empty()
+	if had_player and game.world.players.is_empty() and multiplayer_peers_gone() and (restarted == 0 or refused_duplicate):
 		var saves: PackedStringArray = DirAccess.get_files_at(game.store.dir + "/characters")
 		var json: Array = Array(saves).filter(func(file: String) -> bool: return file.ends_with(".json"))
 		if json.size() != 1 or game.store.load_character(String(json[0]).get_basename())["status"] != "ok":
@@ -745,7 +754,9 @@ func _persist_return_tick(now: float) -> void:
 				print("BRIMHOLT_PERSIST_IN")
 				advance()
 		1:
-			if now - stage_since > 2.5:
+			# Stay until the second login with this identity (started on BRIMHOLT_PERSIST_IN) has
+			# been refused: the host warns whoever plays the character.
+			if game.last_action_message == game.DUPLICATE_LOGIN_WARNING and now - stage_since > 0.5:
 				finish()
 
 

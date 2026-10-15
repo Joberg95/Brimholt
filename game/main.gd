@@ -51,6 +51,8 @@ var instances := Instances.new(world, combat)
 const INTEREST_RADIUS: int = 24
 const INTEREST_SECONDS: float = 0.25
 var _known_monsters: Dictionary = {}
+## Shown to a player when someone else is refused for joining with their identity.
+const DUPLICATE_LOGIN_WARNING: String = "Someone tried to join as your character from another computer and was turned away."
 var _next_interest: float = 0.0
 var actors: Dictionary = {}
 ## Client view of monsters, interpolated like actors.
@@ -613,6 +615,10 @@ func _admit(id: int, token: String, vocation: String) -> String:
 		return "Your client sent no valid identity."
 	var account: String = CharacterStore.account(token)
 	if account in _accounts.values():
+		# Tell whoever plays the character: someone else holds their identity token.
+		for holder: int in _accounts:
+			if _accounts[holder] == account:
+				_send_feedback(holder, DUPLICATE_LOGIN_WARNING, 0.0, false)
 		return "That character is already in the world."
 	var saved: Dictionary = {}
 	if store != null:

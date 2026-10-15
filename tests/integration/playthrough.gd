@@ -35,6 +35,13 @@ var last_target: int = 0
 var hunt_spots: Array[Vector2i] = []
 var spot_index: int = 0
 var quiet_since: float = 0.0
+## What the hunt gives up on: monster ids that never took damage (out of reach behind rock or
+## water, or walking home) and ground cells with no path to them. Then the current target's
+## [id, since, health] while it is being worn down.
+var ignored: Dictionary = {}
+var engaged: Array = [0, 0.0, 0]
+## Seconds a target may go without losing health before it counts as out of reach.
+const GIVE_UP_SECONDS: float = 8.0
 var flags: Dictionary = {}
 var partner_last_cell := Vector2i(-1, -1)
 var finished: bool = false
@@ -188,6 +195,8 @@ func nearest_monster(radius: int) -> int:
 	var best: int = 0
 	var best_distance: int = radius + 1
 	for id: int in game.monsters:
+		if ignored.has(id):
+			continue
 		var gap: int = Combat.distance(me()["cell"], game.monsters[id]["state"]["cell"])
 		if gap < best_distance:
 			best = id
@@ -229,8 +238,34 @@ func fight(spell_target: bool = true, radius: int = Combat.TARGET_RANGE) -> void
 		if monster != 0 and throttle(0.3):
 			game.target_local(monster)
 		return
+	if not _making_progress():
+		return
+	# A Warrior hits only what stands beside it: close in on a target that does not come.
+	var target: int = game.own_target()
+	if state["vocation"] == "knight" and game.monsters.has(target):
+		walk_to(game.monsters[target]["state"]["cell"], 1)
 	if spell_target and throttle(0.6):
 		game.cast_local(ATTACK_SPELLS[state["vocation"]])
+
+
+## Whether the locked monster is still losing health; one that has not for GIVE_UP_SECONDS is out
+## of reach (behind rock or water, or walking home), so it is ignored from then on.
+func _making_progress() -> bool:
+	var target: int = game.own_target()
+	if not game.monsters.has(target):
+		return true
+	if ignored.has(target):
+		return false  # already given up; the server has not cleared the target yet
+	var health: int = int(game.monsters[target]["state"].get("health", 0))
+	if engaged[0] != target or health < engaged[2]:
+		engaged = [target, now(), health]
+		return true
+	if now() - engaged[1] < GIVE_UP_SECONDS:
+		return true
+	ignored[target] = true
+	report("info", "gave up on a monster at %s that never took damage (out of reach)" % game.monsters[target]["state"]["cell"])
+	game.target_local(0)
+	return false
 
 
 func track_events() -> void:
@@ -381,8 +416,12 @@ func _hunt() -> void:
 		var top: String = World.kind_of(stack[-1]) if not stack.is_empty() else ""
 		# Gold is worth a detour; materials only when close, so looting does not pull into other spawns.
 		var reach: int = 8 if top == "gold_coins" else (3 if room and World.ITEMS.get(top, {}).has("value") else -1)
-		if Combat.distance(cell, me()["cell"]) <= reach:
-			if walk_to(cell, 1) and throttle(0.3):
+		if Combat.distance(cell, me()["cell"]) <= reach and not ignored.has(cell):
+			var arrived: bool = walk_to(cell, 1)
+			if not arrived and path.is_empty() and Combat.distance(cell, me()["cell"]) > 1:
+				ignored[cell] = true  # no way to it (across water or rock): leave it
+				continue
+			if arrived and throttle(0.3):
 				var gold: int = me()["gold"]
 				game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 				if top == "gold_coins" and not flags.get("loot_reported", false):

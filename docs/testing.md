@@ -159,14 +159,19 @@ monsters only.
 `--persistence` gives a dedicated host a temporary save folder: a druid joins with a fixed
 identity, steps off its spawn, equips its weapon, and leaves; the host process is restarted on
 the same folder; the same identity rejoins asking for a knight and must get its druid back on
-the same tile with the weapon worn, and a third client with that identity is refused.
+the same tile with the weapon worn, and a third client with that identity is refused. The host
+warns the player in the world ("Someone tried to join as your character ..."); the returning client
+stays until it sees that warning, and the restarted host until it has refused the third client, so
+the order holds on slow machines too.
 Integration tests and the visual check never use your real saves or identity: hosts run with
 `--no-save` (or a temporary `--save-dir`) and clients with `--fresh-identity`. Test hosts add
 `--allow-start-vocation` so bots can start with `--vocation=...`; the host-loss scenario
 leaves it out and checks that such a client still arrives as an Adventurer.
 `--host-loss` checks that a host bot reaches the client as a player (and that clients cannot create bots), the exact disconnect error, and
 clearing stale client state. `--occupied-port` checks an explicit hosting error
-and exit status 1 while another socket holds the port.
+and exit status 1 while another socket holds the port. The test holds it on `::` for IPv4 and IPv6
+(exclusively on Windows), because Godot's ENet host binds a dual-stack socket that an IPv4-only
+socket does not block on Windows.
 
 Each peer has a 20-second deadline (32 seconds in the longer dedicated-server scenario); multiplayer scenarios have a 30-second outer
 deadline. The occupied-port check has a 10-second deadline. The harness stops only
@@ -246,7 +251,9 @@ a Warrior and a Sorcerer, that play the game through the same calls as the UI: t
 a party, equip the start kit, walk out of town with pathfinding, hunt the nearest monsters
 with spells and healing (checking that party sharing keeps the Warrior level with the
 Sorcerer), pick up gold and nearby monster materials, finish their fight, walk to the Cinder Crossing waystone and travel through it to Reedmere, walk to its pier
-(routing around monster spawns), and sail to Blackreed Isle. There the Warrior leaves the
+(routing around monster spawns), and sail to Blackreed Isle. While hunting, the Warrior closes
+in on its target, and a target that takes no damage for 8 seconds (out of reach behind rock, water,
+or a town wall) is given up on and ignored, as are ground stacks with no path to them. There the Warrior leaves the
 party and attacks the
 Sorcerer (white skull), the Sorcerer fights back (no skull), and the Warrior kills him
 (unjustified kill), then loots the dropped items while the Sorcerer checks his empty

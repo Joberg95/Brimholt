@@ -27,8 +27,9 @@ def main():
     if args.persistence:
         persistence(args.godot, root)
         return
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.bind(("127.0.0.1", 0))
+    with occupying_socket() if args.occupied_port else socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        if not args.occupied_port:
+            sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
         if args.occupied_port:
             result = subprocess.run(
@@ -124,6 +125,24 @@ def main():
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=3)
+
+
+def occupying_socket():
+    """A UDP socket holding a free port the way another program would, so hosting on it must fail.
+    Godot's ENet host binds an IPv6 dual-stack socket ("::"); on Windows a socket on 127.0.0.1 or
+    0.0.0.0 alone does not stop that bind, so hold "::" for both families, exclusively where the
+    platform supports it, and fall back to IPv4 where IPv6 is unavailable."""
+    try:
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        address = ("::", 0)
+    except OSError:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        address = ("0.0.0.0", 0)
+    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    sock.bind(address)
+    return sock
 
 
 def persistence(godot, root):
