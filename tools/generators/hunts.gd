@@ -11,11 +11,11 @@ const SPAWN_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 ## [monster, region, lowest level, highest level, camps, monsters per camp, wander radius,
 ## optional tiles kept from roads (elites, so travellers are not caught)].
 const HUNTS: Array = [
-	["frostfang_wolf", "Outlaw Ridge", 19, 21, 5, 4, 3],
+	["frostfang_wolf", "Outlaw Ridge", 19, 21, 5, 5, 3],
 	["greymaw", "Golemback Hills", 24, 24, 1, 1, 2],
-	["cyclops", "Smoulder Fells", 29, 31, 5, 3, 3],
-	["cyclops_smith", "Hollow March", 36, 38, 5, 3, 3],
-	["behemoth", "Gloamwood", 43, 45, 5, 2, 3],
+	["cyclops", "Smoulder Fells", 29, 31, 5, 4, 3],
+	["cyclops_smith", "Hollow March", 36, 38, 5, 4, 3],
+	["behemoth", "Gloamwood", 43, 45, 5, 3, 3],
 	["ashmaw_drake", "Emberwaste", 48, 50, 4, 2, 3, 7],
 	["rime_titan", "Hollow March", 48, 50, 4, 2, 3, 7],
 	["barrow_lich", "Mirewood Fen", 48, 50, 4, 2, 3, 7],

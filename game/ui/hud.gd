@@ -106,9 +106,13 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	layer.add_child(target_frame)
 	controls = ControlsMenu.new()
 	controls.visible = false
-	controls.setup(game.keybinds, func() -> void: controls.hide())
-	controls.position = Layout.VIEW_ORIGIN + Vector2(Layout.VIEW_SIZE.x / 2.0 - 190, 40)
+	controls.setup(game.keybinds, func() -> void: controls.hide(), Layout.VIEW_SIZE.y - 140)
 	layer.add_child(controls)
+	var centre: Callable = func() -> void:
+		controls.position = Layout.VIEW_ORIGIN + Vector2((Layout.VIEW_SIZE.x - controls.size.x) / 2.0, 24)
+	controls.resized.connect(centre)
+	controls.fit()
+	centre.call()
 
 
 ## Per frame: the zone banner and the vitals.
@@ -258,5 +262,5 @@ func _update_zone() -> void:
 			rule = "HIGH-RISK PvP: you drop all your gear if you die"
 		zone_label.text = "%s  —  %s  ·  monsters level %d-%d" % [zone_name, rule, zone["min_level"], zone["max_level"]]
 		if zone.get("town", false):
-			zone_label.text = "%s  —  safe town: no PvP, and monsters cannot enter" % zone_name
+			zone_label.text = "%s  —  safe zone" % zone_name
 		zone_label.add_theme_color_override("font_color", Color("#9fe0a0") if zone.get("town", false) else Color("#ff8a7a"))

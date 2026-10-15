@@ -1031,8 +1031,10 @@ func _check_town_torches() -> bool:
 	night.save_png("res://.tools/visual-torches.png")
 	lighting.time_override = 0.5
 	var lit: Color = night.get_pixelv(flame)
-	if not _expect(lit.r > 0.75 and lit.r > lit.b + 0.3 and lit.get_luminance() > day.get_pixelv(flame).get_luminance(),
-			"A town wall torch does not burn at night (%s at %s)" % [lit, torch]):
+	var unlit: Color = day.get_pixelv(flame)
+	# Warmth rather than brightness: by day the flame point may land on pale wall stone.
+	if not _expect(lit.r > 0.75 and lit.r > lit.b + 0.3 and lit.r - lit.b > unlit.r - unlit.b + 0.3,
+			"A town wall torch does not burn at night (%s at %s, %s by day)" % [lit, torch, unlit]):
 		return false
 	return _expect(night.get_pixelv(wall).r > night.get_pixelv(wall).b,
 		"A town wall torch does not cast warm light on its wall")

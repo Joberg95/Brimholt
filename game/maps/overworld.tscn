@@ -733,35 +733,35 @@ position = Vector2(6512, 6288)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 40
-count = 3
+count = 4
 
 [node name="Reedfang2" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6672, 6192)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 42
-count = 3
+count = 4
 
 [node name="BogHulk3" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7024, 6192)
 script = ExtResource("5_xkg0o")
 monster = "bog_hulk"
 level = 45
-count = 3
+count = 4
 
 [node name="MireStalker4" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7024, 6000)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 44
-count = 3
+count = 4
 
 [node name="Reedfang5" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6384, 6544)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 47
-count = 3
+count = 4
 
 [node name="BogHulk6" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6384, 6256)
@@ -780,1958 +780,1958 @@ level = 50
 position = Vector2(784, 2096)
 script = ExtResource("5_xkg0o")
 monster = "field_vole"
-count = 3
+count = 4
 
 [node name="MarshToad9" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 1072)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 3
-count = 3
+count = 4
 
 [node name="MarshToad10" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 624)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 4
-count = 3
+count = 4
 
 [node name="MarshToad11" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 1232)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 4
-count = 3
+count = 4
 
 [node name="FieldVole12" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(912, 2096)
 script = ExtResource("5_xkg0o")
 monster = "field_vole"
-count = 3
+count = 4
 
 [node name="MarshToad13" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 240)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 4
-count = 3
+count = 4
 
 [node name="MarshToad14" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 816)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 4
-count = 3
+count = 4
 
 [node name="MarshToad15" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1072, 1936)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 3
-count = 3
+count = 4
 
 [node name="MarshToad16" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 496)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 4
-count = 3
+count = 4
 
 [node name="MarshToad17" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 368)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 4
-count = 3
+count = 4
 
 [node name="FieldVole18" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1040, 2096)
 script = ExtResource("5_xkg0o")
 monster = "field_vole"
-count = 3
+count = 4
 
 [node name="MarshToad19" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 112)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 4
-count = 3
+count = 4
 
 [node name="MarshToad20" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1072, 2224)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 3
-count = 3
+count = 4
 
 [node name="MarshToad21" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1040, 1776)
 script = ExtResource("5_xkg0o")
 monster = "marsh_toad"
 level = 3
-count = 3
+count = 4
 
 [node name="MireStalker22" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10608, 6512)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="OutlawArcher23" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3632, 5584)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 19
-count = 2
+count = 3
 
 [node name="StoneGolem24" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2384, 8720)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="StoneGolem25" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8944, 3760)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="ThornbackBoar26" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(976, 2992)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 7
-count = 3
+count = 4
 
 [node name="RoadBandit27" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1936, 3440)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 9
-count = 3
+count = 4
 
 [node name="StoneGolem28" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8080, 2992)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="HollowKnight29" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7984, 8464)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="HollowKnight30" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10736, 5392)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="CinderWraith31" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8496, 5872)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="HollowKnight32" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11984, 1328)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="GreyWolf33" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4272, 1424)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 11
-count = 2
+count = 3
 
 [node name="RoadBandit34" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2160, 2928)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 8
-count = 3
+count = 4
 
 [node name="RoadBandit35" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3728, 2128)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 10
-count = 3
+count = 4
 
 [node name="StoneGolem36" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3120, 9456)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="OutlawArcher37" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7216, 656)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 20
-count = 2
+count = 3
 
 [node name="HollowKnight38" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8400, 8272)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="StoneGolem39" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3632, 8688)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="HollowKnight40" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2864, 10960)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="MireStalker41" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11856, 5872)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="StoneGolem42" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4304, 9040)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="MireStalker43" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7152, 11408)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 39
-count = 2
+count = 3
 
 [node name="MireStalker44" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9808, 9424)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 39
-count = 2
+count = 3
 
 [node name="BogLurker45" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(912, 5488)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 15
-count = 2
+count = 3
 
 [node name="ThornbackBoar46" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2000, 2160)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 6
-count = 3
+count = 4
 
 [node name="HollowKnight47" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11440, 1008)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="CinderWraith48" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4080, 9424)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="HollowKnight49" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5200, 10576)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="StoneGolem50" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9104, 784)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="CinderWraith51" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5296, 9008)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="StoneGolem52" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4816, 8656)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="BogLurker53" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5776, 1040)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 15
-count = 2
+count = 3
 
 [node name="BogLurker54" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2896, 5168)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 16
-count = 2
+count = 3
 
 [node name="HollowKnight55" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2384, 11088)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="HollowKnight56" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7792, 9168)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="Reedfang57" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11280, 8400)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 41
-count = 2
+count = 3
 
 [node name="MireStalker58" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4144, 12016)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="Reedfang59" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8656, 11696)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 42
-count = 2
+count = 3
 
 [node name="BogLurker60" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4592, 5136)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 18
-count = 2
+count = 3
 
 [node name="Reedfang61" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11696, 7920)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 41
-count = 2
+count = 3
 
 [node name="StoneGolem62" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(816, 9776)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="HollowKnight63" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1072, 11824)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="ThornbackBoar64" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(944, 1968)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 5
-count = 3
+count = 4
 
 [node name="GreyWolf65" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5136, 336)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="HollowKnight66" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8816, 7312)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="GreyWolf67" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4592, 752)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 12
-count = 2
+count = 3
 
 [node name="StoneGolem68" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2640, 8496)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 25
-count = 2
+count = 3
 
 [node name="CinderWraith69" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8752, 6512)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="BogLurker70" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5840, 2736)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 17
-count = 2
+count = 3
 
 [node name="MireStalker71" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7632, 10896)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 39
-count = 2
+count = 3
 
 [node name="GreyWolf72" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4848, 1168)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="CinderWraith73" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2864, 9872)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="HollowKnight74" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9936, 6672)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="CinderWraith75" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10640, 464)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="BogLurker76" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6416, 2384)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 18
-count = 2
+count = 3
 
 [node name="GreyWolf77" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1744, 4016)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 11
-count = 2
+count = 3
 
 [node name="CinderWraith78" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11184, 560)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="CinderWraith79" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9776, 4624)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="MireStalker80" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10160, 8272)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="BogHulk81" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11824, 8912)
 script = ExtResource("5_xkg0o")
 monster = "bog_hulk"
 level = 43
-count = 2
+count = 3
 
 [node name="MireStalker82" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6384, 11792)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 39
-count = 2
+count = 3
 
 [node name="HollowKnight83" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10800, 4336)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="OutlawArcher84" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1488, 6960)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 20
-count = 2
+count = 3
 
 [node name="GreyWolf85" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 4912)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 14
-count = 2
+count = 3
 
 [node name="StoneGolem86" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6896, 5008)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="OutlawArcher87" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4560, 6832)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 22
-count = 2
+count = 3
 
 [node name="RoadBandit88" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3216, 1072)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 8
-count = 3
+count = 4
 
 [node name="MireStalker89" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(12048, 4368)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="StoneGolem90" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6800, 7408)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="OutlawArcher91" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5328, 5456)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 21
-count = 2
+count = 3
 
 [node name="StoneGolem92" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4432, 8688)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="OutlawArcher93" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(784, 6832)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 19
-count = 2
+count = 3
 
 [node name="StoneGolem94" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3280, 8816)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="CinderWraith95" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9168, 5072)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="MireStalker96" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9136, 9392)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="GreyWolf97" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1968, 4304)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 12
-count = 2
+count = 3
 
 [node name="HollowKnight98" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8848, 8432)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="CinderWraith99" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(784, 10672)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="StoneGolem100" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1520, 9808)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="MireStalker101" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5936, 11024)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="CinderWraith102" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3312, 9776)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="HollowKnight103" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7344, 9808)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="OutlawArcher104" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3792, 7280)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 23
-count = 2
+count = 3
 
 [node name="MireStalker105" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8528, 9904)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="StoneGolem106" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8656, 880)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="ThornbackBoar107" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2384, 2352)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 7
-count = 3
+count = 4
 
 [node name="HollowKnight108" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10320, 6064)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="MireStalker109" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7248, 11088)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="OutlawArcher110" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7504, 944)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 21
-count = 2
+count = 3
 
 [node name="MireStalker111" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(12048, 4912)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="OutlawArcher112" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1488, 7952)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 23
-count = 2
+count = 3
 
 [node name="StoneGolem113" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8272, 4720)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="CinderWraith114" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10064, 3888)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="HollowKnight115" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11824, 2896)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="GreyWolf116" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(720, 5072)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="Reedfang117" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11792, 7344)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 40
-count = 2
+count = 3
 
 [node name="MireStalker118" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7440, 10576)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="GreyWolf119" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2480, 4144)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 12
-count = 2
+count = 3
 
 [node name="StoneGolem120" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3088, 8496)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 25
-count = 2
+count = 3
 
 [node name="MireStalker121" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9904, 8880)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 39
-count = 2
+count = 3
 
 [node name="HollowKnight122" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11664, 720)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="MireStalker123" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6544, 10768)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="OutlawArcher124" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7632, 3280)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 23
-count = 2
+count = 3
 
 [node name="StoneGolem125" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8432, 1680)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="Reedfang126" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11408, 7632)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 40
-count = 2
+count = 3
 
 [node name="CinderWraith127" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7600, 8400)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="CinderWraith128" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9680, 5136)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="StoneGolem129" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1328, 9136)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="StoneGolem130" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9584, 1776)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="HollowKnight131" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4784, 10352)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="BogLurker132" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1968, 5520)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 16
-count = 2
+count = 3
 
 [node name="MireStalker133" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5648, 11664)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="StoneGolem134" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9264, 2160)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="MireStalker135" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7952, 9776)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="CinderWraith136" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4560, 10032)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="Reedfang137" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7888, 12112)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 42
-count = 2
+count = 3
 
 [node name="BogHulk138" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9776, 11888)
 script = ExtResource("5_xkg0o")
 monster = "bog_hulk"
 level = 45
-count = 2
+count = 3
 
 [node name="StoneGolem139" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4432, 8144)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="StoneGolem140" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6064, 7280)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="BogLurker141" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3184, 5648)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 17
-count = 2
+count = 3
 
 [node name="Reedfang142" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9840, 9872)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 41
-count = 2
+count = 3
 
 [node name="GreyWolf143" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2320, 4496)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="MireStalker144" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8784, 9648)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="MireStalker145" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4592, 11504)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="GreyWolf146" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4208, 1040)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 11
-count = 2
+count = 3
 
 [node name="OutlawArcher147" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8016, 1264)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 22
-count = 2
+count = 3
 
 [node name="RoadBandit148" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1648, 2928)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 8
-count = 3
+count = 4
 
 [node name="RoadBandit149" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2928, 2704)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 9
-count = 3
+count = 4
 
 [node name="GreyWolf150" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3024, 3120)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 11
-count = 2
+count = 3
 
 [node name="BogLurker151" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4016, 5488)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 18
-count = 2
+count = 3
 
 [node name="RoadBandit152" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3632, 1712)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 10
-count = 3
+count = 4
 
 [node name="BogLurker153" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2448, 5616)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 16
-count = 2
+count = 3
 
 [node name="Reedfang154" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10928, 9584)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 42
-count = 2
+count = 3
 
 [node name="RoadBandit155" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3344, 1552)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 8
-count = 3
+count = 4
 
 [node name="BogLurker156" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6096, 1360)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 17
-count = 2
+count = 3
 
 [node name="CinderWraith157" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2544, 10032)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="ThornbackBoar158" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2960, 1584)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 7
-count = 3
+count = 4
 
 [node name="ThornbackBoar159" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2192, 944)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 5
-count = 3
+count = 4
 
 [node name="StoneGolem160" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2224, 9584)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="RoadBandit161" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1520, 3760)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 10
-count = 3
+count = 4
 
 [node name="OutlawArcher162" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1840, 7952)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 23
-count = 2
+count = 3
 
 [node name="CinderWraith163" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10576, 1840)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="CinderWraith164" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4240, 9744)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="BogLurker165" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4528, 4048)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 16
-count = 2
+count = 3
 
 [node name="GreyWolf166" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4464, 2736)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="StoneGolem167" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9200, 4080)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="HollowKnight168" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1552, 11856)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="MireStalker169" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3760, 11984)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="StoneGolem170" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3280, 8208)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 25
-count = 2
+count = 3
 
 [node name="CinderWraith171" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8688, 5264)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="Reedfang172" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(12080, 6512)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 40
-count = 2
+count = 3
 
 [node name="HollowKnight173" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7504, 9008)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="HollowKnight174" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5904, 9808)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="CinderWraith175" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4656, 9424)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="CinderWraith176" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3376, 10384)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="HollowKnight177" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11312, 4112)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="BogLurker178" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5328, 1872)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 15
-count = 2
+count = 3
 
 [node name="OutlawArcher179" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7088, 2960)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 21
-count = 2
+count = 3
 
 [node name="StoneGolem180" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1776, 9104)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="StoneGolem181" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8592, 4624)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="Reedfang182" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9648, 10224)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 41
-count = 2
+count = 3
 
 [node name="Reedfang183" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8752, 10544)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 40
-count = 2
+count = 3
 
 [node name="StoneGolem184" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2960, 9168)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="RoadBandit185" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2512, 3184)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 10
-count = 3
+count = 4
 
 [node name="OutlawArcher186" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7056, 976)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 19
-count = 2
+count = 3
 
 [node name="ThornbackBoar187" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2352, 272)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 5
-count = 3
+count = 4
 
 [node name="GreyWolf188" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4080, 3088)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="CinderWraith189" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9744, 2800)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="MireStalker190" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7696, 10224)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="BogLurker191" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5872, 528)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 16
-count = 2
+count = 3
 
 [node name="HollowKnight192" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10800, 3824)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="ThornbackBoar193" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2224, 1424)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 5
-count = 3
+count = 4
 
 [node name="StoneGolem194" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9008, 1392)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="CinderWraith195" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4784, 9744)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="GreyWolf196" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4848, 1904)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="OutlawArcher197" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3472, 7312)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 22
-count = 2
+count = 3
 
 [node name="StoneGolem198" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5488, 7472)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="MireStalker199" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11312, 7056)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 39
-count = 2
+count = 3
 
 [node name="MireStalker200" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9232, 8272)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="Reedfang201" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11376, 8048)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 40
-count = 2
+count = 3
 
 [node name="CinderWraith202" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11120, 1744)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="StoneGolem203" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5520, 7888)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="StoneGolem204" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6512, 7632)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="MireStalker205" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9840, 8432)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="StoneGolem206" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8208, 5552)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="StoneGolem207" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5392, 8336)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="MireStalker208" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6672, 11216)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="ThornbackBoar209" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2544, 1648)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 6
-count = 3
+count = 4
 
 [node name="CinderWraith210" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10128, 464)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="StoneGolem211" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4112, 8176)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="Reedfang212" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10576, 8752)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 40
-count = 2
+count = 3
 
 [node name="OutlawArcher213" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6768, 1776)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 19
-count = 2
+count = 3
 
 [node name="OutlawArcher214" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3536, 6896)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 21
-count = 2
+count = 3
 
 [node name="CinderWraith215" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10672, 3472)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="HollowKnight216" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6032, 10704)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="GreyWolf217" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3088, 4432)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 14
-count = 2
+count = 3
 
 [node name="BogHulk218" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9168, 11760)
 script = ExtResource("5_xkg0o")
 monster = "bog_hulk"
 level = 44
-count = 2
+count = 3
 
 [node name="BogLurker219" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5488, 3120)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 17
-count = 2
+count = 3
 
 [node name="HollowKnight220" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11472, 1328)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 33
-count = 2
+count = 3
 
 [node name="ThornbackBoar221" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2768, 528)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 6
-count = 3
+count = 4
 
 [node name="OutlawArcher222" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7440, 2704)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 22
-count = 2
+count = 3
 
 [node name="MireStalker223" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11184, 6064)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="StoneGolem224" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4848, 7856)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 26
-count = 2
+count = 3
 
 [node name="BogLurker225" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6192, 3024)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 18
-count = 2
+count = 3
 
 [node name="GreyWolf226" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5328, 880)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 14
-count = 2
+count = 3
 
 [node name="CinderWraith227" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3856, 10384)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="HollowKnight228" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11568, 2384)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="OutlawArcher229" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1712, 7536)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 21
-count = 2
+count = 3
 
 [node name="CinderWraith230" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1680, 10288)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="OutlawArcher231" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7824, 976)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 22
-count = 2
+count = 3
 
 [node name="StoneGolem232" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3024, 7952)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="StoneGolem233" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(784, 8496)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="BogLurker234" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6224, 1968)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 17
-count = 2
+count = 3
 
 [node name="OutlawArcher235" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7376, 1712)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 21
-count = 2
+count = 3
 
 [node name="HollowKnight236" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5744, 10256)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="StoneGolem237" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3888, 9072)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 28
-count = 2
+count = 3
 
 [node name="HollowKnight238" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8496, 8656)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="MireStalker239" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11728, 5456)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="BogLurker240" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4752, 4752)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 18
-count = 2
+count = 3
 
 [node name="CinderWraith241" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8304, 6576)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="ThornbackBoar242" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2544, 912)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 5
-count = 3
+count = 4
 
 [node name="GreyWolf243" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3472, 2608)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 11
-count = 2
+count = 3
 
 [node name="MireStalker244" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4208, 11696)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="CinderWraith245" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10928, 2064)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="CinderWraith246" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10704, 1232)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="BogLurker247" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(720, 6352)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 17
-count = 2
+count = 3
 
 [node name="StoneGolem248" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7568, 4432)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="BogLurker249" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5072, 2608)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 15
-count = 2
+count = 3
 
 [node name="StoneGolem250" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4336, 7824)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 25
-count = 2
+count = 3
 
 [node name="Reedfang251" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9232, 10672)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 41
-count = 2
+count = 3
 
 [node name="OutlawArcher252" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(688, 7344)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 21
-count = 2
+count = 3
 
 [node name="GreyWolf253" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4176, 1744)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 11
-count = 2
+count = 3
 
 [node name="HollowKnight254" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9328, 7760)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 35
-count = 2
+count = 3
 
 [node name="CinderWraith255" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7376, 7472)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 30
-count = 2
+count = 3
 
 [node name="MireStalker256" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8176, 10032)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="Reedfang257" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8784, 11184)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 41
-count = 2
+count = 3
 
 [node name="BogLurker258" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3664, 4592)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 15
-count = 2
+count = 3
 
 [node name="Reedfang259" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10576, 9552)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 41
-count = 2
+count = 3
 
 [node name="GreyWolf260" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4656, 2288)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 13
-count = 2
+count = 3
 
 [node name="OutlawArcher261" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1392, 6640)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 19
-count = 2
+count = 3
 
 [node name="StoneGolem262" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7792, 5808)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 27
-count = 2
+count = 3
 
 [node name="CinderWraith263" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7632, 6928)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 29
-count = 2
+count = 3
 
 [node name="MireStalker264" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9456, 8560)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="CinderWraith265" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5488, 9488)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 31
-count = 2
+count = 3
 
 [node name="MireStalker266" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5168, 11888)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="MireStalker267" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8144, 10576)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 39
-count = 2
+count = 3
 
 [node name="OutlawArcher268" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8176, 656)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 23
-count = 2
+count = 3
 
 [node name="MireStalker269" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10128, 7696)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 37
-count = 2
+count = 3
 
 [node name="CinderWraith270" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10192, 4816)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="OutlawArcher271" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7376, 144)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 20
-count = 2
+count = 3
 
 [node name="OutlawArcher272" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(1008, 8144)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 23
-count = 2
+count = 3
 
 [node name="StoneGolem273" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8240, 2416)
 script = ExtResource("5_xkg0o")
 monster = "stone_golem"
 level = 24
-count = 2
+count = 3
 
 [node name="BogLurker274" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2128, 6128)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 17
-count = 2
+count = 3
 
 [node name="MireStalker275" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7024, 10480)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="MireStalker276" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8176, 9264)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 36
-count = 2
+count = 3
 
 [node name="BogLurker277" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(4144, 4624)
 script = ExtResource("5_xkg0o")
 monster = "bog_lurker"
 level = 16
-count = 2
+count = 3
 
 [node name="GreyWolf278" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3792, 3856)
 script = ExtResource("5_xkg0o")
 monster = "grey_wolf"
 level = 14
-count = 2
+count = 3
 
 [node name="RoadBandit279" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(3472, 304)
 script = ExtResource("5_xkg0o")
 monster = "road_bandit"
 level = 8
-count = 3
+count = 4
 
 [node name="HollowKnight280" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8816, 7984)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="MireStalker281" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10480, 8048)
 script = ExtResource("5_xkg0o")
 monster = "mire_stalker"
 level = 38
-count = 2
+count = 3
 
 [node name="ThornbackBoar282" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2960, 848)
 script = ExtResource("5_xkg0o")
 monster = "thornback_boar"
 level = 7
-count = 3
+count = 4
 
 [node name="OutlawArcher283" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(2224, 7056)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 20
-count = 2
+count = 3
 
 [node name="CinderWraith284" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5072, 9904)
 script = ExtResource("5_xkg0o")
 monster = "cinder_wraith"
 level = 32
-count = 2
+count = 3
 
 [node name="Reedfang285" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8272, 11600)
 script = ExtResource("5_xkg0o")
 monster = "reedfang"
 level = 42
-count = 2
+count = 3
 
 [node name="OutlawArcher286" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6864, 4272)
 script = ExtResource("5_xkg0o")
 monster = "outlaw_archer"
 level = 22
-count = 2
+count = 3
 
 [node name="HollowKnight287" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6640, 9808)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 34
-count = 2
+count = 3
 
 [node name="Morvain288" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7216, 6224)
@@ -2759,21 +2759,21 @@ position = Vector2(10448, 10320)
 script = ExtResource("5_xkg0o")
 monster = "void_wraith"
 level = 45
-count = 3
+count = 4
 
 [node name="HollowVoidWraith2" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10480, 11728)
 script = ExtResource("5_xkg0o")
 monster = "void_wraith"
 level = 46
-count = 3
+count = 4
 
 [node name="HollowObsidianGolem3" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10704, 10704)
 script = ExtResource("5_xkg0o")
 monster = "obsidian_golem"
 level = 46
-count = 2
+count = 3
 radius = 2
 
 [node name="HollowObsidianGolem4" type="Marker2D" parent="MonsterSpawns"]
@@ -2781,7 +2781,7 @@ position = Vector2(10704, 11376)
 script = ExtResource("5_xkg0o")
 monster = "obsidian_golem"
 level = 47
-count = 2
+count = 3
 radius = 2
 
 [node name="HollowVoidWraith5" type="Marker2D" parent="MonsterSpawns"]
@@ -2789,7 +2789,7 @@ position = Vector2(10864, 10416)
 script = ExtResource("5_xkg0o")
 monster = "void_wraith"
 level = 47
-count = 3
+count = 4
 radius = 2
 
 [node name="HollowHollowKnight6" type="Marker2D" parent="MonsterSpawns"]
@@ -2797,7 +2797,7 @@ position = Vector2(10864, 11664)
 script = ExtResource("5_xkg0o")
 monster = "hollow_knight"
 level = 47
-count = 2
+count = 3
 radius = 2
 
 [node name="HollowHollowKnight7" type="Marker2D" parent="MonsterSpawns"]
@@ -2844,35 +2844,35 @@ position = Vector2(6960, 304)
 script = ExtResource("5_xkg0o")
 monster = "frostfang_wolf"
 level = 19
-count = 4
+count = 5
 
 [node name="Hunt_frostfang_wolf_2" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5488, 464)
 script = ExtResource("5_xkg0o")
 monster = "frostfang_wolf"
 level = 19
-count = 4
+count = 5
 
 [node name="Hunt_frostfang_wolf_3" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6480, 1040)
 script = ExtResource("5_xkg0o")
 monster = "frostfang_wolf"
 level = 20
-count = 4
+count = 5
 
 [node name="Hunt_frostfang_wolf_4" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7984, 240)
 script = ExtResource("5_xkg0o")
 monster = "frostfang_wolf"
 level = 20
-count = 4
+count = 5
 
 [node name="Hunt_frostfang_wolf_5" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7056, 1424)
 script = ExtResource("5_xkg0o")
 monster = "frostfang_wolf"
 level = 21
-count = 4
+count = 5
 
 [node name="Hunt_greymaw_1" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8784, 1808)
@@ -2886,105 +2886,105 @@ position = Vector2(9872, 1168)
 script = ExtResource("5_xkg0o")
 monster = "cyclops"
 level = 29
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_2" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9744, 688)
 script = ExtResource("5_xkg0o")
 monster = "cyclops"
 level = 29
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_3" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(10384, 1232)
 script = ExtResource("5_xkg0o")
 monster = "cyclops"
 level = 30
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_4" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11728, 1648)
 script = ExtResource("5_xkg0o")
 monster = "cyclops"
 level = 30
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_5" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(9328, 1200)
 script = ExtResource("5_xkg0o")
 monster = "cyclops"
 level = 31
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_smith_1" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11184, 4752)
 script = ExtResource("5_xkg0o")
 monster = "cyclops_smith"
 level = 36
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_smith_2" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(12176, 3376)
 script = ExtResource("5_xkg0o")
 monster = "cyclops_smith"
 level = 36
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_smith_3" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11024, 3440)
 script = ExtResource("5_xkg0o")
 monster = "cyclops_smith"
 level = 37
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_smith_4" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11984, 2000)
 script = ExtResource("5_xkg0o")
 monster = "cyclops_smith"
 level = 37
-count = 3
+count = 4
 
 [node name="Hunt_cyclops_smith_5" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(11376, 2704)
 script = ExtResource("5_xkg0o")
 monster = "cyclops_smith"
 level = 38
-count = 3
+count = 4
 
 [node name="Hunt_behemoth_1" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6736, 11792)
 script = ExtResource("5_xkg0o")
 monster = "behemoth"
 level = 43
-count = 2
+count = 3
 
 [node name="Hunt_behemoth_2" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6416, 10288)
 script = ExtResource("5_xkg0o")
 monster = "behemoth"
 level = 43
-count = 2
+count = 3
 
 [node name="Hunt_behemoth_3" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(7184, 11984)
 script = ExtResource("5_xkg0o")
 monster = "behemoth"
 level = 44
-count = 2
+count = 3
 
 [node name="Hunt_behemoth_4" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(5360, 11280)
 script = ExtResource("5_xkg0o")
 monster = "behemoth"
 level = 44
-count = 2
+count = 3
 
 [node name="Hunt_behemoth_5" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(6480, 12112)
 script = ExtResource("5_xkg0o")
 monster = "behemoth"
 level = 45
-count = 2
+count = 3
 
 [node name="Hunt_ashmaw_drake_1" type="Marker2D" parent="MonsterSpawns"]
 position = Vector2(8912, 8816)

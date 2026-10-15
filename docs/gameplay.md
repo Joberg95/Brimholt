@@ -409,7 +409,7 @@ thunderstorms with lightning, the same for everyone in the session. Weather is o
 It never rains underground or in the desert. At dusk the torches on the town walls are lit.
 
 The overworld is 384×384 tiles: walking straight across takes about a minute and three
-quarters. Monster camps are dense (about 600 monsters), so levelling is close to town.
+quarters. Monster camps are dense (about 1,000 monsters, in packs of three or more), so levelling is close to town.
 **Cinder Crossing**, the starting town, is a castle town: a battlemented curtain wall with towers
 runs round it from the keep (the training hall in the north-west corner, its walls castle stone
 with a tower at each corner) to the harbour, with gatehouses where the roads leave to the north,
