@@ -3614,11 +3614,9 @@ DOOR_WOOD = (rgba("b07a44"), rgba("8f6034"), rgba("6a4424"), rgba("4a2e18"))
 DOOR_FRAME = (rgba("b4b2a6"), rgba("8c8a7e"))
 
 
-def door(vertical):
-    """A building's doorway (an open tile in a "#" wall line): the thin wall's masonry over it, with
-    an arched wooden door in its visible face (the south face of a west-east wall, the east face of
-    a north-south one), standing ajar on a dark room. Drawn on the doorway tile like a wall, so
-    whoever stands in the doorway is drawn over it. Plank brown on grey stone marks every entrance."""
+def inner_door(vertical):
+    """The inside of a north or west doorway (the face the camera sees is the room's side): the
+    thin wall's masonry over the doorway with a small arched door standing ajar, wall height."""
     image = thin_wall(5 if vertical else 10)
     hi = THIN_BAND[1]
     raise_ = WALL - TILE
@@ -3653,6 +3651,141 @@ def door(vertical):
             elif opening(along - 1, height) or opening(along + 1, height) or opening(along, height - 1):
                 image.set(px, py, DOOR_FRAME[0] if opening(along, height - 1) else DOOR_FRAME[1])
     return image
+
+
+# Entrance doors stand upright, like people, trees, and signs: a raised face in the oblique view
+# leans up-left a pixel per pixel of height, so a person-high door built as a wall face would read
+# as a leaning slab. doors.png has DOOR_CELL frames, all placed with the doorway tile at
+# DOOR_ORIGIN in the frame (SpriteArt.draw_door):
+#   0  a south door's porch: a frontispiece of pale ashlar standing in front of the wall, a round
+#      arch as tall as a person with a plank door ajar in it, a slate cornice and small gable, and
+#      a stone step;
+#   1  an east door's leaf, swung open outward and standing upright beside the doorway;
+#   2, 3  the wall-height doors of a west-east and a north-south wall (`inner_door`): north and
+#      west doorways show only their room side, and east doorways keep theirs behind the leaf.
+DOOR_CELL = (48, 64)
+DOOR_ORIGIN = (8, 38)      # where the doorway tile's top-left corner sits in a frame
+PORCH_BASE = 22            # tile row the porch stands on: just south of the wall band (11..20)
+PORCH = (3, 29)            # the frontispiece's span across the tile
+ARCH = (8, 24, 25)         # the opening from, to (across), and the height its round head starts
+CORNICE = 38               # height of the slate cornice over the frontispiece
+COPING = (rgba("6a6e72"), rgba("53575c"), rgba("3c4045"), rgba("2b2e33"))
+
+
+def _arch_inside(u, v):
+    left, right, spring = ARCH
+    middle, radius = (left + right - 1) / 2, (right - left) / 2
+    return left <= u < right and v >= 0 and (v < spring or (u - middle) ** 2 + (v - spring) ** 2 < radius ** 2)
+
+
+def _plank_leaf(image, x0, base, width, height, inside, ajar):
+    """A plank door seen face-on: vertical planks lit from the left, two iron bands, a ring
+    handle, and (with `ajar`) a dark sliver of the room on its right. `inside(u, v)` limits it to
+    the opening; (x0, base) is its bottom-left pixel."""
+    for v in range(height):
+        for u in range(width):
+            if not inside(u, v):
+                continue
+            plank = u % 4
+            color = DOOR_WOOD[(0, 1, 1, 2)[plank]]
+            if u < 2:
+                color = DOOR_WOOD[min(3, (0, 1, 1, 2)[plank] + 1)]  # the jamb's shadow
+            if v in (5, 21) and plank:
+                color = IRON[1]
+            elif v in (5, 21):
+                color = IRON[2]
+            if ajar and u >= width - 3:
+                color = DOOR_DARK
+            elif ajar and u == width - 4:
+                color = DOOR_WOOD[3]
+            if not inside(u, v + 2):
+                color = DOOR_WOOD[3]  # shadow under the arch's head
+            image.set(x0 + u, base - v, color)
+    ring = (x0 + width - 7, base - 13)
+    image.set(*ring, rgba("e0b85a"))
+    image.set(ring[0], ring[1] + 1, rgba("8a6a2a"))
+    image.set(ring[0] + 1, ring[1] + 1, rgba("8a6a2a"))
+
+
+def porch():
+    """A south doorway's porch, upright on the tile in front of the wall (see DOOR_CELL)."""
+    image = Image(*DOOR_CELL)
+    ox, oy = DOOR_ORIGIN
+    base = oy + PORCH_BASE  # pixel row of the porch's ground line
+    left, right, spring = ARCH
+    middle, radius = (left + right - 1) / 2, (right - left) / 2
+    # The step: a worn slab wider than the opening, its lit top and dark front.
+    for u in range(left - 2, right + 2):
+        image.set(ox + u, base + 1, CASTLE_TOP[1] if u % 5 else CASTLE_TOP[2])
+        image.set(ox + u, base + 2, CASTLE_FACE[3])
+        image.set(ox + u, base + 3, CASTLE_LINE)
+    # The frontispiece: ashlar courses, lit on the left, a shaded right return.
+    for v in range(CORNICE):
+        for u in range(PORCH[0], PORCH[1]):
+            if _arch_inside(u, v):
+                continue
+            color = _ashlar(u, v, CASTLE_FACE)
+            if u >= PORCH[1] - 2:
+                color = _ashlar(v, u, CASTLE_SIDE, salt=5)
+            reach = (u - middle) ** 2 + (v - spring) ** 2
+            if v >= spring - 1 and reach < (radius + 3.5) ** 2:
+                # Voussoirs: a ring of wedge stones round the arch, the keystone at its crown.
+                angle = math.atan2(v - spring, u - middle)
+                if abs(angle - math.pi / 2) < 0.17:
+                    color = CASTLE_FACE[0]
+                elif int(angle / math.pi * 9) != int((angle + 0.05) / math.pi * 9):
+                    color = CASTLE_FACE[4]
+                else:
+                    color = CASTLE_FACE[1] if angle > math.pi / 2 else CASTLE_FACE[2]
+            if v < spring and u in (left - 1, right):
+                color = CASTLE_FACE[0] if u == left - 1 else CASTLE_FACE[3]  # the jambs' arrises
+            image.set(ox + u, base - v, color)
+    # The door in the arch, set back: a dark reveal on the left, then the planks.
+    _plank_leaf(image, ox + left, base, right - left, spring + int(radius) + 1,
+                lambda u, v: _arch_inside(u + left, v), True)
+    for v in range(spring + 6):
+        if _arch_inside(left, v):
+            image.set(ox + left, base - v, CASTLE_SIDE[4])
+    # The cornice: a slate drip course overhanging a pixel each side, then a low gable of slates.
+    for u in range(PORCH[0] - 1, PORCH[1] + 1):
+        image.set(ox + u, base - CORNICE, COPING[3])
+        image.set(ox + u, base - CORNICE - 1, COPING[1])
+        image.set(ox + u, base - CORNICE - 2, COPING[0])
+    peak = (PORCH[0] + PORCH[1]) / 2
+    for v in range(3, 10):
+        half = (PORCH[1] - PORCH[0]) / 2 + 1 - (v - 3) * 2.2
+        for u in range(PORCH[0] - 1, PORCH[1] + 1):
+            if abs(u + 0.5 - peak) < half:
+                edge = abs(u + 0.5 - peak) > half - 1.5
+                course = (v + (u // 3) % 2) % 3
+                color = COPING[2] if edge else COPING[0] if course == 0 else COPING[1]
+                if u + 0.5 > peak:
+                    color = COPING[min(3, COPING.index(color) + 1)]  # the gable's shaded right slope
+                image.set(ox + u, base - CORNICE - v, color)
+    return image.outlined(CASTLE_LINE)
+
+
+def swung_leaf():
+    """An east doorway's door swung open outward: upright and face-on beside the doorway, hinged at
+    its south end (see DOOR_CELL)."""
+    image = Image(*DOOR_CELL)
+    ox, oy = DOOR_ORIGIN
+    width, height, base = 13, 31, oy + 27
+    x0 = ox + THIN_BAND[1] + 1
+    _plank_leaf(image, x0, base, width, height, lambda u, v: v < height - 6 or (u - 6) ** 2 + (v - (height - 6)) ** 2 < 42, False)
+    for v in range(height):
+        image.set(x0 - 1, base - v, IRON[2] if v in (5, 21) else DOOR_WOOD[3])  # the hinged edge
+    return image.outlined(OUTLINE)
+
+
+def door_sheet():
+    """doors.png: the frames listed at DOOR_CELL, in one row."""
+    inner = []
+    for vertical in (False, True):
+        frame = Image(*DOOR_CELL)
+        frame.over(inner_door(vertical), DOOR_ORIGIN[0] - (WALL - TILE), DOOR_ORIGIN[1] - (WALL - TILE))
+        inner.append(frame)
+    return sheet_row([porch(), swung_leaf()] + inner)
 
 
 # ---------------------------------------------------------------- furniture
@@ -4466,7 +4599,7 @@ def main():
         "menu_icons.png": sheet_row([menu_icon(kind) for kind in MENU_ICONS]),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
-        "doors.png": sheet_row([door(False), door(True)]),
+        "doors.png": door_sheet(),
         "terrain_palette.png": terrain_palette(),
         "ores.png": sheet([ore_vein(band, glint) for glint in (False, True) for band in range(5)], 5, WALL),
         "castle_walls.png": sheet([castle_block(mask, False) for mask in range(16)], 16, TILE + CASTLE_RAISE + CASTLE_PAD),

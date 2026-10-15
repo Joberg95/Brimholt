@@ -45,7 +45,7 @@ filtering:
 | `torch.png` | 16×24 wall torches: unlit, then three flame frames; hung on the south faces of town buildings (`World.TORCHES`) |
 | `mountains.png` | 48×48 Tibia-style rock blocks for mountains (`L`) and overworld outcrops (`C`), drawn like walls 16 px up and left: 16 columns by open sides (`SpriteArt.rock_mask`), 16 rows that are the parts of one seamless 128×128 rock texture (a tile draws row `x % 4 + (y % 4) * 4`). A lumpy cracked stone top, ragged where it meets open ground, with cliff faces of rock columns (`make_sprites.py` `mountain`) |
 | `ores.png` | 48×48 ore vein overlays for a rock block's south face (`Crafting.ORES`): one column per band (copper, iron, silver, cobalt, starmetal), row 0 plain and row 1 glinting (`ore_vein`) |
-| `doors.png` | 48×48 arched wooden doors standing ajar in a thin wall: a west-east wall's (south face) and a north-south wall's (east face), drawn on doorway tiles (`door`) |
+| `doors.png` | 48×64 frames with the doorway tile's corner at (8, 38) (`SpriteArt.DOOR_ORIGIN`): a south door's upright porch (a pale ashlar frontispiece in front of the wall with a round arch as tall as a person, a plank door ajar, a slate cornice and small gable, and a step; `porch`), an east door's leaf swung open outward (`swung_leaf`), then the wall-height doors of a west-east and a north-south wall seen from the room side of north and west doorways (`inner_door`) |
 | `castle_walls.png`, `castle_towers.png` | Castle walls (`W`): 16 frames by open sides of ashlar blocks with a flagstone walkway and merlons, 54×54 walls raised 16 px and 70×70 towers raised 32 px (every 2×2 of castle wall is a tower, `SpriteArt.tower`), each with 6 px of room for the battlements (`castle_block`) |
 | `crags.png` | 64×64 boulder piles (the old mountain art), kept for reference; nothing draws them now |
 | `objects.png` | 64×96 trees (three living, two dead for the Hollow Reach, then three desert plants: a columnar cactus, a barrel-cactus clump, and a thorn shrub for terrain `K`, then the waystone, a carved standing stone with a cyan rune); trunk base on the tile centre at cell pixel (32, 80) |
@@ -251,7 +251,12 @@ and frame. Items you cannot use yet are tinted red.
 
 **Thin walls and roofs.** Town walls (`#`) are thin: a masonry band through the tile centre,
 joining neighbouring walls and doorways, with the outside ground and the room's floor drawn on
-either side. Obsidian and cave walls stay full-tile blocks. Each building gets a pitched roof
+either side. Obsidian and cave walls stay full-tile blocks. Doors people walk through are drawn
+upright, like characters, because a raised face leans up-left a pixel per pixel of height: a south
+doorway gets a stone porch taller than the wall with a person-high arch, and an east doorway a
+door leaf swung open beside it. Both are drawn after the building's roof, with whoever stands in
+the doorway drawn after them. North and west doorways face away from the camera and show their
+wall-height door from the room side. Each building gets a pitched roof
 (`game/render/roof_art.gd`): eaves on the wall bands, an east-west ridge raised with the walls'
 up-left lean, a near slope shaded from the lit ridge to the eave, a darker sliver of the far
 slope, a timber gable on the east end, a soft shadow under the eave, and a chimney on about

@@ -59,6 +59,11 @@ var _signs_of: Dictionary = {}
 ## Wall torches by building index, like _signs_of.
 var _torches_of: Dictionary = {}
 var _last_draw: float = 0.0
+## Doorways of the cached area -> the direction each faces (Buildings "outward").
+var _door_outward: Dictionary = {}
+## This frame's drawn area and creatures by cell, for porch doorways drawn after their roof.
+var _area: Rect2i = Rect2i()
+var _occupants: Dictionary = {}
 
 
 func _ready() -> void:
@@ -148,6 +153,16 @@ func _draw_roof(index: int) -> void:
 	var alpha: float = _roof_alpha.get(index, 1.0)
 	if alpha > 0.01:
 		SpriteArt.draw_roof(self, index, World.BUILDINGS[index], alpha)
+	# South and east doors stand upright, taller than the wall, so they come after the roof, and
+	# whoever stands in the doorway (and what lies there) after them.
+	for cell: Vector2i in World.BUILDINGS[index]["doors"]:
+		var outward: Vector2i = _door_outward.get(cell, Vector2i.ZERO)
+		if not _area.has_point(cell) or not SpriteArt.porch_door(outward):
+			continue
+		SpriteArt.draw_porch(self, cell, outward)
+		if game.ground_view.has(cell):
+			_draw_stack(cell, game.ground_view[cell])
+		_draw_occupants(cell)
 	for sign: Dictionary in _signs_of.get(index, []):
 		SpriteArt.draw_sign(self, sign)
 	var lit: bool = lighting.darkness > Lighting.TORCH_DARKNESS
@@ -192,6 +207,8 @@ func _draw() -> void:
 		if not _tall.has(cell) and not occupants.has(cell):
 			keys.append(cell.y * width + cell.x)
 	keys.sort()
+	_area = area
+	_occupants = occupants
 	var names: Array = []
 	for key: int in keys:
 		var cell := Vector2i(key % width, key / width)
@@ -207,7 +224,9 @@ func _draw() -> void:
 				SpriteArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
 			continue
 		if tile == "door":
-			SpriteArt.draw_door(self, cell)
+			SpriteArt.draw_door(self, cell, _door_outward.get(cell, Vector2i.ZERO))
+			if SpriteArt.porch_door(_door_outward.get(cell, Vector2i.ZERO)):
+				continue  # drawn with its porch, after the roof (_draw_roof)
 		if game.ground_view.has(cell):
 			_draw_stack(cell, game.ground_view[cell])
 		if tile == "furniture":
@@ -228,11 +247,7 @@ func _draw() -> void:
 			SpriteArt.draw_actor(self, center, {"id": 0, "facing": npc["facing"], "equipment": look[0]}, false, 0.0, look[1])
 			if not covered(cell):
 				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME, World.NPC_CELLS[cell]])
-		for id: int in occupants.get(cell, []):
-			if id > 0:
-				_draw_actor(id)
-			else:
-				_draw_monster(id)
+		_draw_occupants(cell)
 		if tile in World.TREES and not tile.is_empty():
 			SpriteArt.draw_tree(self, cell)
 	while next_roof < roofs.size():
@@ -251,11 +266,13 @@ func _cache_tall(area: Rect2i) -> void:
 			var tile: String = row[x]
 			if tile in World.WALLS or tile in World.TREES:
 				_tall[Vector2i(x, y)] = tile
+	_door_outward.clear()
 	for building: Dictionary in World.BUILDINGS:
 		if building["rect"].intersects(area):
 			for cell: Vector2i in building["doors"]:
 				if area.has_point(cell):
 					_tall[cell] = "door"
+					_door_outward[cell] = building["outward"].get(cell, Vector2i.ZERO)
 	for cell: Vector2i in World.NPC_CELLS:
 		if area.has_point(cell):
 			_tall[cell] = "npc"
@@ -276,6 +293,15 @@ func _draw_stack(cell: Vector2i, stack: Array) -> void:
 	var shown: int = World.count_of(top) if World.count_of(top) > 1 else stack.size()
 	if shown > 1:
 		SpriteArt.draw_count(self, center + Vector2(15, 14), shown)
+
+
+## The players and monsters standing on a cell this frame.
+func _draw_occupants(cell: Vector2i) -> void:
+	for id: int in _occupants.get(cell, []):
+		if id > 0:
+			_draw_actor(id)
+		else:
+			_draw_monster(id)
 
 
 func _draw_actor(id: int) -> void:

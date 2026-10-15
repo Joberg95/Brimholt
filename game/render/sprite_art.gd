@@ -38,9 +38,14 @@ static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
 const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan"]
-## Building doorways (World.BUILDINGS doors): 48x48 frames like walls, a west-east wall's door
-## (its south face) and a north-south wall's door (its east face).
+## Building doorways (World.BUILDINGS doors): DOOR_CELL frames with the doorway tile's corner at
+## DOOR_ORIGIN. Doors people walk through stand upright like them (a raised wall face would lean):
+## a south door's porch (frame 0) and an east door's leaf swung open outward (frame 1), both drawn
+## after the roof (draw_porch). North and west doorways show only their room side: the wall-height
+## door of a west-east (frame 2) or north-south (frame 3) wall, drawn like a wall (draw_door).
 const DOORS: Texture2D = preload("res://assets/sprites/doors.png")
+const DOOR_CELL: Vector2 = Vector2(48, 64)
+const DOOR_ORIGIN: Vector2 = Vector2(8, 38)
 ## Wall torches (World.TORCHES): 16x24 frames, unlit then three flame frames.
 const TORCH: Texture2D = preload("res://assets/sprites/torch.png")
 ## Where a sign's centre hangs from its wall cell's corner, by the direction the door faces:
@@ -421,11 +426,28 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 	canvas.draw_texture_rect_region(WALLS, dest, wall_region(cell))
 
 
-## A doorway's arched wooden door in its wall line, drawn raised like a wall on the doorway tile.
-static func draw_door(canvas: CanvasItem, cell: Vector2i) -> void:
+## Whether a doorway facing `outward` has an upright porch or leaf, drawn after its roof.
+static func porch_door(outward: Vector2i) -> bool:
+	return outward == Vector2i.DOWN or outward == Vector2i.RIGHT
+
+
+## A doorway's wall-height door in its wall line, drawn raised like a wall on the doorway tile in
+## depth order (nothing for a south door, whose porch replaces it).
+static func draw_door(canvas: CanvasItem, cell: Vector2i, outward: Vector2i) -> void:
+	if outward == Vector2i.DOWN:
+		return
 	var vertical: bool = tile_at(cell + Vector2i.UP) in World.WALLS and not tile_at(cell + Vector2i.UP).is_empty()
-	var dest: Rect2 = Rect2(Vector2(cell) * TILE - Vector2.ONE * WALL_RAISE, Vector2.ONE * WALL_SIZE)
-	canvas.draw_texture_rect_region(DOORS, dest, Rect2((1 if vertical else 0) * WALL_SIZE, 0, WALL_SIZE, WALL_SIZE))
+	_draw_door_frame(canvas, cell, 3 if vertical else 2)
+
+
+## A south door's porch or an east door's open leaf, standing upright (drawn after the roof).
+static func draw_porch(canvas: CanvasItem, cell: Vector2i, outward: Vector2i) -> void:
+	_draw_door_frame(canvas, cell, 0 if outward == Vector2i.DOWN else 1)
+
+
+static func _draw_door_frame(canvas: CanvasItem, cell: Vector2i, frame: int) -> void:
+	canvas.draw_texture_rect_region(DOORS, Rect2(Vector2(cell) * TILE - DOOR_ORIGIN, DOOR_CELL),
+		Rect2(frame * DOOR_CELL.x, 0, DOOR_CELL.x, DOOR_CELL.y))
 
 
 ## A building's pitched roof (roof_art.gd), rasterized the first time it is drawn.
