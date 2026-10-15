@@ -80,6 +80,12 @@ const FURNISHINGS: Dictionary = {
 	"banker": [[1, 0, "counter_bank"], [0, 1, "shelf_books"], [0, -1, "strongbox"], [0, 2, "shelf_books"], [0, -2, "strongbox"]],
 	"artisan": [[0, 1, "anvil"], [0, -1, "workbench"], [1, 1, "cauldron"], [1, -1, "loom"], [0, 2, "hearth"], [0, -2, "barrel"]],
 }
+## A home's furniture, in the order it is placed: one piece per HOME_TILES tiles of floor (at
+## least HOME_MIN), along the walls and in the corners, never beside the door, and never cutting
+## any floor off from the door (World._furnish_homes).
+const HOME_PIECES: Array[String] = ["bed", "chest", "table", "chair", "plant", "shelf_books", "barrel", "plant"]
+const HOME_TILES: int = 4
+const HOME_MIN: int = 3
 static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 ## A slowed creature's steps take this many times longer (Combat.restrain).
@@ -291,6 +297,7 @@ static func _find_buildings() -> void:
 				SIGNS.append({"cell": door + side, "outward": outward, "kind": keeper["role"]})
 				break
 		_furnish(building, keeper)
+	_furnish_homes()
 	_place_torches()
 
 
@@ -344,6 +351,58 @@ static func _furnish(building: Dictionary, keeper: Dictionary) -> void:
 		FURNITURE[cell] = piece[2]
 		if not _room_open(building, entrance, keeper["cell"]):
 			FURNITURE.erase(cell)
+
+
+## Furnishes every town building nobody keeps (no townsfolk, quest giver, spawn, or stairway in
+## it) as a home: a bed, a chest, a table and its chair, a plant, then shelves and a barrel in
+## bigger rooms, corners first, then along the walls.
+static func _furnish_homes() -> void:
+	for building: Dictionary in BUILDINGS:
+		var interior: Array[Vector2i] = building["interior"]
+		var lived: bool = interior.any(func(cell: Vector2i) -> bool:
+			return NPC_CELLS.has(cell) or FURNITURE.has(cell) or SPAWNS.has(cell) or terrain(cell) != "=")
+		if lived:
+			continue
+		var door: Vector2i = building["doors"][0]
+		var entrance: Vector2i = door - building["outward"][door]
+		var items: Dictionary = {}
+		for entry: Array in GROUND_ITEMS:
+			items[entry[0]] = true
+		var spots: Array[Vector2i] = []
+		for cell: Vector2i in interior:
+			if chebyshev(cell, entrance) > 1 and not items.has(cell) and _walls_beside(cell) > 0:
+				spots.append(cell)
+		# Corners (two walls beside) first, then the rest of the walls, in a fixed shuffled order.
+		spots.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			var walls_a: int = _walls_beside(a)
+			var walls_b: int = _walls_beside(b)
+			return walls_a > walls_b if walls_a != walls_b else (a.x * 31 + a.y * 17) % 13 < (b.x * 31 + b.y * 17) % 13)
+		var wanted: int = clampi(interior.size() / HOME_TILES, HOME_MIN, HOME_PIECES.size())
+		var table := Vector2i(-1, -1)
+		for index: int in wanted:
+			var kind: String = HOME_PIECES[index]
+			var choices: Array[Vector2i] = spots.duplicate()
+			if kind == "chair" and table.x >= 0:
+				# The chair goes beside the table if it can, else along a wall like the rest.
+				choices.assign(interior.filter(func(cell: Vector2i) -> bool:
+					return chebyshev(cell, table) == 1 and (cell - table).x * (cell - table).y == 0 and chebyshev(cell, entrance) > 1))
+				choices.append_array(spots)
+			for cell: Vector2i in choices:
+				if FURNITURE.has(cell):
+					continue
+				FURNITURE[cell] = kind
+				if _room_open(building, entrance, entrance):
+					if kind == "table":
+						table = cell
+					break
+				FURNITURE.erase(cell)
+
+
+static func _walls_beside(cell: Vector2i) -> int:
+	var walls: int = 0
+	for side: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+		walls += 1 if terrain(cell + side) in WALLS else 0
+	return walls
 
 
 static func _room_open(building: Dictionary, entrance: Vector2i, keeper: Vector2i) -> bool:

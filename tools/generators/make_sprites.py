@@ -3839,7 +3839,9 @@ def house_door(vertical):
 # than a tile. Order: FURNITURE_KINDS (SpriteArt.FURNITURE must match).
 
 FURNITURE_KINDS = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel", "crate",
-                   "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth"]
+                   "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth",
+                   # Homes (World._furnish_homes): every house without a keeper is lived in.
+                   "bed", "table", "chair", "plant", "chest"]
 OAK = (rgba("a07a4c"), rgba("82603a"), rgba("5f4429"), rgba("3f2c1b"))
 IRON = (rgba("8c8e8c"), rgba("5d605f"), rgba("3a3c3c"))
 
@@ -3992,6 +3994,72 @@ def furniture(kind):
             image.set(x, y, rgba("e8ffc0"))
         for x, y in ((14, 21), (18, 18), (15, 15)):
             image.set(x, y, rgba("b8f080", 170))
+    elif kind == "bed":
+        # A wooden bed seen from the foot: a tall headboard at the back, a white pillow, and a
+        # red wool blanket folded over the sheet, the frame's side lit from the left.
+        image.rect(4, 12, 24, 14, dark)
+        image.rect(4, 12, 24, 3, base)
+        image.rect(5, 15, 22, 1, deep)
+        for x in (4, 27):
+            image.rect(x, 12, 1, 34, deep)
+        plank_block(image, 4, 24, 24, 22, 5)
+        sheet = (rgba("e8e2d0"), rgba("d0c8b4"), rgba("a8a090"))
+        image.rect(6, 22, 20, 7, sheet[0])
+        image.rect(8, 21, 16, 4, rgba("f4f0e4"))
+        image.rect(8, 24, 16, 1, sheet[2])
+        blanket = (rgba("b8463a"), rgba("963428"), rgba("6e2418"))
+        image.rect(6, 29, 20, 13, blanket[0])
+        image.rect(6, 29, 20, 2, scale(blanket[0], 1.15))
+        for y in range(31, 42, 3):
+            image.rect(6, y, 20, 1, blanket[1])
+        image.rect(25, 29, 1, 13, blanket[2])
+        image.rect(6, 41, 20, 1, blanket[2])
+    elif kind == "table":
+        # A plank table on four legs with a candle, a bowl, and a cup.
+        plank_block(image, 3, 26, 26, 8, 6)
+        for x in (4, 26):
+            image.rect(x, 34, 2, 12, dark)
+            image.rect(x, 34, 1, 12, base)
+        image.rect(13, 34, 2, 10, deep)
+        image.rect(8, 20, 3, 6, rgba("e8e2d0"))
+        image.set(9, 19, rgba("ffd060"))
+        image.set(9, 18, rgba("fff0a0"))
+        for x, y in ellipse(19, 27, 4, 1.6):
+            image.set(x, y, rgba("8a6a44") if y < 27 else rgba("5a4228"))
+        image.rect(24, 24, 3, 4, rgba("7a8a94"))
+        image.rect(24, 24, 3, 1, rgba("a8b8c0"))
+    elif kind == "chair":
+        # A ladder-back chair: the seat lit on top, two rails behind.
+        for x in (10, 21):
+            image.rect(x, 14, 2, 32, dark)
+            image.rect(x, 14, 1, 32, base)
+        for y in (17, 22):
+            image.rect(10, y, 13, 2, base)
+            image.rect(10, y + 2, 13, 1, deep)
+        plank_block(image, 8, 30, 17, 5, 3)
+        for x in (9, 23):
+            image.rect(x, 35, 2, 11, dark)
+    elif kind == "plant":
+        # A clay pot with a leafy plant: leaves in clusters, lit from the top-left.
+        clay = (rgba("c8784a"), rgba("a85a34"), rgba("7a3e22"))
+        shade(image, box(10, 34, 13, 11) | box(9, 32, 15, 3), clay, False)
+        image.rect(9, 32, 15, 1, scale(clay[0], 1.15))
+        leaves = (rgba("7ab04a"), rgba("4e8a34"), rgba("2e5a22"))
+        for cx, cy, rx, ry in ((16, 25, 7, 6), (10, 21, 5, 4), (22, 20, 5, 4), (16, 15, 5, 5), (12, 28, 4, 3), (21, 28, 4, 3)):
+            shade(image, ellipse(cx, cy, rx, ry), leaves, False)
+        for x, y in ((14, 13), (19, 18), (9, 20)):
+            image.set(x, y, rgba("b8e070"))
+    elif kind == "chest":
+        # A wooden chest with an arched lid, iron bands, and a brass lock.
+        plank_block(image, 5, 28, 23, 18, 6)
+        for x, y in ellipse(16, 28, 11.5, 4):
+            if y <= 28:
+                image.set(x, y, OAK[0] if x < 16 else OAK[1])
+        for x in (8, 24):
+            image.rect(x, 25, 2, 21, IRON[1])
+            image.rect(x, 25, 1, 21, IRON[0])
+        image.rect(14, 34, 5, 5, rgba("c9a24a"))
+        image.set(16, 36, OUTLINE)
     elif kind == "loom":
         # A weaving loom: posts, beams, and half a striped cloth on the warp.
         for x in (3, 27):

@@ -3445,6 +3445,19 @@ func _building_checks() -> void:
 		check(inside and not through_wall, "%s serves only customers inside the building" % keeper["name"])
 	# Furniture: only inside keepers' buildings, blocking, and never cutting a room off.
 	check(World.FURNITURE.size() >= World.TOWNSFOLK.size() * 3, "shops and the bank are furnished (%d pieces)" % World.FURNITURE.size())
+	# Homes: every building nobody keeps has a bed and a chest, and its floor still reaches the door.
+	var homes: int = 0
+	for building: Dictionary in World.BUILDINGS:
+		var interior: Array = building["interior"]
+		var pieces: Array = interior.filter(func(cell: Vector2i) -> bool: return World.FURNITURE.has(cell)).map(
+			func(cell: Vector2i) -> String: return World.FURNITURE[cell])
+		if "bed" in pieces:
+			homes += 1
+			var door: Vector2i = building["doors"][0]
+			var entrance: Vector2i = door - building["outward"][door]
+			check("chest" in pieces and World._room_open(building, entrance, entrance),
+				"the home at %s has a bed and a chest and every tile reaches its door" % building["rect"].position)
+	check(homes >= 30, "town houses are lived in (%d homes)" % homes)
 	for cell: Vector2i in World.FURNITURE:
 		check((World.ROOM_AT.has(cell) or not World.dungeon_at(cell).is_empty()) and not World.walkable(cell)
 			and SpriteArt.FURNITURE.has(World.FURNITURE[cell]), "furniture stands inside a building (or a dungeon) and blocks")

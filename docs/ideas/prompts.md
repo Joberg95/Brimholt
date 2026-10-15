@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-lets add decorations to houses as per Tibia art direction too, I will share photos for this as well so we get the right direction of art (plan 15)
-
 Lets make the towns a bit more thought out design wise, more decorations and more cobblestone streets (plan 16)
 
 Lets update the world textures to match the new rock design, this is a overhaul of the art and should be a lot more like OpenTibia , I can send referenses when we build this of different tile types (plan 17)

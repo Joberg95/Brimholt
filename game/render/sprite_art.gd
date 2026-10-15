@@ -30,7 +30,7 @@ const Buildings = preload("res://game/data/buildings.gd")
 ## Shop, bank, and workshop furniture, 32x48 cells drawn 16 px above their tile (make_sprites.py FURNITURE_KINDS).
 const FURNITURE_SHEET: Texture2D = preload("res://assets/sprites/furniture.png")
 const FURNITURE: Array[String] = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel",
-	"crate", "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth"]
+	"crate", "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth", "bed", "table", "chair", "plant", "chest"]
 ## Herb patches (Crafting.HERBS): two 32x32 variants per resource band (make_sprites.py herb_patch).
 const HERBS: Texture2D = preload("res://assets/sprites/herbs.png")
 ## House and town walls ("#") stand a full tile tall, as in Tibia: house_walls.png holds HOUSE_SIZE
