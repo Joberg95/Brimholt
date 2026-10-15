@@ -31,6 +31,10 @@ const BANDS: Array = [
 	["the Ashen Hand", [["knight", "Varric", 1], ["sorcerer", "Ysmay", 1], ["druid", "Corvin", 1]]],
 	["the Thornwardens", [["paladin", "Lirien", 2], ["knight", "Haldor", 2], ["druid", "Saskia", 2]]],
 ]
+## Rival bands level from their own kills and tasks like you do. A band member who falls more
+## than BAND_SLACK levels behind its place (your level plus its offset) is lifted to that floor
+## between errands, so a band never drops out of your range; one ahead of you keeps its levels.
+const BAND_SLACK: int = 2
 ## Rivals go after you in PvP zones at your level, one band at a time, with a rest between.
 const AMBUSH_SECONDS: float = 300.0
 const AMBUSH_COOLDOWN: float = 240.0
@@ -284,7 +288,8 @@ func _band_level(offset: int) -> int:
 	return clampi(level + offset, 1, Balance.MAX_LEVEL)
 
 
-## Between errands, a band catches up with your level (they level as you do).
+## Between errands, a band member more than BAND_SLACK levels behind its place catches up to
+## that floor; otherwise it keeps what it earned (Bots tracks its levels and gear as it gains them).
 func _level_band(band: int, events: Array) -> void:
 	var members: Array = BANDS[band][1]
 	var state: Dictionary = bands[band]
@@ -292,16 +297,13 @@ func _level_band(band: int, events: Array) -> void:
 		var id: int = state["members"][index]
 		if not bots.bots.has(id):
 			continue
-		var level: int = _band_level(members[mini(index, members.size() - 1)][2])
-		if bots.bots[id]["level"] != level:
-			bots.bots[id]["level"] = level
-			if world.players[id]["level"] != level:
-				var player: Dictionary = world.players[id]
-				player["level"] = level
-				player["experience"] = 0
-				player["equipment"] = Bots.gear(level, bots.bots[id]["vocation"])
-				world.clamp_vitals(id)
-				events.append({"kind": "player", "id": id})
+		var floor_level: int = maxi(1, _band_level(members[mini(index, members.size() - 1)][2]) - BAND_SLACK)
+		var player: Dictionary = world.players[id]
+		if player["level"] < floor_level:
+			player["level"] = floor_level
+			player["experience"] = 0
+			bots.track_level(id, events)
+			world.clamp_vitals(id)
 
 
 ## Sends a band to fight you in your PvP zone: they arrive out of sight inside the zone and close in.

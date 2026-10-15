@@ -25,6 +25,9 @@ extends RefCounted
 ## A hunter, PvP, or dummy bot that dies is restored RESTORE_SECONDS later at its post with its
 ## level, gear, and potions, so a test can go on; companions come back beside their leader,
 ## rivals where they woke up (the town), and both keep going.
+## Levels: companions keep their leader's level. Rivals earn experience from kills and tasks
+## like players: each level gained upgrades their gear (track_level), and a death costs them
+## what it costs a player (they wake with the level and experience left), never more.
 
 const World = preload("res://game/core/world.gd")
 const Combat = preload("res://game/core/combat.gd")
@@ -191,11 +194,13 @@ func free_cell_near(near: Vector2i, now: float, except_id: int = 0) -> Vector2i:
 
 
 ## Gives a bot its level, gear, potions, and full health and mana at its post (or `at`).
-func _restore(id: int, now: float, at: Vector2i = Vector2i(-1, -1)) -> void:
+## With keep_progress the experience it has left is kept (a rival after a death).
+func _restore(id: int, now: float, at: Vector2i = Vector2i(-1, -1), keep_progress: bool = false) -> void:
 	var bot: Dictionary = bots[id]
 	var player: Dictionary = world.players[id]
 	player["level"] = bot["level"]
-	player["experience"] = 0
+	if not keep_progress:
+		player["experience"] = 0
 	player["equipment"] = gear(bot["level"], bot["vocation"])
 	player["backpack"].fill("")
 	var potions: int = RIVAL_POTIONS if bot["stance"] == "rival" else POTIONS
@@ -233,7 +238,8 @@ func tick(now: float) -> Array:
 					_restore(id, now, free_cell_near(world.players[leader]["cell"], now, id))
 				elif bot["stance"] == "rival":
 					bot["plan"] = {}
-					_restore(id, now, player["cell"])
+					bot["level"] = player["level"]
+					_restore(id, now, player["cell"], true)
 				else:
 					_restore(id, now)
 				events.append({"kind": "player", "id": id})
@@ -249,6 +255,8 @@ func tick(now: float) -> Array:
 		bot["next_think"] = now + THINK_SECONDS
 		if bot["stance"] == "companion":
 			_keep_pace(id, now, events)
+		elif bot["stance"] == "rival" and player["level"] != bot["level"]:
+			track_level(id, events)
 		var agent: Node = _brains[id][0]
 		agent.now = now
 		agent.events = events
@@ -497,6 +505,16 @@ func _tend(id: int, now: float, events: Array) -> bool:
 		return false
 	_step(id, Combat.path_step(player["cell"], world.players[worst]["cell"], _blocked_for(id, now)), now, events)
 	return true
+
+
+## A bot whose level changed (a level earned, a death, a band catching up) takes it as its own
+## and wears the vendor gear of that level.
+func track_level(id: int, events: Array) -> void:
+	var bot: Dictionary = bots[id]
+	var player: Dictionary = world.players[id]
+	bot["level"] = player["level"]
+	player["equipment"] = gear(player["level"], bot["vocation"])
+	events.append({"kind": "player", "id": id})
 
 
 ## A companion keeps its leader's level and gear tier, and stays in their party.

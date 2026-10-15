@@ -1174,6 +1174,33 @@ func _solo_checks() -> void:
 	run.call(20.0)
 	var heads: Array = solo.bands.values().map(func(band: Dictionary) -> int: return band["leader"])
 	check(heads.any(func(head: int) -> bool: return not world.players[head]["tasks"].is_empty()), "rival bands take tasks")
+	# Rivals level from what they earn: a level gained stays and brings its gear.
+	var rival: int = solo.bands[0]["members"][1]
+	var rival_player: Dictionary = world.players[rival]
+	var earned: int = rival_player["level"] + 1
+	combat.grant_experience(rival, Balance.experience_to_next(rival_player["level"]) - rival_player["experience"], [])
+	run.call(1.0)
+	check(rival_player["level"] >= earned and bots.bots[rival]["level"] == rival_player["level"]
+		and rival_player["equipment"] == Bots.gear(rival_player["level"], bots.bots[rival]["vocation"]),
+		"a rival keeps the level it earns and wears that level's gear")
+	# Between errands a band only lifts a member who fell behind you; one ahead keeps its levels.
+	var ahead: int = rival_player["level"]
+	solo._level_band(0, [])
+	check(rival_player["level"] == ahead, "a rival ahead of you is not pulled back to your level")
+	me["level"] = ahead + 10
+	solo._level_band(0, [])
+	check(rival_player["level"] == ahead + 10 + Solo.BANDS[0][1][1][2] - Solo.BAND_SLACK
+		and rival_player["equipment"] == Bots.gear(rival_player["level"], bots.bots[rival]["vocation"]),
+		"a rival who falls behind is lifted to your level plus its offset, less BAND_SLACK")
+	# A death costs a rival what it costs a player, and it wakes with the experience it has left.
+	rival_player["experience"] = Balance.experience_to_next(rival_player["level"]) / 2
+	var dying: Array = []
+	combat._kill_player(rival, sim_clock[0], dying)
+	var left: Array = [rival_player["level"], rival_player["experience"]]
+	run.call(Bots.RESTORE_SECONDS + 1.0)
+	check(rival_player["health"] > 0 and rival_player["level"] == left[0] and rival_player["experience"] >= left[1] and left[1] > 0,
+		"a rival wakes after a death with the level and experience it kept (%s, now %d/%d)" % [left, rival_player["level"], rival_player["experience"]])
+	me["level"] = 23
 	# A raid at level 50: the balance check's composition, rival bands sent home to fit.
 	check(not solo.raid(true, sim_clock[0])["ok"], "raids wait for level 50")
 	me["level"] = Balance.MAX_LEVEL

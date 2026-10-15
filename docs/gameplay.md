@@ -192,6 +192,13 @@ saves your character like hosting does, but brings the group game to you:
   closing in, so Blackreed Isle and the Hollow Reach become group fights. Outside PvP zones
   rivals cannot attack you, as for any player; skulls, death penalties, and loot drops all
   apply to them (beat them for their potions). A band rests a few minutes between ambushes.
+- **How bots level.** Bots level while you play, not only when a game starts:
+
+  | Bot | Level |
+  | --- | --- |
+  | Companion | Always your level; its gear follows your tier. |
+  | Rival band member | Earns experience from its kills and tasks like a player; each level gained brings that level's gear. A death costs what it costs you. Between errands, a member more than 2 levels below its place (your level plus its band's offset, 1 or 2) is lifted to that floor; one ahead of you keeps its levels. |
+  | Hunter, PvP, training dummy | Test bots: they return to their starting level when they fall. |
 - **Choosing companions.** The party window (O) has a class picker beside each companion:
   pick another class and that companion goes home while one of the new class joins, at your
   level. Build the group you want, two healers for a hard dungeon or three damage dealers for PvP.
