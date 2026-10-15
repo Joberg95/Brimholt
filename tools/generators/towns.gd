@@ -50,6 +50,10 @@ const QUEST_GIVERS: Array = [
 	["lodgemaster_varga", "Lodgemaster Varga", "Reedmere", Vector2i(140, 196), Vector2i.UP],
 	["quartermaster_rhosyn", "Quartermaster Rhosyn", "Dunmere", Vector2i(192, 271), Vector2i.RIGHT],
 	["huntmaster_corvel", "Huntmaster Corvel", "Emberfall", Vector2i(286, 200), Vector2i.RIGHT],
+	# More hunting hubs for the twenties: the lake shore, the desert and quarries, the downs.
+	["ranger_aldric", "Ranger Aldric", "Reedmere", Vector2i(117, 191), Vector2i.DOWN],
+	["caravan_master_idris", "Caravan master Idris", "Dunmere", Vector2i(200, 264), Vector2i.DOWN],
+	["skywatch_mera", "Skywatch Mera", "Lastlight", Vector2i(36, 350), Vector2i.DOWN],
 	# Cinder Crossing's training hall (its old bank house): the trial master by the door, and
 	# one vocation trainer in each corner (Quests.TRAINERS).
 	["trial_master", "Master Hesk", "Cinder Crossing", Vector2i(21, 12), Vector2i.DOWN],

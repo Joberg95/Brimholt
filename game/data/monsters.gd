@@ -47,6 +47,36 @@ const MONSTERS: Dictionary = {
 		"rank": "normal", "range": 1, "step": 0.55, "gear_chance": 0.09},
 	"behemoth": {"name": "Behemoth", "look": "quadruped", "color": Color("#5a4a3a"), "size": 1.4,
 		"rank": "normal", "range": 1, "step": 0.55, "gear_chance": 0.1},
+	# More hunting grounds for levels 20-42 (Quests: Ranger Aldric in Reedmere, Caravan master Idris
+	# in Dunmere, Skywatch Mera in Lastlight, Huntmaster Corvel in Emberfall), so every band has
+	# several prey: bears and lizardfolk on the lake shore, harpies and wraith knights on the
+	# downs, trolls in the quarries and the deep wood, scorpions and raiders in the desert.
+	"dire_bear": {"name": "Dire bear", "look": "quadruped", "color": Color("#6a4a32"), "size": 1.25,
+		"rank": "normal", "range": 1, "step": 0.45},
+	"lizard_warrior": {"name": "Lizard warrior", "look": "humanoid", "color": Color("#4a7a3a"), "size": 1.0,
+		"rank": "normal", "range": 1, "step": 0.4,
+		"gear": {"helmet": "bronze_coif", "armor": "bronze_scale_coat", "main_hand": "silverleaf_axe", "off_hand": "bronze_heater"}},
+	"lizard_shaman": {"name": "Lizard shaman", "look": "humanoid", "color": Color("#3a6a5a"), "size": 0.95,
+		"rank": "normal", "range": 4, "step": 0.45,
+		"gear": {"helmet": "thornvine_circlet", "armor": "thornvine_jerkin", "main_hand": "rootbound_rod"}},
+	"harpy": {"name": "Harpy", "look": "wraith", "color": Color("#b08a5a"), "size": 0.95,
+		"rank": "normal", "range": 3, "step": 0.3},
+	"stone_troll": {"name": "Stone troll", "look": "golem", "color": Color("#6e7458"), "size": 1.3,
+		"rank": "normal", "range": 1, "step": 0.6},
+	"dune_scorpion": {"name": "Dune scorpion", "look": "spider", "color": Color("#c8a050"), "size": 1.1,
+		"rank": "normal", "range": 1, "step": 0.38},
+	"sand_raider": {"name": "Sand raider", "look": "humanoid", "color": Color("#a0784a"), "size": 1.0,
+		"rank": "normal", "range": 1, "step": 0.4,
+		"gear": {"helmet": "wolfhide_hood", "armor": "wolfhide_coat", "main_hand": "steel_longsword"}},
+	"wraith_knight": {"name": "Wraith knight", "look": "humanoid", "color": Color("#3a3448"), "size": 1.1,
+		"rank": "normal", "range": 1, "step": 0.45,
+		"gear": {"helmet": "embersteel_helm", "armor": "embersteel_cuirass", "main_hand": "cobalt_warhammer",
+			"off_hand": "cobalt_tower_shield"}},
+	"marsh_witch": {"name": "Marsh witch", "look": "humanoid", "color": Color("#4a5a3a"), "size": 1.0,
+		"rank": "normal", "range": 4, "step": 0.45,
+		"gear": {"helmet": "cobalt_hat", "armor": "cobalt_robe", "main_hand": "tide_rod"}},
+	"cave_troll": {"name": "Cave troll", "look": "golem", "color": Color("#4a4e42"), "size": 1.4,
+		"rank": "normal", "range": 1, "step": 0.6, "gear_chance": 0.08},
 	# Level-50 hunting grounds for endgame characters: elites in the high regions (elite gold
 	# and tier-gear rolls), each with a valuable trophy and its own mythic set (Items.mythic:
 	# unbound level-50 gear, between tier 45 and relics) at low chances.
@@ -147,6 +177,16 @@ const LOOT: Dictionary = {
 	"kharzul": [],
 	"sylvaine": [],
 	"void_wraith": [["void_shard", 0.3], ["lightning_rune", 0.05]],
+	"dire_bear": [["bear_claw", 0.35], ["health_potion", 0.08]],
+	"lizard_warrior": [["lizard_scale", 0.3]],
+	"lizard_shaman": [["shaman_fetish", 0.3], ["mana_potion", 0.1]],
+	"harpy": [["harpy_feather", 0.35]],
+	"stone_troll": [["troll_tusk", 0.3]],
+	"dune_scorpion": [["scorpion_stinger", 0.3]],
+	"sand_raider": [["raider_sash", 0.3]],
+	"wraith_knight": [["wraithsteel_shard", 0.25], ["rune_shard", 0.02]],
+	"marsh_witch": [["hexed_charm", 0.25], ["mana_potion", 0.12], ["rune_shard", 0.02]],
+	"cave_troll": [["troll_hide", 0.3], ["rune_shard", 0.03]],
 	"sewer_rat": [["rat_tail", 0.5]],
 	"giant_rat": [["rat_pelt", 0.4], ["quarry_handhammer", 0.02]],
 	"rat_king": [["rat_crown", 1.0], ["rat_pelt", 1.0], ["quarry_handhammer", 0.12], ["burrow_falchion", 0.18]],
@@ -170,4 +210,5 @@ const LEASH: int = 12
 const RESPAWN_SECONDS: float = 45.0
 ## Monsters whose attacks are magic (cut by magic defense, not defense): wraiths, the lich, and
 ## the Hollow Bloom. Every other monster hits physically (Balance.ARMOR_TYPES).
-const MAGIC_ATTACKERS: Array[String] = ["cinder_wraith", "void_wraith", "barrow_lich", "sylvaine"]
+const MAGIC_ATTACKERS: Array[String] = ["cinder_wraith", "void_wraith", "barrow_lich", "sylvaine", "lizard_shaman",
+	"marsh_witch"]

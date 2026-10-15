@@ -423,6 +423,16 @@
     {"id": "forgeheart_ring", "name": "Forgeheart ring", "slot": "ring", "level": 35, "look": "ring", "colors": ["4a3a32", "c8603a", "ffb040"], "bound": true, "quest": "forgemaw"},
     {"id": "fire_rune", "name": "Fire rune", "level": 40, "look": "runestone+kenaz", "colors": ["5e5650", "7e766c", "ff7a2a"], "value": 120, "rune": "fire"},
     {"id": "frost_rune", "name": "Frost rune", "level": 40, "look": "runestone+isa", "colors": ["5a6068", "7c8692", "8ad8ff"], "value": 120, "rune": "frost"},
+    {"id": "bear_claw", "name": "Bear claw", "look": "fang", "colors": ["4a3424", "8a6a4a", "e8dcc4"], "value": 30},
+    {"id": "lizard_scale", "name": "Lizard scale", "look": "scale", "colors": ["3a6a2e", "6a9a4a", "c8d870"], "value": 34},
+    {"id": "shaman_fetish", "name": "Shaman fetish", "look": "badge", "colors": ["5a4a32", "8a7a52", "6ad0a0"], "value": 40},
+    {"id": "harpy_feather", "name": "Harpy feather", "look": "fang", "colors": ["8a6a42", "d8b880", "f0e8d0"], "value": 44},
+    {"id": "troll_tusk", "name": "Troll tusk", "look": "fang", "colors": ["5a5e48", "a8a08a", "e0d8c0"], "value": 48},
+    {"id": "scorpion_stinger", "name": "Scorpion stinger", "look": "fang", "colors": ["8a6a2a", "d8b050", "b04a2a"], "value": 55},
+    {"id": "raider_sash", "name": "Raider sash", "look": "coil", "colors": ["8a3a2a", "c86a4a", "e8c070"], "value": 60},
+    {"id": "wraithsteel_shard", "name": "Wraithsteel shard", "look": "crystal", "colors": ["2e2a3a", "6a6488", "b0a8e0"], "value": 75},
+    {"id": "hexed_charm", "name": "Hexed charm", "look": "badge", "colors": ["3a4a2a", "6a7a4a", "c88ae0"], "value": 85},
+    {"id": "troll_hide", "name": "Troll hide", "look": "pelt", "colors": ["3a3e32", "6a6e5a", "8a8e72"], "value": 110},
     {"id": "lightning_rune", "name": "Lightning rune", "level": 40, "look": "runestone+sowilo", "colors": ["56545e", "78767e", "ffe060"], "value": 120, "rune": "lightning"}
   ]
 }

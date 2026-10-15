@@ -3401,6 +3401,390 @@ monster = "thornscale_basilisk"
 level = 50
 count = 2
 
+[node name="Hunt_dire_bear_1" type="Marker2D" parent="MonsterSpawns" unique_id=1346425034]
+position = Vector2(5904, 4944)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 20
+count = 6
+radius = 2
+
+[node name="Hunt_dire_bear_2" type="Marker2D" parent="MonsterSpawns" unique_id=2008270396]
+position = Vector2(6384, 4240)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 20
+count = 6
+radius = 2
+
+[node name="Hunt_dire_bear_3" type="Marker2D" parent="MonsterSpawns" unique_id=1822575951]
+position = Vector2(5008, 5360)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 21
+count = 6
+radius = 2
+
+[node name="Hunt_dire_bear_4" type="Marker2D" parent="MonsterSpawns" unique_id=1854610972]
+position = Vector2(7664, 4816)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 21
+count = 6
+radius = 2
+
+[node name="Hunt_dire_bear_5" type="Marker2D" parent="MonsterSpawns" unique_id=1334086916]
+position = Vector2(7440, 3952)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 22
+count = 6
+radius = 2
+
+[node name="Hunt_lizard_warrior_1" type="Marker2D" parent="MonsterSpawns" unique_id=2097581297]
+position = Vector2(7792, 3984)
+script = ExtResource("5_xkg0o")
+monster = "lizard_warrior"
+level = 21
+count = 6
+radius = 2
+
+[node name="Hunt_lizard_warrior_2" type="Marker2D" parent="MonsterSpawns" unique_id=1852194755]
+position = Vector2(7504, 3600)
+script = ExtResource("5_xkg0o")
+monster = "lizard_warrior"
+level = 21
+count = 6
+radius = 2
+
+[node name="Hunt_lizard_warrior_3" type="Marker2D" parent="MonsterSpawns" unique_id=1249250032]
+position = Vector2(6608, 4944)
+script = ExtResource("5_xkg0o")
+monster = "lizard_warrior"
+level = 22
+count = 6
+radius = 2
+
+[node name="Hunt_lizard_warrior_4" type="Marker2D" parent="MonsterSpawns" unique_id=725374625]
+position = Vector2(8304, 4400)
+script = ExtResource("5_xkg0o")
+monster = "lizard_warrior"
+level = 23
+count = 6
+radius = 2
+
+[node name="Hunt_lizard_warrior_5" type="Marker2D" parent="MonsterSpawns" unique_id=1755368133]
+position = Vector2(7088, 3344)
+script = ExtResource("5_xkg0o")
+monster = "lizard_warrior"
+level = 24
+count = 6
+radius = 2
+
+[node name="Hunt_lizard_shaman_1" type="Marker2D" parent="MonsterSpawns" unique_id=79597401]
+position = Vector2(6192, 4656)
+script = ExtResource("5_xkg0o")
+monster = "lizard_shaman"
+level = 23
+count = 5
+radius = 2
+
+[node name="Hunt_lizard_shaman_2" type="Marker2D" parent="MonsterSpawns" unique_id=637253805]
+position = Vector2(5840, 4496)
+script = ExtResource("5_xkg0o")
+monster = "lizard_shaman"
+level = 23
+count = 5
+radius = 2
+
+[node name="Hunt_lizard_shaman_3" type="Marker2D" parent="MonsterSpawns" unique_id=252792883]
+position = Vector2(8048, 5072)
+script = ExtResource("5_xkg0o")
+monster = "lizard_shaman"
+level = 24
+count = 5
+radius = 2
+
+[node name="Hunt_lizard_shaman_4" type="Marker2D" parent="MonsterSpawns" unique_id=1536761831]
+position = Vector2(7088, 4656)
+script = ExtResource("5_xkg0o")
+monster = "lizard_shaman"
+level = 25
+count = 5
+radius = 2
+
+[node name="Hunt_harpy_1" type="Marker2D" parent="MonsterSpawns" unique_id=239783322]
+position = Vector2(2576, 12176)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 24
+count = 6
+radius = 2
+
+[node name="Hunt_harpy_2" type="Marker2D" parent="MonsterSpawns" unique_id=613635370]
+position = Vector2(2576, 11504)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 24
+count = 6
+radius = 2
+
+[node name="Hunt_harpy_3" type="Marker2D" parent="MonsterSpawns" unique_id=1813487927]
+position = Vector2(1744, 8624)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 25
+count = 6
+radius = 2
+
+[node name="Hunt_harpy_4" type="Marker2D" parent="MonsterSpawns" unique_id=1478824930]
+position = Vector2(2000, 11760)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 26
+count = 6
+radius = 2
+
+[node name="Hunt_harpy_5" type="Marker2D" parent="MonsterSpawns" unique_id=1932625685]
+position = Vector2(2960, 11696)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 27
+count = 6
+radius = 2
+
+[node name="Hunt_stone_troll_1" type="Marker2D" parent="MonsterSpawns" unique_id=1703627956]
+position = Vector2(5840, 7568)
+script = ExtResource("5_xkg0o")
+monster = "stone_troll"
+level = 25
+count = 5
+radius = 2
+
+[node name="Hunt_stone_troll_2" type="Marker2D" parent="MonsterSpawns" unique_id=1634709167]
+position = Vector2(4784, 5712)
+script = ExtResource("5_xkg0o")
+monster = "stone_troll"
+level = 25
+count = 5
+radius = 2
+
+[node name="Hunt_stone_troll_3" type="Marker2D" parent="MonsterSpawns" unique_id=1458399799]
+position = Vector2(4944, 6800)
+script = ExtResource("5_xkg0o")
+monster = "stone_troll"
+level = 26
+count = 5
+radius = 2
+
+[node name="Hunt_stone_troll_4" type="Marker2D" parent="MonsterSpawns" unique_id=1629944006]
+position = Vector2(3536, 7728)
+script = ExtResource("5_xkg0o")
+monster = "stone_troll"
+level = 27
+count = 5
+radius = 2
+
+[node name="Hunt_stone_troll_5" type="Marker2D" parent="MonsterSpawns" unique_id=1921042825]
+position = Vector2(3024, 7632)
+script = ExtResource("5_xkg0o")
+monster = "stone_troll"
+level = 28
+count = 5
+radius = 2
+
+[node name="Hunt_dune_scorpion_1" type="Marker2D" parent="MonsterSpawns" unique_id=964160496]
+position = Vector2(3888, 9936)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 26
+count = 6
+radius = 2
+
+[node name="Hunt_dune_scorpion_2" type="Marker2D" parent="MonsterSpawns" unique_id=389655015]
+position = Vector2(3760, 9424)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 27
+count = 6
+radius = 2
+
+[node name="Hunt_dune_scorpion_3" type="Marker2D" parent="MonsterSpawns" unique_id=873546971]
+position = Vector2(3696, 11152)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 28
+count = 6
+radius = 2
+
+[node name="Hunt_dune_scorpion_4" type="Marker2D" parent="MonsterSpawns" unique_id=1300347974]
+position = Vector2(2864, 10640)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 29
+count = 6
+radius = 2
+
+[node name="Hunt_dune_scorpion_5" type="Marker2D" parent="MonsterSpawns" unique_id=277529887]
+position = Vector2(5136, 10224)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 30
+count = 6
+radius = 2
+
+[node name="Hunt_sand_raider_1" type="Marker2D" parent="MonsterSpawns" unique_id=1617173253]
+position = Vector2(2640, 9008)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 28
+count = 6
+radius = 2
+
+[node name="Hunt_sand_raider_2" type="Marker2D" parent="MonsterSpawns" unique_id=85840262]
+position = Vector2(2480, 10608)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 29
+count = 6
+radius = 2
+
+[node name="Hunt_sand_raider_3" type="Marker2D" parent="MonsterSpawns" unique_id=1874759726]
+position = Vector2(3600, 10736)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 30
+count = 6
+radius = 2
+
+[node name="Hunt_sand_raider_4" type="Marker2D" parent="MonsterSpawns" unique_id=398590011]
+position = Vector2(4400, 11120)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 31
+count = 6
+radius = 2
+
+[node name="Hunt_sand_raider_5" type="Marker2D" parent="MonsterSpawns" unique_id=73617502]
+position = Vector2(4400, 10736)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 32
+count = 6
+radius = 2
+
+[node name="Hunt_wraith_knight_1" type="Marker2D" parent="MonsterSpawns" unique_id=1256775157]
+position = Vector2(1968, 12048)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 31
+count = 5
+radius = 2
+
+[node name="Hunt_wraith_knight_2" type="Marker2D" parent="MonsterSpawns" unique_id=1860800308]
+position = Vector2(1808, 11472)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 31
+count = 5
+radius = 2
+
+[node name="Hunt_wraith_knight_3" type="Marker2D" parent="MonsterSpawns" unique_id=1701271098]
+position = Vector2(784, 9264)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 32
+count = 5
+radius = 2
+
+[node name="Hunt_wraith_knight_4" type="Marker2D" parent="MonsterSpawns" unique_id=135181343]
+position = Vector2(1744, 11088)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 33
+count = 5
+radius = 2
+
+[node name="Hunt_wraith_knight_5" type="Marker2D" parent="MonsterSpawns" unique_id=664083151]
+position = Vector2(688, 10384)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 34
+count = 5
+radius = 2
+
+[node name="Hunt_marsh_witch_1" type="Marker2D" parent="MonsterSpawns" unique_id=1106474357]
+position = Vector2(8496, 7024)
+script = ExtResource("5_xkg0o")
+monster = "marsh_witch"
+level = 33
+count = 5
+radius = 2
+
+[node name="Hunt_marsh_witch_2" type="Marker2D" parent="MonsterSpawns" unique_id=1121028430]
+position = Vector2(11728, 6160)
+script = ExtResource("5_xkg0o")
+monster = "marsh_witch"
+level = 34
+count = 5
+radius = 2
+
+[node name="Hunt_marsh_witch_3" type="Marker2D" parent="MonsterSpawns" unique_id=1312278476]
+position = Vector2(9296, 5456)
+script = ExtResource("5_xkg0o")
+monster = "marsh_witch"
+level = 35
+count = 5
+radius = 2
+
+[node name="Hunt_marsh_witch_4" type="Marker2D" parent="MonsterSpawns" unique_id=373603353]
+position = Vector2(10640, 5968)
+script = ExtResource("5_xkg0o")
+monster = "marsh_witch"
+level = 36
+count = 5
+radius = 2
+
+[node name="Hunt_cave_troll_1" type="Marker2D" parent="MonsterSpawns" unique_id=1886316778]
+position = Vector2(6352, 9712)
+script = ExtResource("5_xkg0o")
+monster = "cave_troll"
+level = 38
+count = 5
+radius = 2
+
+[node name="Hunt_cave_troll_2" type="Marker2D" parent="MonsterSpawns" unique_id=1845790523]
+position = Vector2(6096, 12048)
+script = ExtResource("5_xkg0o")
+monster = "cave_troll"
+level = 39
+count = 5
+radius = 2
+
+[node name="Hunt_cave_troll_3" type="Marker2D" parent="MonsterSpawns" unique_id=1440496291]
+position = Vector2(6832, 10192)
+script = ExtResource("5_xkg0o")
+monster = "cave_troll"
+level = 40
+count = 5
+radius = 2
+
+[node name="Hunt_cave_troll_4" type="Marker2D" parent="MonsterSpawns" unique_id=351316703]
+position = Vector2(6800, 12240)
+script = ExtResource("5_xkg0o")
+monster = "cave_troll"
+level = 41
+count = 5
+radius = 2
+
+[node name="Hunt_cave_troll_5" type="Marker2D" parent="MonsterSpawns" unique_id=704097850]
+position = Vector2(4752, 11216)
+script = ExtResource("5_xkg0o")
+monster = "cave_troll"
+level = 42
+count = 5
+radius = 2
+
 [node name="DungeonEntrances" type="Node2D" parent="." unique_id=1286199040]
 
 [node name="CinderCellar" type="Marker2D" parent="DungeonEntrances" unique_id=1722923843]
@@ -3567,6 +3951,24 @@ script = ExtResource("6_qgive")
 npc_name = "Lodgemaster Varga"
 place = "Reedmere"
 facing = Vector2i(0, -1)
+
+[node name="ranger_aldric" type="Marker2D" parent="QuestGivers" unique_id=611137935]
+position = Vector2(3760, 6128)
+script = ExtResource("6_qgive")
+npc_name = "Ranger Aldric"
+place = "Reedmere"
+
+[node name="caravan_master_idris" type="Marker2D" parent="QuestGivers" unique_id=229202961]
+position = Vector2(6416, 8464)
+script = ExtResource("6_qgive")
+npc_name = "Caravan master Idris"
+place = "Dunmere"
+
+[node name="skywatch_mera" type="Marker2D" parent="QuestGivers" unique_id=1279308734]
+position = Vector2(1168, 11216)
+script = ExtResource("6_qgive")
+npc_name = "Skywatch Mera"
+place = "Lastlight"
 
 [node name="Townsfolk" type="Node2D" parent="." unique_id=1441967375]
 

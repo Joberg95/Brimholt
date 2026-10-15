@@ -416,7 +416,8 @@ def spider(frame, s):
     k = s.get("scale", 1.0)
     swing = (0.0, 1.0, -1.0)[frame] * 2.2
     body = s["body"]
-    parts = [ell((0, -8 * k, 8 * k), (8 * k, 9.5 * k, 7 * k), s["abdomen"], tilt_y(0.35), "abdomen"),
+    a = s.get("abdomen_size", 1.0)
+    parts = [ell((0, -8 * k, 8 * k), (8 * k * a, 9.5 * k * a, 7 * k * a), s["abdomen"], tilt_y(0.35), "abdomen"),
              ell((0, 3 * k, 6 * k), (5.5 * k, 6 * k, 4 * k), body, group="thorax"),
              ell((0, 8.5 * k, 5.5 * k), (3.6 * k, 3.2 * k, 3 * k), body, group="head")]
     if s.get("marking"):
@@ -434,6 +435,19 @@ def spider(frame, s):
             foot = (side * reach * 1.15, (y + (i - 1.5) * 6.5) * k + phase, 0.6)
             parts += [limb(hip, knee, 1.2 * k, s.get("legs", body), group="leg%d%d" % (side, i)),
                       limb(knee, foot, 0.9 * k, s.get("legs", body), group="leg%d%d" % (side, i))]
+        if s.get("pincers"):
+            arm = (side * 3 * k, 10 * k, 5.5 * k)
+            claw = (side * 6.5 * k, 16 * k + swing * 0.3, 5 * k)
+            parts.append(limb(arm, claw, 1.3 * k, s["pincers"], group="pincer%d" % side))
+            parts.append(ell(claw, (2.4 * k, 3.2 * k, 1.8 * k), s["pincers"], group="pincer%d" % side))
+            for tip in (-1, 1):
+                parts.append(limb(add(claw, (side * tip * 0.8 * k, 2.5 * k, 0)), add(claw, (side * tip * 0.5 * k, 5 * k, 0)),
+                                  0.6 * k, s["pincers"], group="pincer%d" % side))
+    if s.get("stinger"):
+        # A segmented tail rising from the abdomen and curling forward over the back.
+        points = [(0, -13 * k, 7 * k), (0, -17 * k, 10 * k), (0, -17 * k, 14 * k), (0, -13 * k, 17 * k), (0, -9 * k, 16 * k)]
+        parts += chain(points, [1.7 * k, 1.5 * k, 1.3 * k, 1.1 * k], s["abdomen"], "tail")
+        parts.append(limb(points[-1], add(points[-1], (0, 2.5 * k, -2.5 * k)), 0.8 * k, s["stinger"], group="tail"))
     return parts
 
 
@@ -543,6 +557,20 @@ def wraith(frame, s):
             at = (x * k, y * k, float_z + z * k)
             parts.append(ell(at, (1.8 * k, 1.8 * k, 1.1 * k), s["flowers"], group="flower%d" % i))
             parts.append(ell(add(at, (0, 0, 0.8 * k)), (0.7 * k, 0.7 * k, 0.5 * k), emissive("ffe08a"), group="flower%d" % i))
+    if s.get("wings"):
+        # Feathered wings from the shoulder blades, beating with the float.
+        rise = (0.5, 1.0, 0.1)[frame]
+        for side in (1, -1):
+            shoulder = (side * 4 * k, -2 * k, float_z + 23 * k)
+            wrist = add(shoulder, (side * 7 * k, -2 * k, (3 + 5 * rise) * k))
+            tip = add(wrist, (side * 7 * k, -3 * k, (0.5 + 3 * rise) * k))
+            edge = s.get("wing_bone", robe)
+            parts += [limb(shoulder, wrist, 1.1 * k, edge, group="wing%d" % side),
+                      limb(wrist, tip, 0.8 * k, edge, group="wing%d" % side)]
+            for a, b, chord in ((shoulder, wrist, 4.5 * k), (wrist, tip, 3.6 * k)):
+                axis = sub(b, a)
+                centre = add(mul(add(a, b), 0.5), (0, -0.5 * k, -chord * 0.55))
+                parts.append(ell(centre, (0.7, math.sqrt(dot(axis, axis)) * 0.55, chord), s["wings"], basis(axis), "wing%d" % side))
     if s.get("antlers"):
         for side in (1, -1):
             base = add(hood, (side * 3 * k, -1 * k, 4.5 * k))
@@ -647,12 +675,21 @@ def giant(frame, s):
         parts.append(ell((0, 6.4, 18 + bob), (5.6, 1.6, 7.6), s["apron"], group="apron"))
     head = (0, 2.0, 30 + bob)
     parts.append(ell(head, (3.6, 3.6, 3.8), skin, group="head"))
-    parts.append(ell(add(head, (0, 3.0, 0.6)), (2.6, 1.0, 2.2), Material("f4f0e2"), group="eye"))
-    parts.append(ell(add(head, (0, 3.7, 0.6)), (1.4, 0.6, 1.4), emissive(s["eye"]), group="eye"))
-    parts.append(ell(add(head, (0, 4.1, 0.6)), (0.6, 0.4, 0.6), EYE, group="eye"))
-    parts.append(ell(add(head, (0, 3.2, -2.0)), (2.2, 1.0, 0.6), Material("3a2018"), group="mouth"))
-    horn = add(head, (0, 0.5, 3.4))
-    parts += chain([horn, add(horn, (0, -0.6, 2.2)), add(horn, (0, -1.4, 3.6))], [1.0, 0.6], s.get("horn", BONE), "horn")
+    if s.get("troll"):
+        # A troll: two small deep-set eyes under a heavy brow, and tusks from the jaw.
+        parts.append(ell(add(head, (0, 2.6, 1.4)), (3.0, 1.4, 0.9), skin, group="brow"))
+        for side in (1, -1):
+            parts.append(ell(add(head, (side * 1.3, 3.2, 0.4)), (0.7, 0.5, 0.6), emissive(s["eye"]), group="eye"))
+            tusk = add(head, (side * 1.6, 3.0, -2.0))
+            parts.append(limb(tusk, add(tusk, (side * 0.4, 0.8, 1.8)), 0.55, BONE, group="tusk"))
+        parts.append(ell(add(head, (0, 3.2, -2.2)), (2.4, 1.0, 0.7), Material("2a1a12"), group="mouth"))
+    else:
+        parts.append(ell(add(head, (0, 3.0, 0.6)), (2.6, 1.0, 2.2), Material("f4f0e2"), group="eye"))
+        parts.append(ell(add(head, (0, 3.7, 0.6)), (1.4, 0.6, 1.4), emissive(s["eye"]), group="eye"))
+        parts.append(ell(add(head, (0, 4.1, 0.6)), (0.6, 0.4, 0.6), EYE, group="eye"))
+        parts.append(ell(add(head, (0, 3.2, -2.0)), (2.2, 1.0, 0.6), Material("3a2018"), group="mouth"))
+        horn = add(head, (0, 0.5, 3.4))
+        parts += chain([horn, add(horn, (0, -0.6, 2.2)), add(horn, (0, -1.4, 3.6))], [1.0, 0.6], s.get("horn", BONE), "horn")
     hands = s.get("hands", skin)
     for side in (1, -1):
         shoulder = (side * 8.0, 0, 25 + bob)
@@ -775,6 +812,19 @@ SPECIES = {
                                horn=M("d8f4ff", gloss=0.8), hands=M("7a98b0"), shards=M("c8f0ff", gloss=0.9)), (14, 4.5)),
     "barrow_lich": (biped, dict(flesh=IVORY, skull=IVORY, robe=M("3e5a54", "cloth", spread=1.3), eyes="60ffc0",
                                 focus="60ffc0", crown=M("d0a840", gloss=0.8), torso=M("4a6a62", "cloth")), (10, 3.5)),
+    "dire_bear": (quadruped, dict(length=26, height=7, girth=8.6, head=5.6, snout=0.75, snout_width=0.6, leg=2.1, spread=0.8,
+                                  stride=2.0, ears="round", tail="short", body=M("6a4a32", "fur"), belly=M("8a6a4a", "fur"),
+                                  ruff=M("5a3e2a", "fur"), chest=1.15, neck=0.5, eye=emissive("e8a030"), nose=M("2a1e18"),
+                                  paw=M("2a2018"), teeth=True), (15, 4.5)),
+    "harpy": (wraith, dict(robe=M("8a6a42", "fur"), hood=M("b08a5a", "fur"), eyes="f0c040", claws=M("3a2a1a"),
+                           wings=M("a07a4a", "fur"), wing_bone=M("5a4028", "fur")), (11, 3.5)),
+    "dune_scorpion": (spider, dict(body=M("b08a40", "chitin", gloss=0.6), abdomen=M("c09a50", "chitin", gloss=0.5),
+                                   legs=M("8a6a30", "chitin"), eyes="ffe080", stinger=M("d86a2a", "chitin", gloss=0.8),
+                                   pincers=M("a07a38", "chitin", gloss=0.6), abdomen_size=0.7), (13, 4)),
+    "stone_troll": (giant, dict(skin=M("7a7e66", "stone"), cloth=M("4a4234", "fur"), eye="e0c040", weapon="club",
+                                troll=True, hands=M("5a5e4a", "stone")), (13, 4)),
+    "cave_troll": (giant, dict(skin=M("4e5246", "warts"), cloth=M("3a3028", "fur"), eye="c0e040", weapon="club",
+                               troll=True, hands=M("3a3e34", "warts")), (14, 4.5)),
     "sylvaine": (wraith, dict(robe=M("5a3a80", "cloth"), hood=M("3a5a3a", "fur"), eyes="f0d0ff", claws=M("5a7a40"),
                               flowers=M("e888c0", gloss=0.3), antlers=M("8a6a48", "bone"), scale=1.05), (11, 3.5)),
 }
@@ -787,7 +837,8 @@ ZOOM = {"frostfang_wolf": 1.2, "greymaw": 1.0, "behemoth": 1.05, "cyclops": 1.25
         "venom_weaver": 1.5, "silk_matron": 1.5, "marsh_toad": 1.35, "bog_lurker": 1.35, "stone_golem": 1.6,
         "bog_hulk": 1.6, "ember_golem": 1.6, "forgemaw": 1.4, "kharzul": 1.35, "obsidian_golem": 1.6,
         "cinder_wraith": 1.15, "mire_stalker": 1.15, "void_wraith": 1.15, "sylvaine": 1.1, "ashmaw_drake": 1.0,
-        "thornscale_basilisk": 1.0, "rime_titan": 1.2, "barrow_lich": 1.4}
+        "thornscale_basilisk": 1.0, "rime_titan": 1.2, "barrow_lich": 1.4, "dire_bear": 1.05, "harpy": 1.15,
+        "dune_scorpion": 1.4, "stone_troll": 1.25, "cave_troll": 1.2}
 
 
 def frames(kind, direction, frame):

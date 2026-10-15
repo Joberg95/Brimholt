@@ -16,6 +16,16 @@ const HUNTS: Array = [
 	["cyclops", "Smoulder Fells", 29, 31, 5, 4, 3],
 	["cyclops_smith", "Hollow March", 36, 38, 5, 4, 3],
 	["behemoth", "Gloamwood", 43, 45, 5, 3, 3],
+	["dire_bear", "Stillwater Shore", 20, 22, 5, 6, 2],
+	["lizard_warrior", "Stillwater Shore", 21, 24, 5, 6, 2],
+	["lizard_shaman", "Stillwater Shore", 23, 25, 4, 5, 2],
+	["harpy", "Lastlight Downs", 24, 27, 5, 6, 2],
+	["stone_troll", "Stonevale", 25, 28, 5, 5, 2],
+	["dune_scorpion", "Sunscar Dunes", 26, 30, 5, 6, 2],
+	["sand_raider", "Sunscar Dunes", 28, 32, 5, 6, 2],
+	["wraith_knight", "Lastlight Downs", 31, 34, 5, 5, 2],
+	["marsh_witch", "Mirewood Fen", 33, 36, 4, 5, 2],
+	["cave_troll", "Gloamwood", 38, 42, 5, 5, 2],
 	["ashmaw_drake", "Emberwaste", 48, 50, 4, 2, 3, 7],
 	["rime_titan", "Hollow March", 48, 50, 4, 2, 3, 7],
 	["barrow_lich", "Mirewood Fen", 48, 50, 4, 2, 3, 7],
@@ -46,7 +56,7 @@ func _initialize() -> void:
 		var road_gap: int = hunt[7] if hunt.size() > 7 else 0
 		var candidates: Array[Vector2i] = []
 		for cell: Vector2i in reached:
-			if WORLD.has_point(cell) and _tile(cell) == "." and _region(cell) == hunt[1] and _zone(cell).is_empty() \
+			if WORLD.has_point(cell) and _tile(cell) in ".:" and _region(cell) == hunt[1] and _zone(cell).is_empty() \
 					and _open(cell, radius, walkable) and (road_gap == 0 or not _near(cell, road_gap, ",=")):
 				candidates.append(cell)
 		# A fixed shuffle so the camps spread over the region instead of bunching in one corner.
