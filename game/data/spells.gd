@@ -4,6 +4,8 @@ extends RefCounted
 ## player's max health ("heal_self") or the caster's healing stat times power ("heal_area").
 ## Like Tibia, every spell has its own cooldown and also starts its group's shared cooldown.
 ## "taunt" (Challenge) turns nearby monsters, bosses included, onto the caster: the tank swap.
+## "taunt_target" (Provoke) turns one monster, your target, onto the caster from a few tiles away:
+## pull it off a healer before it reaches them. Monsters keep a target until they lose it.
 
 const Balance = preload("res://game/data/balance.gd")
 ## Each spell is carved as one Elder Futhark rune (its icon in assets/sprites/spells.png, drawn by
@@ -75,6 +77,8 @@ const SPELLS: Dictionary = {
 		"power": 5.0, "mana": 0.3, "cooldown": 8.0, "group": "healing", "color": Color("#60e070")},
 	"mass_mend": {"rune": "gebo", "name": "Mass mend", "vocations": ["druid"], "level": 1, "kind": "heal_area", "radius": 3,
 		"power": 3.0, "mana": 0.2, "cooldown": 2.0, "group": "healing", "color": Color("#a6f0b0")},
+	"provoke": {"rune": "ansuz", "name": "Provoke", "vocations": ["knight"], "level": 8, "kind": "taunt_target", "range": 4,
+		"power": 0.0, "mana": 0.05, "cooldown": 6.0, "group": "attack", "color": Color("#f08a50")},
 }
 
 
@@ -141,6 +145,8 @@ static func info(id: String, stats: Dictionary, level: int, rank: int = 1) -> Di
 			amount = hit + " each"
 		"taunt":
 			effect = "Turns every monster within %s of you, bosses included, onto you: take a boss off a wounded ally." % area
+		"taunt_target":
+			effect = "Turns your target monster (up to %d tiles away), bosses included, onto you: pull it off a friend." % reach
 		"heal_self":
 			effect = "Heals you for %d%% of your max health." % roundi(power * 100.0)
 			amount = "Heals about %d" % roundi(float(stats.get("health", 0)) * power)

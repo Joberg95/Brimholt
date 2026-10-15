@@ -1165,6 +1165,10 @@ func _solo_checks() -> void:
 	check(bots._should_taunt(1, 2, sim_clock[0]), "a warrior challenges a monster on a softer party member")
 	world.monsters[guard]["target"] = 1
 	check(not bots._should_taunt(1, 2, sim_clock[0]), "but not one already on the warrior")
+	world.monsters[guard]["target"] = druid
+	check(bots._loose_monster(1, 4) == guard, "a warrior spots a monster on a softer party member to Provoke")
+	world.monsters[guard]["target"] = 1
+	check(bots._loose_monster(1, 4) == 0, "and leaves one already on the warrior")
 	combat.despawn(guard, [])
 	me["health"] = 100
 	var events: Array = []
@@ -2533,6 +2537,20 @@ func _raid_mechanic_checks() -> void:
 	world.players[2]["mana"] = 999999
 	check(combat.cast(2, "challenge", 20.0)["ok"] and monster["target"] == 2, "Challenge pulls the boss onto the second Knight")
 	check(not combat.cast(3, "challenge", 20.0)["ok"], "only Knights can Challenge")
+	# Provoke: one monster, the caster's target, from a few tiles away; never a player.
+	var knight_cell: Vector2i = world.players[1]["cell"]
+	world.players[1]["mana"] = 999999
+	world.players[1]["target"] = boss
+	world.players[1]["cell"] = monster["cell"] + Vector2i(3, 0)
+	check(combat.cast(1, "provoke", 30.0)["ok"] and monster["target"] == 1, "Provoke pulls one monster, a boss too, from three tiles")
+	world.players[1]["cell"] = monster["cell"] + Vector2i(6, 0)
+	check(not combat.cast(1, "provoke", 40.0)["ok"] and monster["target"] == 1, "Provoke needs its target within four tiles")
+	world.players[1]["cell"] = knight_cell
+	world.players[1]["target"] = 2
+	check(not combat.cast(1, "provoke", 50.0)["ok"] and not combat.cast(3, "provoke", 50.0)["ok"] and not Spells.rankable("provoke"),
+		"Provoke works on monsters only, for Knights only, and has no ranks")
+	world.players[1]["target"] = 0
+	monster["target"] = 2
 	# Enrage.
 	combat._boss_tick(boss, 1.0 + Balance.ENRAGE_SECONDS - 0.5, [])
 	check(not monster["enraged"], "no enrage before its time")

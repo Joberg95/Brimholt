@@ -360,7 +360,8 @@ func choose_target(id: int, now: float) -> int:
 
 
 ## Spells and potions as the fight simulator's careful player uses them; in a party, healing
-## spells also mend hurt allies around the bot, and warriors use Challenge to protect the group.
+## spells also mend hurt allies around the bot, and warriors use Challenge (every monster around)
+## and Provoke (one monster a few tiles off, onto a softer member) to protect the group.
 func use_resources(id: int, now: float, events: Array) -> void:
 	var player: Dictionary = world.players[id]
 	var stats: Dictionary = world.player_stats(id)
@@ -375,6 +376,11 @@ func use_resources(id: int, now: float, events: Array) -> void:
 			wanted = _hurt_ally(id, definition["radius"], HEAL_ALLY_SHARE)
 		if style == "taunt":
 			wanted = _should_taunt(id, definition["radius"], now)
+		if style == "taunt_target":
+			var loose: int = _loose_monster(id, definition["range"])
+			wanted = loose != 0
+			if wanted:
+				player["target"] = loose
 		if wanted:
 			var cast: Dictionary = combat.cast(id, spell, now)
 			if cast["ok"]:
@@ -480,6 +486,24 @@ func _hurt_ally(id: int, radius: int, share: float) -> bool:
 
 ## A warrior in a party challenges when a monster within `radius` attacks a member who is not
 ## a warrior, or when a boss has wounded the other tank SWAP_WOUNDS times (the tank swap).
+## The nearest monster within `reach` that is after a party member who is not a warrior, or 0.
+func _loose_monster(id: int, reach: int) -> int:
+	var group: Array[int] = _group(id)
+	if group.size() < 2:
+		return 0
+	var own: Vector2i = world.players[id]["cell"]
+	var best: int = 0
+	var nearest: int = reach + 1
+	for monster: int in world.monsters:
+		var state: Dictionary = world.monsters[monster]
+		var victim: int = state["target"]
+		var gap: int = Combat.distance(own, state["cell"])
+		if victim != id and victim in group and world.players[victim]["vocation"] != "knight" and gap < nearest:
+			best = monster
+			nearest = gap
+	return best
+
+
 func _should_taunt(id: int, radius: int, now: float) -> bool:
 	var group: Array[int] = _group(id)
 	if group.size() < 2:

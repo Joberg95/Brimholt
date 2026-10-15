@@ -346,10 +346,12 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	if player["mana"] < cost:
 		return {"ok": false, "reason": "Not enough mana (%d needed)" % cost, "events": []}
 	var target: int = player["target"]
-	var needs_target: bool = definition["kind"] in ["target", "area_target"]
+	var needs_target: bool = definition["kind"] in ["target", "area_target", "taunt_target"]
 	if needs_target and (target == 0 or not hostile(id, target)
 			or not in_reach(player["cell"], creature(target)["cell"], definition.get("range", 1))):
 		return {"ok": false, "reason": "You need a target in range", "events": []}
+	if definition["kind"] == "taunt_target" and target > 0:
+		return {"ok": false, "reason": "%s works on monsters" % definition["name"], "events": []}
 	var events: Array = []
 	player["mana"] -= cost
 	player["cooldowns"][spell] = now + definition["cooldown"]
@@ -370,6 +372,12 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 				if distance(world.monsters[monster]["cell"], player["cell"]) <= definition["radius"]:
 					world.monsters[monster]["target"] = id
 			events.append({"kind": "message", "id": id, "text": "You challenge every monster around you."})
+		"taunt_target":
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
+			_area(creature(target)["cell"], 0, definition["color"], events)
+			world.monsters[target]["target"] = id
+			events.append({"kind": "monster", "id": target, "movement": false})
+			events.append({"kind": "message", "id": id, "text": "You provoke %s." % describe(target)})
 		"heal_self":
 			_heal(id, roundi(limits["health"] * power * rng.randf_range(0.9, 1.1)), events, id, now)
 			_area(player["cell"], 0, definition["color"], events)

@@ -11,7 +11,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 09 | [Single-target warrior taunt](09-warrior-taunt.md) | S-M | |
 | 10 | [Armor types, new stats, class counters](10-armor-and-class-counters.md) | L | |
 | 11 | [Rune spells from level 40+ monsters](11-rune-spells.md) | M-L | |
 | 12 | [World map: arrow, quest guidance, new look](12-world-map.md) | M | |

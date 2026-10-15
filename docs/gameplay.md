@@ -48,7 +48,7 @@ times the spell's power):
 
 | Class | Spells (unlock level) |
 | --- | --- |
-| Warrior | Brutal blow (1), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
+| Warrior | Brutal blow (1), Provoke (8, turns your target monster onto you from up to 4 tiles), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
 | Hunter | Piercing shot (1), Holy mend (8), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
 | Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
 | Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
@@ -181,8 +181,8 @@ saves your character like hosting does, but brings the group game to you:
   on). They always match your level, wear the best regular gear of your tier, and follow you
   everywhere: across the map, through waystones and ferries, after you die, and down dungeon
   stairs into your party's copy. They fight what you target and whatever attacks the group.
-  Druids heal allies below 80% health with Mass mend from level 1, moving to them; Warriors **Challenge** monsters that turn on a softer
-  member. A companion who falls is back beside you six seconds later with what it carried.
+  Druids heal allies below 80% health with Mass mend from level 1, moving to them; Warriors **Provoke** a monster that turns on a softer
+  member from up to four tiles away and **Challenge** everything around them. A companion who falls is back beside you six seconds later with what it carried.
   Party experience is shared by the usual rules, so a full group levels as a real one does.
 - **Rival bands.** Two named adventurer bands of three (*the Ashen Hand* and *the
   Thornwardens*) roam the world at about your level. Their leader takes a task from its giver,
@@ -234,7 +234,7 @@ below 25% mana; ranged bots step back from anything beside them.
 | Training dummy | Stands still and never fights back: test damage, spells, and skulls |
 
 A **LimboAI behavior tree** (`game/data/bot_behavior.tres`) makes each bot's decisions: dummies
-idle; everyone else uses spells and potions (in a party: heals for hurt allies, Challenge for the
+idle; everyone else uses spells and potions (in a party: heals for hurt allies, Provoke and Challenge for the
 group), then fights a target (its leader's, attackers of its group, PvP victims, monsters after
 it, or prey near its post), collects loot, sells it, follows its leader (companions and rival
 band members), runs its errand (rival band leaders: tasks, camps, ambushes), or walks back to its
@@ -389,7 +389,7 @@ tier and **bound**: they are never dropped on death, sold, or traded.
 **Spell ranks.** Right-click your class trainer in Cinder Crossing's training hall and choose
 **Runes**: they carve rune shards into a spell you know, one rank at a time (rank 2 costs 3
 shards, rank 3 costs 6 more). Each rank makes the spell 15% stronger (damage or healing);
-Challenge has no strength to raise. Ranks are saved with your character and show in the spell
+Challenge and Provoke have no strength to raise. Ranks are saved with your character and show in the spell
 book and tooltips ("Ember bolt · rank 3"). Shards drop from the Lodge prey (1.5–4%), Greymaw
 (50%), and as contract rewards: the whole chain pays 9, enough to take one spell to rank 3.
 

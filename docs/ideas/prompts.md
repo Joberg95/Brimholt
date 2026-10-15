@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-lets add a taunt for warriors so they can target a enemy to gain their focus from another player (plan 09)
-
 Lets add new item types, I want to add healing power, damage is ok as it is, since this is an overall increase regardless of its a spell or attack with melee weapon. lets add crit chance, defense against magic, defense against melee should be part of the warrior class as they wear plate armor and should take less melee damage based on armor, but spell damage should still do the same damage making sorcerer a good class for dealing with warriors. Warriors should be effective against druid and hunter since they are wearing lesser armor gear. We might have to rebalance spells due to this , so druids get a root spell for example and hunters a slowing arrow for example. (plan 10)
 
 lets create a new different type of spell, that is a rune item you can drop from 40+ monsters that you hunt, the item is a area of effect damage spell as fire, lightning or frost damage and this you can drag to your action bar and use from there but it needs a inventory space. (plan 11)
