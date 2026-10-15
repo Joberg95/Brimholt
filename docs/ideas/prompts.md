@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-when selling something to a vendor the list snaps back to the top, lets keep the list where the scroll is so we dont get layout shifts when interacting with a vendor. (plan 02)
-
 lets reduce gold gain, at level 19 I have 22k gold, this seems a bit exessive (plan 03)
 
 lets make a gathering node have a chance of gaining you 1-5 items per node and make them spawn like 10% less (plan 04)

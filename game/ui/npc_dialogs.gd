@@ -38,6 +38,10 @@ var _player_menu_target: int = 0
 ## The craft dialog's chosen profession and gear tier (0: the highest you can craft).
 var craft_profession: String = "smithing"
 var craft_tier: int = 0
+## The scrolled list's offset when a dialog page rebuilds (after a sale, a purchase, a deposit),
+## kept for the same page so the list does not jump to the top.
+var _scroll_page: String = ""
+var _scroll_offset: int = 0
 
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
@@ -218,6 +222,9 @@ func _begin(npc: String) -> bool:
 	if not World.in_talk_range(actors[self_id]["state"]["cell"], World.npc(npc)["cell"]):
 		game.last_action_message = "Walk closer to %s." % World.npc(npc)["name"]
 		return false
+	var scroll: ScrollContainer = _list_scroll()
+	_scroll_page = _page() if scroll != null and panel.visible else ""
+	_scroll_offset = scroll.scroll_vertical if scroll != null else 0
 	for child: Node in list.get_children():
 		list.remove_child(child)
 		child.queue_free()
@@ -230,6 +237,28 @@ func _show(npc: String, kind: String) -> void:
 	_shown_state = _state_key()
 	panel.reset_size()
 	panel.show()
+	var scroll: ScrollContainer = _list_scroll()
+	if scroll != null and _scroll_page == _page() and _scroll_offset > 0:
+		_restore_scroll(scroll, _scroll_offset)
+
+
+## The open page: who, which service, and for an artisan the chosen profession and tier.
+func _page() -> String:
+	return "%s/%s/%s/%d" % [talking_to, mode, craft_profession if mode == "craft" else "", craft_tier if mode == "craft" else 0]
+
+
+func _list_scroll() -> ScrollContainer:
+	for child: Node in list.get_children():
+		if child is ScrollContainer:
+			return child
+	return null
+
+
+## A new list has no size until the next layout pass, which would clamp the offset to 0.
+func _restore_scroll(scroll: ScrollContainer, offset: int) -> void:
+	await get_tree().process_frame
+	if is_instance_valid(scroll):
+		scroll.scroll_vertical = offset
 
 
 func _label(text: String, color: Color = Color.TRANSPARENT) -> Label:

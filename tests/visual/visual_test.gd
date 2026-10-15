@@ -535,6 +535,19 @@ func _check_town_services() -> bool:
 	if not _expect(player["backpack"][0] == "health_potion#10" and player["gold"] == 500 - 10 * World.ITEMS["health_potion"]["price"]
 			and game._travel_list.get_child(1).text.contains(str(player["gold"])), "Buying potions did not update the trade window"):
 		return false
+	# A purchase rebuilds the list where it was scrolled, not back at the top.
+	var trade_scroll: ScrollContainer = game.dialogs._list_scroll()
+	trade_scroll.scroll_vertical = 80
+	await process_frame
+	var scrolled: int = trade_scroll.scroll_vertical
+	game.buy_local("cinder_vendor", "health_potion", 1)
+	for wait: int in 4:
+		await process_frame
+	var rebuilt: ScrollContainer = game.dialogs._list_scroll()
+	if not _expect(scrolled > 0 and rebuilt != trade_scroll and rebuilt.scroll_vertical == scrolled,
+			"Buying moved the trade list (%d before, %d after)" % [scrolled, rebuilt.scroll_vertical]):
+		return false
+	player["backpack"][0] = "health_potion#10"
 	player["health"] = 1
 	game._publish_actor(1)
 	await process_frame
