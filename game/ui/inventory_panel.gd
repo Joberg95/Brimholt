@@ -11,6 +11,7 @@ const Items = preload("res://game/data/items.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Professions = preload("res://game/data/professions.gd")
+const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const ItemTip = preload("res://game/ui/item_tip.gd")
@@ -278,6 +279,13 @@ func _relic_source(kind: String) -> String:
 	return Monsters.MONSTERS[boss]["name"] if not boss.is_empty() else "a final boss"
 
 
+## Who pays a quest piece: "the Hunters' Lodge", or the boss task's title.
+func _quest_source(quest: String) -> String:
+	if quest == "hunters_lodge":
+		return "the Hunters' Lodge"
+	return Quests.TASKS[quest]["title"] if Quests.TASKS.has(quest) else "a quest"
+
+
 func item_tooltip(kind: String) -> String:
 	if not World.ITEMS.has(kind):
 		return ""
@@ -307,6 +315,8 @@ func item_tooltip(kind: String) -> String:
 		var refused: String = requirement_for(kind)
 		if not refused.is_empty():
 			lines.append("✗ " + refused)
+	if item.has("quest"):
+		lines.append("Quest reward (%s); bound to you (never dropped or lost)" % _quest_source(item["quest"]))
 	if item.has("gold"):
 		lines.append("Worth %d gold; picked up into your purse" % item["gold"])
 	if item.get("loot_only", false) or Items.mythic(item):

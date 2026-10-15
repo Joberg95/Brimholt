@@ -19,7 +19,7 @@ PLAYING TOGETHER ON A LAN
    "IPv4 Address" of the network adapter (for example 192.168.1.20).
 3. Everyone else starts Brimholt.exe, types that address, and clicks "Join".
 
-Up to twelve players. Everyone must use the same version of the game.
+Up to twenty-four players. Everyone must use the same version of the game.
 
 DEDICATED SERVER (optional; the host plays no character)
 In Command Prompt, in the game folder:

@@ -152,7 +152,10 @@ Crossing at full health. **Below level 8 you keep your items and gold**, so an e
 cannot strand you. From level 8, as in classic Tibia without blessings, you always lose your whole
 backpack and all purse gold, and each worn item has a 10% chance to drop. Everything lost
 lands on the tile where you fell, spilling onto tiles within 3 steps (six items per tile),
-and anyone can pick it up, including you on a run back to your body.
+and anyone can pick it up, including you on a run back to your body. What drops is only what
+you **found or bought**: anything **bound** to you stays, wherever you die and whatever your
+skull. Bound items are quest rewards: packs, relics, the Hunters' Lodge set, and the boss
+tasks' accessories (their tooltips say "bound to you").
 
 Attacking an unmarked player gives you a **white skull** for 15 minutes (renewed while you
 keep attacking). Fighting back against someone who attacked you, or attacking a skulled
@@ -188,12 +191,18 @@ saves your character like hosting does, but brings the group game to you:
   closing in, so Blackreed Isle and the Hollow Reach become group fights. Outside PvP zones
   rivals cannot attack you, as for any player; skulls, death penalties, and loot drops all
   apply to them (beat them for their potions). A band rests a few minutes between ambushes.
-- **Raids.** At level 50, open the party window (O) and choose **Gather a raid**: your party fills to
-  the ten-player raid the final bosses are balanced for (two Warriors, three Hunters, three
-  Sorcerers, two Druids, you included). The raid's Warriors trade the boss when its wounds stack
-  on the tank (three or more), and the Druids keep everyone up through its pulses. The rival
-  bands step aside meanwhile, to stay within the twelve-player limit. **Disband the raid** sends
-  the extra companions home; your three stay.
+- **Choosing companions.** The party window (O) has a class picker beside each companion:
+  pick another class and that companion goes home while one of the new class joins, at your
+  level. Build the group you want, two healers for a hard dungeon or three damage dealers for PvP.
+- **Raids.** The party window also holds the **raid plan**: a count per class (with − and +),
+  starting from the twenty-player raid the final bosses are balanced for (four Warriors, six
+  Hunters, six Sorcerers, four Druids, you included), and never below the classes already in
+  your party. A line under it says whether that raid beats the final boss, and how fast, or
+  what it lacks. At level 50, with twenty planned, choose **Gather a raid**: your party fills
+  to the plan. The raid's Warriors trade the boss when its wounds stack on the tank (three or
+  more), and the Druids keep everyone up through its pulses. The rival bands step aside
+  meanwhile, to stay within the twenty-four-player limit. **Disband the raid** sends the extra
+  companions home; your three stay. Companions and the plan stay fixed while a raid is out.
 
 Companions and rivals are bots (below): they play through the server's own rules and are never
 saved. Their nameplates show their name and level.
@@ -202,7 +211,7 @@ saved. Their nameplates show their name and level.
 
 Bots come with solo play (companions and rivals, above); there is no menu to add them. The
 host's `spawn_bot` (tests, the fight and duel simulators) still adds standalone bots in three
-stances. Bots are real players on the host: they take player slots (twelve in
+stances. Bots are real players on the host: they take player slots (twenty-four in
 all), wear the best regular gear of their level (with accessories from level 20), carry 50
 health and 50 mana potions, and play through the server's own rules, so PvP zones, skulls,
 death penalties, and loot drops all apply. Their nameplates read "Bot Warrior 40" and so on.
@@ -339,7 +348,10 @@ contracts, one at a time: each opens once the one before it is turned in, agains
 a new region. The prey are also the best farms for their level: twice the usual chance of tier
 gear, health and mana potions, and **rune shards**. Each contract pays experience and gold,
 potions and shards, and one piece of the hunt's tier made for your class (your own armor type,
-weapon, or off-hand); turning in needs a free backpack slot for every item.
+weapon, or off-hand); turning in needs a free backpack slot for every item. The pieces are the
+**Lodge set**, made only for the Lodge (Lodgewarden for Warriors, Lodgeranger for Hunters,
+Lodgestalker for Druids, Lodgeseer for Sorcerers), 5% stronger than the vendor piece of their
+tier and **bound**: they are never dropped on death, sold, or traded.
 
 | Contract | Prey | Where | Levels | Also pays |
 | --- | --- | --- | --- | --- |
@@ -380,6 +392,9 @@ Thornfield Wilds (25 Silkhollow spiders, then the Silk Matron). Any of the dunge
 hunt, and your party's shared kills count too. They pay experience and gold instead of a pack:
 half of what the kills themselves gave for a hunt, and as much again as the boss gave for a
 boss task (shown in the quest dialog). A giver lists all their tasks; each is done once.
+Three boss tasks also pay a bound accessory: **Matron's silk cape** (the Silk Matron, level 20),
+**Abbot's prayer beads** (Abbot Morrow, level 25), and the **Forgeheart ring** (the Forgemaw,
+level 35).
 
 The **quest list** in the top-left of the game window shows every task you are on: its giver
 and town, and your progress, or "Done: return to ..." once you can turn it in. Press L
@@ -597,16 +612,16 @@ applies. Zones get this rule with the `full_loot` flag on their marker.
 Three level-50 final bosses each guard a lair: **Morvain the Drowned** at the far end of
 Blackreed Isle, **Kharzul the Cinder Colossus** in the far east, and **Sylvaine the Hollow
 Bloom** in the south-eastern forest, west of the Hollow Reach. The ultimate boss, **Vaelith**, waits in the Hollow
-Sanctum's throne room and respawns after an hour. Each boss has the 350,000 health of the
-raid boss (so it takes a ten-player group), drops gold, and respawns 30 minutes after it
+Sanctum's throne room and respawns after an hour. Each boss has the 700,000 health of the
+raid boss (so it takes a twenty-player group), drops gold, and respawns 30 minutes after it
 dies.
 
 Bosses fight like raid bosses. When one engages, everyone within 20 tiles is warned that it
-**enrages after 255 seconds**: from then on it hits ten times as hard, so the raid needs its
+**enrages after 245 seconds**: from then on it hits ten times as hard, so the raid needs its
 damage. Every 4 seconds it **pulses** dark energy at every player within 8 tiles, ignoring
-defense; across a ten-player raid that adds up to about 2.2 Druids' healing per second.
+defense; across a twenty-player raid that adds up to about 4.4 Druids' healing per second.
 Each of its hits **wounds** its target, so every next hit on that player lands 25% harder
-until 12 seconds pass without one: two Warriors must take turns, the second pulling the boss
+until 12 seconds pass without one: the Warriors (four, two pairs) must take turns, the second pulling the boss
 with **Challenge** (Warrior spell from level 20: monsters within 2 tiles turn on the caster).
 If the raid leaves, the boss walks home, heals, and forgets the fight. Its nameplate shows
 ENRAGED once it enrages.
@@ -630,6 +645,9 @@ even with a red skull.
 Every new character starts as an **Adventurer**: no class yet, middling health and
 mana, only Light heal, and the tier-1 gear of every class to try (an Adventurer with a
 bow shoots from six tiles, with a wand or rod from five). Adventurers stop at level 8.
+**Choosing a class comes first**: until you have one, the trial is the only task anyone gives
+you (other givers send you to the trainers, and show no mark), and the dungeon stairways turn
+you away. The quest list leads the way: the trial, then "choose your class" at a trainer.
 **Master Hesk**, outside Cinder Crossing's training hall in the south-east corner, gives
 **The adventurer's trial**: hunt eight thornback boars in Greywood. Once you have passed it and
 reached level 5, right-click a trainer in the hall and choose **Class**: Sir Garrow
@@ -652,9 +670,9 @@ totals and the gear bonus. Charms, rings, and necklaces give passive stats only.
 computed with the same shared function on every peer from server-authoritative class,
 level, and equipment.
 
-`game/data/balance.gd` defines the level 1-50 curves, all derived from a **350,000-health
-final boss** that needs a raid of **at least ten level-50 players with every class**:
+`game/data/balance.gd` defines the level 1-50 curves, all derived from a **700,000-health
+final boss** that needs a raid of **at least twenty level-50 players with every class**:
 an enrage timer demands damage, raid-wide pressure demands healers, and wound stacks
-demand two tanks. See [`balance.md`](balance.md) for the anchors, class
+demand four tanks. See [`balance.md`](balance.md) for the anchors, class
 profiles, raid checks, and full level table.
 Combat uses these stats and curves directly.

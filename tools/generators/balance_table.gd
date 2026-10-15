@@ -39,8 +39,10 @@ func _initialize() -> void:
 		var smaller: Dictionary = Balance.RAID.duplicate()
 		smaller[vocation] -= 1
 		groups.append(smaller)
-	groups.append({"knight": 2, "paladin": 2, "sorcerer": 4, "druid": 2})
-	groups.append({"knight": 2, "paladin": 4, "sorcerer": 4, "druid": 2})
+	groups.append({"knight": 4, "paladin": 4, "sorcerer": 8, "druid": 4})
+	groups.append({"knight": 4, "paladin": 8, "sorcerer": 6, "druid": 4})
+	groups.append({"knight": 4, "paladin": 0, "sorcerer": 10, "druid": 5})
+	groups.append({"knight": 2, "paladin": 3, "sorcerer": 3, "druid": 2})
 	groups.append({"knight": 1, "paladin": 1, "sorcerer": 1, "druid": 1})
 	for group: Dictionary in groups:
 		var result: Dictionary = Balance.raid_check(group)

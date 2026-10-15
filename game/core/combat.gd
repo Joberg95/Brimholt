@@ -74,6 +74,8 @@ const ENRAGE_MULTIPLIER: float = 10.0
 const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.04, "elite": 0.25, "champion": 1.0, "boss": 0.0}
 const GEAR_LOWER_TIER_CHANCE: float = 0.3
 const PARTY_ACTIONS: Array[String] = ["invite", "revoke", "join", "leave"]
+## What an Adventurer hears from every giver but the trial master, and at a dungeon stairway.
+const CHOOSE_CLASS_FIRST: String = "Choose your class first: pass the adventurer's trial, then see a trainer in Cinder Crossing's training hall"
 const STEPS: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
 var world: World
@@ -688,6 +690,9 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 			var requires: String = definition.get("requires", "")
 			if not requires.is_empty() and not player["done_tasks"].has(requires):
 				return {"ok": false, "reason": "Finish %s first" % Quests.TASKS[requires]["title"], "events": []}
+			if not World.task_open(task, player):
+				return {"ok": false, "reason": CHOOSE_CLASS_FIRST if player["vocation"] == Balance.ADVENTURER
+					else "That task is for Adventurers", "events": []}
 			player["tasks"][task] = 0
 			text = "%s: slay %s, then return to %s." % [definition["title"],
 				target if definition["count"] == 1 else "%d %s" % [definition["count"], target], giver]

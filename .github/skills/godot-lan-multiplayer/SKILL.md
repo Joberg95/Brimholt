@@ -5,7 +5,7 @@ description: Use when implementing or changing Brimholt ENet hosting/joining, RP
 
 # Godot LAN multiplayer
 
-1. Use native ENet with UDP port 1234 and at most twelve players (`World.MAX_PLAYERS`) including a playing host. The handshake carries the map signature and a class; validate both as untrusted Variants. Do not introduce a Node/WebSocket service.
+1. Use native ENet with UDP port 1234 and at most twenty-four players (`World.MAX_PLAYERS`) including a playing host. The handshake carries the map signature and a class; validate both as untrusted Variants. Do not introduce a Node/WebSocket service.
 2. Leave gameplay nodes under peer 1 authority. Record each character's input-owner peer ID separately.
 3. Expose narrowly scoped reliable action RPCs. Validate the remote sender against a connected player; do not accept a client-supplied owner ID, position, speed, slot appearance, or arbitrary item data.
 4. Route host actions directly through the same server validation used for remote requests. Never treat a remote sender ID of zero as a remote client.

@@ -16,6 +16,10 @@ const RELIC_BONUS: float = 1.15
 ## Mythic gear: unbound level-50 pieces (no glow) that only the level-50 farm monsters drop
 ## (Monsters.LOOT). Computed at RELIC_LEVEL with the smaller MYTHIC_BONUS: past the last tier, below relics.
 const MYTHIC_BONUS: float = 1.05
+## Quest pieces: bound gear that only a quest pays ("quest": the Hunters' Lodge chain or a boss
+## task), a little better than the vendor piece of their tier. Being bound, they are never
+## dropped on death, sold, or traded: what a player loses in PvP is only what they found or bought.
+const QUEST_BONUS: float = 1.05
 ## Defense of a full tier set (helmet, armor, legs, boots, shield) rises linearly from SET_DEFENSE_LOW at
 ## level 1 to SET_DEFENSE_HIGH at the last tier; each piece takes a share.
 const SET_DEFENSE_LOW: float = 14.0
@@ -54,7 +58,7 @@ const RESOURCE_VALUES: Array[int] = [0, 4, 7, 10, 14]
 
 
 ## id -> {name, slot, level, vocations, look, colors, stats, [armor], [outfit], [gold], [value], [price], [sell],
-## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only], [sold]} in file order. "sold" puts
+## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only], [sold], [quest]} in file order. "sold" puts
 ## an item without a gear slot (a bag) in vendor stock. Potions sharing a
 ## "timer" share one cooldown (a strong health potion waits on the health potion's timer). "price" is the tier valuation,
 ## "sell" what vendors pay; loot_only items are never vendor stock or generic gear rolls.
@@ -79,6 +83,8 @@ static func load_catalog() -> Dictionary:
 			item["loot_only"] = true
 		if bool(entry.get("sold", false)):
 			item["sold"] = true
+		if entry.has("quest"):
+			item["quest"] = String(entry["quest"])
 		for key: String in ["gold", "value", "price", "slots"]:
 			if entry.has(key):
 				item[key] = int(entry[key])
@@ -107,8 +113,9 @@ static func load_catalog() -> Dictionary:
 				stats[stat] = int(entry["stats"][stat])
 		elif not item["slot"].is_empty():
 			stats = tier_stats(item)
-			if item.has("glow") or mythic(item):
-				var bonus: float = float(entry.get("bonus", RELIC_BONUS)) if item.has("glow") else MYTHIC_BONUS
+			if item.has("glow") or mythic(item) or item.has("quest"):
+				var bonus: float = float(entry.get("bonus", RELIC_BONUS)) if item.has("glow") \
+					else QUEST_BONUS if item.has("quest") else MYTHIC_BONUS
 				for stat: String in stats:
 					stats[stat] = roundi(stats[stat] * bonus)
 		item["stats"] = stats

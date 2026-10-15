@@ -9,9 +9,10 @@ extends RefCounted
 ## themselves gave, so a boss task (share 1) doubles the boss's experience.
 ##
 ## Chains: a task with "requires" opens only once that task is done. Tasks may also pay
-## "items" ([item, count] pairs: potions, rune shards) and "gear" (an equipment slot: the
-## piece of that slot for your class at the tier of the task's "level", World.class_piece);
-## turning in needs backpack room for all of them.
+## "items" ([item, count] pairs: potions, rune shards, a boss task's bound accessory) and "gear"
+## (an equipment slot: the chain's bound quest piece of that slot for your class, World.quest_piece,
+## or else the class piece at the tier of the task's "level"); turning in needs backpack room for
+## all of them. Quest gear is bound, so a PvP death never drops it.
 
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
@@ -93,19 +94,19 @@ const TASKS: Dictionary = {
 		"also": ["grave_ghoul"], "target": "risen dead", "count": 30, "reward": "experience", "share": 0.5,
 		"intro": "The dead of Ashford's crypt will not lie still. Put them back to rest."},
 	"abbot_morrow": {"title": "The abbot's last rites", "giver": "sexton_wren", "monster": "abbot_morrow", "count": 1,
-		"reward": "experience", "share": 1.0,
+		"reward": "experience", "share": 1.0, "items": [["abbots_prayer_beads", 1]],
 		"intro": "Abbot Morrow raises them all from the bottom of the crypt. End his vigil."},
 	"mine_clearing": {"title": "Clear the deep mine", "giver": "foreman_dagny", "monster": "cave_crawler",
 		"also": ["ember_golem"], "target": "mine creatures", "count": 30, "reward": "experience", "share": 0.5,
 		"intro": "Crawlers and ember golems drove my miners out. Clear the shafts so we can dig again."},
 	"forgemaw": {"title": "Quench the Forgemaw", "giver": "foreman_dagny", "monster": "forgemaw", "count": 1,
-		"reward": "experience", "share": 1.0,
+		"reward": "experience", "share": 1.0, "items": [["forgeheart_ring", 1]],
 		"intro": "Something burns at the bottom of the mine. The miners call it the Forgemaw."},
 	"silk_harvest": {"title": "Cut the webs", "giver": "trapper_maud", "monster": "cave_spider",
 		"also": ["venom_weaver"], "target": "Silkhollow spiders", "count": 25, "reward": "experience", "share": 0.5,
 		"intro": "Spiders the size of dogs nest in Silkhollow. Take a torch, it is black as pitch down there."},
 	"silk_matron": {"title": "The Silk Matron", "giver": "trapper_maud", "monster": "silk_matron", "count": 1,
-		"reward": "experience", "share": 1.0,
+		"reward": "experience", "share": 1.0, "items": [["matron_silk_cape", 1]],
 		"intro": "Their mother spins at the bottom of the cave. Burn her nest and the wilds are ours again."},
 }
 ## Relic keepers: quest giver -> the final boss whose trophies they trade for relics.

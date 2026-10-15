@@ -2884,49 +2884,105 @@ def boulder(variant):
     return image
 
 
+TREE_LEAF = (rgba("9aa264"), rgba("7a894b"), rgba("65763f"), rgba("4c5d35"), rgba("39482c"), rgba("283422"))
+TREE_LEAF_LINE = rgba("1b2417")
+TREE_PINE = (rgba("86a06c"), rgba("648255"), rgba("4b6847"), rgba("375139"), rgba("273c2d"), rgba("1c2b22"))
+TREE_PINE_LINE = rgba("131d17")
+TREE_BARK = (rgba("907c5e"), rgba("6d5b45"), rgba("4f4233"), rgba("362d24"))
+TREE_BARK_LINE = rgba("211b15")
+
+
 def tree(variant):
-    """64x96 cell; the trunk base sits on the tile centre at (32, 80)."""
+    """64x96 cell; the trunk base sits on the tile centre at (32, 80). Variants 0 and 1 are broadleaf
+    trees, 2 a pine. Drawn like the mountain rock: clusters lit from the top-left on a six-tone ramp
+    (warm lights, cool shadows), dark gaps between leaf clumps or needle tiers, and a dark outline
+    in the foliage's own darkest hue."""
     rng = random.Random(1000 + variant)
     image = Image(FRAME, 96)
-    for x, y in ellipse(32, 82, 15, 4):
+    for x, y in ellipse(32, 82, 16, 4):
         image.set(x, y, SHADOW)
+    pine = variant == 2
+    ramp, line_ = (TREE_PINE, TREE_PINE_LINE) if pine else (TREE_LEAF, TREE_LEAF_LINE)
+    # The trunk: lit on its left, bark furrows, a root flare, and (broadleaf) two limbs into the crown.
     trunk = Image(FRAME, 96)
-    wood = box(29, 44, 6, 37)
-    for a, b in [((31, 60), (19, 38)), ((32, 54), (46, 36)), ((31, 76), (24, 82)), ((33, 77), (42, 83))]:
-        wood |= thick(line(*a, *b), ((0, 0), (1, 0)))
-    shade(trunk, wood, BARK, False)
-    for x, y in sorted(wood):
-        if (x * 13 + y // 5) % 5 == 0:
-            trunk.set(x, y, BARK[2])
-    image.over(trunk.outlined(BARK[2]))
+    wood = set()
+    for y in range(44 if not pine else 58, 81):
+        half = 3 + (1 if y > 74 else 0) + (1 if y > 78 else 0)
+        wood |= box(32 - half, y, half * 2, 1)
+    if not pine:
+        for a, b in [((30, 58), (22, 44)), ((34, 55), (43, 42))]:
+            wood |= thick(line(*a, *b), ((0, 0), (1, 0), (0, 1)))
+    for x, y in wood:
+        across = x - 32
+        tone = 0 if across < -1 else 1 if across < 2 else 2
+        if (x * 7 + y // 3 + variant) % 6 == 0:
+            tone = min(3, tone + 1)  # a furrow in the bark
+        trunk.set(x, y, TREE_BARK[tone])
+    image.over(trunk.outlined(TREE_BARK_LINE))
     crown = Image(FRAME, 96)
-    if variant < 2:
-        lobes = [(19, 51, 12, 9), (42, 53, 12, 10), (30, 44, 20, 18),
-                 (20, 33, 12, 11), (45, 35, 10, 13), (33, 22, 13, 12)]
+    if not pine:
+        lobes = [(32, 38, 20, 19), (20, 47, 12, 10), (44, 47, 12, 10), (24, 26, 12, 11), (41, 27, 12, 11), (32, 17, 11, 9)]
+        if variant == 1:
+            lobes = [(32, 40, 18, 18), (19, 44, 10, 11), (45, 42, 10, 12), (27, 24, 13, 12), (40, 22, 11, 10), (33, 12, 8, 7)]
+        mask = set()
         for cx, cy, rx, ry in lobes:
-            cx += rng.randrange(-2, 3)
-            cy += rng.randrange(-2, 3)
-            points = ellipse(cx, cy, rx, ry)
-            for x, y in sorted(points):
-                edge = any((x + dx, y + dy) not in points for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-                if edge and (x * 13 + y * 7) % 5 == 0:
-                    continue
-                lighting = (cx - x) / rx * 0.35 + (cy - y) / ry * 0.55
-                patch = ((x // 3 * 7 + y // 2 * 11 + variant * 3) % 7 - 3) * 0.06
-                tone = LEAF[0] if lighting + patch > 0.35 else (LEAF[2] if lighting + patch < -0.32 else LEAF[1])
-                if (x * 17 + y * 31) % 11 < 2:
-                    tone = scale(tone, 1.13)
-                crown.set(x, y, tone)
+            mask |= ellipse(cx + rng.randrange(-1, 2), cy + rng.randrange(-1, 2), rx, ry)
+        # Leaf clumps: each pixel belongs to its nearest clump centre; clumps are lit on their
+        # upper left, with dark gaps where two clumps meet.
+        centres = []
+        while len(centres) < 19:
+            x, y = rng.randrange(10, 55), rng.randrange(6, 60)
+            if (x, y) in mask and all((x - a) ** 2 + (y - b) ** 2 > 42 for a, b in centres):
+                centres.append((x, y))
+        top = min(y for _, y in mask)
+        bottom = max(y for _, y in mask)
+        for x, y in sorted(mask):
+            dist = sorted(((x - a) ** 2 + (y - b) ** 2, a, b) for a, b in centres)
+            first, ax, ay = dist[0]
+            second = dist[1][0]
+            radius = 7.5
+            nx, ny = (x - ax) / radius, (y - ay) / radius
+            light = -(nx * 0.55 + ny * 0.75) * 0.9 + (32 - x) / 22 * 0.35 + (bottom - y) / (bottom - top) * 0.55 - 0.2
+            light += (_grain(x, y, 23 + variant) - 0.5) * 0.25
+            tone = 0 if light > 0.75 else 1 if light > 0.35 else 2 if light > 0.0 else 3 if light > -0.4 else 4
+            if math.sqrt(second) - math.sqrt(first) < 1.1:
+                tone = min(5, max(tone + 2, 3))  # the gap between two clumps
+            crown.set(x, y, ramp[tone])
+        # A leafy edge: bite a few pixels out and scatter single leaves just outside.
+        for x, y in sorted(mask):
+            edge = any((x + dx, y + dy) not in mask for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+            if edge and _grain(x, y, 31 + variant) < 0.3:
+                crown.clear(x, y)
+        for x, y in sorted(mask):
+            for dx, dy in ((-1, -1), (1, -1), (-1, 1)):
+                if (x + dx, y + dy) not in mask and _grain(x, y, 41 + variant) < 0.05:
+                    crown.set(x + dx, y + dy, ramp[1] if dy < 0 else ramp[3])
+        # Branches show in a few gaps low in the crown.
+        for x, y in sorted(mask):
+            if y > bottom - 14 and crown.get(x, y) == ramp[5] and _grain(x, y, 53) < 0.35:
+                crown.set(x, y, TREE_BARK[3])
     else:
-        points = set()
-        for y in range(9, 66):
-            width = max(1, round((y - 8) * 0.35) - (y % 7) // 3)
-            points |= box(32 - width, y, width * 2, 1)
-        for x, y in sorted(points):
-            branch = (y + abs(x - 32) // 2) % 7
-            tone = PINE[2] if branch > 4 else (PINE[0] if x < 32 and branch < 2 else PINE[1])
-            crown.set(x, y, tone)
-    image.over(crown.outlined(LEAF[2] if variant < 2 else PINE[2]))
+        # A pine: tiers of drooping boughs, each wider than the one above, lit on the left, dark
+        # under the tier above, with a ragged hem of needle tips.
+        tiers = [(8, 20, 6), (15, 29, 9), (22, 39, 12), (30, 49, 15), (39, 60, 18), (48, 68, 20)]
+        for index, (top, bottom, width) in enumerate(tiers):
+            for y in range(top, bottom + 1):
+                share = (y - top) / max(1, bottom - top)
+                half = width * (0.25 + 0.75 * share)
+                for x in range(32 - int(half) - 1, 32 + int(half) + 2):
+                    off = abs(x + 0.5 - 32)
+                    droop = bottom - (off / max(1.0, half)) * 3.5  # the bough tips hang lower
+                    if off > half or y > droop + (_grain(x, index, 61) * 3.0):
+                        continue
+                    light = (32 - x) / max(4.0, half) * 0.6 + (1.0 - share) * 0.5 - 0.2
+                    light += (0.25 if (x + y) % 3 == 0 and x < 32 else 0.0) - (0.2 if (x - y) % 4 == 0 and x > 32 else 0.0)
+                    tone = 0 if light > 0.7 else 1 if light > 0.35 else 2 if light > 0.0 else 3 if light > -0.35 else 4
+                    if share < 0.22 and index > 0 and off < half * 0.75:
+                        tone = min(5, tone + 2)  # in the shadow of the tier above
+                    crown.set(x, y, ramp[tone])
+        crown.set(32, 6, ramp[1])
+        crown.set(32, 7, ramp[2])
+    image.over(crown.outlined(line_))
     return image
 
 

@@ -2,9 +2,11 @@ extends RefCounted
 ## Solo play on the host (the start screen's "Play solo"): a private world where your own
 ## companions (Bots "companion") complete a tank, healer, and damage group around your class,
 ## and two rival adventurer bands (Bots "rival") take tasks, hunt, level alongside you, and
-## ambush your group when you enter a PvP zone. "Raid" fills your party to the ten-player raid
-## the final bosses are balanced for (Balance.RAID), sending the rival bands home meanwhile to
-## stay within World.MAX_PLAYERS; "Disband raid" sends the extra companions away again.
+## ambush your group when you enter a PvP zone. "Raid" fills your party to the raid the final
+## bosses are balanced for, sending the rival bands home meanwhile to stay within
+## World.MAX_PLAYERS; "Disband raid" sends the extra companions away again. You choose your
+## companions' classes (set_companion) and the raid's makeup (set_raid_plan, starting from
+## Balance.RAID; Balance.raid_check says whether it can beat the final boss) in the party window.
 ## Everything runs through game/core/bots.gd, so bots play by the same rules as players.
 ## Results are events like Combat.tick; {"kind": "bot_left", "id"} asks the host to drop a bot.
 
@@ -41,6 +43,11 @@ var bots: Bots
 ## The playing host.
 var leader: int = 1
 var raiding: bool = false
+## Your companions' classes, one per slot (starting as COMPANIONS), and the bot in each slot.
+var party_plan: Array[String] = []
+var slot_ids: Array[int] = []
+## The raid's classes: vocation -> players, you and your companions included (starting as Balance.RAID).
+var raid_plan: Dictionary = {}
 ## Band index -> {leader: bot id (0 while away), members: [ids], rest_until}.
 var bands: Dictionary = {}
 var _next_check: float = 0.0
@@ -58,9 +65,12 @@ func start(id: int, now: float) -> Array:
 	var events: Array = []
 	var player: Dictionary = world.players[id]
 	var vocation: String = player["vocation"]
-	for index: int in COMPANIONS[vocation].size():
-		var kind: String = COMPANIONS[vocation][index]
-		_add_companion(kind, COMPANION_NAMES[kind][0], now, events)
+	party_plan.assign(COMPANIONS[vocation])
+	raid_plan = Balance.RAID.duplicate()
+	slot_ids.clear()
+	for index: int in party_plan.size():
+		var kind: String = party_plan[index]
+		slot_ids.append(_add_companion(kind, _free_name(kind), now, events))
 	for band: int in BANDS.size():
 		bands[band] = {"leader": 0, "members": [], "rest_until": 0.0}
 		_send_band(band, now, events)
@@ -77,7 +87,65 @@ func companions() -> Array[int]:
 	return result
 
 
-## Fills your party to Balance.RAID (on) or sends the extra companions home (off).
+## Gives a companion slot another class: its companion goes home and one of `vocation` joins.
+func set_companion(slot: int, vocation: String, now: float) -> Dictionary:
+	var events: Array = []
+	if slot < 0 or slot >= party_plan.size() or not Balance.VOCATIONS.has(vocation):
+		return {"ok": false, "reason": "Unknown companion or class", "events": events}
+	if raiding:
+		return {"ok": false, "reason": "Disband the raid before changing your companions", "events": events}
+	if party_plan[slot] == vocation and bots.bots.has(slot_ids[slot]):
+		return {"ok": false, "reason": "That companion already is a %s" % Balance.VOCATIONS[vocation]["name"], "events": events}
+	if bots.bots.has(slot_ids[slot]):
+		_drop(slot_ids[slot], events)
+	party_plan[slot] = vocation
+	var name: String = _free_name(vocation)
+	slot_ids[slot] = _add_companion(vocation, name, now, events)
+	if slot_ids[slot] == 0:
+		return {"ok": false, "reason": "No room for another companion", "events": events}
+	# The raid plan keeps room for everyone already in your party.
+	var have: Dictionary = party_classes()
+	for kind: String in have:
+		raid_plan[kind] = maxi(raid_plan.get(kind, 0), have[kind])
+	events.append({"kind": "message", "id": leader, "text": "%s the %s joins you." % [name, Balance.VOCATIONS[vocation]["name"]]})
+	return {"ok": true, "events": events}
+
+
+## Raises or lowers how many of a class the raid brings (never below those already in your party).
+func set_raid_plan(vocation: String, delta: int) -> Dictionary:
+	if not Balance.VOCATIONS.has(vocation) or absi(delta) != 1:
+		return {"ok": false, "reason": "Unknown class"}
+	if raiding:
+		return {"ok": false, "reason": "Disband the raid before changing its makeup"}
+	var count: int = raid_plan.get(vocation, 0) + delta
+	if count < party_classes().get(vocation, 0):
+		return {"ok": false, "reason": "Your party already has %d %ss" % [party_classes()[vocation], Balance.VOCATIONS[vocation]["name"]]}
+	if delta > 0 and raid_size() >= raid_target():
+		return {"ok": false, "reason": "The raid is full: take someone out first"}
+	raid_plan[vocation] = count
+	return {"ok": true}
+
+
+## Players the raid plan brings, and how many a raid should have (Balance.RAID's total).
+func raid_size() -> int:
+	return raid_plan.values().reduce(func(total: int, count: int) -> int: return total + count, 0)
+
+
+static func raid_target() -> int:
+	return Balance.RAID.values().reduce(func(total: int, count: int) -> int: return total + count, 0)
+
+
+## Vocation -> how many of your party (you and your companions, not the raid) have it.
+func party_classes() -> Dictionary:
+	var result: Dictionary = {}
+	for id: int in [leader] + companions():
+		if world.players.has(id) and not (bots.bots.has(id) and bots.bots[id].get("raid", false)):
+			var vocation: String = world.players[id]["vocation"]
+			result[vocation] = result.get(vocation, 0) + 1
+	return result
+
+
+## Fills your party to the raid plan (on) or sends the extra companions home (off).
 func raid(on: bool, now: float) -> Dictionary:
 	var events: Array = []
 	if on == raiding:
@@ -85,19 +153,25 @@ func raid(on: bool, now: float) -> Dictionary:
 	if on and world.players[leader]["level"] < Balance.MAX_LEVEL:
 		return {"ok": false, "reason": "Raids are for level %d: the final bosses need a full raid at the top" % Balance.MAX_LEVEL,
 			"events": events}
+	if on:
+		# You may have chosen your class (or companions) since planning: keep room for them.
+		var have: Dictionary = party_classes()
+		for kind: String in have:
+			raid_plan[kind] = maxi(raid_plan.get(kind, 0), have[kind])
+	if on and raid_size() != raid_target():
+		return {"ok": false, "reason": "Plan a raid of %d first (%d planned)" % [raid_target(), raid_size()], "events": events}
 	raiding = on
 	if on:
 		for band: int in bands:
 			_recall_band(band, events)
-		var wanted: Dictionary = Balance.RAID.duplicate()
+		var wanted: Dictionary = raid_plan.duplicate()
 		for id: int in [leader] + companions():
 			var vocation: String = world.players[id]["vocation"]
 			if wanted.get(vocation, 0) > 0:
 				wanted[vocation] -= 1
 		for vocation: String in wanted:
 			for count: int in wanted[vocation]:
-				var names: Array = COMPANION_NAMES[vocation]
-				_add_companion(vocation, names[(count + 1) % names.size()], now, events, true)
+				_add_companion(vocation, _free_name(vocation), now, events, true)
 		events.append({"kind": "message", "id": leader, "text": "Your raid gathers: %d strong. Two warriors trade the boss with Challenge; stay near the druids." % (companions().size() + 1)})
 	else:
 		for id: int in companions():
@@ -138,15 +212,27 @@ func tick(now: float) -> Array:
 
 # ---------------------------------------------------------------- helpers
 
-func _add_companion(vocation: String, name: String, now: float, events: Array, for_raid: bool = false) -> void:
+## Adds a companion beside you in your party; returns its id (0 if the world is full).
+func _add_companion(vocation: String, name: String, now: float, events: Array, for_raid: bool = false) -> int:
 	var player: Dictionary = world.players[leader]
 	var added: Dictionary = bots.add(vocation, player["level"], "companion", player["cell"], now,
 		{"leader": leader, "name": name})
 	if not added["ok"]:
-		return
+		return 0
 	bots.bots[added["id"]]["raid"] = for_raid
 	bots.join_leader(added["id"], now, events)
 	events.append({"kind": "player", "id": added["id"]})
+	return added["id"]
+
+
+## A companion name for the class that no companion has yet (numbered once they run out).
+func _free_name(vocation: String) -> String:
+	var taken: Array = companions().map(func(id: int) -> String: return String(world.players[id].get("name", "")))
+	for suffix: String in ["", " II", " III", " IV", " V", " VI", " VII"]:
+		for name: String in COMPANION_NAMES[vocation]:
+			if not name + suffix in taken:
+				return name + suffix
+	return COMPANION_NAMES[vocation][0]
 
 
 ## Puts a rival band in a town away from you, at its level.

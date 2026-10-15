@@ -8,7 +8,7 @@ and the 384×384 world) is original.
 
 **Features at a glance**
 
-- Server-authoritative LAN play for up to twelve players (native Godot ENet), with saves on the host
+- Server-authoritative LAN play for up to twenty-four players (native Godot ENet), with saves on the host
 - Four classes, spells with ranks, parties with shared experience, Tibia-style skulls and PvP zones
 - Ten gear tiers, hunting weapons, level-50 mythic sets, and boss relics, all visible on your character
 - Towns, waystones, ferries, instanced dungeons, quest chains, and a lexicon of every monster
@@ -16,11 +16,11 @@ and the 384×384 world) is original.
   tailoring, alchemy, cooking) at town artisans
 - A backpack plus three bag slots, a bank depot, vendors, potions, and food
 - **Play solo** with three AI companions who follow, heal, and tank for you, rival adventurer
-  bands who quest, level, and ambush you in PvP zones, and a ten-player AI raid for the final bosses
+  bands who quest, level, and ambush you in PvP zones, and a twenty-player AI raid (you pick its classes) for the final bosses
 
 ## About
 
-An original Godot tile-world prototype for up to **twelve LAN players**, including a
+An original Godot tile-world prototype for up to **twenty-four LAN players**, including a
 playing host. It uses native ENet, server-authoritative grid movement, collision,
 smooth visual interpolation, a backpack with bags and ground items, layered visible
 equipment, a dense 384×384 world with safe towns, waystones, and ferries, and instanced dungeons. The map and all sprites are original;
@@ -63,7 +63,7 @@ godot --path . -- --host
 # Client on the same computer; replace the IP for another LAN computer
 godot --path . -- --join=127.0.0.1
 
-# Optional dedicated host: no host character, up to twelve clients
+# Optional dedicated host: no host character, up to twenty-four clients
 godot --headless --path . -- --headless-server
 ```
 

@@ -55,6 +55,42 @@ position = Vector2(368, 336)
 [node name="Spawn12" type="Marker2D" parent="Spawns"]
 position = Vector2(432, 336)
 
+[node name="Spawn13" type="Marker2D" parent="Spawns"]
+position = Vector2(176, 272)
+
+[node name="Spawn14" type="Marker2D" parent="Spawns"]
+position = Vector2(240, 272)
+
+[node name="Spawn15" type="Marker2D" parent="Spawns"]
+position = Vector2(304, 272)
+
+[node name="Spawn16" type="Marker2D" parent="Spawns"]
+position = Vector2(368, 272)
+
+[node name="Spawn17" type="Marker2D" parent="Spawns"]
+position = Vector2(432, 272)
+
+[node name="Spawn18" type="Marker2D" parent="Spawns"]
+position = Vector2(496, 272)
+
+[node name="Spawn19" type="Marker2D" parent="Spawns"]
+position = Vector2(560, 272)
+
+[node name="Spawn20" type="Marker2D" parent="Spawns"]
+position = Vector2(240, 144)
+
+[node name="Spawn21" type="Marker2D" parent="Spawns"]
+position = Vector2(304, 144)
+
+[node name="Spawn22" type="Marker2D" parent="Spawns"]
+position = Vector2(368, 144)
+
+[node name="Spawn23" type="Marker2D" parent="Spawns"]
+position = Vector2(432, 144)
+
+[node name="Spawn24" type="Marker2D" parent="Spawns"]
+position = Vector2(496, 144)
+
 [node name="Ferrymen" type="Node2D" parent="."]
 
 [node name="cinder_landing" type="Marker2D" parent="Ferrymen"]

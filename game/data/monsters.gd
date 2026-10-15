@@ -85,7 +85,7 @@ const MONSTERS: Dictionary = {
 		"rank": "normal", "range": 3, "step": 0.45},
 	"silk_matron": {"name": "The Silk Matron", "look": "spider", "color": Color("#4a2a3a"), "size": 1.6,
 		"rank": "champion", "range": 1, "step": 0.45},
-	# Final bosses: level 50 "boss" rank (Balance: a ten-player raid), slow respawn. Each kill
+	# Final bosses: level 50 "boss" rank (Balance: a twenty-player raid), slow respawn. Each kill
 	# gives every participant a trophy, traded at the Relic keeper for one of the boss's four
 	# glowing "relics". Raid mechanics (enrage, raid-wide damage, tank swaps) come later.
 	# The Hollow Reach (level 45-50 PvP, south-east): blight creatures guarding the Sanctum.

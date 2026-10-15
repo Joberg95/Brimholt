@@ -6,6 +6,7 @@ extends PanelContainer
 
 const World = preload("res://game/core/world.gd")
 const Quests = preload("res://game/data/quests.gd")
+const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const WIDTH: float = 230.0
 const TITLE: Color = Color("#ffcf6a")
@@ -44,7 +45,10 @@ func refresh() -> void:
 	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
 	var tasks: Dictionary = state.get("tasks", {})
 	var next: String = World.next_task(state) if not state.is_empty() else ""
-	var key: String = "%s|%s|%s" % [shown, tasks, next]
+	# An Adventurer past the trial has one thing left to do: choose a class.
+	var choosing: bool = not state.is_empty() and state.get("vocation", "") == Balance.ADVENTURER \
+		and Quests.TRIAL_TASK in state.get("done_tasks", [])
+	var key: String = "%s|%s|%s|%s|%s" % [shown, tasks, next, choosing, state.get("level", 1)]
 	if key == _key:
 		return
 	_key = key
@@ -52,7 +56,7 @@ func refresh() -> void:
 	for child: Node in _list.get_children():
 		_list.remove_child(child)
 		child.queue_free()
-	visible = shown and (not tasks.is_empty() or not next.is_empty())
+	visible = shown and (not tasks.is_empty() or not next.is_empty() or choosing)
 	if not visible:
 		size = Vector2.ZERO
 		return
@@ -79,6 +83,11 @@ func refresh() -> void:
 		_line("Next: %s" % Quests.TASKS[next]["title"], 12, NEXT)
 		_line("  %s, %s" % [giver["name"], giver["place"]], 10, GIVER)
 		_line("  Monsters level %d-%d" % [band.x, band.y], 10, GIVER)
+	if choosing:
+		_line("Next: choose your class", 12, NEXT)
+		_line("  A trainer, Cinder Crossing training hall", 10, GIVER)
+		if state.get("level", 1) < Balance.CHOOSE_LEVEL:
+			_line("  Reach level %d first" % Balance.CHOOSE_LEVEL, 10, GIVER)
 	# A container grows to fit but never shrinks on its own: fit the panel to these lines.
 	reset_size()
 

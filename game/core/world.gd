@@ -82,9 +82,9 @@ const FURNISHINGS: Dictionary = {
 }
 static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
-const MAX_PLAYERS: int = 12
+const MAX_PLAYERS: int = 24
 const PORT: int = 1234
-const PROTOCOL: int = 12
+const PROTOCOL: int = 13
 ## Tasks are suggested (and marked "!") up to this many levels above you, and until you are
 ## this many levels past their monsters.
 const NEXT_TASK_AHEAD: int = 2
@@ -1005,12 +1005,15 @@ static func with_items(slots: Array, items: Array) -> Array:
 
 
 ## The items a task pays besides experience and gold, for a class: its "items", then its "gear"
-## piece ([kind, 1]) at the tier of the task's level.
+## piece ([kind, 1]): the bound quest piece of its chain for that slot (Items "quest"), or else the
+## class piece at the tier of the task's level.
 static func task_items(task: String, vocation: String) -> Array:
 	var definition: Dictionary = Quests.TASKS[task]
 	var result: Array = definition.get("items", []).duplicate(true)
 	if definition.has("gear"):
-		var piece: String = class_piece(definition["gear"], Items.tier_for(definition.get("level", 1)), vocation)
+		var piece: String = quest_piece(definition.get("chain", task), definition["gear"], vocation)
+		if piece.is_empty():
+			piece = class_piece(definition["gear"], Items.tier_for(definition.get("level", 1)), vocation)
 		if not piece.is_empty():
 			result.append([piece, 1])
 	return result
@@ -1032,8 +1035,18 @@ static func items_text(items: Array) -> String:
 static func class_piece(slot: String, tier: int, vocation: String) -> String:
 	for kind: String in ITEMS:
 		var item: Dictionary = ITEMS[kind]
-		if item["slot"] == slot and item["level"] == tier and not item.get("loot_only", false) and not item.has("glow") \
+		if item["slot"] == slot and item["level"] == tier and not item.get("loot_only", false) and not item.get("bound", false) \
 				and requirement_error(kind, Balance.MAX_LEVEL, vocation).is_empty():
+			return kind
+	return ""
+
+
+## The bound piece a quest (a chain or a task, Items "quest") pays for an equipment slot to a
+## class, or "".
+static func quest_piece(quest: String, slot: String, vocation: String) -> String:
+	for kind: String in ITEMS:
+		var item: Dictionary = ITEMS[kind]
+		if item.get("quest", "") == quest and item["slot"] == slot and requirement_error(kind, Balance.MAX_LEVEL, vocation).is_empty():
 			return kind
 	return ""
 
@@ -1067,14 +1080,22 @@ static func task_levels(task: String) -> Vector2i:
 
 
 ## Whether a character (a player record, or a client's exported state) may still accept `task`:
-## not done, not on it, its giver placed, the task it "requires" done, and the trial only for Adventurers.
+## not done, not on it, its giver placed, the task it "requires" done, and the trial only for
+## Adventurers, who take nothing else: choosing a class comes first.
 static func task_open(task: String, state: Dictionary) -> bool:
 	if task in state.get("done_tasks", []) or state.get("tasks", {}).has(task) or not QUEST_GIVERS.has(Quests.TASKS[task]["giver"]):
 		return false
 	var requires: String = Quests.TASKS[task].get("requires", "")
 	if not requires.is_empty() and requires not in state.get("done_tasks", []):
 		return false
-	return task != Quests.TRIAL_TASK or state.get("vocation", "") == Balance.ADVENTURER
+	return (task == Quests.TRIAL_TASK) == (state.get("vocation", "") == Balance.ADVENTURER)
+
+
+## Whether a character is an Adventurer who has passed the trial and reached Balance.CHOOSE_LEVEL,
+## so a trainer will teach them a vocation.
+static func ready_to_choose(state: Dictionary) -> bool:
+	return state.get("vocation", "") == Balance.ADVENTURER and Quests.TRIAL_TASK in state.get("done_tasks", []) \
+		and state.get("level", 1) >= Balance.CHOOSE_LEVEL
 
 
 ## Whether a task suits a character's level: its monsters are at most NEXT_TASK_AHEAD levels
@@ -1089,6 +1110,8 @@ static func task_fits(task: String, level: int) -> bool:
 static func next_task(state: Dictionary) -> String:
 	var best: String = ""
 	var level: int = state.get("level", 1)
+	if state.get("vocation", "") == Balance.ADVENTURER:
+		return Quests.TRIAL_TASK if task_open(Quests.TRIAL_TASK, state) else ""
 	for task: String in Quests.TASKS:
 		if task_open(task, state) and task_fits(task, level) \
 				and (best.is_empty() or task_levels(task).x > task_levels(best).x):
@@ -1104,9 +1127,7 @@ static func quest_mark(npc_id: String, state: Dictionary) -> String:
 	if giver.is_empty():
 		return ""
 	if Quests.TRAINERS.has(npc_id):
-		var ready: bool = state.get("vocation", "") == Balance.ADVENTURER and Quests.TRIAL_TASK in state.get("done_tasks", []) \
-			and state.get("level", 1) >= Balance.CHOOSE_LEVEL
-		return "!" if ready else ""
+		return "!" if ready_to_choose(state) else ""
 	if not giver["boss"].is_empty():
 		return "?" if state.get("trophies", {}).get(giver["boss"], 0) > 0 else ""
 	var offer: bool = false

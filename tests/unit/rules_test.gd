@@ -116,14 +116,14 @@ func _run() -> void:
 	check(transit["from"] == Vector2i(6, 6), "late join sees movement origin")
 	check(world.move(1, Vector2i.RIGHT, 0.4)["ok"], "origin released after movement")
 	check(world.players[1]["facing"] == Vector2i.RIGHT, "authoritative facing")
-	check(World.SPAWNS.size() == World.MAX_PLAYERS and World.MAX_PLAYERS == 12, "one spawn per player, twelve players")
+	check(World.SPAWNS.size() == World.MAX_PLAYERS and World.MAX_PLAYERS == 24, "one spawn per player, twenty-four players")
 	for id: int in range(3, World.MAX_PLAYERS + 1):
 		check(world.add_player(id, 0.6), "spawn up to the player cap")
-	check(not world.add_player(World.MAX_PLAYERS + 1, 0.6), "twelve-player cap")
+	check(not world.add_player(World.MAX_PLAYERS + 1, 0.6), "twenty-four-player cap")
 	var cells: Dictionary = {}
 	for id: int in world.players:
 		cells[world.players[id]["cell"]] = true
-	check(cells.size() == World.MAX_PLAYERS, "twelve unique spawn cells")
+	check(cells.size() == World.MAX_PLAYERS, "twenty-four unique spawn cells")
 	world.remove_player(3)
 	check(not world.players.has(3), "disconnect removes player")
 	check(world.add_player(World.MAX_PLAYERS + 1, 0.6), "disconnect releases spawn")
@@ -288,6 +288,28 @@ func _quest_hub_and_lexicon_checks() -> void:
 		"a done giver loses its mark; a trophy marks its relic keeper")
 	check(World.quest_mark("trainer_druid", {"level": 5, "vocation": Balance.ADVENTURER, "done_tasks": [Quests.TRIAL_TASK]}) == "!",
 		"trainers mark a qualified Adventurer")
+	# Choosing a class comes first: an Adventurer is offered only the trial and no dungeon lets them in.
+	var fresh: Dictionary = {"level": 1, "vocation": Balance.ADVENTURER, "tasks": {}, "done_tasks": [], "trophies": {}}
+	check(World.next_task(fresh) == Quests.TRIAL_TASK and Quests.TASKS.keys().all(func(task: String) -> bool:
+		return World.task_open(task, fresh) == (task == Quests.TRIAL_TASK)), "an Adventurer is offered the trial and nothing else")
+	check(World.quest_mark("warden_brask", fresh) == "" and World.quest_mark("cellarmaster_pell", fresh) == "",
+		"other givers show no mark to an Adventurer")
+	fresh["done_tasks"] = [Quests.TRIAL_TASK]
+	check(World.next_task(fresh).is_empty(), "after the trial, the next step is a trainer, not a task")
+	var gate := World.new()
+	var gate_combat := Combat.new(gate, 4)
+	gate.add_player(1, 0.0, Balance.ADVENTURER)
+	var brask: Dictionary = World.QUEST_GIVERS["warden_brask"]
+	_place(gate, 1, brask["cell"] + brask["facing"])
+	check(gate_combat.task_action(1, "warden_brask", "boar_cull", "accept", 1.0)["reason"] == Combat.CHOOSE_CLASS_FIRST,
+		"givers send an Adventurer to choose a class first")
+	var stairway: Vector2i = World.DUNGEON_ENTRANCES.keys()[0]
+	var gate_instances := Instances.new(gate, gate_combat)
+	_place(gate, 1, stairway)
+	var bounced: Array = gate_instances.enter(1, World.DUNGEON_ENTRANCES[stairway], 2.0)
+	check(World.dungeon_at(gate.players[1]["cell"]).is_empty()
+		and bounced.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and String(event["text"]).begins_with("Choose your class")),
+		"dungeon stairways turn Adventurers away")
 	var world := World.new()
 	var combat := Combat.new(world, 3)
 	world.monsters.clear()
@@ -1034,8 +1056,8 @@ func _solo_checks() -> void:
 	check(not solo.raid(true, sim_clock[0])["ok"], "raids wait for level 50")
 	me["level"] = Balance.MAX_LEVEL
 	run.call(0.5)
-	check(solo.raid(true, sim_clock[0])["ok"] and combat.party_members(1).size() == 10 and world.players.size() <= World.MAX_PLAYERS,
-		"a raid gathers ten")
+	check(solo.raid(true, sim_clock[0])["ok"] and combat.party_members(1).size() == Solo.raid_target() and Solo.raid_target() == 20
+		and world.players.size() <= World.MAX_PLAYERS, "a raid gathers twenty")
 	var counts: Dictionary = {}
 	for id: int in combat.party_members(1):
 		counts[world.players[id]["vocation"]] = counts.get(world.players[id]["vocation"], 0) + 1
@@ -1054,6 +1076,47 @@ func _solo_checks() -> void:
 		for id: int in [1] + friends:
 			hunted = hunted or not world.players[id]["aggressors"].is_empty()
 	check(hunted, "rivals ambush your group in a PvP zone")
+	# Choosing companions: a slot swaps to another class, and the raid plan follows your party.
+	_place(world, 1, World.SPAWNS[0])
+	run.call(0.5)
+	var swapped: Dictionary = solo.set_companion(0, "knight", sim_clock[0])
+	var druids: int = solo.companions().filter(func(id: int) -> bool: return world.players[id]["vocation"] == "druid").size()
+	check(swapped["ok"] and world.players[solo.slot_ids[0]]["vocation"] == "knight" and druids == 0
+		and swapped["events"].any(func(event: Dictionary) -> bool: return event["kind"] == "bot_left"),
+		"a companion swaps to another class (%s)" % swapped.get("reason", ""))
+	check(solo.slot_ids[0] in combat.party_members(1) and solo.companions().size() == 3 and combat.party_members(1).size() == 4,
+		"the new companion joins your party (%s, %d companions, party %s)" % [solo.slot_ids, solo.companions().size(), combat.party_members(1)])
+	check(not solo.set_companion(0, "knight", sim_clock[0])["ok"] and not solo.set_companion(3, "druid", sim_clock[0])["ok"]
+		and not solo.set_companion(1, "adventurer", sim_clock[0])["ok"], "swaps need a real slot and a new class")
+	var names: Array = solo.companions().map(func(id: int) -> String: return world.players[id]["name"])
+	check(names.size() == 3 and names[0] != names[1] and names[1] != names[2] and names[0] != names[2], "companions keep distinct names")
+	check(solo.raid_plan["knight"] >= 2, "the raid plan keeps room for your party's classes")
+	var planned_knights: int = solo.raid_plan["knight"]
+	while solo.set_raid_plan("knight", -1)["ok"]:
+		pass
+	check(solo.raid_plan["knight"] == solo.party_classes()["knight"], "the plan never drops below your party")
+	while solo.raid_plan["knight"] < planned_knights:
+		solo.set_raid_plan("knight", 1)
+	check(not solo.set_raid_plan("druid", 1)["ok"] if solo.raid_size() >= Solo.raid_target() else true, "a full plan takes no more")
+	while solo.raid_size() > Solo.raid_target():
+		for vocation: String in ["paladin", "sorcerer", "druid", "knight"]:
+			if solo.raid_size() > Solo.raid_target():
+				solo.set_raid_plan(vocation, -1)
+	check(solo.set_raid_plan("sorcerer", -1)["ok"] and not solo.raid(true, sim_clock[0])["ok"], "a raid needs a full plan")
+	me["level"] = Balance.MAX_LEVEL  # the ambush may have cost a level
+	var gathering: Dictionary = solo.raid(true, sim_clock[0]) if solo.set_raid_plan("paladin", 1)["ok"] else {"ok": false, "reason": "plan"}
+	check(gathering["ok"], "a planned raid gathers (%s)" % gathering.get("reason", ""))
+	var gathered: Dictionary = {}
+	for id: int in combat.party_members(1):
+		gathered[world.players[id]["vocation"]] = gathered.get(world.players[id]["vocation"], 0) + 1
+	var wanted: Dictionary = solo.raid_plan.duplicate()
+	for vocation: String in wanted.keys():
+		if wanted[vocation] == 0:
+			wanted.erase(vocation)
+	check(gathered == wanted, "the raid gathers exactly the planned classes")
+	check(not solo.set_companion(1, "druid", sim_clock[0])["ok"] and not solo.set_raid_plan("druid", 1)["ok"],
+		"companions and the plan are fixed while the raid is out")
+	check(solo.raid(false, sim_clock[0])["ok"] and combat.party_members(1).size() == 4, "and it disbands back to your companions")
 
 
 ## Start-menu characters: names are cleaned, and a profile's summary is read defensively.
@@ -1185,8 +1248,8 @@ func _hunters_lodge_checks() -> void:
 	player["backpack"] = full
 	player["backpack"][0] = ""
 	check(combat.task_action(1, "lodgemaster_varga", chain[0], "complete", 3.0)["ok"]
-		and World.carried(player["backpack"], "health_potion") == 5 and player["backpack"].has(World.class_piece("boots", 10, "paladin")),
-		"the first contract pays potions and the Hunter's boots")
+		and World.carried(player["backpack"], "health_potion") == 5 and player["backpack"].has("lodgeranger_boots")
+		and World.bound("lodgeranger_boots"), "the first contract pays potions and the Hunter's bound Lodge boots")
 	check(combat.task_action(1, "lodgemaster_varga", chain[1], "accept", 4.0)["ok"], "the next contract opens")
 	# Spell ranks: a class trainer carves rune shards into a known spell.
 	var trainer: String = "trainer_paladin"
@@ -1365,8 +1428,8 @@ func _slot_and_stat_checks() -> void:
 
 
 func _balance_checks() -> void:
-	check(Balance.mob_health(Balance.MAX_LEVEL, "boss") == Balance.FINAL_BOSS_HEALTH, "final boss has 350,000 health")
-	check(Balance.FINAL_BOSS_HEALTH == 350000, "final boss anchor")
+	check(Balance.mob_health(Balance.MAX_LEVEL, "boss") == Balance.FINAL_BOSS_HEALTH, "final boss has 700,000 health")
+	check(Balance.FINAL_BOSS_HEALTH == 700000, "final boss anchor")
 	check(Balance.mob_health(1) == 30 and Balance.mob_health(Balance.MAX_LEVEL) == 1966, "normal mob health range")
 	check(Balance.boss_ratio() > 150.0, "the boss is a raid boss, well over a hundred normal mobs")
 	check(is_equal_approx(Balance.ATTACK_SECONDS, 2.0), "Tibia-style two-second attacks")
@@ -1403,7 +1466,7 @@ func _raid_checks() -> void:
 	for vocation: String in raid:
 		size += raid[vocation]
 		check(Balance.VOCATIONS.has(vocation), "raid uses known vocations")
-	check(size == 10 and raid.size() == Balance.VOCATIONS.size(), "intended raid is ten players of every vocation")
+	check(size == 20 and raid.size() == Balance.VOCATIONS.size(), "intended raid is twenty players of every vocation")
 	var result: Dictionary = Balance.raid_check(raid)
 	check(result["ok"], "the intended raid wins")
 	check(absf(result["seconds"] - Balance.RAID_FIGHT_SECONDS) < 0.01, "the intended raid takes the planned time")
@@ -1412,20 +1475,21 @@ func _raid_checks() -> void:
 		smaller[vocation] -= 1
 		check(not Balance.raid_check(smaller)["ok"], "removing any one player loses")
 	for vocation: String in Balance.VOCATIONS:
-		check(not Balance.raid_check({vocation: 12})["ok"], "a single-vocation group of twelve loses")
+		check(not Balance.raid_check({vocation: World.MAX_PLAYERS})["ok"], "a single-vocation group of a full server loses")
 	check(not Balance.raid_check({"knight": 1, "paladin": 1, "sorcerer": 1, "druid": 1})["ok"], "four players lose")
-	check(Balance.raid_check({"knight": 2, "paladin": 2, "sorcerer": 4, "druid": 2})["ok"], "other ten-player mixes can win")
-	check(Balance.raid_check({"knight": 2, "paladin": 4, "sorcerer": 4, "druid": 2})["ok"], "twelve players win faster")
-	# Exhaustively: no group of nine or fewer level-50 players can win.
+	check(Balance.raid_check({"knight": 4, "paladin": 4, "sorcerer": 8, "druid": 4})["ok"], "other twenty-player mixes can win")
+	check(Balance.raid_check({"knight": 4, "paladin": 8, "sorcerer": 6, "druid": 4})["seconds"] < Balance.RAID_FIGHT_SECONDS
+		and Balance.raid_check({"knight": 4, "paladin": 8, "sorcerer": 6, "druid": 4})["ok"], "twenty-two players win faster")
+	# Exhaustively: no group smaller than the intended raid can win.
 	var smallest: int = 99
-	for knights: int in 10:
-		for paladins: int in 10 - knights:
-			for sorcerers: int in 10 - knights - paladins:
-				for druids: int in 10 - knights - paladins - sorcerers:
+	for knights: int in size:
+		for paladins: int in size - knights:
+			for sorcerers: int in size - knights - paladins:
+				for druids: int in size - knights - paladins - sorcerers:
 					var group: Dictionary = {"knight": knights, "paladin": paladins, "sorcerer": sorcerers, "druid": druids}
 					if Balance.raid_check(group)["ok"]:
 						smallest = mini(smallest, knights + paladins + sorcerers + druids)
-	check(smallest > 9, "no group of nine or fewer can defeat the final boss")
+	check(smallest >= size, "no group of nineteen or fewer can defeat the final boss")
 	var stats: Dictionary = {}
 	for vocation: String in Balance.VOCATIONS:
 		stats[vocation] = Balance.base_stats(Balance.MAX_LEVEL, vocation)
@@ -1892,8 +1956,11 @@ func _gear_tier_checks() -> void:
 				slots.append_array(Items.ACCESSORY_SLOTS)
 			for slot: String in slots:
 				var pieces: Array = by_key.get("%s/%s/%d" % [slot, vocation, level], [])
-				var regular: Array = pieces.filter(func(kind: String) -> bool: return not World.ITEMS[kind].get("loot_only", false))
-				check(regular.size() == 1, "exactly one regular %s for a level-%d %s plus optional hunting sidegrades" % [slot, level, vocation])
+				var regular: Array = pieces.filter(func(kind: String) -> bool:
+					return not World.ITEMS[kind].get("loot_only", false) and not World.ITEMS[kind].has("quest"))
+				check(regular.size() == 1, "exactly one regular %s for a level-%d %s plus optional hunting sidegrades and quest pieces" % [slot, level, vocation])
+				# Keep the regular piece first: the upgrade and six-hit checks below read it.
+				by_key["%s/%s/%d" % [slot, vocation, level]] = regular + pieces.filter(func(kind: String) -> bool: return not kind in regular)
 	# Each tier is an upgrade, and weapons keep a geared player near six hits per same-level kill.
 	for vocation: String in Balance.VOCATIONS:
 		var previous: Dictionary = {}
@@ -1916,6 +1983,7 @@ func _gear_tier_checks() -> void:
 		"levels map to tiers")
 	_relic_checks(by_key)
 	_mythic_checks(by_key)
+	_quest_piece_checks()
 	# Requirements, on the server.
 	check(World.requirement_error("willow_shortbow", 50, "knight") == "Only Hunters can use the Willow shortbow",
 		"weapons are class-bound")
@@ -2049,6 +2117,60 @@ func _hunting_weapon_checks() -> void:
 
 ## Mythic gear: unbound level-50 sets that only the level-50 elite farm monsters drop, between the
 ## last tier and the relics, one full armor set and weapon per class.
+## Quest pieces: bound gear that only the Hunters' Lodge chain and boss tasks pay, a little better
+## than the vendor piece of their tier, so a PvP death drops only what was found or bought.
+func _quest_piece_checks() -> void:
+	var paid: Dictionary = {}
+	for task: String in Quests.TASKS:
+		var definition: Dictionary = Quests.TASKS[task]
+		for vocation: String in Balance.VOCATIONS:
+			for entry: Array in World.task_items(task, vocation):
+				if World.ITEMS[entry[0]].has("quest"):
+					paid[entry[0]] = true
+		if definition.has("gear") and definition.get("chain", "") == "hunters_lodge":
+			for vocation: String in Balance.VOCATIONS:
+				var piece: String = World.quest_piece("hunters_lodge", definition["gear"], vocation)
+				check(not piece.is_empty() and World.bound(piece) and World.requirement_error(piece, Balance.MAX_LEVEL, vocation).is_empty()
+					and World.ITEMS[piece]["level"] == Items.tier_for(definition["level"]),
+					"%s pays a %s its bound Lodge %s of the hunt's tier" % [task, vocation, definition["gear"]])
+	for task: String in ["silk_matron", "abbot_morrow", "forgemaw"]:
+		var accessory: Array = Quests.TASKS[task].get("items", []).filter(func(entry: Array) -> bool:
+			return World.ITEMS[entry[0]].get("quest", "") == task)
+		check(accessory.size() == 1 and World.bound(accessory[0][0]), "the %s task pays its bound accessory" % task)
+	var drops := Combat.new(World.new(), 21)
+	var pool: Dictionary = {}
+	for roll: int in 300:
+		for level: int in [12, 22, 32, 42]:
+			pool[drops.gear_drop(level)] = true
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if not item.has("quest"):
+			continue
+		check(paid.has(kind), "%s is paid by a quest" % kind)
+		check(World.bound(kind) and not Economy.stock().has(kind) and Economy.sell_price(kind) == 0 and not pool.has(kind)
+			and not Monsters.LOOT.values().any(func(table: Array) -> bool: return table.any(func(entry: Array) -> bool: return entry[0] == kind)),
+			"%s is bound: never sold, bought, or dropped by monsters" % kind)
+		var derived: Dictionary = Items.tier_stats(item)
+		for stat: String in derived:
+			derived[stat] = roundi(derived[stat] * Items.QUEST_BONUS)
+		check(item["stats"] == derived, "%s derives its tier stats with the quest bonus" % kind)
+	# A skulled death drops what was found but keeps what was earned.
+	var world := World.new()
+	var combat := Combat.new(world, 5)
+	world.add_player(1, 0.0, "knight")
+	var player: Dictionary = world.players[1]
+	player["level"] = 30
+	player["skull"] = "red"
+	player["equipment"]["boots"] = "lodgewarden_boots"
+	player["equipment"]["helmet"] = "embersteel_helm"
+	player["backpack"][0] = "forgeheart_ring"
+	player["backpack"][1] = "garnet_ring"
+	combat._drop_belongings(1, [])
+	check(player["equipment"].get("boots", "") == "lodgewarden_boots" and player["backpack"][0] == "forgeheart_ring"
+		and not player["equipment"].has("helmet") and player["backpack"][1].is_empty(),
+		"a red-skulled death drops found gear but keeps bound quest rewards")
+
+
 func _mythic_checks(by_key: Dictionary) -> void:
 	var mythic: Array[String] = []
 	for kind: String in World.ITEMS:

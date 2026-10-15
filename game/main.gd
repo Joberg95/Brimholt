@@ -502,6 +502,25 @@ func raid_local(on: bool) -> void:
 		last_action_message = result["reason"]
 
 
+## Solo only: gives a companion slot another class (Solo.set_companion).
+func companion_local(slot: int, vocation: String) -> void:
+	if not solo_mode or not hosting:
+		return
+	var result: Dictionary = solo.set_companion(slot, vocation, _now())
+	_handle_events(result["events"])
+	if not result["ok"]:
+		last_action_message = result["reason"]
+
+
+## Solo only: one more or one fewer of a class in the raid plan (Solo.set_raid_plan).
+func raid_plan_local(vocation: String, delta: int) -> void:
+	if not solo_mode or not hosting:
+		return
+	var result: Dictionary = solo.set_raid_plan(vocation, delta)
+	if not result["ok"]:
+		last_action_message = result["reason"]
+
+
 func join_game() -> void:
 	var address: String = _address.text.strip_edges()
 	_reset_session()

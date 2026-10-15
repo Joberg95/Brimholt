@@ -9,6 +9,7 @@ extends RefCounted
 const World = preload("res://game/core/world.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
+const Balance = preload("res://game/data/balance.gd")
 
 var world: World
 var combat: Combat
@@ -46,12 +47,17 @@ func after_move(id: int, now: float) -> Array:
 
 func enter(id: int, dungeon: String, now: float) -> Array:
 	var definition: Dictionary = Dungeons.DUNGEONS[dungeon]
+	var events: Array = []
+	if world.players[id]["vocation"] == Balance.ADVENTURER:
+		# Choosing a class comes first: the stairways stay shut to Adventurers.
+		_bounce(id, now, events)
+		events.append({"kind": "message", "id": id, "text": Combat.CHOOSE_CLASS_FIRST + "."})
+		return events
 	var key: int = owner_key(id)
 	var chosen: int = -1
 	for copy: int in copies[dungeon].size():
 		if copies[dungeon][copy]["owner"] == key:
 			chosen = copy
-	var events: Array = []
 	if chosen < 0:
 		chosen = _claim(dungeon, key, now, events)
 	if chosen < 0:

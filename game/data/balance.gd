@@ -1,12 +1,12 @@
 extends RefCounted
-## Brimholt balance curves. Everything is anchored on the final boss: 350,000 health, built so
-## that at least ten level-50 players with every vocation are needed (enrage timer, healing
+## Brimholt balance curves. Everything is anchored on the final boss: 700,000 health, built so
+## that at least twenty level-50 players with every vocation are needed (enrage timer, healing
 ## pressure, and tank swaps). Combat and mobs are not implemented yet; these curves are the
 ## design targets for mobs, items, vocations, and levelling.
 ## Print the full table with: godot --headless --path . --script res://tools/generators/balance_table.gd
 
 const MAX_LEVEL: int = 50
-const FINAL_BOSS_HEALTH: int = 350000
+const FINAL_BOSS_HEALTH: int = 700000
 ## Tibia-style auto-attack interval for players and monsters.
 const ATTACK_SECONDS: float = 2.0
 ## Hits a damage-1.0 player with level-appropriate gear needs to defeat a normal mob of its level.
@@ -66,14 +66,17 @@ const ADVENTURER_PROFILE: Dictionary = {"name": "Adventurer",
 const CHOOSE_LEVEL: int = 5
 const ADVENTURER_MAX_LEVEL: int = 8
 ## The smallest intended final-boss raid. Removing any one player makes the fight unwinnable.
-const RAID: Dictionary = {"knight": 2, "paladin": 3, "sorcerer": 3, "druid": 2}
+## Boss health and RAID grow together (reference_dps divides one by the other), so a bigger raid
+## leaves every monster and item curve unchanged.
+const RAID: Dictionary = {"knight": 4, "paladin": 6, "sorcerer": 6, "druid": 4}
 const RAID_FIGHT_SECONDS: float = 240.0
-## The boss enrages and wipes the raid after this, leaving about 6% slack over the intended fight.
-const ENRAGE_SECONDS: float = 255.0
+## The boss enrages and wipes the raid after this, leaving about 2% slack over the intended fight:
+## less than the damage of any one raid member (a Druid is about 2.2% of it).
+const ENRAGE_SECONDS: float = 245.0
 ## Raid-wide boss damage per second, in full-healer units at the same level.
-const BOSS_HEALING_PRESSURE: float = 2.2
-## Boss hits stack a wound on their target, so tanks must swap.
-const MIN_TANKS: int = 2
+const BOSS_HEALING_PRESSURE: float = 4.4
+## Boss hits stack a wound on their target, so tanks must swap: two pairs of Warriors.
+const MIN_TANKS: int = 4
 const RANKS: Dictionary = {
 	"normal": {"health": 1.0, "damage": 1.0, "experience": 1.0},
 	"elite": {"health": 4.0, "damage": 1.5, "experience": 5.0},

@@ -11,7 +11,7 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
    `o`, obsidian wall `O`, and dead tree `D`. Water, walls, castle walls, trees, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
    plank piers. Keep the map at non-negative coordinates; unpainted cells are void.
-2. **Spawns**: the twelve `Marker2D` nodes under `Spawns`, one per player, in order.
+2. **Spawns**: the twenty-four `Marker2D` nodes under `Spawns`, one per player, in order.
 3. **Ferrymen and waystones**: nodes under `Ferrymen` (set `vehicle` to `ferry` for a pier
    ferryman, or `waystone` for an inland standing stone, drawn as a stone with a glowing rune).
    The node name is the id; set the name,
