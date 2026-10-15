@@ -242,8 +242,10 @@ Banker Orrin in **Reedmere** (pale blue on the maps), the lakeside hub with a wa
 and the ferry to Blackreed Isle. Plan trips to deposit gold and store gear there. A hanging
 sign beside each door shows what is inside: a flask and a sword for the shop, a coin stack for
 the bank. Step inside to deal with them; you cannot trade or bank through
-a wall. Town buildings have roofs that hide whoever is inside; the roof of the building you
-stand in fades away while you are there.
+a wall. Town buildings have roofs that hide whoever is inside, and every doorway has a
+wooden door in its wall so you can see where to go in. Walk within 3 tiles of a building and its
+roof turns see-through, showing the rooms and who is inside; the roof of the building you stand
+in fades away completely.
 
 **Vendors** sell health and mana potions (20 gold each, in ones or tens) and levelling gear:
 the helmet, armor, weapon, and off-hand of tiers 1, 5, and 10, filtered to your class, and
@@ -281,7 +283,7 @@ character shows the progress. The node then regrows for a minute.
 
 | Skill | Node | Resources by land level (1+, 10+, 20+, 30+, 40+) |
 | --- | --- | --- |
-| Mining | rock outcrops and mountains | Copper, Iron, Silver, Cobalt, Starmetal ore |
+| Mining | ore veins: glittering nuggets in the cliff faces of mountains and outcrops (most rock is just rock) | Copper, Iron, Silver, Cobalt, Starmetal ore |
 | Woodcutting | trees (and the Hollow Reach's dead trees) | Pine, Oak, Yew, Ironbark, Elderwood log |
 | Herbalism | flowering herb patches in the wilds | Sunflax, Mirereed, Silverthistle, Nightcotton, Starpetal |
 | Fishing | water up to 3 tiles away | River perch, Marsh eel, Silver trout, Deep pike, Glimmerfin |
@@ -408,8 +410,10 @@ It never rains underground or in the desert. At dusk the torches on the town wal
 
 The overworld is 384×384 tiles: walking straight across takes about a minute and three
 quarters. Monster camps are dense (about 600 monsters), so levelling is close to town.
-**Cinder Crossing**, the walled starting town, runs from its training hall in the north-west
-corner down to its harbour, with an open plaza between and gates to the east and south. A sea
+**Cinder Crossing**, the starting town, is a castle town: a battlemented curtain wall with towers
+runs round it from the keep (the training hall in the north-west corner, its walls castle stone
+with a tower at each corner) to the harbour, with gatehouses where the roads leave to the north,
+east, and south. A sea
 runs down the whole western edge with two ports: Cinder Crossing's harbour at the top and
 **Lastlight** at the bottom, joined by one ferry. Two-tile cobbled roads join the walled towns
 across woods, meadows, rocky mountains, outcrops, and boulders; **Reedmere**, the capital, has a castle on
@@ -453,7 +457,7 @@ and leaves you in town.
 | Cinder cellar | Cinder Crossing, north-east house | 3–9 | sewer rats, giant rats | The Rat King |
 | Ashford crypt | Ashford, south-west house | 19–25 | crypt skeletons, grave ghouls | Abbot Morrow |
 | Highmoor deep mine | Highmoor, north-east house | 33–40 | cave crawlers, ember golems | Forgemaw |
-| Silkhollow | Thornfield Wilds, a cave mouth west of the lake | 15–20 | cave spiders, venom weavers (spit from 3 tiles) | The Silk Matron |
+| Silkhollow | Thornfield Wilds, a cave mouth west of the lake at the end of a dirt trail from the coast road | 15–20 | cave spiders, venom weavers (spit from 3 tiles) | The Silk Matron |
 
 **Silkhollow is pitch dark**: you carry no light of your own, so you will not see a
 spider until it bites. Hold a **Torch** (15 gold at any vendor, any class, no stats) in your

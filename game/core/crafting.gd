@@ -1,6 +1,6 @@
 extends RefCounted
 ## Gathering, crafting, and profession skills on the host (game/data/professions.gd). A player
-## works a node next to them (a rock outcrop, a tree, a herb patch, or water within reach) for
+## works a node next to them (an ore vein, a tree, a herb patch, or water within reach) for
 ## Professions.GATHER_SECONDS; moving cancels it. The node then regrows for REGROW_SECONDS and
 ## the resource of the land's band lands in the backpack. Crafting happens at a town artisan
 ## (World service "craft"): the recipe's resources leave the backpack and its output arrives.
@@ -14,6 +14,9 @@ const Professions = preload("res://game/data/professions.gd")
 static var RECIPES: Dictionary = Professions.build_recipes(World.ITEMS)
 ## Herb patches: cell -> resource band. Herbs grow outside towns, dungeons, and markers.
 static var HERBS: Dictionary = _find_herbs()
+## Ore veins: cell -> resource band. Veins glitter in the south faces of mountains and outcrops in
+## the wilds (not in towns or dungeons); the rest of the rock is scenery.
+static var ORES: Dictionary = _find_ores()
 
 var world: World
 ## Worked nodes: cell -> host time when they regrow.
@@ -47,6 +50,27 @@ static func _find_herbs() -> Dictionary:
 	return herbs
 
 
+static func _find_ores() -> Dictionary:
+	var ores: Dictionary = {}
+	var rect: Rect2i = World.OVERWORLD
+	for y: int in range(rect.position.y, rect.end.y):
+		for x: int in range(rect.position.x, rect.end.x):
+			var cell := Vector2i(x, y)
+			var zone: Dictionary = World.zone_at(cell)
+			var tile: String = World.terrain(cell)
+			if tile.is_empty() or not tile in Professions.SOURCES["mining"] or zone.get("town", false) \
+					or zone.get("underground", false) \
+					or not Professions.ore_at(cell, tile, World.walkable(cell + Vector2i.DOWN), band_at(cell)):
+				continue
+			var crowded: bool = false
+			for dy: int in range(-Professions.ORE_GAP, 1):
+				for dx: int in range(-Professions.ORE_GAP, Professions.ORE_GAP + 1):
+					crowded = crowded or ores.has(cell + Vector2i(dx, dy))
+			if not crowded:
+				ores[cell] = band_at(cell)
+	return ores
+
+
 ## The resource band of the land at a cell: the middle of its zone's (or region's) monster levels.
 static func band_at(cell: Vector2i) -> int:
 	var zone: Dictionary = World.zone_at(cell)
@@ -66,6 +90,8 @@ static func node_at(cell: Vector2i) -> String:
 		return ""
 	if HERBS.has(cell):
 		return "herbalism"
+	if ORES.has(cell):
+		return "mining"
 	return Professions.source_of(World.terrain(cell))
 
 

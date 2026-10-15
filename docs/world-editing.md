@@ -7,8 +7,8 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
 1. **Terrain**: select the `Terrain` node and use the TileMap panel at the bottom to paint
    with the palette (`game/maps/terrain.tres`). Each tile's custom data `terrain` sets its
    gameplay: grass `.`, dirt road `,`, water `~`, stone wall `#`, tree `T`, sand `:`,
-   cobblestone `=`, boulder `R`, mountain rock `L`, pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
-   `o`, obsidian wall `O`, and dead tree `D`. Water, walls, trees, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
+   cobblestone `=`, boulder `R`, mountain rock `L`, castle wall `W` (a 2×2 block of it is a tower), pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
+   `o`, obsidian wall `O`, and dead tree `D`. Water, walls, castle walls, trees, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
    plank piers. Keep the map at non-negative coordinates; unpainted cells are void.
 2. **Spawns**: the twelve `Marker2D` nodes under `Spawns`, one per player, in order.
@@ -121,3 +121,10 @@ back of a free building, facing the door: vendors to the first (north-west) buil
 banker and artisans from the last, skipping buildings with stairs or other NPCs. A sign and furniture
 (`World.FURNISHINGS`) are added automatically at load. Re-run it after moving
 houses; a second run changes nothing, and it refuses to wall in any marker.
+
+**Cinder Crossing's castle walls** are painted by `tools/generators/castle_town.gd`
+(`make castle-town`): wall runs, gate gaps, towers, and a few ground patches listed at the top of
+the file. **The trail to Silkhollow** is cut by `tools/generators/silkhollow.gd` (`make silkhollow`).
+Both only change their own cells and refuse to wall over a marker; re-running them changes
+nothing. Ore veins are not painted: `Crafting.ORES` picks them from rock faces that look south
+onto open ground (`Professions.ore_at`).

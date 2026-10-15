@@ -725,6 +725,22 @@ func _profession_data_checks() -> void:
 	for cell: Vector2i in Crafting.HERBS:
 		check(World.zone_at(cell).is_empty() and not World.NPC_CELLS.has(cell) and not World.FURNITURE.has(cell)
 			and World.walkable(cell), "herb patch %s grows in the open wilds" % cell)
+	# Ore veins: only some rock faces, each facing open ground to the south (where its ore shows),
+	# outside towns, never crowded together; the rest of the rock is scenery.
+	var rock_faces: int = 0
+	for cell: Vector2i in Crafting.ORES:
+		check(World.terrain(cell) in ["L", "C"] and World.walkable(cell + Vector2i.DOWN) and not World.zone_at(cell).get("town", false)
+			and Crafting.ORES[cell] == Crafting.band_at(cell), "ore vein %s shows in a rock face in the wilds" % cell)
+		for other: Vector2i in Crafting.ORES:
+			check(other == cell or World.chebyshev(cell, other) > Professions.ORE_GAP, "ore veins %s and %s are spread out" % [cell, other])
+	for y: int in World.OVERWORLD.size.y:
+		for x: int in World.OVERWORLD.size.x:
+			var cell := Vector2i(x, y)
+			if World.terrain(cell) in ["L", "C"] and World.walkable(cell + Vector2i.DOWN):
+				rock_faces += 1
+				check(Crafting.ORES.has(cell) == (Crafting.node_at(cell) == "mining"), "only ore veins are mined (%s)" % cell)
+	check(Crafting.ORES.size() * 4 < rock_faces and Crafting.ORES.size() > 200,
+		"ore veins are a few of the rock faces (%d of %d)" % [Crafting.ORES.size(), rock_faces])
 	var found: Dictionary = {}
 	for y: int in range(0, World.OVERWORLD.size.y, 1):
 		for x: int in range(0, World.OVERWORLD.size.x, 1):
@@ -1464,7 +1480,7 @@ func _map_checks() -> void:
 			unknown += 0 if tile in World.TERRAINS or tile == " " else 1
 	check(ragged == 0, "rectangular map")
 	check(unknown == 0, "every tile is a known terrain")
-	check(World.width() >= 24 and World.height() >= 18 and World.terrain(Vector2i(0, 1)) == "#", "map loaded from the scene")
+	check(World.width() >= 24 and World.height() >= 18 and World.terrain(Vector2i(0, 1)) == "W", "map loaded from the scene")
 	check(World.SPAWNS.size() == World.MAX_PLAYERS, "one spawn marker per player")
 	var spawn_cells: Dictionary = {}
 	for spawn: Vector2i in World.SPAWNS:
@@ -3528,7 +3544,20 @@ func _spawn_and_rest_checks() -> void:
 	var Island: GDScript = load("res://tools/generators/island.gd")
 	var isle_scene: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
 	check(Island.TERRAINS == World.TERRAINS and Island.apply(isle_scene) == 0, "Blackreed Isle is already thinned (a re-run changes nothing)")
+	# Cinder Crossing's castle walls (castle_town.gd) and Silkhollow's trail (silkhollow.gd) are painted.
+	var Castle: GDScript = load("res://tools/generators/castle_town.gd")
+	var Trail: GDScript = load("res://tools/generators/silkhollow.gd")
+	check(Castle.TERRAINS == World.TERRAINS and Castle.apply(isle_scene) == 0, "Cinder Crossing's castle is built (a re-run changes nothing)")
+	check(Trail.TERRAINS == World.TERRAINS and Trail.apply(isle_scene) == 0, "the trail to Silkhollow is cut (a re-run changes nothing)")
 	isle_scene.free()
+	var towers: int = 0
+	var castle: Dictionary = Castle.plan()
+	for cell: Vector2i in castle:
+		towers += 1 if SpriteArt.tower(cell) else 0
+		check(World.terrain(cell) == castle[cell], "castle cell %s is painted as planned" % cell)
+	check(towers >= Castle.TOWERS.size() * 4, "every castle tower stands at least 2x2 (%d tower cells)" % towers)
+	for gate: Vector2i in Castle.GATES:
+		check(World.walkable(gate), "the castle gate at %s is open" % gate)
 	var isle: Rect2i = World.ZONES.filter(func(zone: Dictionary) -> bool: return zone["name"] == "Blackreed Isle")[0]["rect"]
 	var trees: int = 0
 	var land: int = 0

@@ -14,6 +14,7 @@ Aseprite), treat that PNG as the source of truth and stop regenerating it.
 """
 
 import argparse
+import bisect
 import json
 import colorsys
 import math
@@ -34,7 +35,7 @@ ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
 VISIBLE_SLOTS = ("helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
-TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L")
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W")
 
 
 def rgba(value, alpha=255):
@@ -2950,8 +2951,9 @@ def terrain_palette():
              "o": obsidian_tile(0), "O": wall(0, OBSIDIAN_STONE).crop(0, 0, TILE, TILE), "D": dead_tile,
              "c": cave_tile(0), "C": wall(0, CAVE_STONE).crop(0, 0, TILE, TILE),
              "v": stairs_tile(True), "^": stairs_tile(False), "K": cactus_tile, "R": rock_tile,
-             "L": gravel_tile(0).over(crag(0).crop(16, 24, TILE, TILE))}
-    tiles["C"] = grass_tile(0).over(crag(0, True).crop(16, 24, TILE, TILE))
+             "L": mountain(0, 0).crop(0, 0, TILE, TILE),
+             "W": castle_block(0, False).crop(CASTLE_PAD, CASTLE_PAD, TILE, TILE)}
+    tiles["C"] = mountain(15, 4).crop(0, 0, TILE, TILE)
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
@@ -3203,6 +3205,351 @@ def cliff(mask, rocky=False):
     return image
 
 
+# Tibia-style mountain rock ("L", and rock outcrops "C" on the overworld): an oblique block like a
+# wall, its top a lumpy mass of weathered stone and its open south and east sides rough cliff faces.
+# Seven cool greys from highlight to crevice.
+ROCK = (rgba("d2d1cc"), rgba("b1b0ab"), rgba("918f8b"), rgba("73726f"), rgba("575659"), rgba("3d3c41"), rgba("27262b"))
+ROCK_LINE = rgba("1b1a1e")
+# The rock texture repeats every ROCK_SPAN tiles each way: a tile draws the variant
+# (x % ROCK_SPAN) + (y % ROCK_SPAN) * ROCK_SPAN, the matching part of one seamless 96x96 texture.
+ROCK_SPAN = 4
+ROCK_PERIOD = TILE * ROCK_SPAN
+MOUNTAIN_VARIANTS = ROCK_SPAN * ROCK_SPAN
+
+
+def _column_edges():
+    """Where the rock columns of a cliff face start along the seamless texture (4-8 px apart)."""
+    rng = random.Random(4500)
+    edges, at = [0.0], 0.0
+    while at < ROCK_PERIOD - 12:
+        at += rng.choice((4, 5, 5, 6, 6, 7, 8))
+        edges.append(at)
+    edges.append(float(ROCK_PERIOD))
+    return edges
+
+
+COLUMN_EDGES = _column_edges()
+
+
+def _feature_points(seed, count, period):
+    rng = random.Random(seed)
+    return [(rng.uniform(0, period), rng.uniform(0, period)) for _ in range(count)]
+
+
+def _worley(x, y, points, period, stretch=1.0, which=False):
+    """Distances to the nearest and second-nearest feature point, wrapping at `period` (so the
+    texture tiles seamlessly); `stretch` squashes the vertical axis for tall cliff slabs. With
+    `which`, also the indices of those two points."""
+    first = second = 1e9
+    near = other = 0
+    for index, (px, py) in enumerate(points):
+        dx = abs(x - px)
+        dx = min(dx, period - dx)
+        dy = abs(y - py)
+        dy = min(dy, period - dy) * stretch
+        distance = dx * dx + dy * dy
+        if distance < first:
+            first, second, near, other = distance, first, index, near
+        elif distance < second:
+            second, other = distance, index
+    if which:
+        return math.sqrt(first), math.sqrt(second), near, other
+    return math.sqrt(first), math.sqrt(second)
+
+
+def _grain(x, y, seed):
+    """Fine, tileable pixel grain in [0, 1)."""
+    return ((x % ROCK_PERIOD) * 73856093 ^ (y % ROCK_PERIOD) * 19349663 ^ seed * 83492791) % 1000 / 1000.0
+
+
+_ROCK_FIELD = {}
+
+
+def _rock_field():
+    """The rock top's height and crevices over the whole seamless 96x96 texture: broad slabs, smaller
+    knobs on them, and grit, with dark cracks where slabs meet."""
+    if _ROCK_FIELD:
+        return _ROCK_FIELD
+    broad = _feature_points(4100, 60, ROCK_PERIOD)
+    knobs = _feature_points(4200, 460, ROCK_PERIOD)
+    for y in range(ROCK_PERIOD):
+        for x in range(ROCK_PERIOD):
+            f1, f2, a, b = _worley(x + 0.5, y + 0.5, broad, ROCK_PERIOD, which=True)
+            g1, g2 = _worley(x + 0.5, y + 0.5, knobs, ROCK_PERIOD)
+            height = max(0.0, 1.0 - f1 / 13.0) * 0.55 + max(0.0, 1.0 - g1 / 4.5) * 0.35 + _grain(x, y, 7) * 0.12
+            # Only some slabs are split by a crack (wider in places); the rest weather into one mass.
+            pair = (min(a, b) * 31 + max(a, b) * 17) % 7
+            width = 0.7 + 0.5 * (0.5 + 0.5 * math.sin((x + y) * 0.35 + pair))
+            crack = (pair < 4 and f2 - f1 < width and f1 > 1.5) or (g2 - g1 < 0.45 and _grain(x, y, 3) < 0.18)
+            _ROCK_FIELD[x, y] = (height, crack)
+    return _ROCK_FIELD
+
+
+def mountain(mask, variant):
+    """One mountain rock block (48x48, drawn like a wall 16 px up and left of its tile), indexed by
+    its open sides (1 N, 2 W, 4 S, 8 E) and its place in the seamless rock texture (variant): a
+    weathered stone top of slabs and knobs lit from the top-left with dark cracks, ragged where it
+    meets open ground to the north and west, and craggy cliff faces of tall slabs on its open south
+    and east sides."""
+    open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
+    ox, oy = (variant % ROCK_SPAN) * TILE, (variant // ROCK_SPAN) * TILE
+    image = Image(WALL, WALL)
+    field = _rock_field()
+
+    def face(along, rise, side):
+        # A rough cliff of standing rock columns: each column (4-8 px wide, its edges wandering with
+        # the height) is lit on its left and shaded on its right, with dark fissures between them,
+        # broken ledges across some columns, a sunlit lip at the top and shadow at the foot.
+        position = (along + math.sin(rise * 0.55 + along * 0.21) * 1.3) % ROCK_PERIOD
+        index = bisect.bisect_right(COLUMN_EDGES, position) - 1
+        left, right = COLUMN_EDGES[index], COLUMN_EDGES[index + 1]
+        inside, width = position - left, right - left
+        if inside < 1.0:
+            return ROCK[6]
+        shade = inside / width
+        tone = 2 if shade < 0.3 else 3 if shade < 0.7 else 4
+        ledge = 4 + index * 5 % 9
+        if abs(rise - ledge) < 0.5 and index % 3 == 0:
+            return ROCK[5]
+        if abs(rise - ledge - 1) < 0.5 and index % 3 == 0:
+            tone = 2
+        grit = _grain(int(along), int(rise), 11 + index)
+        if grit < 0.08:
+            tone += 1
+        if rise > 14.5:
+            tone = 1
+        elif rise < 3.0:
+            tone += 2 if rise < 1.5 else 1
+        return ROCK[max(1, min(6, tone + (1 if side else 0)))]
+
+    if open_east:
+        for y in range(FRAME):
+            for x in range(32, 48):
+                depth = 48 - (x + 0.5)
+                if 16 - depth <= y + 0.5 < 48 - depth:
+                    level = y + 0.5 + depth - 16
+                    image.set(x, y, ROCK_LINE if level < 1.0 or x == 47 else face(level + oy, depth, True))
+    if open_south:
+        for y in range(32, 48):
+            rise = 48 - (y + 0.5)
+            for x in range(0, 48):
+                if 16 - rise <= x + 0.5 < 48 - rise:
+                    color = face(x + 0.5 + rise - 16 + ox, rise, False)
+                    if y == 47 or x + 0.5 < 16 - rise + 1.0:
+                        color = ROCK_LINE
+                    image.set(x, y, color)
+
+    def height(x, y):
+        return field[(x + ox) % ROCK_PERIOD, (y + oy) % ROCK_PERIOD][0]
+
+    def bite(t, salt):
+        # How far a ragged open edge eats into the top at position t along it: irregular notches
+        # of 0-3 pixels, none at the corners, so neighbouring tiles' edges meet.
+        wave = 0.5 + 0.3 * math.sin(t * 0.55 + salt) + 0.2 * math.sin(t * 1.7 + salt * 2.3)
+        return int(3.2 * math.sin(math.pi * t / TILE) * wave * (0.6 + 0.4 * _grain(int(t), int(salt), 5)) + 0.4)
+
+    top = Image(TILE, TILE)
+    for y in range(TILE):
+        for x in range(TILE):
+            if open_north and y < bite(x, ox * 0.37) or open_west and x < bite(y, oy * 0.37):
+                continue
+            if open_north and open_west and x < 4 and y < 4 and (x - 4) ** 2 + (y - 4) ** 2 > 14:
+                continue
+            light = (height(x + 1, y + 1) - height(x - 1, y - 1)) * 1.6 + height(x, y) * 0.8
+            tone = 1 if light > 0.85 else 2 if light > 0.5 else 3 if light > 0.2 else 4
+            if field[(x + ox) % ROCK_PERIOD, (y + oy) % ROCK_PERIOD][1]:
+                tone = 5 if light > 0.3 else 6
+            top.set(x, y, ROCK[tone])
+    # A sunlit lip where the top breaks off into a cliff, and a dark rim where it meets open ground.
+    for x in range(TILE):
+        for y in range(TILE):
+            if top.get(x, y) is None:
+                continue
+            if open_south and y >= 30:
+                top.set(x, y, ROCK[1] if y == 30 and (x * 7 + ox) % 5 else ROCK[2])
+            if open_east and x >= 31:
+                top.set(x, y, ROCK[3])
+            if any(top.get(x + dx, y + dy) is None and 0 <= x + dx < TILE and 0 <= y + dy < TILE
+                   for dx, dy in ((-1, 0), (0, -1))) or (open_north and y == 0) or (open_west and x == 0):
+                top.set(x, y, ROCK_LINE)
+    image.over(top)
+    return image
+
+
+# Ore veins by resource band (Professions.RESOURCES["mining"]): dark, main, light, and glint.
+ORE_COLOURS = (
+    (rgba("6e3812"), rgba("cf7a34"), rgba("ffbd78"), rgba("fff0d8")),  # copper
+    (rgba("55261a"), rgba("a24c38"), rgba("dc8a70"), rgba("ffd8c8")),  # iron
+    (rgba("5e6872"), rgba("bcc6d0"), rgba("f4f8fc"), rgba("ffffff")),  # silver
+    (rgba("1c2f72"), rgba("3a6ae0"), rgba("98bcff"), rgba("e8f0ff")),  # cobalt
+    (rgba("42246e"), rgba("9a66ee"), rgba("e8d6ff"), rgba("ffe48a")),  # starmetal
+)
+# Nuggets in the cliff face as (along, rise) and on the rock top just above it as (x, y).
+ORE_FACE = ((5, 9), (8, 5), (13, 11), (17, 6), (21, 9), (25, 4), (27, 11), (11, 2))
+ORE_TOP = ((8, 27), (15, 25), (23, 27))
+
+
+def ore_vein(band, glint):
+    """An ore vein's overlay for a mountain block with an open south face (48x48, drawn over the
+    block): nuggets of the band's ore set in the cliff face and the lip above it, each lit at its
+    top-left and set in a dark seam. With `glint`, a few nuggets sparkle (the game flickers between
+    the two frames now and then, so veins catch the eye)."""
+    dark, main, light, shine = ORE_COLOURS[band]
+    image = Image(WALL, WALL)
+
+    def nugget(cx, cy, size, sparkle):
+        cells = [(cx, cy), (cx + 1, cy), (cx, cy + 1), (cx + 1, cy + 1)]
+        if size > 1:
+            cells += [(cx - 1, cy), (cx, cy - 1), (cx + 2, cy + 1), (cx + 1, cy + 2)]
+        for x, y in cells:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                if (x + dx, y + dy) not in cells:
+                    image.set(x + dx, y + dy, ROCK[6])
+        for x, y in cells:
+            image.set(x, y, main)
+        image.set(cx, cy, light)
+        image.set(cx + 1, cy + 1, dark)
+        if size > 1:
+            image.set(cx - 1, cy, light)
+            image.set(cx + 1, cy + 2, dark)
+        if sparkle:
+            image.set(cx, cy, shine)
+            for dx, dy in ((0, -2), (-2, 0), (2, 0), (0, 2)):
+                image.set(cx + dx, cy + dy, blend(shine, main, 0.4))
+
+    # A seam of ore wandering across the cliff face, the nuggets strung along and around it.
+    for along in range(2, 30):
+        rise = 8 + 2.5 * math.sin(along * 0.33) + (1 if along % 7 == 3 else 0)
+        image.set(round(along + 16 - rise - 0.5), round(47.5 - rise), dark if along % 4 else main)
+    for index, (along, rise) in enumerate(ORE_FACE):
+        x = round(along + 16 - rise - 0.5)
+        y = round(47.5 - rise)
+        nugget(x, y, 1 if index % 3 == 2 else 2, glint and index in (2, 5))
+    for index, (x, y) in enumerate(ORE_TOP):
+        nugget(x, y, 1, glint and index == 1)
+    return image
+
+
+# Castle walls ("W"): town curtain walls of big pale ashlar blocks with a battlemented walkway on
+# top, and towers twice as tall where the wall makes a 2x2 block (SpriteArt.tower). Both are
+# drawn like walls, raised up-left of their tile, in frames with CASTLE_PAD pixels of room for the
+# merlons: a wall frame is 32 + CASTLE_RAISE + CASTLE_PAD square, a tower's 32 + TOWER_RAISE +
+# CASTLE_PAD.
+CASTLE_RAISE = 16
+TOWER_RAISE = 32
+CASTLE_PAD = 6
+MERLON = 5
+CASTLE_FACE = (rgba("b3aa98"), rgba("9d947f"), rgba("877e6b"), rgba("6d6555"), rgba("4f493e"))
+CASTLE_SIDE = (rgba("948b78"), rgba("7f7765"), rgba("6b6454"), rgba("554f43"), rgba("3d382f"))
+CASTLE_TOP = (rgba("c2baa8"), rgba("aca390"), rgba("968d7a"), rgba("7a725f"))
+CASTLE_LINE = rgba("2a2620")
+
+
+def _ashlar(along, height, tones, course=6, length=13, salt=0):
+    """Big squared stones in courses: mortar joints, a lit top edge, and per-stone shading."""
+    row = int(height // course)
+    shifted = along + (length // 2 if row % 2 else 0) + salt
+    stone = int(shifted // length)
+    if height % course < 1.0 or shifted % length < 1.0:
+        return tones[4]
+    shade = (stone * 7 + row * 13 + salt) % 5
+    tone = (0, 1, 1, 2, 1)[shade]
+    if height % course > course - 1.5:
+        tone = max(0, tone - 1)
+    if shifted % length > length - 1.5:
+        tone = min(3, tone + 1)
+    if ((int(along) * 13 + int(height) * 7 + salt) % 23) == 0:
+        tone = min(3, tone + 1)
+    return tones[tone]
+
+
+def cuboid(image, x0, y0, width, depth, height, face, side, top, open_south=True, open_east=True, slits=False):
+    """An axis-aligned block in the game's oblique view: its footprint (x0, y0, width, depth) on
+    the ground plane, its top drawn `height` pixels up and left, and its south and east faces (when
+    open) of ashlar between them. With `slits`, dark arrow slits in the faces."""
+    for k in range(height):
+        for fx in range(x0, x0 + width):
+            if open_south:
+                color = face(fx - x0, k)
+                if slits and (fx - x0) % 16 == 7 and height * 0.35 < k < height * 0.65:
+                    color = CASTLE_LINE
+                image.set(fx - k, y0 + depth - 1 - k, color)
+        for fy in range(y0, y0 + depth):
+            if open_east:
+                color = side(fy - y0, k)
+                if slits and (fy - y0) % 16 == 7 and height * 0.35 < k < height * 0.65:
+                    color = CASTLE_LINE
+                image.set(x0 + width - 1 - k, fy - k, color)
+    for fy in range(y0, y0 + depth):
+        for fx in range(x0, x0 + width):
+            image.set(fx - height, fy - height, top(fx - x0, fy - y0))
+    # Outline the lower edges so blocks read against the ground and each other.
+    if open_south:
+        for fx in range(x0, x0 + width):
+            image.set(fx, y0 + depth - 1, CASTLE_LINE)
+    if open_east:
+        for fy in range(y0, y0 + depth):
+            image.set(x0 + width - 1, fy, CASTLE_LINE)
+
+
+def castle_block(mask, tower):
+    """A castle wall or tower block indexed by open sides (1 N, 2 W, 4 S, 8 E: sides not joined to
+    more castle wall, or for a tower, to more tower): ashlar faces where open, a flagstone walkway,
+    and merlons along every open edge of the top. Towers stand twice as tall, with arrow slits."""
+    open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
+    raise_ = TOWER_RAISE if tower else CASTLE_RAISE
+    size = TILE + raise_ + CASTLE_PAD
+    image = Image(size, size)
+    base = CASTLE_PAD + raise_  # the tile's footprint on the ground plane
+
+    def face(along, height):
+        return _ashlar(along, height, CASTLE_FACE)
+
+    def side(along, height):
+        return _ashlar(along, height, CASTLE_SIDE, salt=5)
+
+    def flag(x, y):
+        # Flagstones of the walkway in staggered rows of uneven slabs, with a little grit.
+        row = y // 7
+        shifted = x + (row * 5) % 11
+        length = (9, 12, 10, 13)[row % 4]
+        if y % 7 == 0 or shifted % length == 0:
+            return CASTLE_TOP[3]
+        tone = (0, 1, 2, 1, 1)[(shifted // length * 3 + row * 7) % 5]
+        if (x * 13 + y * 7) % 29 == 0:
+            tone = min(3, tone + 1)
+        return CASTLE_TOP[tone]
+
+    cuboid(image, base, base, TILE, TILE, raise_, face, side, flag, open_south, open_east, slits=tower)
+    top = CASTLE_PAD  # the walkway's top-left corner in the frame
+    # Merlons stand along open edges: 6 px blocks with 4 px gaps, drawn from the back to the front.
+    merlons = []
+    for start in range(1, TILE - 5, 10):
+        if open_north:
+            merlons.append((top + start, top, 6, 4))
+        if open_south:
+            merlons.append((top + start, top + TILE - 4, 6, 4))
+        if open_west:
+            merlons.append((top, top + start, 4, 6))
+        if open_east:
+            merlons.append((top + TILE - 4, top + start, 4, 6))
+    if open_north and open_west:
+        merlons.append((top, top, 4, 4))
+    if open_north and open_east:
+        merlons.append((top + TILE - 4, top, 4, 4))
+    if open_south and open_west:
+        merlons.append((top, top + TILE - 4, 4, 4))
+    if open_south and open_east:
+        merlons.append((top + TILE - 4, top + TILE - 4, 4, 4))
+    merlons.sort(key=lambda m: (m[1] + m[3], m[0]))
+    for x, y, width, depth in merlons:
+        cuboid(image, x, y, width, depth, MERLON,
+               lambda a, h: CASTLE_FACE[1] if h < MERLON - 1 else CASTLE_FACE[0],
+               lambda a, h: CASTLE_SIDE[2],
+               lambda a, b: CASTLE_TOP[0] if a + b < 3 else CASTLE_TOP[1])
+    return image
+
+
 THIN_BAND = (11, 21)  # a thin wall's masonry band across its tile
 
 
@@ -3259,6 +3606,52 @@ def thin_wall(mask, stone=None):
             nx, ny = x + dx, y + dy
             if 0 <= nx < TILE and 0 <= ny < TILE and (nx, ny) not in shape and image.get(nx, ny) is None:
                 image.set(nx, ny, OUTLINE)
+    return image
+
+
+DOOR_DARK = rgba("1a1612")
+DOOR_WOOD = (rgba("b07a44"), rgba("8f6034"), rgba("6a4424"), rgba("4a2e18"))
+DOOR_FRAME = (rgba("b4b2a6"), rgba("8c8a7e"))
+
+
+def door(vertical):
+    """A building's doorway (an open tile in a "#" wall line): the thin wall's masonry over it, with
+    an arched wooden door in its visible face (the south face of a west-east wall, the east face of
+    a north-south one), standing ajar on a dark room. Drawn on the doorway tile like a wall, so
+    whoever stands in the doorway is drawn over it. Plank brown on grey stone marks every entrance."""
+    image = thin_wall(5 if vertical else 10)
+    hi = THIN_BAND[1]
+    raise_ = WALL - TILE
+    left, right, top = 7, 25, 14
+
+    def opening(along, height):
+        if not left <= along < right or height < 0 or height >= top:
+            return False
+        # A round arch: the corners of the opening's head stay masonry.
+        middle = (left + right - 1) / 2
+        span = (right - left) / 2
+        return height < top - 4 or (along - middle) ** 2 / span ** 2 + (height - (top - 4)) ** 2 / 16 < 1
+
+    for height in range(raise_):
+        k = raise_ - height
+        for along in range(TILE):
+            px, py = (hi - 1 + k, along + k) if vertical else (along + k, hi - 1 + k)
+            if opening(along, height):
+                plank = (along - left) % 4
+                color = (DOOR_WOOD[0], DOOR_WOOD[1], DOOR_WOOD[1], DOOR_WOOD[2])[plank]
+                if height in (3, 9) and right - along > 3:
+                    color = IRON[1] if plank else IRON[2]
+                if along == right - 6 and height == 6:
+                    color = rgba("e0b85a")  # the ring handle
+                elif along == right - 6 and height == 5:
+                    color = rgba("8a6a2a")
+                if along >= right - 3:
+                    color = DOOR_DARK  # the door stands ajar on the dark room
+                elif along == right - 4:
+                    color = DOOR_WOOD[3]
+                image.set(px, py, color)
+            elif opening(along - 1, height) or opening(along + 1, height) or opening(along, height - 1):
+                image.set(px, py, DOOR_FRAME[0] if opening(along, height - 1) else DOOR_FRAME[1])
     return image
 
 
@@ -4073,7 +4466,12 @@ def main():
         "menu_icons.png": sheet_row([menu_icon(kind) for kind in MENU_ICONS]),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
+        "doors.png": sheet_row([door(False), door(True)]),
         "terrain_palette.png": terrain_palette(),
+        "ores.png": sheet([ore_vein(band, glint) for glint in (False, True) for band in range(5)], 5, WALL),
+        "castle_walls.png": sheet([castle_block(mask, False) for mask in range(16)], 16, TILE + CASTLE_RAISE + CASTLE_PAD),
+        "castle_towers.png": sheet([castle_block(mask, True) for mask in range(16)], 16, TILE + TOWER_RAISE + CASTLE_PAD),
+        "mountains.png": sheet([mountain(mask, variant) for variant in range(MOUNTAIN_VARIANTS) for mask in range(16)], 16, WALL),
         "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)]
                            + [wall(mask, CAVE_STONE) for mask in range(16)] + [thin_wall(mask) for mask in range(16)]
                            + [cliff(mask) for mask in range(16)] + [cliff(mask, True) for mask in range(16)],

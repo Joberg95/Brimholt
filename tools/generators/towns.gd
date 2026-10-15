@@ -13,7 +13,7 @@ extends SceneTree
 const Buildings = preload("res://game/data/buildings.gd")
 ## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRL"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLW"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## The only town with a banker (and so the only bank and depot).
 const BANK_PLACE: String = "Reedmere"
@@ -90,13 +90,13 @@ const PATCHES: Array = [
 	]],
 	# Silkhollow's cave mouth in Thornfield Wilds: a ring of cave rock, open to the south, around
 	# the stairway (painted by dungeons.gd at Dungeons.DUNGEONS["silkhollow"]["entrance"]), in a
-	# small clearing.
+	# small clearing where the trail from the coast road (silkhollow.gd) arrives.
 	[Vector2i(79, 161), [
 		"   .....  ",
 		"   .CCC.  ",
 		"  .CC CC. ",
-		"  .C...C. ",
-		"..........",
+		"  ,C,..C. ",
+		",,,,,.....",
 		"..........",
 		" ........ ",
 		"  ......  ",
@@ -134,7 +134,8 @@ static func apply(scene_root: Node) -> int:
 			var row: String = patch[1][y]
 			for x: int in row.length():
 				var cell: Vector2i = patch[0] + Vector2i(x, y)
-				if row[x] == " " or _terrain(layer, cell) == row[x]:
+				# Castle walls (castle_town.gd) stand in for a patch's town walls.
+				if row[x] == " " or _terrain(layer, cell) == row[x] or (row[x] == "#" and _terrain(layer, cell) == "W"):
 					continue
 				if row[x] == "#" and blocked.has(cell):
 					push_error("Town patch would wall in %s at %s" % [blocked[cell], cell])

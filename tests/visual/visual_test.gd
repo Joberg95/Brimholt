@@ -15,6 +15,7 @@ const Biomes = preload("res://game/data/biomes.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
+const Crafting = preload("res://game/core/crafting.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 var game: Node2D
 ## The game renders offscreen into this buffer; the real window only needs to exist.
@@ -249,6 +250,8 @@ func _run() -> void:
 	if not await _check_town_services():
 		return
 	if not await _check_roofs_and_signs():
+		return
+	if not await _check_ore_vein():
 		return
 	if not await _check_dungeons():
 		return
@@ -1336,8 +1339,9 @@ func _check_quest_list() -> bool:
 		and _expect(hidden, "The quest list key should hide the list")
 
 
-## Ashford's shop from the plaza (roof over the merchant, sign by the door, no name through
-## the roof), then from inside (the roof has faded and the merchant shows).
+## Ashford's shop from across the plaza (roof over the merchant, sign by the door, no name through
+## the roof), then from beside its door (the roof turns see-through and the door shows), then from
+## inside (the roof has faded and the merchant shows).
 func _check_roofs_and_signs() -> bool:
 	var player: Dictionary = game.world.players[1]
 	var keeper: Vector2i = World.npc("ashford_vendor")["cell"]
@@ -1349,7 +1353,7 @@ func _check_roofs_and_signs() -> bool:
 			sign = entry
 	if not _expect(World.ROOM_AT.has(keeper) and not sign.is_empty(), "Ashford's merchant has no shop with a sign"):
 		return false
-	player["cell"] = door + building["outward"][door] * 2
+	player["cell"] = door + building["outward"][door] * (WorldViewScript.ROOF_NEAR + 1)
 	player["from"] = player["cell"]
 	game._publish_actor(1)
 	await create_timer(0.8).timeout
@@ -1357,6 +1361,17 @@ func _check_roofs_and_signs() -> bool:
 	var outside: Image = screen.get_texture().get_image()
 	outside.save_png("res://.tools/visual-roofs.png")
 	var named_outside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
+	player["cell"] = door + building["outward"][door] * 2
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var near: Image = screen.get_texture().get_image()
+	near.save_png("res://.tools/visual-roofs-near.png")
+	var near_alpha: float = game._world_view._roof_alpha.get(World.ROOM_AT[keeper], 1.0)
+	var named_near: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
+	var door_spot: Vector2 = game.map_to_screen((Vector2(door) + Vector2(0.5, 0.55)) * World.TILE_SIZE)
+	var door_area := Rect2(door_spot - Vector2(8, 4), Vector2(16, 8))
 	player["cell"] = keeper + Vector2i.DOWN * 2
 	player["from"] = player["cell"]
 	game._publish_actor(1)
@@ -1370,12 +1385,66 @@ func _check_roofs_and_signs() -> bool:
 	var sign_centre: Vector2 = game.map_to_screen(Vector2(sign["cell"]) * World.TILE_SIZE + SpriteArt.SIGN_OFFSETS[sign["outward"]])
 	return _expect(not named_outside and named_inside, "The merchant's name must hide under the roof and show inside (%s, %s)"
 			% [named_outside, named_inside]) \
+		and _expect(is_equal_approx(near_alpha, WorldViewScript.ROOF_NEAR_ALPHA) and named_near,
+			"Beside the door the roof must turn see-through (alpha %.2f, name shown %s)" % [near_alpha, named_near]) \
+		and _expect(_brown(near, door_area) > 20, "The shop's wooden door is not drawn (%d brown pixels)" % _brown(near, door_area)) \
 		and _expect(not game._world_view.covered(keeper) and game._world_view.inside_building() == World.ROOM_AT[keeper],
 			"The roof must fade while you are inside") \
 		and _expect(_colours(inside, Rect2(sign_centre - Vector2(16, 12), Vector2(32, 24))) > 8, "The shop sign is not drawn (%d colours at %s)"
 			% [_colours(inside, Rect2(sign_centre - Vector2(16, 12), Vector2(32, 24))), sign_centre]) \
 		and _expect(outside.get_region(keeper_area).get_data() != inside.get_region(keeper_area).get_data(),
 			"The roof must cover the merchant from outside")
+
+
+## A copper vein near Cinder Crossing: orange ore glitters in the mountain's cliff face, and it
+## vanishes while the vein regrows.
+func _check_ore_vein() -> bool:
+	var vein := Vector2i(-1, -1)
+	for cell: Vector2i in Crafting.ORES:
+		if Crafting.ORES[cell] == 0 and (vein.x < 0 or cell.length_squared() < vein.length_squared()):
+			vein = cell
+	var player: Dictionary = game.world.players[1]
+	for offset: Vector2i in [Vector2i(2, 1), Vector2i(-2, 1), Vector2i(0, 2), Vector2i(0, 1)]:
+		if World.walkable(vein + offset):
+			player["cell"] = vein + offset
+			break
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var shown: Image = screen.get_texture().get_image()
+	shown.save_png("res://.tools/visual-ore.png")
+	var face: Vector2 = game.map_to_screen((Vector2(vein) + Vector2(0.5, 0.75)) * World.TILE_SIZE)
+	var area := Rect2(face - Vector2(28, 14), Vector2(56, 28))
+	game.worked_nodes[vein] = game._now() + 30.0
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	var worked: Image = screen.get_texture().get_image()
+	game.worked_nodes.erase(vein)
+	return _expect(Crafting.node_at(vein) == "mining" and _orange(shown, area) > 12,
+			"The copper vein at %s shows no ore (%d orange pixels)" % [vein, _orange(shown, area)]) \
+		and _expect(_orange(worked, area) < 4, "A worked vein still shows its ore (%d orange pixels)" % _orange(worked, area))
+
+
+func _orange(image: Image, area: Rect2) -> int:
+	var count: int = 0
+	for y: int in range(int(area.position.y), int(area.end.y)):
+		for x: int in range(int(area.position.x), int(area.end.x)):
+			var pixel: Color = image.get_pixel(x, y)
+			if pixel.r > 0.6 and pixel.r > pixel.g + 0.2 and pixel.g > pixel.b + 0.1:
+				count += 1
+	return count
+
+
+## Pixels in a screen area that look like door planks (warm brown: red over green over blue).
+func _brown(image: Image, area: Rect2) -> int:
+	var count: int = 0
+	for y: int in range(int(area.position.y), int(area.end.y)):
+		for x: int in range(int(area.position.x), int(area.end.x)):
+			var pixel: Color = image.get_pixel(x, y)
+			if pixel.r > pixel.g + 0.06 and pixel.g > pixel.b + 0.04 and pixel.r > 0.3:
+				count += 1
+	return count
 
 
 ## A storm at noon over Cinder Crossing (rain drawn, light dimmed), the same rain at night (the

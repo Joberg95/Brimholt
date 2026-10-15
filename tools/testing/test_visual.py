@@ -34,6 +34,8 @@ CAPTURES = (
     ("visual-tooltip.png", "Item tooltip: rarity grade in the name colour and frame (no coloured slot edge)"),
     ("visual-swing.png", "Attack: the weapon hand strikes toward the target"),
     ("visual-roofs.png", "Ashford from the plaza: roofs over the houses, a hanging shop sign, no names through roofs"),
+    ("visual-roofs-near.png", "Beside Ashford's shop: its roof turns see-through, the wooden door and the merchant show"),
+    ("visual-ore.png", "A copper vein near Cinder Crossing: orange ore in the mountain's cliff face"),
     ("visual-shop-inside.png", "Inside Ashford's shop: its roof fades away and the merchant shows"),
     ("visual-cellar.png", "Cinder cellar: entered by the town stairway; rats and the Rat King in a private copy"),
     ("visual-torches.png", "Night in town: wall torches burn beside the doors and light the walls"),

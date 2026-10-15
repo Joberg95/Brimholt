@@ -11,7 +11,7 @@ extends SceneTree
 
 ## Must match World.TERRAINS (the rules check verifies it); World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRL"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLW"
 const TILE_SIZE: int = 32
 const Dungeons = preload("res://game/data/dungeons.gd")
 const ENTRANCE_SCRIPT: Script = preload("res://game/maps/markers/dungeon_entrance.gd")

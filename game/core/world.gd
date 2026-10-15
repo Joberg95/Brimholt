@@ -15,12 +15,13 @@ const MAP_SCENE: String = "res://game/maps/overworld.tscn"
 ## Terrain characters: grass, dirt road, water, stone wall, tree, sand, cobblestone, pier/bridge,
 ## the Hollow Reach's dusk soil, obsidian floor, obsidian wall, and dead tree, and the
 ## dungeons' cave floor, cave wall, stairs down (a dungeon entrance), and stairs up (its exit),
-## and the desert's cacti and thorn scrub (on sand).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRL"
+## the desert's cacti and thorn scrub (on sand), boulders, mountain rock, and castle walls (town
+## curtain walls and towers, see SpriteArt.tower).
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLW"
 const WALKABLE: String = ".,:=bdocv^"
 const LAND: String = ".,:=docv^"
 ## Drawn as oblique walls / as trees; both block movement and line of sight.
-const WALLS: String = "#OCL"
+const WALLS: String = "#OCLW"
 const TREES: String = "TDKR"
 ## Loaded from MAP_SCENE: terrain rows (" " for unpainted cells), spawn cells, starting
 ## ground items, and ferrymen {id: {name, place, cell, facing, routes: {id: fare}}}.

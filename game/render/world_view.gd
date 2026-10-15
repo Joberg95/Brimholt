@@ -46,8 +46,14 @@ var _tall: Dictionary = {}
 var _tall_area: Rect2i = Rect2i()
 var floor_layer: Node2D
 ## Roof opacity by building index (World.BUILDINGS): the roof of the building you stand in
-## fades out, and everyone else's fades back in. Signs by building index.
+## fades out, the roofs of buildings within ROOF_NEAR tiles of you turn see-through (ROOF_NEAR_ALPHA)
+## so their doors and rooms show as you approach, and the rest fade back in. Signs by building index.
 const ROOF_FADE_PER_SECOND: float = 5.0
+const ROOF_NEAR: int = 3
+const ROOF_NEAR_ALPHA: float = 0.35
+## An ore vein glints for ORE_GLINT seconds every ORE_GLINT_EVERY seconds.
+const ORE_GLINT: float = 0.35
+const ORE_GLINT_EVERY: float = 2.6
 var _roof_alpha: Dictionary = {}
 var _signs_of: Dictionary = {}
 ## Wall torches by building index, like _signs_of.
@@ -92,6 +98,21 @@ func inside_building() -> int:
 	return World.ROOM_AT.get(Vector2i(roundi(visual.x), roundi(visual.y)), -1)
 
 
+## The local character's tile (rounded from where it is drawn), or (-1000, -1000) without one.
+func own_cell() -> Vector2i:
+	if not game.actors.has(game.self_id):
+		return Vector2i(-1000, -1000)
+	var visual: Vector2 = game.actors[game.self_id]["visual"]
+	return Vector2i(roundi(visual.x), roundi(visual.y))
+
+
+## Whether a tile is within ROOF_NEAR tiles (Chebyshev) of a building's walls.
+static func near_building(cell: Vector2i, rect: Rect2i) -> bool:
+	var gap: Vector2i = Vector2i(maxi(maxi(rect.position.x - cell.x, cell.x - (rect.end.x - 1)), 0),
+		maxi(maxi(rect.position.y - cell.y, cell.y - (rect.end.y - 1)), 0))
+	return maxi(gap.x, gap.y) <= ROOF_NEAR
+
+
 ## Buildings in the area, fading their roofs; returns [bottom row, index] sorted by row.
 func _roofs_in(area: Rect2i, time: float) -> Array:
 	if _signs_of.is_empty():
@@ -109,10 +130,11 @@ func _roofs_in(area: Rect2i, time: float) -> Array:
 	var step: float = clampf(time - _last_draw, 0.0, 0.1) * ROOF_FADE_PER_SECOND
 	_last_draw = time
 	var inside: int = inside_building()
+	var here: Vector2i = own_cell()
 	var roofs: Array = []
 	for index: int in World.BUILDINGS.size():
-		var target: float = 0.0 if index == inside else 1.0
 		var rect: Rect2i = World.BUILDINGS[index]["rect"]
+		var target: float = 0.0 if index == inside else ROOF_NEAR_ALPHA if near_building(here, rect) else 1.0
 		if not rect.intersects(area):
 			_roof_alpha[index] = target
 			continue
@@ -180,7 +202,12 @@ func _draw() -> void:
 		var tile: String = _tall.get(cell, "")
 		if tile in World.WALLS and not tile.is_empty():
 			SpriteArt.draw_wall(self, cell)
+			if Crafting.ORES.has(cell) and not game.node_worked(cell):
+				# Veins catch the eye: each glints for a moment every few seconds.
+				SpriteArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
 			continue
+		if tile == "door":
+			SpriteArt.draw_door(self, cell)
 		if game.ground_view.has(cell):
 			_draw_stack(cell, game.ground_view[cell])
 		if tile == "furniture":
@@ -224,6 +251,11 @@ func _cache_tall(area: Rect2i) -> void:
 			var tile: String = row[x]
 			if tile in World.WALLS or tile in World.TREES:
 				_tall[Vector2i(x, y)] = tile
+	for building: Dictionary in World.BUILDINGS:
+		if building["rect"].intersects(area):
+			for cell: Vector2i in building["doors"]:
+				if area.has_point(cell):
+					_tall[cell] = "door"
 	for cell: Vector2i in World.NPC_CELLS:
 		if area.has_point(cell):
 			_tall[cell] = "npc"

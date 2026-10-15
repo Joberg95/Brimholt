@@ -18,7 +18,7 @@ const NAMES: Dictionary = {
 	"smithing": "Smithing", "woodworking": "Woodworking", "tailoring": "Tailoring", "alchemy": "Alchemy", "cooking": "Cooking",
 }
 const DESCRIPTIONS: Dictionary = {
-	"mining": "Break ore from rock outcrops and mountains.",
+	"mining": "Break ore from the veins that glitter in rock faces.",
 	"woodcutting": "Fell logs from trees.",
 	"herbalism": "Pick herbs from the flowering patches in the wilds.",
 	"fishing": "Fish open water within three tiles of the shore.",
@@ -37,9 +37,14 @@ const RESOURCES: Dictionary = {
 	"herbalism": ["sunflax", "mirereed", "silverthistle", "nightcotton", "starpetal"],
 	"fishing": ["river_perch", "marsh_eel", "silver_trout", "deep_pike", "glimmerfin"],
 }
-## Terrain each gathering skill works (herbalism works herb patches, see herb_at), and how far
-## away it may be (Chebyshev tiles).
+## Terrain each gathering skill works, and how far away it may be (Chebyshev tiles). Herbalism
+## works herb patches (herb_at) and mining works ore veins (Crafting.ORES): a few rock faces of
+## mountains and outcrops ("CL") picked by ore_at, not every rock.
 const SOURCES: Dictionary = {"mining": "CL", "woodcutting": "TD", "fishing": "~"}
+## Ore veins: about one rock face in ORE_SPACING[band] facing open ground to the south, never two
+## within ORE_GAP tiles of each other. The beginners' land has little rock, so copper is denser.
+const ORE_SPACING: Array[int] = [2, 6, 6, 6, 6]
+const ORE_GAP: int = 3
 const REACH: Dictionary = {"mining": 1, "woodcutting": 1, "herbalism": 1, "fishing": 3}
 ## Seconds of work per gather (moving cancels it), and how long a worked node needs to regrow.
 const GATHER_SECONDS: float = 3.0
@@ -121,10 +126,20 @@ static func herb_at(cell: Vector2i, tile: String) -> bool:
 	return (mixed & 0x7fffffff) % HERB_SPACING == 0
 
 
-## The gathering skill a terrain tile serves, or "" (herb patches are not a terrain).
+## Whether a rock face on `cell` may hold an ore vein (given its terrain and whether open ground lies
+## south of it, so the vein shows in its cliff face; zones and spacing are checked by the caller).
+static func ore_at(cell: Vector2i, tile: String, open_south: bool, band: int) -> bool:
+	if tile.is_empty() or not tile in SOURCES["mining"] or not open_south:
+		return false
+	var mixed: int = (cell.x * 83492791) ^ (cell.y * 73856093)
+	return (mixed & 0x7fffffff) % ORE_SPACING[band] == 0
+
+
+## The gathering skill a terrain tile serves, or "" (herb patches and ore veins are not a terrain:
+## see Crafting.node_at).
 static func source_of(tile: String) -> String:
 	for profession: String in SOURCES:
-		if not tile.is_empty() and tile in SOURCES[profession]:
+		if profession != "mining" and not tile.is_empty() and tile in SOURCES[profession]:
 			return profession
 	return ""
 

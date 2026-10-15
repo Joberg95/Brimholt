@@ -56,7 +56,7 @@ const TOWN_DUNGEONS: Dictionary = {"ashford_crypt": ["ashford", Vector2i(-9, 10)
 ## Cinder Crossing's vendor (and a spare spot) flank the south road.
 const CINDER_TOWNSFOLK: Array[Vector2i] = [Vector2i(9, 13), Vector2i(14, 16)]
 ## Palette order in terrain_palette.png; the tile set stores each as custom data "terrain".
-const TERRAINS: Array[String] = [".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L"]
+const TERRAINS: Array[String] = [".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W"]
 const WALKABLE: String = ".,:=b"
 ## The great lake is the old one scaled by LAKE_SCALE around LAKE_CENTER.
 const LAKE_SCALE: float = 0.8

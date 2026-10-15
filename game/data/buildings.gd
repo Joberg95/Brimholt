@@ -5,7 +5,7 @@ extends RefCounted
 ## holds at most MAX_ROOM tiles is a building. Shared by the world (roofs, signs) and the town
 ## painter, so it depends on nothing: terrain comes from a Callable(cell) -> String.
 
-const WALLS: String = "#OC"
+const WALLS: String = "#OCW"
 const MAX_ROOM: int = 48
 const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 

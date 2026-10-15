@@ -24,7 +24,7 @@ const MAP_COLORS: Dictionary = {
 	".": Color("#4e693b"), ",": Color("#a08a6a"), "~": Color("#2d5a78"), "#": Color("#9196a0"),
 	"T": Color("#26401f"), ":": Color("#d8c48a"), "=": Color("#b0aca4"), "b": Color("#8a5a34"),
 	"d": Color("#3a2c4a"), "o": Color("#2c2438"), "O": Color("#6a5a88"), "D": Color("#1e1626"),
-	"c": Color("#5a534c"), "C": Color("#85766a"), "v": Color("#f0d070"), "^": Color("#f0d070"),
+	"c": Color("#5a534c"), "C": Color("#85766a"), "W": Color("#b3aa98"), "v": Color("#f0d070"), "^": Color("#f0d070"),
 	"K": Color("#7c8450"),
 	"R": Color("#8a8478"),
 	"L": Color("#6a6250"),
