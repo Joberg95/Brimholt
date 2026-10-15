@@ -18,8 +18,8 @@ lets add some smaller mini bosses as rare creatures from levels 10-50 anywhere i
 
 Outfits from quests, later thing (plan 22)
 
-remove small stones , they add nothing but anoyances
+remove small stones , they add nothing but anoyances (plan 23)
 
-we need more hunt quests for level 20-30 , i have been doing a lot of the 40+ quests in level 25 as a party, i think we need like 5-10 more stages. 
+we need more hunt quests for level 20-30 , i have been doing a lot of the 40+ quests in level 25 as a party, i think we need like 5-10 more stages. (plan 24)
 
-we need to expand the world map with more monster variety for the hunt quests.
+we need to expand the world map with more monster variety for the hunt quests. (plan 25)
