@@ -4,3 +4,5 @@
 .DS_Store
 __pycache__/
 build/
+# Godot's Windows editor copies a loaded GDExtension to ~<name>.dll while it runs
+addons/*/bin/~*

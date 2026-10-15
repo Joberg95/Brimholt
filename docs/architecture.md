@@ -15,6 +15,7 @@ game/
     instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
     bots.gd              Host player bots: hunter, PvP, dummy, companion, and rival stances through the real rules
+    bot_loot.gd          Bots collect the loot their group earned (Combat.loot_claims) and sell it at vendors
     solo.gd              Solo play: companions around your class, rival bands, PvP ambushes, raid fill and disband
     nav.gd               Long-range bot navigation: AStarGrid2D over the walkable overworld
     ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/

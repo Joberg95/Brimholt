@@ -8,6 +8,7 @@ const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Lexicon = preload("res://game/core/lexicon.gd")
 const Bots = preload("res://game/core/bots.gd")
+const BotLoot = preload("res://game/core/bot_loot.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Items = preload("res://game/data/items.gd")
 const Economy = preload("res://game/core/economy.gd")
@@ -165,6 +166,7 @@ func _run() -> void:
 	_adventurer_checks()
 	_quest_hub_and_lexicon_checks()
 	_bot_checks()
+	_bot_loot_checks()
 	_armor_type_checks()
 	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
@@ -470,6 +472,91 @@ func _bot_checks() -> void:
 		"removing a bot frees its slot")
 	check(not full_bots.add("pirate", 10, "dummy", World.SPAWNS[0], 0.0)["ok"] and not full_bots.add("knight", 10, "berserk", World.SPAWNS[0], 0.0)["ok"],
 		"bots need a real vocation and stance")
+
+
+## Bot loot (game/core/bot_loot.gd): kills claim their loot for who earned them; bots collect only
+## what their own group earned, leave what does not fit, give up on stacks they cannot reach, and
+## sell at a vendor when nearly full.
+func _bot_loot_checks() -> void:
+	var field: Vector2i = Vector2i(-1, -1)
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var spot: Vector2i = spawn["cell"] + Vector2i(0, 5)
+		if World.zone_at(spot).is_empty() and World.walkable(spot) and World.walkable(spot + Vector2i(0, 2)) and field.x < 0:
+			field = spot
+	var world := World.new()
+	var combat := Combat.new(world, 17)
+	var bots := Bots.new(world, combat)
+	world.monsters.clear()
+	var hunter: int = bots.add("knight", 20, "hunter", field, 0.0)["id"]
+	var me: Dictionary = world.players[hunter]
+	# A kill claims every tile its loot spilled onto for the players credited with it.
+	var prey: int = combat.spawn_monster("grey_wolf", 12, me["cell"] + Vector2i(0, 2), 0.0)
+	world.monsters[prey]["damage_by"] = {hunter: 100}
+	var events: Array = []
+	combat._kill_monster(prey, 1.0, events)
+	var claimed: Array = combat.loot_claims.keys()
+	check(not claimed.is_empty() and claimed.all(func(cell: Vector2i) -> bool:
+		return combat.loot_claims[cell]["owners"].has(hunter) and not world.ground.get(cell, []).is_empty()),
+		"a kill claims its spilled loot for the players credited with it")
+	# The hunter collects all of it: gold into the purse, items into the backpack.
+	var gold: int = me["gold"]
+	var now: float = _run_bots(bots, combat, 1.0, 12.0)
+	check(claimed.all(func(cell: Vector2i) -> bool: return world.ground.get(cell, []).is_empty()) and me["gold"] > gold,
+		"a bot collects the loot its kills dropped")
+	# Loot a human player helped earn is left for them; so is loot that does not fit.
+	world.add_player(1, now, "knight")
+	_place(world, 1, field + Vector2i(4, 0))
+	var material: String = ""
+	for kind: String in World.ITEMS:
+		if material.is_empty() and World.ITEMS[kind].has("value") and World.stackable(kind) and Economy.sell_price(kind) > 0:
+			material = kind
+	var shared: Vector2i = me["cell"] + Vector2i(1, 0)
+	world.ground[shared] = [World.make_entry(material, 3)]
+	combat.loot_claims[shared] = {"owners": {1: true, hunter: true}, "until": now + 60.0}
+	var full: Vector2i = me["cell"] + Vector2i(-1, 0)
+	world.ground[full] = ["rusted_breastplate"]
+	combat.loot_claims[full] = {"owners": {hunter: true}, "until": now + 60.0}
+	var kept: Array = me["backpack"].duplicate()
+	for index: int in me["backpack"].size():
+		if me["backpack"][index].is_empty():
+			me["backpack"][index] = "copper_blade"
+	now = _run_bots(bots, combat, now, 3.0)
+	check(world.ground[shared] == [World.make_entry(material, 3)], "bots leave loot a human player helped earn")
+	check(world.ground[full] == ["rusted_breastplate"], "loot that does not fit the backpack stays on the ground")
+	check(BotLoot.fits(me, "gold_coins#4") and not BotLoot.fits(me, "rusted_breastplate"), "gold always fits; gear needs a free slot")
+	me["backpack"] = kept
+	# A stack the bot makes no progress on is given up while its claim lasts.
+	var bot: Dictionary = bots.bots[hunter]
+	_place(world, hunter, full + Vector2i(0, 1))
+	bot["last_cell"] = me["cell"]  # a placed bot is not a dead one (Bots.tick reads a jump as a death)
+	var chosen: Vector2i = bots.loot.choose_stack(hunter, now)
+	bot["loot"] = {"cell": full, "since": now - BotLoot.GIVE_UP_SECONDS - 1.0}
+	var gave_up: bool = not bots.loot.collect(hunter, now, [])
+	check(chosen == full and gave_up and bot["skip"].has(full) and bots.loot.choose_stack(hunter, now) != full,
+		"a bot gives up on a stack it has made no progress on and skips it")
+	# Who loots: hunters, PvP bots, and rivals; never companions or dummies.
+	check(BotLoot.loots({"stance": "rival"}) and BotLoot.loots({"stance": "pvp"}) and not BotLoot.loots({"stance": "companion"})
+		and not BotLoot.loots({"stance": "dummy"}), "only roaming bots loot")
+	# Claims lapse, and are swept.
+	combat.loot_claims[full]["until"] = now - 1.0
+	combat.tick(now + Combat.LOOT_SWEEP_SECONDS + 1.0)
+	check(not combat.loot_claims.has(full), "lapsed loot claims are swept")
+	# Selling: nearly full of materials and gear, the hunter travels to a vendor, sells what vendors
+	# buy (not its potions), and returns to its post.
+	world.remove_player(1)
+	world.ground.erase(shared)
+	world.ground.erase(full)
+	combat.loot_claims.clear()
+	for index: int in range(2, me["backpack"].size()):
+		me["backpack"][index] = World.make_entry(material, 10) if index % 2 == 0 else "copper_blade"
+	check(bots.loot.wants_to_sell(hunter), "a nearly full bot with something to sell wants a vendor")
+	gold = me["gold"]
+	var potions: int = World.count_of(me["backpack"][0])
+	now = _run_bots(bots, combat, now + 20.0, 90.0)
+	check(me["gold"] > gold and BotLoot.sellable_index(me) < 0 and World.count_of(me["backpack"][0]) == potions,
+		"the bot sells everything a vendor buys and keeps its potions")
+	check(bots.bots[hunter]["trip"].is_empty() and Combat.distance(me["cell"], bots.bots[hunter]["post"]) <= 2,
+		"after selling, the bot goes back to its post")
 
 
 ## Each class wears one armor type: Warriors plate, Hunters mail, Druids leather, Sorcerers cloth.

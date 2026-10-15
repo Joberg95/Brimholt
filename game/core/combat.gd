@@ -82,6 +82,14 @@ var world: World
 var rng := RandomNumberGenerator.new()
 ## [due time, spawn index] for monsters waiting to respawn.
 var respawns: Array = []
+## Who earned the loot on a ground cell: cell -> {"owners": {player id: true}, "until": time},
+## set for every tile a kill's loot spilled onto (the players credited with the kill). Anyone may
+## still pick it up; bots use it to collect only what their own group earned (game/core/bot_loot.gd).
+## Claims lapse after LOOT_CLAIM_SECONDS and are swept every LOOT_SWEEP_SECONDS.
+var loot_claims: Dictionary = {}
+const LOOT_CLAIM_SECONDS: float = 180.0
+const LOOT_SWEEP_SECONDS: float = 10.0
+var _next_claim_sweep: float = 0.0
 var _next_id: int = -1
 var _last_tick: float = -INF
 ## Occupied tiles (cell -> number of creatures on or reserving it) for one moment, built once and
@@ -526,7 +534,7 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 	_credit_tasks(monster["kind"], credited, events)
 	if definition.has("relics"):
 		_award_trophies(monster["kind"], monster["fought"], events)
-	_drop_loot(monster, events)
+	_drop_loot(monster, credited, now, events)
 	world.monsters.erase(id)
 	_taken_at = NAN
 	events.append({"kind": "monster_gone", "id": id, "cell": monster["cell"]})
@@ -985,12 +993,29 @@ func gear_drop(level: int) -> String:
 	return choices[rng.randi_range(0, choices.size() - 1)]
 
 
-func _drop_loot(monster: Dictionary, events: Array) -> void:
+func _drop_loot(monster: Dictionary, credited: Array[int], now: float, events: Array) -> void:
 	var loot: Array[String] = roll_loot(monster["kind"], monster["level"])
 	loot.reverse()  # spill() places from the back: items before gold, nearest tiles first
 	var changed: Array[Vector2i] = spill(monster["cell"], loot)
-	if not changed.is_empty():
-		events.append({"kind": "ground", "cells": changed})
+	if changed.is_empty():
+		return
+	events.append({"kind": "ground", "cells": changed})
+	var owners: Dictionary = {}
+	for player: int in credited:
+		owners[player] = true
+	if not owners.is_empty():
+		for cell: Vector2i in changed:
+			loot_claims[cell] = {"owners": owners, "until": now + LOOT_CLAIM_SECONDS}
+
+
+## Drops lapsed loot claims and claims on tiles that have since been cleared.
+func _sweep_loot_claims(now: float) -> void:
+	if now < _next_claim_sweep:
+		return
+	_next_claim_sweep = now + LOOT_SWEEP_SECONDS
+	for cell: Vector2i in loot_claims.keys():
+		if now >= loot_claims[cell]["until"] or world.ground.get(cell, []).is_empty():
+			loot_claims.erase(cell)
 
 
 ## Places items on walkable tiles within SPILL_RADIUS of origin, nearest first, up to
@@ -1153,6 +1178,7 @@ func tick(now: float) -> Array:
 		return events
 	_last_tick = now
 	_taken_at = NAN
+	_sweep_loot_claims(now)
 	for id: int in world.players.keys():
 		if world.players.has(id):
 			_player_tick(id, now, events)

@@ -228,8 +228,21 @@ below 25% mana; ranged bots step back from anything beside them.
 A **LimboAI behavior tree** (`game/data/bot_behavior.tres`) makes each bot's decisions: dummies
 idle; everyone else uses spells and potions (in a party: heals for hurt allies, Challenge for the
 group), then fights a target (its leader's, attackers of its group, PvP victims, monsters after
-it, or prey near its post), follows its leader (companions and rival band members), runs its
-errand (rival band leaders: tasks, camps, ambushes), or walks back to its post. Long trips use
+it, or prey near its post), collects loot, sells it, follows its leader (companions and rival
+band members), runs its errand (rival band leaders: tasks, camps, ambushes), or walks back to its
+post.
+
+**Bots and loot** (`game/core/bot_loot.gd`). When a monster dies, the tiles its loot spills onto
+are claimed for three minutes by the players credited with the kill. Hunters, PvP bots, and
+rivals pick up the claimed stacks within 5 tiles that their own bot group earned (gold into the
+purse, the rest into the backpack), so a place where bots hunted is not a free loot pile. Loot a
+human player helped earn is left for them, so companions never take yours; anyone may still pick
+up anything, as before. Loot that does not fit a bot's backpack stays on the ground, and a stack a
+bot cannot reach (across water or rock) is given up after 8 seconds. Once anyone in a bot group
+has at most one free backpack slot and something to sell, the roaming bot (a hunter, PvP bot, or
+rival band leader) travels to the nearest vendor, sells everything vendors buy (never potions or
+bound items), and goes back to its post or errand; band members follow their leader into the
+shop and sell there. Rivals carry what they collected, so beating them drops it. Long trips use
 `game/core/nav.gd`, an A* grid over the walkable overworld. Open the tree in
 the Godot editor's LimboAI tab to change how bots play; `make bot-tree` restores the default.
 

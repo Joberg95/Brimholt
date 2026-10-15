@@ -110,6 +110,7 @@ func _sample() -> Dictionary:
 		"orphans": Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT),
 		"memory": Performance.get_monitor(Performance.MEMORY_STATIC),
 		"ground": game.world.ground.size(),
+		"claims": game.combat.loot_claims.size(),
 		"monsters": game.world.monsters.size(),
 		"lights": view.lighting._pool.size(),
 		"particles": view.fx.get_child_count(),
@@ -150,6 +151,9 @@ func _report(drops: int) -> void:
 		spawned += spawn["count"]
 	if final["monsters"] > spawned + 40:
 		failures.append("more monsters than spawn slots (%d > %d)" % [final["monsters"], spawned])
+	# Loot claims are swept with their stacks: never more claims than loot on the ground.
+	if final["claims"] > final["ground"]:
+		failures.append("loot claims outlive their loot (%d claims, %d ground tiles)" % [final["claims"], final["ground"]])
 	game.leave_game()
 	await process_frame
 	if failures.is_empty():

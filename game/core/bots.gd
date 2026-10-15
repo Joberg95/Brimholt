@@ -19,6 +19,9 @@ extends RefCounted
 ##   "rival"      an adventurer band: its leader takes a task at its giver, hunts the task's
 ##                monsters at a camp, and turns it in, again and again (run_plan); members follow
 ##                the leader like companions. A band may ambush players in a PvP zone ("ambush").
+## Hunters, PvP bots, and rivals also collect the loot their bot group earned and sell it at the
+## nearest vendor when their packs are nearly full (game/core/bot_loot.gd); loot a human player
+## earned is left for them, and loot that does not fit stays on the ground.
 ## A hunter, PvP, or dummy bot that dies is restored RESTORE_SECONDS later at its post with its
 ## level, gear, and potions, so a test can go on; companions come back beside their leader,
 ## rivals where they woke up (the town), and both keep going.
@@ -33,6 +36,7 @@ const BotTree = preload("res://game/core/ai/bot_tree.gd")
 const Nav = preload("res://game/core/nav.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const BotLoot = preload("res://game/core/bot_loot.gd")
 
 ## Stances for standalone bots (tests, the fight and duel simulators); solo play uses SOLO_STANCES.
 const STANCES: Array[String] = ["hunter", "pvp", "dummy"]
@@ -93,11 +97,14 @@ var instances: RefCounted = null
 ## Bot id -> [BotAgent node, BTInstance]: the behavior tree running for it.
 var _brains: Dictionary = {}
 var _tree: BehaviorTree = BotTree.load_tree()
+## Collecting the group's loot and selling it at vendors (game/core/bot_loot.gd).
+var loot: BotLoot
 
 
 func _init(owner: World, fights: Combat) -> void:
 	world = owner
 	combat = fights
+	loot = BotLoot.new(self)
 
 
 ## Agents are nodes outside the scene tree: free them with the bots.
@@ -196,6 +203,7 @@ func _restore(id: int, now: float, at: Vector2i = Vector2i(-1, -1)) -> void:
 	player["backpack"][1] = World.make_entry("mana_potion", potions)
 	player["target"] = 0
 	bot["route"] = []
+	BotLoot.reset(bot)
 	var spot: Vector2i = bot["post"] if at.x < 0 else at
 	var cell: Vector2i = spot if not world.occupied(spot, now, id) else free_cell_near(spot, now, id)
 	player["cell"] = cell
@@ -268,7 +276,17 @@ func engage(id: int, now: float, events: Array) -> void:
 
 ## One step along a path back to the bot's post.
 func walk_home(id: int, now: float, events: Array) -> void:
-	_step(id, Combat.path_step(world.players[id]["cell"], bots[id]["post"], _blocked_for(id, now)), now, events)
+	step_toward(id, bots[id]["post"], now, events)
+
+
+## One step along a path toward `cell` (never across a stairway).
+func step_toward(id: int, cell: Vector2i, now: float, events: Array) -> void:
+	_step(id, Combat.path_step(world.players[id]["cell"], cell, _blocked_for(id, now)), now, events)
+
+
+## The bot's party, or just itself (for BotLoot and the behavior tree's tasks).
+func party_of(id: int) -> Array[int]:
+	return _group(id)
 
 
 ## Keeps a valid target, else picks: an attacker, a PvP victim (PvP stance), a monster after

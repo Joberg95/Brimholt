@@ -1,69 +1,77 @@
-[gd_resource type="BehaviorTree" load_steps=25 format=3]
+[gd_resource type="BehaviorTree" format=3]
 
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_is_stance.gd" id="1_nv0h5"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_use_resources.gd" id="2_jwafk"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_pick_target.gd" id="3_rdg2n"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_engage.gd" id="4_mh4ou"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_follow_leader.gd" id="5_8qq5o"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_run_plan.gd" id="6_jpmkg"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_away_from_post.gd" id="7_laul0"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_walk_home.gd" id="8_pywc4"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_is_stance.gd" id="1_rdg2n"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_use_resources.gd" id="2_mh4ou"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_pick_target.gd" id="3_8qq5o"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_engage.gd" id="4_jpmkg"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_collect_loot.gd" id="5_laul0"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_sell_loot.gd" id="6_pywc4"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_follow_leader.gd" id="7_lf2mx"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_run_plan.gd" id="8_30e7k"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_away_from_post.gd" id="9_l7qvd"]
+[ext_resource type="Script" path="res://game/core/ai/tasks/bt_walk_home.gd" id="10_r2mda"]
 
-[sub_resource type="BTCondition" id="BTCondition_lf2mx"]
-script = ExtResource("1_nv0h5")
-
-[sub_resource type="BTSequence" id="BTSequence_30e7k"]
-custom_name = "Training dummy"
-children = [SubResource("BTCondition_lf2mx")]
-
-[sub_resource type="BTAction" id="BTAction_l7qvd"]
-script = ExtResource("2_jwafk")
-
-[sub_resource type="BTAction" id="BTAction_r2mda"]
-script = ExtResource("3_rdg2n")
-
-[sub_resource type="BTAction" id="BTAction_8b5x6"]
-script = ExtResource("4_mh4ou")
+[sub_resource type="BTCondition" id="BTCondition_8b5x6"]
+script = ExtResource("1_rdg2n")
 
 [sub_resource type="BTSequence" id="BTSequence_jbcbo"]
-custom_name = "Fight"
-children = [SubResource("BTAction_r2mda"), SubResource("BTAction_8b5x6")]
+custom_name = "Training dummy"
+children = [SubResource("BTCondition_8b5x6")]
 
 [sub_resource type="BTAction" id="BTAction_05ace"]
-script = ExtResource("5_8qq5o")
+script = ExtResource("2_mh4ou")
 
-[sub_resource type="BTCondition" id="BTCondition_jlxyk"]
-script = ExtResource("1_nv0h5")
-stance = "rival"
+[sub_resource type="BTAction" id="BTAction_jlxyk"]
+script = ExtResource("3_8qq5o")
 
 [sub_resource type="BTAction" id="BTAction_ctsle"]
-script = ExtResource("6_jpmkg")
+script = ExtResource("4_jpmkg")
 
 [sub_resource type="BTSequence" id="BTSequence_aushb"]
-custom_name = "Rival errand"
-children = [SubResource("BTCondition_jlxyk"), SubResource("BTAction_ctsle")]
+custom_name = "Fight"
+children = [SubResource("BTAction_jlxyk"), SubResource("BTAction_ctsle")]
 
-[sub_resource type="BTCondition" id="BTCondition_5lxuv"]
-script = ExtResource("7_laul0")
+[sub_resource type="BTAction" id="BTAction_5lxuv"]
+script = ExtResource("5_laul0")
 
 [sub_resource type="BTAction" id="BTAction_7qt44"]
-script = ExtResource("8_pywc4")
+script = ExtResource("6_pywc4")
 
-[sub_resource type="BTSequence" id="BTSequence_75ft7"]
+[sub_resource type="BTAction" id="BTAction_75ft7"]
+script = ExtResource("7_lf2mx")
+
+[sub_resource type="BTCondition" id="BTCondition_gl324"]
+script = ExtResource("1_rdg2n")
+stance = "rival"
+
+[sub_resource type="BTAction" id="BTAction_8y2c0"]
+script = ExtResource("8_30e7k")
+
+[sub_resource type="BTSequence" id="BTSequence_uud08"]
+custom_name = "Rival errand"
+children = [SubResource("BTCondition_gl324"), SubResource("BTAction_8y2c0")]
+
+[sub_resource type="BTCondition" id="BTCondition_8376a"]
+script = ExtResource("9_l7qvd")
+
+[sub_resource type="BTAction" id="BTAction_kfgen"]
+script = ExtResource("10_r2mda")
+
+[sub_resource type="BTSequence" id="BTSequence_vxvnq"]
 custom_name = "Return to post"
-children = [SubResource("BTCondition_5lxuv"), SubResource("BTAction_7qt44")]
+children = [SubResource("BTCondition_8376a"), SubResource("BTAction_kfgen")]
 
-[sub_resource type="BTSelector" id="BTSelector_gl324"]
-children = [SubResource("BTSequence_jbcbo"), SubResource("BTAction_05ace"), SubResource("BTSequence_aushb"), SubResource("BTSequence_75ft7")]
+[sub_resource type="BTSelector" id="BTSelector_b0xj1"]
+children = [SubResource("BTSequence_aushb"), SubResource("BTAction_5lxuv"), SubResource("BTAction_7qt44"), SubResource("BTAction_75ft7"), SubResource("BTSequence_uud08"), SubResource("BTSequence_vxvnq")]
 
-[sub_resource type="BTSequence" id="BTSequence_8y2c0"]
+[sub_resource type="BTSequence" id="BTSequence_08sb1"]
 custom_name = "Play"
-children = [SubResource("BTAction_l7qvd"), SubResource("BTSelector_gl324")]
+children = [SubResource("BTAction_05ace"), SubResource("BTSelector_b0xj1")]
 
-[sub_resource type="BTSelector" id="BTSelector_uud08"]
+[sub_resource type="BTSelector" id="BTSelector_kpujx"]
 custom_name = "Bot"
-children = [SubResource("BTSequence_30e7k"), SubResource("BTSequence_8y2c0")]
+children = [SubResource("BTSequence_jbcbo"), SubResource("BTSequence_08sb1")]
 
 [resource]
-description = "Brimholt player bot: dummies idle; others use resources, fight a target, follow their leader, run a rival errand, or walk back to their post."
-root_task = SubResource("BTSelector_uud08")
+description = "Brimholt player bot: dummies idle; others use resources, fight a target, collect their group's loot, sell it at a vendor, follow their leader, run a rival errand, or walk back to their post."
+root_task = SubResource("BTSelector_kpujx")

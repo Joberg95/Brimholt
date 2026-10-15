@@ -49,7 +49,7 @@ monster camp or town, kills nearby monsters (loot spills, effects fire, respawns
 a junk stack, and jumps the clock two minutes (`main.clock_skew`). It samples object, node,
 orphan-node, and static-memory counts plus pool sizes. After a warm-up third, the last third may
 not exceed the middle third by more than 3%. Orphan nodes, a light pool over its cap, ground
-stacks that never decay, or more monsters than spawn slots also fail it. Run it after changing
+stacks that never decay, more monsters than spawn slots, or loot claims outliving their loot also fail it. Run it after changing
 anything that creates nodes, caches, or per-player/per-monster state.
 
 ## Unit rules
@@ -123,7 +123,7 @@ monster fights never counting), the monster catalog contract (ids, names, ranks,
 ranges, idle pace, known fields only, no hand-set numbers, loot of real non-relic items, placement
 on the map or in a dungeon, boss relics), long-session safety (ground decay timing, restarts on change, rate limit, and
 exemptions for starting items and relics; the client spatial index; monsters closing in on a
-player in one tick never sharing a tile), and buildings (door and room detection, the town painter is a no-op on the
+player in one tick never sharing a tile), bot loot (kills claim their loot for who earned them; bots collect only their own group's, leave a human's and what does not fit, give up on stacks they cannot reach, and sell at a vendor when nearly full, keeping their potions), and buildings (door and room detection, the town painter is a no-op on the
 map, two or more buildings per town, furniture inside keepers' buildings that blocks without
 cutting rooms off, rarity grades (Common to Legendary by tier, relics apart, none for potions or packs), every vendor and the banker inside a building of their own
 facing the door with a matching sign beside it, open rooms and doors, and no trading or banking
