@@ -479,7 +479,8 @@ minimap's edge points toward the nearest.
 
 The sky follows a 40-minute day and night and changing weather: clear, overcast, rain, and
 thunderstorms with lightning, the same for everyone in the session. Weather is only for looks.
-It never rains underground or in the desert. At dusk the torches on the town walls are lit.
+It never rains underground or in the desert, and over Mirewood Fen low cloud and drizzle hang
+whatever the sky does elsewhere. At dusk the torches on the town walls are lit.
 
 The overworld is 384×384 tiles: walking straight across takes about a minute and three
 quarters. Monster camps are dense (about 1,000 monsters, in packs of three or more), so levelling is close to town.
@@ -499,7 +500,8 @@ Towns ring the lake: **Ashford** to the north, **Reedmere** to the west, **Ember
 east, and **Dunmere** to the south, with **Highmoor** as an outpost among the north-eastern
 rock ridges. Every town (Cinder Crossing and the ports too) is a **safe zone**: no PvP, and
 monsters never cross into it; a green banner shows when you enter. A desert spreads across
-the south-west, and the Hollow Reach waits in the far south-east, well away from the towns.
+the south-west, Mirewood Fen (levels 30-50) is a swamp of bog mud, giant mushrooms, and murky
+pools crossed by plank walkways, and the Hollow Reach waits in the far south-east, well away from the towns.
 
 **Waystones** are the fast travel over land: carved standing stones with a glowing rune, one in
 each inland town and one just outside Cinder Crossing's east gate. Every waystone links to the

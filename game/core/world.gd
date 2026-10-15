@@ -17,12 +17,12 @@ const MAP_SCENE: String = "res://game/maps/overworld.tscn"
 ## dungeons' cave floor, cave wall, stairs down (a dungeon entrance), and stairs up (its exit),
 ## the desert's cacti and thorn scrub (on sand), boulders, mountain rock, and castle walls (town
 ## curtain walls and towers, see SpriteArt.tower).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLW"
-const WALKABLE: String = ".,:=bdocv^"
-const LAND: String = ".,:=docv^"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmU"
+const WALKABLE: String = ".,:=bdocv^m"
+const LAND: String = ".,:=docv^m"
 ## Drawn as oblique walls / as trees; both block movement and line of sight.
 const WALLS: String = "#OCLW"
-const TREES: String = "TDKR"
+const TREES: String = "TDKRU"
 ## Loaded from MAP_SCENE: terrain rows (" " for unpainted cells), spawn cells, starting
 ## ground items, and ferrymen {id: {name, place, cell, facing, routes: {id: fare}}}.
 static var ROWS: PackedStringArray

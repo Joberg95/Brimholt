@@ -10,7 +10,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/castle_town.gd
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLW"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmU"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILE: int = 32
 ## Wall runs [from, to] (inclusive, straight lines) and the gaps left open in them for the gates.

@@ -10,6 +10,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/void_throne.gd
 
 const World = preload("res://game/core/world.gd")
+const Dungeons = preload("res://game/data/dungeons.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const MONSTER_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 const FERRY_SCRIPT: Script = preload("res://game/maps/markers/ferryman.gd")
@@ -17,7 +18,7 @@ const ZONE_SCRIPT: Script = preload("res://game/maps/markers/zone.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const ZONE_NAME: String = "The Void Throne"
 ## Beyond the dungeon band (game/data/dungeons.gd), never reachable on foot.
-const AREA: Rect2i = Rect2i(Vector2i(584, 6), Vector2i(36, 30))
+const AREA: Rect2i = Rect2i(Vector2i(Dungeons.BAND_END + Dungeons.COPY_GAP, 6), Vector2i(36, 30))
 const SEAT: Vector2i = AREA.position + Vector2i(18, 8)
 const ARRIVAL: Vector2i = AREA.position + Vector2i(18, 26)
 const GATE: Vector2i = EndgameZone.THRONE_SEAT

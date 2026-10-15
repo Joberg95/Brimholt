@@ -19,6 +19,9 @@ const PROPS: Dictionary = {"B": "barrel", "X": "crate"}
 
 ## First column of the dungeon band; the overworld is everything left of BAND_X - COPY_GAP.
 const BAND_X: int = 388
+## Column the band stops before; the Void Throne arena (tools/generators/void_throne.gd) lies past
+## it, and repainting the band (tools/generators/dungeons.gd) clears only up to here.
+const BAND_END: int = 580
 const COPY_GAP: int = 4
 const RESET_SECONDS: float = 60.0
 ## Band columns, left to right.

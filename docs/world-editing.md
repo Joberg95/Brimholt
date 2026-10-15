@@ -8,7 +8,7 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
    with the palette (`game/maps/terrain.tres`). Each tile's custom data `terrain` sets its
    gameplay: grass `.`, dirt road `,`, water `~`, stone wall `#`, tree `T`, sand `:`,
    cobblestone `=`, boulder `R`, mountain rock `L`, castle wall `W` (a 2×2 block of it is a tower), pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
-   `o`, obsidian wall `O`, and dead tree `D`. Water, walls, castle walls, trees, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
+   `o`, obsidian wall `O`, dead tree `D`, and Mirewood Fen's bog mud `m` and giant mushroom `U`. Water, walls, castle walls, trees, giant mushrooms, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
    plank piers. Keep the map at non-negative coordinates; unpainted cells are void.
 2. **Spawns**: the twenty-four `Marker2D` nodes under `Spawns`, one per player, in order.
@@ -115,7 +115,14 @@ changes nothing; move them in Godot like any other spawn.
 
 **The Void Throne** (`tools/generators/void_throne.gd`, `make void-throne`): an arena beyond the dungeon
 band, a level-50 full-loot PvP zone with Vaelith on the throne, reached through the free Void Gate
-(a ferryman marker with vehicle `gate`) that stands in the Hollow Sanctum's throne room.
+(a ferryman marker with vehicle `gate`) that stands in the Hollow Sanctum's throne room. It lies
+past `Dungeons.BAND_END`, so repainting the dungeon band (`make dungeons`) leaves it alone.
+
+**Mirewood Fen** (`Biomes.SWAMP_REGION`) was turned into a swamp by `tools/generators/swamp.gd`
+(`make swamp`): open grass became bog mud (`m`) but for grassy hummocks, three trees in four
+became giant mushrooms (`U`), and small murky pools, well apart and away from camps and roads,
+open in the mud, each crossed both ways by plank walkways. The scene remembers it ran (metadata
+`swamp`), so a re-run changes nothing; edit the fen by hand afterwards.
 
 **Reedmere** was rebuilt by `tools/generators/reedmere.gd` (`make reedmere`): its west half,
 once a walled castle compound, is an open quarter of streets around a square with four stone

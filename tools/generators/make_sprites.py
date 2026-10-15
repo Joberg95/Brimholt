@@ -35,7 +35,7 @@ ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
 VISIBLE_SLOTS = ("helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
-TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W")
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W", "m", "U")
 
 
 def rgba(value, alpha=255):
@@ -2779,6 +2779,81 @@ def cellar_floor_tile(variant):
     return image
 
 
+# The swamp of Mirewood Fen (tools/generators/swamp.gd): dark peaty mud and giant mushrooms.
+BOG = (rgba("4a4632"), rgba("3e3a28"), rgba("585338"), rgba("2c2a1c"), rgba("5a6a3a"))
+
+
+def bog_tile(variant):
+    """Bog mud ("m"): dark peat with wet glints, reed stubble, and a few murky puddles; seamless."""
+    rng = random.Random(6100 + variant)
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, BOG[0])
+    for _ in range(16):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        for px, py in ellipse(x, y, rng.randrange(2, 6), rng.randrange(1, 3)):
+            image.set(px % TILE, py % TILE, BOG[rng.choice((1, 1, 2))])
+    if variant in (1, 3):
+        x, y = rng.randrange(6, 24), rng.randrange(8, 24)
+        for px, py in ellipse(x, y, 5, 2.5):
+            image.set(px, py, rgba("2e3428"))
+        for px in range(x - 3, x + 2):
+            image.set(px, y - 1, rgba("6a7468"))
+    for _ in range(18):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        image.set(x, y, BOG[3])
+        image.set(x % TILE, (y - 1) % TILE, BOG[4])
+        if rng.random() < 0.5:
+            image.set(x % TILE, (y - 2) % TILE, BOG[4])
+    return image
+
+
+def mushroom(variant):
+    """A giant swamp mushroom ("U", in place of trees in Mirewood Fen): 64x96 like the trees, the
+    stem's foot on the tile centre at (32, 80). A pale fibrous stem flaring into a cup at the
+    foot, a broad cap lit from the top-left with darker spots and a shaded rim, the gills dark
+    under it. Caps: dull teal, violet, and rust."""
+    rng = random.Random(7100 + variant)
+    caps = ((rgba("6a9a8a"), rgba("4e7a6c"), rgba("365a50"), rgba("22403a")),
+            (rgba("8a6a9a"), rgba("6a4e7a"), rgba("4a365a"), rgba("2e2240")),
+            (rgba("a8704a"), rgba("885436"), rgba("643c26"), rgba("402418")))[variant]
+    stem = (rgba("e0d8c0"), rgba("c8bea2"), rgba("a09678"), rgba("6a6450"))
+    image = Image(FRAME, 96)
+    for x, y in ellipse(32, 82, 15, 4):
+        image.set(x, y, SHADOW)
+    body = Image(FRAME, 96)
+    top = 34 + variant * 3
+    for y in range(top, 81):
+        half = 4 + (2 if y > 74 else 0) + (1 if y > 78 else 0)
+        for x in range(32 - half, 32 + half):
+            across = x - (32 - half)
+            tone = 0 if across < 2 else 1 if across < half + 1 else 2 if across < half * 2 - 1 else 3
+            if (x * 5 + y // 2) % 7 == 0:
+                tone = min(3, tone + 1)
+            body.set(x, y, stem[tone])
+    rx, ry = 22 - variant, 14
+    cy = top - 2
+    cap = {p for p in ellipse(32, cy, rx, ry) if p[1] <= cy + 4}
+    for x, y in cap:
+        nx, ny = (x - 32) / rx, (y - cy) / ry
+        light = -(nx * 0.6 + ny * 0.8)
+        tone = 0 if light > 0.55 else 1 if light > 0.0 else 2 if light > -0.5 else 3
+        if y >= cy + 2:
+            tone = 3
+        body.set(x, y, caps[tone])
+    for x in range(32 - rx + 3, 32 + rx - 2):
+        body.set(x, cy + 5, stem[3])
+        if x % 3 == 0:
+            body.set(x, cy + 6, stem[2])
+    for _ in range(7):
+        sx, sy = rng.randrange(32 - rx + 6, 32 + rx - 6), rng.randrange(cy - ry + 4, cy)
+        if (sx, sy) in cap:
+            for px, py in ellipse(sx, sy, 2, 1.4):
+                if (px, py) in cap:
+                    body.set(px, py, stem[0] if variant == 2 else blend(caps[0], stem[0], 0.6))
+    image.over(body.outlined(caps[3]))
+    return image
+
+
 def stone_surface(image, points, palette, seed):
     """Weathered stone with a shallow bevel, broad mottling and occasional worn flecks."""
     light, main, dark = palette
@@ -3139,6 +3214,10 @@ def terrain_palette():
              "L": mountain(0, 0).crop(0, 0, TILE, TILE),
              "W": castle_block(0, False).crop(CASTLE_PAD, CASTLE_PAD, TILE, TILE)}
     tiles["C"] = mountain(15, 4).crop(0, 0, TILE, TILE)
+    tiles["m"] = bog_tile(0)
+    mushroom_tile = bog_tile(1)
+    mushroom_tile.over(mushroom(0).crop(16, 52, TILE, TILE))
+    tiles["U"] = mushroom_tile
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
@@ -4918,12 +4997,14 @@ def main():
                            + edge_set("sand") + [gravel_tile(v) for v in range(4)] + [cave_hole_tile()]
                            + [cellar_floor_tile(v) for v in range(4)]
                            + [curb_overlay(), curb_overlay().rotated(), curb_overlay().rotated().rotated(),
-                              curb_overlay().rotated().rotated().rotated()],
+                              curb_overlay().rotated().rotated().rotated()]
+                           + [bog_tile(v) for v in range(4)],
                            4, TILE),
         "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
                                  + [desert_plant(v) for v in range(3)] + [waystone()]
                                  + [boulder(v) for v in range(3)]),
+        "mushrooms.png": sheet_row([mushroom(v) for v in range(3)]),
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan")]),
         "title.png": title_painting(),

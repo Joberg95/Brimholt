@@ -11,7 +11,7 @@ extends SceneTree
 
 ## Must match World.TERRAINS (the rules check verifies it); World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLW"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmU"
 const TILE_SIZE: int = 32
 const Dungeons = preload("res://game/data/dungeons.gd")
 const ENTRANCE_SCRIPT: Script = preload("res://game/maps/markers/dungeon_entrance.gd")
@@ -52,7 +52,7 @@ static func apply(scene_root: Node, entrances: Dictionary) -> void:
 	ResourceSaver.save(layer.tile_set, layer.tile_set.resource_path)
 	# Clear the band first: a layout that changed size moves the copies after it.
 	for cell: Vector2i in layer.get_used_cells():
-		if cell.x >= Dungeons.BAND_X:
+		if cell.x >= Dungeons.BAND_X and cell.x < Dungeons.BAND_END:
 			layer.erase_cell(cell)
 	for id: String in Dungeons.DUNGEONS:
 		var size: Vector2i = Dungeons.size(id)

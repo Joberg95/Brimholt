@@ -7,7 +7,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/silkhollow.gd
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLW"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmU"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const DUNGEON: String = "silkhollow"
 ## Trees within this many tiles of the stairway are cleared; up to GLADE_EDGE every other one.

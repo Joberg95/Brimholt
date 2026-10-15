@@ -55,11 +55,16 @@ static func at(clock: float) -> Dictionary:
 	return {"kind": kind, "cloud": cloud, "rain": rain, "storm": storm, "flash": _flash(clock) * storm}
 
 
-## The weather where the camera is: none underground, and no rain in the desert.
+## The weather where the camera is: none underground, no rain in the desert, and low cloud and
+## drizzle all but always over the fen.
 static func local(clock: float, cell: Vector2i) -> Dictionary:
 	var weather: Dictionary = at(clock)
 	if World.zone_at(cell).get("underground", false):
 		return {"kind": "underground", "cloud": 0.0, "rain": 0.0, "storm": 0.0, "flash": 0.0}
+	if World.region_at(cell) == Biomes.SWAMP_REGION:
+		# The fen: low cloud nearly always, and rain more often than not.
+		weather["cloud"] = maxf(weather["cloud"], 0.55)
+		weather["rain"] = maxf(weather["rain"], 0.3)
 	if Biomes.in_desert(cell):
 		weather["cloud"] *= 0.35
 		weather["rain"] = 0.0

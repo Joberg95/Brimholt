@@ -133,7 +133,12 @@ const CAVE_HOLE_TILE: int = 54
 const CELLAR_FLOOR_TILE: int = 55
 ## Kerb stones where a cobbled street meets grass, dirt, sand, or trees (north, east, south, west).
 const CURB_TILE: int = 59
-const CURBED: Array[String] = [".", ",", ":", "T", "K", "d"]
+const CURBED: Array[String] = [".", ",", ":", "T", "K", "d", "m", "U"]
+## Bog mud of the swamp ("m"), four variants (make_sprites.py bog_tile).
+const BOG_TILE: int = 63
+## Giant swamp mushrooms ("U"): 64x96 frames like the trees (make_sprites.py mushroom).
+const MUSHROOMS: Texture2D = preload("res://assets/sprites/mushrooms.png")
+const MUSHROOM_VARIANTS: int = 3
 ## Cellar walls: the house wall shapes (house_walls.png) in red-brown brick.
 const CELLAR_WALLS: Texture2D = preload("res://assets/sprites/cellar_walls.png")
 ## mountains.png: Tibia-style rock blocks for mountains ("L") and rock outcrops ("C" on the
@@ -221,7 +226,7 @@ static func _tile_region(index: int) -> Rect2:
 
 static func _tile_regions() -> Array[Rect2]:
 	var regions: Array[Rect2] = []
-	for index: int in 64:
+	for index: int in 80:
 		regions.append(Rect2(Vector2(index % 4, index / 4) * TILE, Vector2.ONE * TILE))
 	return regions
 
@@ -304,6 +309,8 @@ static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
 	elif tile == "c" or tile == "C" and not World.OVERWORLD.has_point(cell):
 		# Rock outcrops on the overworld stand on grass; cave rock in dungeons on cave floor.
 		index = CAVE_TILE + noise(cell, 11) % 4
+	elif tile == "m" or tile == "U":
+		index = BOG_TILE + noise(cell, 14) % 4
 	elif tile == "v":
 		# Town cellars have built stairs; anywhere else the way down is a hole in the ground.
 		index = STAIRS_DOWN_TILE if World.zone_at(cell).get("town", false) else CAVE_HOLE_TILE
@@ -331,6 +338,10 @@ static func _run(cell: Vector2i, axis: Vector2i) -> int:
 ## Trees stand on their tile and rise about two tiles; draw in row-major order like walls.
 static func draw_tree(canvas: CanvasItem, cell: Vector2i) -> void:
 	var dest: Rect2 = Rect2((Vector2(cell) + Vector2(0.5, 0.5)) * TILE - TREE_ANCHOR, TREE_SIZE)
+	if tile_at(cell) == "U":
+		canvas.draw_texture_rect_region(MUSHROOMS, dest,
+			Rect2(Vector2(noise(cell, 7) % MUSHROOM_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
+		return
 	var variant: int = noise(cell, 7) % TREE_VARIANTS
 	if tile_at(cell) == "D":
 		variant = DEAD_TREE_FIRST + noise(cell, 7) % DEAD_TREE_VARIANTS

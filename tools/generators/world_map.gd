@@ -24,6 +24,8 @@ const DEAD_FOREST: Array[Color] = [Color("#6a5a7a"), Color("#3e3050"), Color("#2
 const DIRT: Color = Color("#9a8460")
 const SAND: Color = Color("#d8c48a")
 const DUSK: Color = Color("#4a3a5a")
+const BOG: Color = Color("#4a4632")
+const MUSHROOM_CAPS: Array[Color] = [Color("#8ab0a0"), Color("#5e8a7a"), Color("#3e6a5c"), Color("#22403a")]
 const OBSIDIAN: Color = Color("#2e2638")
 const ROCK: Array[Color] = [Color("#aaa292"), Color("#7c7668"), Color("#4e4a42")]
 const STREET: Color = Color("#bab4a6")
@@ -78,6 +80,11 @@ func _paint_tile(image: Image, cell: Vector2i) -> void:
 				image.set_pixelv(corner + Vector2i(1, 1), Color("#6a7a40"))
 		"d":
 			_fill(image, corner, _vary(DUSK, cell, 0.05))
+		"m":
+			_fill(image, corner, _vary(BOG, cell, 0.05))
+		"U":
+			_fill(image, corner, _vary(BOG, cell, 0.05))
+			_canopy(image, corner, cell, MUSHROOM_CAPS)
 		"o", "O":
 			_fill(image, corner, _vary(OBSIDIAN, cell, 0.05))
 		"b":

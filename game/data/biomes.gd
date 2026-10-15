@@ -15,5 +15,10 @@ static func desert_distance(cell: Vector2i) -> float:
 	return ((Vector2(cell) + Vector2(0.5, 0.5) - DESERT_CENTRE) / DESERT_RADII).length()
 
 
+## The swamp: Mirewood Fen, its bog mud and giant mushrooms painted by tools/generators/swamp.gd.
+## Rain and fog hang over it more often than anywhere else.
+const SWAMP_REGION: String = "Mirewood Fen"
+
+
 static func in_desert(cell: Vector2i) -> bool:
 	return desert_distance(cell) < 1.0

@@ -35,6 +35,7 @@ const MAP_COLORS: Dictionary = {
 	"K": Color("#7c8450"),
 	"R": Color("#8a8478"),
 	"L": Color("#6a6250"),
+	"m": Color("#4a4632"), "U": Color("#4e7a6c"),
 }
 
 var game: Node

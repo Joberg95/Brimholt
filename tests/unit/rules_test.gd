@@ -3087,6 +3087,7 @@ func _dungeon_checks() -> void:
 			var rect: Rect2i = Dungeons.rect(dungeon, copy)
 			check(not rect.intersects(World.OVERWORLD) and World.dungeon_at(rect.position + Vector2i.ONE) == [dungeon, copy],
 				"%s copy %d sits outside the overworld" % [dungeon, copy])
+			check(rect.end.x <= Dungeons.BAND_END, "%s copy %d ends before the Void Throne arena" % [dungeon, copy])
 			for other_copy: int in range(copy + 1, definition["copies"]):
 				check(not rect.intersects(Dungeons.rect(dungeon, other_copy)), "dungeon copies do not overlap")
 			var origin: Vector2i = Dungeons.origin(dungeon, copy)
@@ -3240,10 +3241,43 @@ func _climate_checks() -> void:
 		"no weather underground")
 	check(Weather.local(rainy, Vector2i(Biomes.DESERT_CENTRE))["rain"] == 0.0, "it never rains in the desert")
 	check(Weather.local(rainy, World.SPAWNS[0])["rain"] > 0.6, "it rains in Cinder Crossing when the sky rains")
+	_swamp_checks()
 	Weather.override = "storm"
 	check(Weather.tint(Weather.at(0.0)).v < 0.95 or Weather.at(0.0)["flash"] > 0.0, "storms darken the light")
 	Weather.override = ""
 
+
+
+## Mirewood Fen (tools/generators/swamp.gd): walkable bog mud and giant mushrooms that block
+## like trees, only in the fen, and wet weather over it whatever the sky does elsewhere.
+func _swamp_checks() -> void:
+	var mud: Array[Vector2i] = []
+	var mushrooms: int = 0
+	var stray: int = 0
+	for y: int in World.OVERWORLD.size.y:
+		for x: int in World.OVERWORLD.size.x:
+			var cell := Vector2i(x, y)
+			var terrain: String = World.terrain(cell)
+			if terrain not in ["m", "U"]:
+				continue
+			if World.region_at(cell) != Biomes.SWAMP_REGION:
+				stray += 1
+			if terrain == "m":
+				mud.append(cell)
+			else:
+				mushrooms += 1
+	check(mud.size() > 2000 and mushrooms > 300, "Mirewood Fen is bog mud and giant mushrooms")
+	check(stray == 0, "bog and mushrooms grow only in Mirewood Fen")
+	check(World.walkable(mud[0]) and not World.walkable(mud[0] + Vector2i(9999, 0)), "bog mud is walkable")
+	check("U" in World.TREES and "U" not in World.WALKABLE, "giant mushrooms block like trees")
+	check(SpriteArt.TILES.get_height() >= SpriteArt.TILE_REGIONS[SpriteArt.BOG_TILE + 3].end.y, "tiles.png holds the four bog tiles")
+	var dry: float = -1.0
+	for step: int in 2000:
+		if Weather.at(step * 60.0)["rain"] == 0.0:
+			dry = step * 60.0
+			break
+	check(dry >= 0.0 and Weather.local(dry, mud[0])["rain"] >= 0.3 and Weather.local(dry, mud[0])["cloud"] >= 0.55,
+		"it drizzles over the fen even when the sky is dry elsewhere")
 
 func _remove_tree(path: String) -> void:
 	var folder := DirAccess.open(path)
