@@ -220,7 +220,7 @@ func _draw() -> void:
 			SpriteArt.draw_furniture(self, cell, World.FURNITURE[cell])
 		elif tile == "herb" and not game.node_worked(cell):
 			SpriteArt.draw_herb(self, cell, Crafting.HERBS[cell])
-		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") == "waystone":
+		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
 			SpriteArt.draw_waystone(self, cell)
 			if not covered(cell):
 				# The stone stands taller than a person: its name sits above it.

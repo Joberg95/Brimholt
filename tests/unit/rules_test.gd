@@ -83,6 +83,7 @@ func _run() -> void:
 	_armor_and_control_checks()
 	_rune_checks()
 	_map_guidance_checks()
+	_trophy_steal_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -1729,7 +1730,7 @@ func _map_checks() -> void:
 		check(not npc["routes"].is_empty(), "ferryman has routes")
 		for destination: String in npc["routes"]:
 			check(World.FERRYMEN.has(destination) and destination != id, "route leads to another ferryman")
-			check(npc["routes"][destination] > 0, "fares are positive")
+			check(npc["routes"][destination] > 0 or npc["vehicle"] == "gate", "fares are positive (gateways are free)")
 	# Every ferryman, spawn, and item must be reachable on foot from the spawns or by boat.
 	var labels: PackedInt32Array = _components()
 	var width: int = World.width()
@@ -1909,7 +1910,7 @@ func _zone_checks() -> void:
 		for id: String in World.FERRYMEN:
 			if World.FERRYMEN[id]["vehicle"] == "waystone":
 				coaches.append(id)
-			elif id not in ["reedmere", "blackreed_isle"]:
+			elif id not in ["reedmere", "blackreed_isle"] and World.FERRYMEN[id]["vehicle"] == "ferry":
 				check(not World.FERRYMEN[id]["routes"].has("blackreed_isle") and World.FERRYMEN[id]["cell"].x < 64,
 					"coastal ports sail the western sea only")
 		check(World.OVERWORLD.size == Vector2i(384, 384), "the overworld is 384 by 384 tiles")
@@ -2580,7 +2581,7 @@ func _endgame_zone_checks() -> void:
 	check(not zone.is_empty() and zone["pvp"] and zone["full_loot"] and zone["min_level"] == 45 and zone["max_level"] == 50,
 		"the Hollow Reach is a high-risk (full-loot) level 45-50 PvP zone")
 	for other: Dictionary in World.ZONES:
-		if other["name"] != "The Hollow Reach":
+		if other["name"] not in ["The Hollow Reach", "The Void Throne"]:
 			check(not other["full_loot"], "%s keeps the normal 10%% worn-item loss" % other["name"])
 	if zone.is_empty():
 		return
@@ -2596,8 +2597,17 @@ func _endgame_zone_checks() -> void:
 				gates += 1
 	check(themed == area.get_area(), "the whole zone uses the dark obsidian theme")
 	check(gates > 0 and gates <= 5, "the obsidian wall has a single narrow gate")
+	# The throne room holds the Void Gate; Vaelith sits past it on the Void Throne, an open
+	# full-loot PvP arena off the overworld.
+	var gate: Dictionary = World.FERRYMEN.get("VoidGate", {})
+	var arena: Dictionary = World.FERRYMEN.get("VoidThrone", {})
+	check(not gate.is_empty() and area.has_point(gate["cell"]) and gate["vehicle"] == "gate" and gate["routes"] == {"VoidThrone": 0}
+		and not arena.is_empty() and arena["routes"] == {"VoidGate": 0}, "the Sanctum's throne room holds a free gateway to the Void Throne")
 	var throne: Dictionary = World.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return spawn["monster"] == "vaelith")[0]
-	check(area.has_point(throne["cell"]) and World.terrain(throne["cell"]) == "o", "Vaelith sits on the Sanctum floor")
+	var void_zone: Dictionary = World.zone_at(throne["cell"])
+	check(void_zone.get("name", "") == "The Void Throne" and void_zone["pvp"] and void_zone["full_loot"]
+		and not World.OVERWORLD.has_point(throne["cell"]) and World.terrain(throne["cell"]) == "o"
+		and void_zone["rect"].has_point(arena["cell"]), "Vaelith sits on the Void Throne, an open full-loot PvP arena")
 	for spawn: Dictionary in World.MONSTER_SPAWNS:
 		if area.has_point(spawn["cell"]):
 			check(spawn["level"] >= 45 and World.walkable(spawn["cell"]), "Hollow Reach spawns are level 45+ on open floor")
@@ -2611,7 +2621,8 @@ func _endgame_zone_checks() -> void:
 			if not seen.has(next) and World.walkable(next):
 				seen[next] = true
 				frontier.append(next)
-	check(seen.has(throne["cell"]), "the throne room is reachable on foot from Cinder Crossing")
+	check([Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT].any(func(side: Vector2i) -> bool: return seen.has(gate["cell"] + side)),
+		"the Void Gate in the throne room is reachable on foot from Cinder Crossing")
 	var line_blocked: bool = not Combat.line_of_sight(Vector2i(area.position.x - 2, area.position.y + 4),
 		Vector2i(area.position.x + 2, area.position.y + 4))
 	check(line_blocked and not World.walkable(Vector2i(area.position.x, area.position.y + 4)),
@@ -3083,7 +3094,8 @@ func _dungeon_checks() -> void:
 				and World.walkable(origin + Dungeons.cells(dungeon, "@")[0]), "%s copy %d is painted" % [dungeon, copy])
 	var monster_count: int = 0
 	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		check(World.OVERWORLD.has_point(spawn["cell"]), "overworld spawns stay out of dungeon copies")
+		check(World.OVERWORLD.has_point(spawn["cell"]) or World.zone_at(spawn["cell"]).get("name", "") == "The Void Throne",
+			"overworld spawns stay out of dungeon copies")
 		monster_count += spawn["count"]
 	check(monster_count > 550, "the smaller overworld is densely populated")
 
@@ -4186,6 +4198,23 @@ func _rune_checks() -> void:
 	world.players[bot]["target"] = pack[4]
 	check(bots._rune_to_use(bot) == "", "but not at a lone monster")
 	check(BotLoot.sellable_index({"backpack": ["fire_rune#2", "wolf_pelt"]}) == 1, "bots keep their runes when they sell")
+
+
+## Boss kills can be stolen: only fighters alive and near the boss when it falls earn a trophy.
+func _trophy_steal_checks() -> void:
+	var world := World.new()
+	var combat := Combat.new(world, 3)
+	for id: int in [1, 2, 3]:
+		world.add_player(id, 0.0, "knight")
+	var lair := Vector2i(600, 20)
+	world.players[1]["cell"] = lair + Vector2i(2, 0)
+	world.players[1]["health"] = 0
+	world.players[2]["cell"] = lair + Vector2i(40, 0)
+	world.players[3]["cell"] = lair + Vector2i(3, 2)
+	combat._award_trophies("vaelith", {1: true, 2: true, 3: true}, lair, [])
+	check(not world.players[1]["trophies"].has("vaelith") and not world.players[2]["trophies"].has("vaelith")
+		and world.players[3]["trophies"].get("vaelith", 0) == 1,
+		"only fighters alive and near the boss when it falls earn its trophy (a wiped raid loses the kill)")
 
 
 ## The painted world map is baked from the current map, and every task points somewhere.

@@ -39,7 +39,7 @@ const SPAWNS: Array = [
 	["hollow_knight", 48, 2, 2, ORIGIN + Vector2i(30, 46)],
 	["obsidian_golem", 49, 2, 1, ORIGIN + Vector2i(40, 26)],
 	["obsidian_golem", 49, 2, 1, ORIGIN + Vector2i(40, 38)],
-	["vaelith", 50, 1, 1, THRONE_SEAT],
+	# Vaelith sits on the Void Throne past the gateway stone in the throne room (void_throne.gd).
 ]
 
 

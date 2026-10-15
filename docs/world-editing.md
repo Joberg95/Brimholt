@@ -113,6 +113,10 @@ suits each prey (`HUNTS`), on open meadow that can be walked to, away from zones
 the elite rows also keep seven tiles from roads. Existing camps are kept, so running it again
 changes nothing; move them in Godot like any other spawn.
 
+**The Void Throne** (`tools/generators/void_throne.gd`, `make void-throne`): an arena beyond the dungeon
+band, a level-50 full-loot PvP zone with Vaelith on the throne, reached through the free Void Gate
+(a ferryman marker with vehicle `gate`) that stands in the Hollow Sanctum's throne room.
+
 **Reedmere** was rebuilt by `tools/generators/reedmere.gd` (`make reedmere`): its west half,
 once a walled castle compound, is an open quarter of streets around a square with four stone
 houses (slate roofs, `RoofArt.SLATE_TOWN`), the town wall is castle wall, and a west gate opens

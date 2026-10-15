@@ -662,7 +662,9 @@ of blighted violet soil and dead trees inside an obsidian wall, entered on foot 
 single gate in its west wall (a clearing in the forest leads to it). An obsidian road runs
 east past void wraiths, obsidian golems (elite), and hollow knights to the **Hollow
 Sanctum**: an antechamber of pillars, a narrow gallery, and at the very end the throne room
-where **Vaelith, Sovereign of the Hollow** sits. Void wraiths glow faintly; Vaelith wears
+with the **Void Gate**. Step through it (free, both ways) to the **Void Throne**, an arena
+beyond the world where **Vaelith, Sovereign of the Hollow** sits; it is a level-50 full-loot
+PvP zone open to everyone, so a rival raid can follow yours in. Void wraiths glow faintly; Vaelith wears
 his own glowing relics. Obsidian walls block movement and sight like stone walls.
 
 **Dying in the Hollow Reach drops everything**: your backpack, your gold, and every worn
@@ -674,8 +676,8 @@ applies. Zones get this rule with the `full_loot` flag on their marker.
 
 Three level-50 final bosses each guard a lair: **Morvain the Drowned** at the far end of
 Blackreed Isle, **Kharzul the Cinder Colossus** in the far east, and **Sylvaine the Hollow
-Bloom** in the south-eastern forest, west of the Hollow Reach. The ultimate boss, **Vaelith**, waits in the Hollow
-Sanctum's throne room and respawns after an hour. Each boss has the 700,000 health of the
+Bloom** in the south-eastern forest, west of the Hollow Reach. The ultimate boss, **Vaelith**, waits on the Void
+Throne past the Hollow Sanctum's gate and respawns after an hour. Each boss has the 700,000 health of the
 raid boss (so it takes a twenty-player group), drops gold, and respawns 30 minutes after it
 dies.
 
@@ -689,9 +691,12 @@ with **Challenge** (Warrior spell from level 20: monsters within 2 tiles turn on
 If the raid leaves, the boss walks home, heals, and forgets the fight. Its nameplate shows
 ENRAGED once it enrages.
 
-Glowing **relics** are quest rewards. Everyone who took part in the fight earns one
-**trophy** for that boss when it dies: players who damaged it, players it hit, and players
-who healed any of them. Standing nearby, or casting at full health, earns nothing. Each final boss has its own **relic keeper** on Reedmere's north plaza, the town in the middle
+Glowing **relics** are quest rewards. Everyone who took part in the fight **and is still in
+it** earns one **trophy** for that boss when it dies: players who damaged it, players it hit,
+and players who healed any of them, if they are alive and within 15 tiles when it falls.
+Standing nearby, or casting at full health, earns nothing. Every final boss stands in an open
+PvP zone, so a raid can wipe the raid that is fighting it, finish the boss, and **steal the
+kill**: the fallen raid gets nothing. Each final boss has its own **relic keeper** on Reedmere's north plaza, the town in the middle
 of the world (gold names): **Ysolde** keeps Morvain's relics, **Brannoc the Forgemaster**
 Kharzul's, **Liraen of the Thorn** Sylvaine's, and **Oswin the Ashen** Vaelith's. Right-click
 the keeper, choose **Quests**, and trade a trophy for any one of that boss's relics: Morvain gives

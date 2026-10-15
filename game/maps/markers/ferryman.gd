@@ -9,5 +9,6 @@ extends Marker2D
 ## Destination ferryman node name -> fare in gold.
 @export var routes: Dictionary[String, int] = {}
 @export var facing: Vector2i = Vector2i.DOWN
-## "ferry" (a pier ferryman) or "waystone" (an inland standing stone); both use the same routes.
+## "ferry" (a pier ferryman), "waystone" (an inland standing stone, a coach station), or "gate" (a
+## free gateway stone outside the coach network: the Void Gate); all use the same routes.
 @export var vehicle: String = "ferry"

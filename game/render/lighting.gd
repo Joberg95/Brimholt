@@ -103,7 +103,7 @@ func _process(_delta: float) -> void:
 				var flicker: float = 0.92 + 0.08 * sin(time * 8.0 + id) * sin(time * 4.7)
 				_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness)
 		for cell: Vector2i in World.NPC_CELLS:
-			if area.has_point(cell) and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") != "waystone":
+			if area.has_point(cell) and not World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
 				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness)
 	if darkness > TORCH_DARKNESS:
 		for cell: Vector2i in World.TORCHES:
@@ -117,7 +117,7 @@ func _process(_delta: float) -> void:
 	var tint: float = maxf(darkness, 0.18)
 	for id: String in World.FERRYMEN:
 		var stone: Dictionary = World.FERRYMEN[id]
-		if stone["vehicle"] == "waystone" and area.has_point(stone["cell"]):
+		if stone["vehicle"] in ["waystone", "gate"] and area.has_point(stone["cell"]):
 			_light(_centre(Vector2(stone["cell"])) - Vector2(0, 12), WAYSTONE_GLOW, 2.0, 0.8 * tint)
 	for id: int in game.actors:
 		var actor: Dictionary = game.actors[id]

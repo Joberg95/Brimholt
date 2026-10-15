@@ -48,6 +48,8 @@ const AGGRESSION_SECONDS: float = 900.0
 const UNJUSTIFIED_WINDOW_SECONDS: float = 86400.0
 const RED_SKULL_KILLS: int = 3
 const CRITICAL_MULTIPLIER: float = 1.5
+## A boss's trophies go only to fighters alive and this close to it when it falls (_award_trophies).
+const TROPHY_RADIUS: int = 15
 ## After a root or slow on a player ends, that player cannot be held again for this long.
 const RESTRAIN_IMMUNITY: float = 6.0
 const VOCATION_RANGE: Dictionary = {"knight": 1, "paladin": 6, "sorcerer": 5, "druid": 5}
@@ -636,7 +638,7 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 	var credited: Array[int] = _award_experience(experience, monster["damage_by"], monster["cell"], now, events)
 	_credit_tasks(monster["kind"], credited, events)
 	if definition.has("relics"):
-		_award_trophies(monster["kind"], monster["fought"], events)
+		_award_trophies(monster["kind"], monster["fought"], monster["cell"], events)
 	_drop_loot(monster, credited, now, events)
 	world.monsters.erase(id)
 	_taken_at = NAN
@@ -682,12 +684,15 @@ func _award_experience(experience: int, damage_by: Dictionary, cell: Vector2i, n
 
 # ---------------------------------------------------------------- relic quests
 
-## Everyone who took part in the fight earns one trophy: players who damaged the boss, players
-## it hit (tanks), and players who healed any of them. Standing nearby is not enough.
-func _award_trophies(boss: String, fought: Dictionary, events: Array) -> void:
+## Everyone who took part in the fight and is still in it when the boss falls earns one trophy:
+## players who damaged the boss, players it hit (tanks), and players who healed any of them, if
+## they are alive and within TROPHY_RADIUS of it. Standing nearby is not enough, and neither is
+## having fought and died: a raid that wipes the raid fighting a boss and finishes it takes the
+## trophies (the bosses stand in open PvP zones).
+func _award_trophies(boss: String, fought: Dictionary, at: Vector2i, events: Array) -> void:
 	var name: String = Monsters.MONSTERS[boss]["name"]
 	for id: int in fought:
-		if not world.players.has(id):
+		if not world.players.has(id) or world.players[id]["health"] <= 0 or distance(world.players[id]["cell"], at) > TROPHY_RADIUS:
 			continue
 		var player: Dictionary = world.players[id]
 		player["trophies"][boss] = player["trophies"].get(boss, 0) + 1

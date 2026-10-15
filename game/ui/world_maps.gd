@@ -317,17 +317,21 @@ func _draw_minimap() -> void:
 	var region := Rect2(focus / World.TILE_SIZE - tiles / 2.0, tiles)
 	var shown := Rect2(World.OVERWORLD)
 	var place: Array = World.dungeon_at(Vector2i(focus / World.TILE_SIZE))
+	var away: bool = not World.OVERWORLD.has_point(Vector2i(focus / World.TILE_SIZE))
 	if not place.is_empty():
 		# Underground, show only your own copy, never the copies next to it.
 		shown = Rect2(Dungeons.rect(place[0], place[1]))
+	elif away:
+		# Somewhere off the overworld (the Void Throne): the flat map around you.
+		shown = Rect2(Vector2.ZERO, Vector2(World.width(), World.height()))
 	var visible := region.intersection(shown)
 	if visible.has_area():
 		# The painted map covers the overworld only; underground, the flat map shows your copy.
-		var texel: float = _texel if place.is_empty() else 1.0
-		minimap.draw_texture_rect_region(_texture if place.is_empty() else _flat_texture,
+		var texel: float = _texel if not away else 1.0
+		minimap.draw_texture_rect_region(_texture if not away else _flat_texture,
 			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE),
 			Rect2(visible.position * texel, visible.size * texel))
-	if place.is_empty():
+	if not away:
 		_draw_guidance(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
 	_draw_markers(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
 	minimap.draw_rect(view, Color("#3a4450"), false, 1.0)

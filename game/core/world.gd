@@ -1608,5 +1608,6 @@ func travel(id: int, ferryman: Variant, destination: Variant, now: float) -> Dic
 	player["next_move"] = now
 	player["next_travel"] = now + TRAVEL_SECONDS
 	return {"ok": true, "state": export_player(id, now, true),
-		"message": "You %s to %s for %d gold." % ["step through the waystone" if FERRYMEN[ferryman]["vehicle"] == "waystone" else "sailed",
+		"message": "You step through the gateway to %s." % FERRYMEN[destination]["place"] if FERRYMEN[ferryman]["vehicle"] == "gate"
+			else "You %s to %s for %d gold." % ["step through the waystone" if FERRYMEN[ferryman]["vehicle"] == "waystone" else "sailed",
 			FERRYMEN[destination]["place"], fare]}
