@@ -4180,6 +4180,15 @@ func _map_guidance_checks() -> void:
 		var done: Array[Vector2i] = World.task_targets(task, {"tasks": {task: definition["count"]}})
 		check(done.size() == 1 and done[0] == World.QUEST_GIVERS[definition["giver"]]["cell"],
 			"a finished %s points back to its giver" % task)
+	# Levels 20-30 always have hunting work of their own level: three or more tasks whose monsters
+	# are that level (plan 24: a party of 25 had only 40+ tasks left).
+	for level: int in range(20, 31):
+		var hunts: int = 0
+		for task: String in Quests.TASKS:
+			var band: Vector2i = World.task_levels(task)
+			if Quests.TASKS[task].has("monster") and Quests.dungeon_of(task).is_empty() and band.x <= level and band.y >= level:
+				hunts += 1
+		check(hunts >= 3, "level %d has %d overworld hunting tasks of its level" % [level, hunts])
 	var cellar: String = ""
 	for task: String in Quests.TASKS:
 		if Quests.dungeon_of(task) == "cinder_cellar" and cellar.is_empty():

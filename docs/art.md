@@ -77,10 +77,10 @@ five-tone ramp per material (warm lights, cool shadows), gloss on chitin and sli
 cores, a coloured silhouette edge, and dark seams where parts overlap. Builders: `quadruped`
 (voles, rats, the Rat King's crown, boars with tusks and spines, wolves with a ruff, the
 reedfang lizard, the thornscale basilisk, and the Ashmaw drake's swept horns and beating wings:
-a bony edge with a membrane sail under each bone), `beetle`, `spider`, `toad`, `slime`, `golem` (stone, moss, ember, obsidian,
-Forgemaw's and Kharzul's horns and burning maws), `wraith` (Sylvaine's flowers and antlers), and
+a bony edge with a membrane sail under each bone), `beetle`, `spider` (the dune scorpion's curled tail and pincers), `toad`, `slime`, `golem` (stone, moss, ember, obsidian,
+Forgemaw's and Kharzul's horns and burning maws), `wraith` (Sylvaine's flowers and antlers; the harpy's feathered wings), and
 `biped` (the skeleton, ghoul, robed Abbot, and the Barrow lich's crown), and `giant` (cyclopes;
-the Rime titan's shoulder crystals). `SPECIES` sets each one's proportions and
+the Rime titan's shoulder crystals; trolls' two eyes, brow, and tusks). `SPECIES` sets each one's proportions and
 materials and `ZOOM` its on-screen scale; `creatures/<monster>_glow.png` halos only the bright
 parts of glowing creatures. Armed humanoids (bandits, archers, knights, Vaelith, Morvain) still
 wear catalog gear. The old tinted `monsters/<look>.png` sheets remain as a fallback.

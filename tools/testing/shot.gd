@@ -1,6 +1,7 @@
 extends SceneTree
 ## Screenshots of places in the real game (offscreen, solo, noon, clear sky), for looking at art
-## and map work: each argument is x,y (a tile) and becomes .tools/shot-x-y.png with you there.
+## and map work: each argument is x,y (a tile) and becomes .tools/shot-x-y.png with you there;
+## level=N first makes you that level (so monsters in the shot do not kill you).
 ##
 ##   godot --position 99999,99999 --resolution 64x64 --path . --script res://tools/testing/shot.gd -- 140,193 120,190
 
@@ -37,6 +38,11 @@ func _run() -> void:
 	game._world_view.lighting.time_override = 0.5
 	Weather.override = "clear"
 	for argument: String in OS.get_cmdline_user_args():
+		if argument.begins_with("level="):
+			var me: Dictionary = game.world.players[game.self_id]
+			me["level"] = argument.get_slice("=", 1).to_int()
+			me["health"] = game.world.player_stats(game.self_id)["health"]
+			continue
 		var parts: PackedStringArray = argument.split(",")
 		var cell := Vector2i(parts[0].to_int(), parts[1].to_int())
 		var player: Dictionary = game.world.players[game.self_id]

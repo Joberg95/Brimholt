@@ -389,7 +389,10 @@ monsters, paying experience and gold.
 | Harbourmaster Ilse | Cinder Crossing (harbour) | 20 road bandits; 20 grey wolves | 8–10; 11–14 |
 | Fenwarden Ostrel | Reedmere | 25 bog lurkers | 15–18 |
 | Quartermaster Rhosyn | Dunmere | 25 stone golems; 25 cinder wraiths | 24–28; 29–32 |
-| Huntmaster Corvel | Emberfall | 25 mire stalkers; 25 fen beasts (reedfangs, bog hulks) | 36–44; 40–48 |
+| Ranger Aldric | Reedmere (west square) | 25 dire bears; 25 lizard warriors; 20 lizard shamans | 20–22; 21–24; 23–25 |
+| Skywatch Mera | Lastlight | 25 harpies; 25 wraith knights | 24–27; 31–34 |
+| Caravan master Idris | Dunmere | 25 stone trolls; 25 dune scorpions; 25 sand raiders | 25–28; 26–30; 28–32 |
+| Huntmaster Corvel | Emberfall | 25 mire stalkers; 25 fen beasts (reedfangs, bog hulks); 20 marsh witches; 25 cave trolls | 36–44; 40–48; 33–36; 38–42 |
 
 **The Hunters' Lodge.** **Lodgemaster Varga** on Reedmere's plaza runs a chain of six hunting
 contracts, one at a time: each opens once the one before it is turned in, against harder prey in
