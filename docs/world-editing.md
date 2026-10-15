@@ -111,6 +111,14 @@ suits each prey (`HUNTS`), on open meadow that can be walked to, away from zones
 the elite rows also keep seven tiles from roads. Existing camps are kept, so running it again
 changes nothing; move them in Godot like any other spawn.
 
+**Caves** (Highmoor deep mine, Silkhollow) are grown by `tools/generators/cave_layouts.py`:
+irregular chambers joined by winding two-wide tunnels, the stairs at the north-west end, the
+boss in the farthest open chamber, monsters spread through the rest. It writes the layout's
+rows into `game/data/dungeons.gd`; then run `make dungeons` to paint the copies (the painter
+clears the dungeon band first, so a layout may change size). Hand-drawn layouts (the cellar,
+the crypt) may hold props: `B` a barrel and `X` a crate (`Dungeons.PROPS`), which block like
+furniture; the rules check makes sure every open tile can still be reached.
+
 **The world map** is painted from the map by `tools/generators/world_map.gd` (`make world-map`):
 four pixels per tile in `assets/sprites/world_map.png`, with the map's hash in
 `world_map.json`. After editing the terrain or buildings, bake it again; until then the game

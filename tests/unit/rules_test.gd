@@ -3050,6 +3050,23 @@ func _dungeon_checks() -> void:
 			"%s copies carry its darkness" % dungeon)
 		check(Dungeons.cells(dungeon, "^").size() == 1 and Dungeons.cells(dungeon, "@").size() == 1
 			and Dungeons.cells(dungeon, definition["boss"]).size() == 1, "%s has one exit, arrival, and champion" % dungeon)
+		# Every floor tile, monster, and the champion can be walked to from the arrival, props and all.
+		var first: Vector2i = Dungeons.origin(dungeon, 0)
+		var arrival: Vector2i = first + Dungeons.cells(dungeon, "@")[0]
+		var reached: Dictionary = {arrival: true}
+		var queue: Array[Vector2i] = [arrival]
+		while not queue.is_empty():
+			var at: Vector2i = queue.pop_back()
+			for step: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				if not reached.has(at + step) and World.walkable(at + step):
+					reached[at + step] = true
+					queue.append(at + step)
+		var open: int = 0
+		for y: int in Dungeons.size(dungeon).y:
+			for x: int in Dungeons.size(dungeon).x:
+				var cell: Vector2i = first + Vector2i(x, y)
+				open += 1 if World.walkable(cell) else 0
+		check(reached.size() == open, "every open tile of %s can be reached (%d of %d)" % [dungeon, reached.size(), open])
 		var boss: String = Dungeons.DUNGEONS[dungeon]["monsters"][definition["boss"]][0]
 		check(Monsters.MONSTERS[boss]["rank"] == "champion" and Monsters.LOOT[boss].size() >= 2, "%s ends with a champion" % dungeon)
 		for spawn: Array in Dungeons.spawns(dungeon):
@@ -3429,8 +3446,8 @@ func _building_checks() -> void:
 	# Furniture: only inside keepers' buildings, blocking, and never cutting a room off.
 	check(World.FURNITURE.size() >= World.TOWNSFOLK.size() * 3, "shops and the bank are furnished (%d pieces)" % World.FURNITURE.size())
 	for cell: Vector2i in World.FURNITURE:
-		check(World.ROOM_AT.has(cell) and not World.walkable(cell) and SpriteArt.FURNITURE.has(World.FURNITURE[cell]),
-			"furniture stands inside a building and blocks")
+		check((World.ROOM_AT.has(cell) or not World.dungeon_at(cell).is_empty()) and not World.walkable(cell)
+			and SpriteArt.FURNITURE.has(World.FURNITURE[cell]), "furniture stands inside a building (or a dungeon) and blocks")
 	for id: String in World.TOWNSFOLK:
 		var building: Dictionary = World.BUILDINGS[World.ROOM_AT[World.TOWNSFOLK[id]["cell"]]]
 		var door: Vector2i = building["doors"][0]

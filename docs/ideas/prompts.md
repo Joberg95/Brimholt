@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-lets expand the cellars and caves with more mobs and caves needs the rock textures and to be twice as large I think. Cellars need a more cellar theme and I will give you art direction from tibia images in the prompt (plan 13)
-
 lets redesign redmeere to be more of a open town inside the walls, and openings to both west, north and south. Then make the houses more castle themed I will share art direction for this as well. (plan 14)
 
 lets add decorations to houses as per Tibia art direction too, I will share photos for this as well so we get the right direction of art (plan 15)

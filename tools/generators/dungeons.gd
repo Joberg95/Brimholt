@@ -50,6 +50,10 @@ static func apply(scene_root: Node, entrances: Dictionary) -> void:
 			source.create_tile(Vector2i(index, 0))
 			source.get_tile_data(Vector2i(index, 0), 0).set_custom_data("terrain", TERRAINS[index])
 	ResourceSaver.save(layer.tile_set, layer.tile_set.resource_path)
+	# Clear the band first: a layout that changed size moves the copies after it.
+	for cell: Vector2i in layer.get_used_cells():
+		if cell.x >= Dungeons.BAND_X:
+			layer.erase_cell(cell)
 	for id: String in Dungeons.DUNGEONS:
 		var size: Vector2i = Dungeons.size(id)
 		for copy: int in Dungeons.DUNGEONS[id]["copies"]:

@@ -5,6 +5,7 @@ extends RefCounted
 ## unarmoured characters stand about 36 pixels tall; their feet remain at frame y=53.
 
 const World = preload("res://game/core/world.gd")
+const Dungeons = preload("res://game/data/dungeons.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const FRAME: float = 64.0
 const FRAME_ANCHOR: Vector2 = Vector2(32, 40)
@@ -127,6 +128,10 @@ const SAND_EDGE_TILE: int = 46
 const GRAVEL_TILE: int = 50
 ## A cave hole in the wilds (a stairway "v" outside towns): a ragged pit in worn earth.
 const CAVE_HOLE_TILE: int = 54
+## Cellar floors (dungeons with "theme": "cellar"): dark red-brown brick, four variants.
+const CELLAR_FLOOR_TILE: int = 55
+## Cellar walls: the house wall shapes (house_walls.png) in red-brown brick.
+const CELLAR_WALLS: Texture2D = preload("res://assets/sprites/cellar_walls.png")
 ## mountains.png: Tibia-style rock blocks for mountains ("L") and rock outcrops ("C" on the
 ## overworld), 48x48 frames drawn like walls: 16 columns by open sides (1 N, 2 W, 4 S, 8 E, see
 ## rock_mask), and ROCK_SPAN x ROCK_SPAN rows that are the parts of one seamless rock texture
@@ -277,6 +282,8 @@ static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
 		index = WATER_TILE + (int(time * 3.0) + noise(cell, 3)) % 4
 	elif tile == ":" or tile == "K":
 		index = SAND_TILE + noise(cell, 4) % 4
+	elif tile == "=" and theme_at(cell) == "cellar":
+		index = CELLAR_FLOOR_TILE + noise(cell, 13) % 4
 	elif tile == "=" or tile == "W":
 		index = COBBLE_TILE + noise(cell, 5) % 4
 	elif tile == "d" or tile == "D" or tile == "O":
@@ -438,7 +445,15 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 
 ## The sheet a wall cell is drawn from (house_walls.png for "#", else walls.png).
 static func wall_sheet(cell: Vector2i) -> Texture2D:
-	return HOUSE_WALLS if tile_at(cell) == "#" else WALLS
+	if tile_at(cell) != "#":
+		return WALLS
+	return CELLAR_WALLS if theme_at(cell) == "cellar" else HOUSE_WALLS
+
+
+## The theme of the dungeon copy a cell lies in ("" on the overworld).
+static func theme_at(cell: Vector2i) -> String:
+	var place: Array = World.dungeon_at(cell)
+	return "" if place.is_empty() else Dungeons.theme_at(place[0])
 
 
 ## How far up and left a wall cell's sprite is raised: a full tile for house walls.

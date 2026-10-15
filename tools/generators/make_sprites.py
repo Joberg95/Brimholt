@@ -2722,6 +2722,35 @@ def cave_hole_tile():
     return image
 
 
+def cellar_floor_tile(variant):
+    """A cellar floor: dark red-brown bricks laid in a herringbone-like stagger with sunken
+    mortar, a few worn or cracked bricks and a scatter of grit, lit faintly from the top-left."""
+    rng = random.Random(5500 + variant)
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, CELLAR_FLOOR[3])
+    for row in range(8):
+        y = row * 4
+        shift = (row % 2) * 4 + variant
+        for column in range(-1, 5):
+            x = column * 8 + shift
+            tone = rng.choice((CELLAR_FLOOR[0], CELLAR_FLOOR[0], CELLAR_FLOOR[1], CELLAR_FLOOR[2]))
+            for px in range(x + 1, x + 8):
+                for py in range(y + 1, y + 4):
+                    if 0 <= px < TILE and 0 <= py < TILE:
+                        image.set(px, py, tone)
+            for px in range(x + 1, x + 8):
+                if 0 <= px < TILE and y + 1 < TILE:
+                    image.set(px, y + 1, scale(tone, 1.12))
+    for _ in range(6):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        image.set(x, y, CELLAR_FLOOR[2] if rng.random() < 0.5 else CELLAR_FLOOR[3])
+    if variant == 2:
+        x, y = rng.randrange(4, 24), rng.randrange(6, 26)
+        for step in range(6):
+            image.set(x + step, y + (step // 2), CELLAR_FLOOR[3])
+    return image
+
+
 def stone_surface(image, points, palette, seed):
     """Weathered stone with a shallow bevel, broad mottling and occasional worn flecks."""
     light, main, dark = palette
@@ -3097,6 +3126,11 @@ OBSIDIAN_STONE = ((rgba("3d3352"), rgba("4c4066"), rgba("2e2640"), rgba("5e4f80"
 CAVE_STONE = ((rgba("6e6156"), rgba("85766a"), rgba("54493f"), rgba("948476")),
               (rgba("43392f"), rgba("2f2821"), rgba("51463b")),
               (rgba("352d25"), rgba("251f19"), rgba("40372d")))
+# Cellar walls (dungeons with "theme": "cellar"): dark red-brown brick, as in Tibia's cellars.
+CELLAR_STONE = ((rgba("7a4a3a"), rgba("8e5a46"), rgba("5e3a2e"), rgba("9a6650")),
+                (rgba("5c3226"), rgba("40221a"), rgba("6e3e2e")),
+                (rgba("48271e"), rgba("321912"), rgba("583025")))
+CELLAR_FLOOR = (rgba("3c2c26"), rgba("2e211c"), rgba("483529"), rgba("1e1512"))
 HEIGHT = 16
 
 
@@ -4724,7 +4758,8 @@ def main():
                            + [plank_tile(False, 0), plank_tile(False, 1), plank_tile(True, 0), plank_tile(True, 1)]
                            + [dusk_tile(v) for v in range(4)] + [obsidian_tile(v) for v in range(4)]
                            + [cave_tile(v) for v in range(4)] + [stairs_tile(True), stairs_tile(False)]
-                           + edge_set("sand") + [gravel_tile(v) for v in range(4)] + [cave_hole_tile()],
+                           + edge_set("sand") + [gravel_tile(v) for v in range(4)] + [cave_hole_tile()]
+                           + [cellar_floor_tile(v) for v in range(4)],
                            4, TILE),
         "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
@@ -4738,6 +4773,8 @@ def main():
         "torch.png": sheet_row([wall_torch(frame) for frame in range(4)]),
         "house_walls.png": sheet([thin_wall(mask, height=HOUSE_RAISE) for mask in range(16)]
                                   + [house_door(False), house_door(True)], 18, TILE + HOUSE_RAISE),
+        "cellar_walls.png": sheet([thin_wall(mask, stone=CELLAR_STONE, height=HOUSE_RAISE) for mask in range(16)], 16,
+                                  TILE + HOUSE_RAISE),
         "terrain_palette.png": terrain_palette(),
         "ores.png": sheet([ore_vein(band, glint) for glint in (False, True) for band in range(5)], 5, WALL),
         "castle_walls.png": sheet([castle_block(mask, False) for mask in range(16)], 16, TILE + CASTLE_RAISE + CASTLE_PAD),

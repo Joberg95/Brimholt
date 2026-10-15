@@ -41,6 +41,8 @@ var game: Node
 var minimap: Control
 var world_map: Control
 var _texture: ImageTexture
+## The whole map, dungeon band included, one pixel per tile: the minimap underground.
+var _flat_texture: ImageTexture
 ## Texture pixels per tile: the bake's scale, or 1 for the flat fallback.
 var _texel: float = 1.0
 ## Pixels per tile, and the tile at the centre of the map area.
@@ -51,9 +53,11 @@ var _dragging: bool = false
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
+	var flat: Image = _flat_map()
+	_flat_texture = ImageTexture.create_from_image(flat)
 	var image: Image = _baked_map()
 	if image == null:
-		image = _flat_map()
+		image = flat.duplicate()
 	else:
 		_texel = image.get_width() / float(World.OVERWORLD.size.x)
 	var texel: int = int(_texel)
@@ -318,9 +322,11 @@ func _draw_minimap() -> void:
 		shown = Rect2(Dungeons.rect(place[0], place[1]))
 	var visible := region.intersection(shown)
 	if visible.has_area():
-		minimap.draw_texture_rect_region(_texture,
+		# The painted map covers the overworld only; underground, the flat map shows your copy.
+		var texel: float = _texel if place.is_empty() else 1.0
+		minimap.draw_texture_rect_region(_texture if place.is_empty() else _flat_texture,
 			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE),
-			Rect2(visible.position * _texel, visible.size * _texel))
+			Rect2(visible.position * texel, visible.size * texel))
 	if place.is_empty():
 		_draw_guidance(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
 	_draw_markers(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)

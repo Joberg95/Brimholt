@@ -510,6 +510,11 @@ Crossing to level 45 in the far east and south.
 
 ## Instanced dungeons
 
+The caves are twice the size they were and twice as full: winding tunnels between chambers of
+rough mountain rock, the champion in the farthest one. The Cinder cellar is a proper cellar of
+red-brown brick with barrels and crates against its walls, and the cellar and the crypt hold
+half again as many monsters.
+
 Some town buildings hold stairs down (orange on the world map), and one rock-ringed stairway
 lies in the wilds. Step on them to enter a
 private copy of that dungeon for you and your party; the party leader's copy is shared by

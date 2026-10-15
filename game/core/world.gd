@@ -253,6 +253,7 @@ static func _static_init() -> void:
 			})
 	scene.free()
 	_find_buildings()
+	_place_dungeon_props()
 	OVERWORLD = Rect2i(0, 0, mini(size.x, Dungeons.BAND_X - Dungeons.COPY_GAP), size.y)
 	_map_regions()
 	MAP_HASH = ("".join(ROWS) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK) + str(ZONES)
@@ -313,6 +314,14 @@ static func _place_torches() -> void:
 					and zone_at(cell + Vector2i.DOWN).get("town", false) and not signed.has(cell) and not placed.has(cell):
 				placed[cell] = true
 				TORCHES.append(cell)
+
+
+## Barrels and crates from the dungeon layouts (Dungeons.props), in every copy.
+static func _place_dungeon_props() -> void:
+	for dungeon: String in Dungeons.ORDER:
+		for copy: int in Dungeons.DUNGEONS[dungeon]["copies"]:
+			for prop: Array in Dungeons.props(dungeon):
+				FURNITURE[Dungeons.origin(dungeon, copy) + prop[0]] = prop[1]
 
 
 ## Places a keeper's furniture, skipping any piece on a marker or one that would cut a room
