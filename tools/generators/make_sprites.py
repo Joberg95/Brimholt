@@ -2451,33 +2451,61 @@ def item_icon(kind):
 
 # ---------------------------------------------------------------- terrain
 
-GRASS = (rgba("505d3b"), rgba("5d6944"), rgba("465437"), rgba("707951"), rgba("3d4933"))
+# Grass in the OpenTibia manner: a living mid green (not olive), darker clumps, and blade tufts
+# with lit tips; light from the top-left like the rock.
+GRASS = (rgba("517433"), rgba("5d823b"), rgba("44642a"), rgba("7a9d4c"), rgba("33501f"))
 DIRT = (rgba("80725c"), rgba("766851"), rgba("92816a"), rgba("625944"))
 WATER = (rgba("354b50"), rgba("49666a"), rgba("688281"), rgba("293e44"), rgba("30464b"))
 FLOWERS = (rgba("beb793"), rgba("b3a56b"), rgba("a9999b"))
 
 
 def grass_tile(variant):
+    """Seamless grass: soft clumps of lighter and darker green, then many small tufts of two or
+    three blades (a dark root, a mid blade, a lit tip leaning right), and on two variants a few
+    clover leaves or tiny flowers. Everything wraps at the tile edge so no grid shows."""
     rng = random.Random(100 + variant)
     image = Image(TILE, TILE)
     image.rect(0, 0, TILE, TILE, GRASS[0])
-    for _ in range(30):
+    for _ in range(14):
         x, y = rng.randrange(TILE), rng.randrange(TILE)
         tone = GRASS[rng.choice((1, 2, 2))]
-        for px, py in ellipse(x, y, rng.randrange(2, 5), rng.randrange(1, 3)):
+        for px, py in ellipse(x, y, rng.randrange(3, 6), rng.randrange(2, 4)):
             image.set(px % TILE, py % TILE, tone)
-    for _ in range(30):
+    for _ in range(46):
         x, y = rng.randrange(TILE), rng.randrange(TILE)
-        length = rng.choice((1, 2, 2, 3))
-        image.set(x, y, GRASS[4])
-        for step in range(length):
-            image.set((x + step // 2) % TILE, (y - step - 1) % TILE, GRASS[1 if step < 2 else 3])
+        for blade in range(rng.choice((2, 3, 3))):
+            bx = x + blade * 2 - 2
+            height = rng.choice((2, 3, 3, 4))
+            image.set(bx % TILE, y % TILE, GRASS[4])
+            for step in range(1, height):
+                tone = GRASS[3] if step == height - 1 else GRASS[1]
+                image.set((bx + step // 3) % TILE, (y - step) % TILE, tone)
+    if variant == 2:
+        for _ in range(3):
+            x, y = rng.randrange(TILE), rng.randrange(TILE)
+            for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                image.set((x + dx) % TILE, (y + dy) % TILE, GRASS[3] if dx + dy < 2 else GRASS[1])
     if variant == 3:
-        for _ in range(2):
+        for _ in range(3):
             x, y = rng.randrange(3, 28), rng.randrange(3, 28)
             petal = rng.choice(FLOWERS)
             image.set(x, y, petal)
-            image.set(x + 1, y, FLOWERS[1])
+            image.set(x + 1, y, petal)
+            image.set(x, y + 1, FLOWERS[1])
+    return image
+
+
+def curb_overlay():
+    """The north curb of a cobbled street meeting softer ground: a row of dressed kerb stones,
+    lit on top, with joints every 8 px and a shadow on the street side. Rotated for each side."""
+    image = Image(TILE, TILE)
+    for x in range(TILE):
+        joint = x % 8 == 0
+        image.set(x, 0, COBBLE[3] if joint else scale(COBBLE[1], 1.12))
+        image.set(x, 1, COBBLE[3] if joint else COBBLE[1])
+        image.set(x, 2, COBBLE[3] if joint else COBBLE[0])
+        image.set(x, 3, COBBLE[3])
+        image.set(x, 4, COBBLE[3][:3] + (90,))
     return image
 
 
@@ -4888,7 +4916,9 @@ def main():
                            + [dusk_tile(v) for v in range(4)] + [obsidian_tile(v) for v in range(4)]
                            + [cave_tile(v) for v in range(4)] + [stairs_tile(True), stairs_tile(False)]
                            + edge_set("sand") + [gravel_tile(v) for v in range(4)] + [cave_hole_tile()]
-                           + [cellar_floor_tile(v) for v in range(4)],
+                           + [cellar_floor_tile(v) for v in range(4)]
+                           + [curb_overlay(), curb_overlay().rotated(), curb_overlay().rotated().rotated(),
+                              curb_overlay().rotated().rotated().rotated()],
                            4, TILE),
         "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]

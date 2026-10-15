@@ -11,7 +11,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 17 | [World textures overhaul](17-world-textures.md) | L | References in the art skill |
 | 18 | [Biomes and the void gateway](18-biomes-and-void-gateway.md) | XL | |
 | 19 | [Swamp zone, levels 35-50](19-swamp-zone.md) | L | |
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |

@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-Lets update the world textures to match the new rock design, this is a overhaul of the art and should be a lot more like OpenTibia , I can send referenses when we build this of different tile types (plan 17)
-
 Lets make the environment more "biome" based, Mountain ranges , swamp, woodlands , desert and then the endgame area being the void zone for example, you can still keep the "palace" in the bottom right but this needs to be like a gateway you use there to get to the boss room, this should be accessible for everyone so pvp is still relevant there during the boss fight, so a group or raid can kill and wipe the boss fight and take it over and kill it themselves and effectively steealing it from the other team trying to kill it. (plan 18)
 
 lets expand the map with a swampland zone and new hunt monsters, this area should be around level 35+ up to 50, where we have swamp land mushrooms as trees and pathways made of wood platforms (plan 19)
@@ -15,3 +13,5 @@ lets add some smaller mini bosses as rare creatures from levels 10-50 anywhere i
 Outfits from quests, later thing (plan 22)
 
 we should rename the "everyone" on items to something that makes more sense, like "dropped on death" or something.
+
+new farming area for 35+ , killing elite ogres in a large cave that has increased xp but harder monsters

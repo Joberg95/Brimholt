@@ -131,6 +131,9 @@ const GRAVEL_TILE: int = 50
 const CAVE_HOLE_TILE: int = 54
 ## Cellar floors (dungeons with "theme": "cellar"): dark red-brown brick, four variants.
 const CELLAR_FLOOR_TILE: int = 55
+## Kerb stones where a cobbled street meets grass, dirt, sand, or trees (north, east, south, west).
+const CURB_TILE: int = 59
+const CURBED: Array[String] = [".", ",", ":", "T", "K", "d"]
 ## Cellar walls: the house wall shapes (house_walls.png) in red-brown brick.
 const CELLAR_WALLS: Texture2D = preload("res://assets/sprites/cellar_walls.png")
 ## mountains.png: Tibia-style rock blocks for mountains ("L") and rock outcrops ("C" on the
@@ -233,6 +236,11 @@ static func draw_floor(canvas: CanvasItem, cell: Vector2i, time: float) -> void:
 		_draw_wall_floor(canvas, cell, dest)
 		return
 	canvas.draw_texture_rect_region(TILES, dest, _tile_region(_floor_index(tile, cell, time)))
+	if tile == "=" and World.OVERWORLD.has_point(cell):
+		for side: int in EDGES.size():
+			if tile_at(cell + EDGES[side]) in CURBED:
+				canvas.draw_texture_rect_region(TILES, dest, _tile_region(CURB_TILE + side))
+		return
 	# Only roads, dusk soil, sand, water, and piers have edge overlays; skip neighbour lookups otherwise.
 	if tile != "," and tile != "d" and tile != "~" and tile != "b" and tile != ":" and tile != "K":
 		return
