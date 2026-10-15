@@ -484,8 +484,8 @@ with a tower at each corner) to the harbour, with gatehouses where the roads lea
 east, and south. A sea
 runs down the whole western edge with two ports: Cinder Crossing's harbour at the top and
 **Lastlight** at the bottom, joined by one ferry. Two-tile cobbled roads join the walled towns
-across woods, meadows, rocky mountains, outcrops, and boulders; **Reedmere**, the capital, has a castle on
-its west side. In the middle of the world lies a
+across woods, meadows, rocky mountains, and outcrops; **Reedmere**, the capital, is a walled
+castle town. In the middle of the world lies a
 great irregular lake with **Blackreed Isle** in it, a **level 40–50 PvP hunting ground** of open meadows and scattered trees
 reached only by the ferry from **Reedmere** on the west shore; entering it shows a red
 banner, and the island is tinted red on the minimap and world map.

@@ -92,7 +92,9 @@ draft into settled countryside, once (the scene's `landscape` metadata stops a s
 - Dirt roads between towns became two-tile cobblestone.
 - The speckled forest became woods and meadows (two layers of smooth noise), with rock outcrops
   (`C`, drawn on grass outside dungeons) and boulders (`R`, a blocking object like trees),
-  more in the north-eastern highlands, and a few dry-stone pastures (`#`) outside towns.
+  more in the north-eastern highlands, and a few dry-stone pastures (`#`) outside towns. The
+  boulders were cleared again later (`tools/generators/clear_boulders.gd`, `make clear-boulders`):
+  they only snagged walking; the rules check keeps the overworld free of them.
 - Monster camps in the way were moved just outside, in the same region, and the shortest way
   back to any marker cut off by trees or rock was cleared.
 Run `make towns` after it to move vendors into free buildings. Edit the constants and restore

@@ -19,7 +19,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |
 | 21 | [Rare mini-bosses](21-mini-bosses.md) | L | Later, when the game is stable |
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
-| 23 | [Remove the small stones](23-remove-small-stones.md) | S | |
 | 24 | [More hunting tasks for levels 20-30](24-level-20-30-hunts.md) | M-L | |
 | 25 | [More monster variety](25-monster-variety.md) | L | |
 

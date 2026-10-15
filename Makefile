@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim bench playtest check \
-	sprites outfits landscape cliffs hunts camp-density world-map reedmere map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape cliffs hunts camp-density world-map reedmere clear-boulders map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -110,6 +110,9 @@ map-force: ## Regenerate the overworld draft, overwriting game/maps/overworld.ts
 
 hunts: ## Place the Hunters' Lodge and level-50 elite hunting camps (keeps existing camps)
 	$(GODOT) --headless --path . --script res://tools/generators/hunts.gd
+
+clear-boulders: ## One-time pass: turn the overworld's boulders into the ground around them
+	$(GODOT) --headless --path . --script res://tools/generators/clear_boulders.gd
 
 reedmere: ## Rebuild Reedmere as an open walled town (keeps the east half; a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/reedmere.gd
