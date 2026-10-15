@@ -77,6 +77,43 @@ const MONSTERS: Dictionary = {
 		"gear": {"helmet": "cobalt_hat", "armor": "cobalt_robe", "main_hand": "tide_rod"}},
 	"cave_troll": {"name": "Cave troll", "look": "golem", "color": Color("#4a4e42"), "size": 1.4,
 		"rank": "normal", "range": 1, "step": 0.6, "gear_chance": 0.08},
+	# Elite caves (game/data/caves.gd, levels 32-45): shared caves of elites, each with its giver
+	# in the nearest town and a champion in the deepest hall. Elites have more health and hit
+	# harder than the hunts above ground, but pay five times the experience and roll elite gold
+	# and gear (a one-in-four gear chance): the farms of the thirties and early forties.
+	"ogre_brute": {"name": "Ogre brute", "look": "golem", "color": Color("#8a7a56"), "size": 1.3,
+		"rank": "elite", "range": 1, "step": 0.55},
+	"ogre_shaman": {"name": "Ogre shaman", "look": "humanoid", "color": Color("#7a6a48"), "size": 1.25,
+		"rank": "elite", "range": 4, "step": 0.5,
+		"gear": {"helmet": "emberweave_hat", "armor": "ashcaller_robe", "main_hand": "duskroot_branch"}},
+	"ogre_smasher": {"name": "Ogre smasher", "look": "golem", "color": Color("#6a5a40"), "size": 1.45,
+		"rank": "elite", "range": 1, "step": 0.6},
+	"gorvak": {"name": "Gorvak the Gutter", "look": "golem", "color": Color("#5a4a32"), "size": 1.8,
+		"rank": "champion", "range": 1, "step": 0.55, "respawn": 600.0},
+	"bog_troll": {"name": "Bog troll", "look": "golem", "color": Color("#4a5a3a"), "size": 1.35,
+		"rank": "elite", "range": 1, "step": 0.6},
+	"grotto_leech": {"name": "Grotto leech", "look": "blob", "color": Color("#6a2a2e"), "size": 1.15,
+		"rank": "elite", "range": 1, "step": 0.45},
+	"drowned_priest": {"name": "Drowned priest", "look": "humanoid", "color": Color("#3a5a56"), "size": 1.05,
+		"rank": "elite", "range": 4, "step": 0.45,
+		"gear": {"helmet": "warlock_s_cowl", "armor": "warlock_s_robe", "main_hand": "starbloom_rod"}},
+	"drowned_abbess": {"name": "The Drowned Abbess", "look": "wraith", "color": Color("#2e5a58"), "size": 1.45,
+		"rank": "champion", "range": 4, "step": 0.45, "respawn": 600.0, "glow": Color("#60e0c0")},
+	"magma_hound": {"name": "Magma hound", "look": "quadruped", "color": Color("#4a2a20"), "size": 1.15,
+		"rank": "elite", "range": 1, "step": 0.35, "glow": Color("#ff7a2a")},
+	"cinder_brute": {"name": "Cinder brute", "look": "golem", "color": Color("#5a3024"), "size": 1.35,
+		"rank": "elite", "range": 1, "step": 0.6},
+	"ember_witch": {"name": "Ember witch", "look": "humanoid", "color": Color("#7a3a2a"), "size": 1.0,
+		"rank": "elite", "range": 4, "step": 0.45,
+		"gear": {"helmet": "ashcaller_hat", "armor": "infernal_robe", "main_hand": "starfire_wand"}},
+	"frost_ogre": {"name": "Frost ogre", "look": "golem", "color": Color("#9ab0c0"), "size": 1.4,
+		"rank": "elite", "range": 1, "step": 0.55},
+	"rime_stalker": {"name": "Rime stalker", "look": "wraith", "color": Color("#b8d4e4"), "size": 1.1,
+		"rank": "elite", "range": 1, "step": 0.35},
+	"glacial_golem": {"name": "Glacial golem", "look": "golem", "color": Color("#8ab4d0"), "size": 1.4,
+		"rank": "elite", "range": 1, "step": 0.65},
+	"hoarfrost_jarl": {"name": "The Hoarfrost Jarl", "look": "golem", "color": Color("#c8dce8"), "size": 1.9,
+		"rank": "champion", "range": 1, "step": 0.55, "respawn": 600.0, "glow": Color("#90e0ff")},
 	# Level-50 hunting grounds for endgame characters: elites in the high regions (elite gold
 	# and tier-gear rolls), each with a valuable trophy and its own mythic set (Items.mythic:
 	# unbound level-50 gear, between tier 45 and relics) at low chances.
@@ -187,6 +224,21 @@ const LOOT: Dictionary = {
 	"wraith_knight": [["wraithsteel_shard", 0.25], ["rune_shard", 0.02]],
 	"marsh_witch": [["hexed_charm", 0.25], ["mana_potion", 0.12], ["rune_shard", 0.02]],
 	"cave_troll": [["troll_hide", 0.3], ["rune_shard", 0.03]],
+	"ogre_brute": [["ogre_tooth", 0.35], ["health_potion", 0.1]],
+	"ogre_shaman": [["ogre_totem", 0.3], ["mana_potion", 0.15], ["rune_shard", 0.03]],
+	"ogre_smasher": [["smasher_brace", 0.3], ["health_potion", 0.1]],
+	"gorvak": [["gorvak_tusk", 1.0], ["rune_shard", 1.0], ["health_potion", 1.0]],
+	"bog_troll": [["bog_troll_hide", 0.3], ["health_potion", 0.1]],
+	"grotto_leech": [["leech_ichor", 0.35], ["mana_potion", 0.1]],
+	"drowned_priest": [["drowned_rosary", 0.3], ["mana_potion", 0.15], ["rune_shard", 0.03]],
+	"drowned_abbess": [["drowned_reliquary", 1.0], ["rune_shard", 1.0], ["mana_potion", 1.0]],
+	"magma_hound": [["magma_fang", 0.35], ["fire_rune", 0.02]],
+	"cinder_brute": [["cinder_core", 0.3], ["health_potion", 0.1], ["rune_shard", 0.03]],
+	"ember_witch": [["ember_charm", 0.3], ["mana_potion", 0.15], ["fire_rune", 0.03]],
+	"frost_ogre": [["frost_tusk", 0.3], ["health_potion", 0.1]],
+	"rime_stalker": [["rime_pelt", 0.35], ["frost_rune", 0.02]],
+	"glacial_golem": [["glacial_shard", 0.3], ["rune_shard", 0.04], ["frost_rune", 0.02]],
+	"hoarfrost_jarl": [["hoarfrost_horn", 1.0], ["rune_shard", 1.0], ["frost_rune", 0.5]],
 	"sewer_rat": [["rat_tail", 0.5]],
 	"giant_rat": [["rat_pelt", 0.4], ["quarry_handhammer", 0.02]],
 	"rat_king": [["rat_crown", 1.0], ["rat_pelt", 1.0], ["quarry_handhammer", 0.12], ["burrow_falchion", 0.18]],
@@ -211,4 +263,4 @@ const RESPAWN_SECONDS: float = 45.0
 ## Monsters whose attacks are magic (cut by magic defense, not defense): wraiths, the lich, and
 ## the Hollow Bloom. Every other monster hits physically (Balance.ARMOR_TYPES).
 const MAGIC_ATTACKERS: Array[String] = ["cinder_wraith", "void_wraith", "barrow_lich", "sylvaine", "lizard_shaman",
-	"marsh_witch"]
+	"marsh_witch", "ogre_shaman", "drowned_priest", "drowned_abbess", "ember_witch"]

@@ -256,7 +256,9 @@ func _update_zone() -> void:
 	zone_label.visible = not zone.is_empty()
 	if not zone.is_empty():
 		var rule: String = "PvP zone: other players can attack you" if zone["pvp"] else "safe zone"
-		if zone.get("underground", false):
+		if zone.has("cave"):
+			rule = "an elite cave, shared with every hunter; the stairs up lead back"
+		elif zone.get("underground", false):
 			rule = "your party's private copy; the stairs up lead back"
 		if zone.get("full_loot", false):
 			rule = "HIGH-RISK PvP: you drop all your gear if you die"

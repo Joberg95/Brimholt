@@ -131,6 +131,14 @@ on the main street beside the old south-west one. The east quarter keeps its bui
 the trees that crowded them, and the waystone stands in an open square beside the bank. Edit its
 `LAYOUT` and run it again.
 
+**Elite caves** (`tools/generators/caves.gd`, `make caves`): the caves of `game/data/caves.gd`,
+carved into the band beyond the Void Throne (from `Caves.BAND_X`): halls joined by winding
+tunnels, the stairs up in the westmost hall, camps (`Cave_<cave>_<n>` spawn markers) deeper in,
+and the champion in the deepest hall. Each mouth is a `CaveMouths` marker on a hole (`v`) in the
+cave's region. Terrain is repainted the same way every run; existing camps and mouths keep their
+places but take their monster, level, and size from the table, so edit the table and run it
+again, or move markers in Godot.
+
 **Door paths** (`tools/generators/town_paths.gd`, `make town-paths`): every town door gets a
 cobbled path to the nearest street, the shortest walk over open ground (a tree is cut only if
 there is no other way). After adding a house, run it; the rules check fails while a door opens

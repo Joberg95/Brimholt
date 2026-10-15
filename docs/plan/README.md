@@ -14,7 +14,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |
 | 21 | [Rare mini-bosses](21-mini-bosses.md) | L | Later, when the game is stable |
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
-| 27 | [Elite caves, levels 30-45](27-elite-caves.md) | L | - |
 
 Build 18-19 together, and 24-25 together (the new monsters feed the new tasks) (the swamp is one of the
 biomes). 09 can ship with 10 if that is simpler, since both change warrior play.

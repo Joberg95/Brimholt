@@ -20,6 +20,8 @@ const Instances = preload("res://game/core/instances.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const TownPaths = preload("res://tools/generators/town_paths.gd")
+const Caves = preload("res://game/data/caves.gd")
+const VoidThrone = preload("res://tools/generators/void_throne.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Crafting = preload("res://game/core/crafting.gd")
@@ -74,6 +76,7 @@ func _run() -> void:
 	_town_checks()
 	_persistence_checks()
 	_dungeon_checks()
+	_cave_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -3049,6 +3052,70 @@ func _by_wild_stairway(giver: Dictionary) -> bool:
 	return false
 
 
+
+## The elite caves (game/data/caves.gd, tools/generators/caves.gd): shared underground zones
+## beyond the Void Throne, a mouth in each region leading down and the stairs leading back, every
+## camp reachable from the stairs, and fifteen or more tasks for levels 30-45.
+func _cave_checks() -> void:
+	var void_end: int = VoidThrone.AREA.end.x
+	for cave: String in Caves.ORDER:
+		var definition: Dictionary = Caves.CAVES[cave]
+		var area: Rect2i = Caves.rect(cave)
+		check(area.position.x >= void_end and not area.intersects(World.OVERWORLD), "%s lies beyond the Void Throne" % cave)
+		for other: String in Caves.ORDER:
+			check(other == cave or not area.intersects(Caves.rect(other)), "caves do not overlap")
+		var zone: Dictionary = World.zone_at(area.get_center())
+		check(zone.get("cave", "") == cave and zone.get("underground", false) and not zone["pvp"], "%s is a shared underground zone" % cave)
+		check(World.MOUTH_OF.has(cave) and World.OVERWORLD.has_point(World.MOUTH_OF[cave])
+			and World.terrain(World.MOUTH_OF[cave]) == "v" and World.region_at(World.MOUTH_OF[cave]) == definition["region"]
+			and World.zone_at(World.MOUTH_OF[cave]).is_empty(), "%s's mouth opens in %s" % [cave, definition["region"]])
+		check(World.CAVE_STAIRS.has(cave) and area.has_point(World.CAVE_STAIRS[cave]), "%s has stairs up" % cave)
+		# Every camp is reachable from the stairs on foot.
+		var reached: Dictionary = {World.CAVE_STAIRS.get(cave, area.position): true}
+		var queue: Array[Vector2i] = [World.CAVE_STAIRS.get(cave, area.position)]
+		while not queue.is_empty():
+			var at: Vector2i = queue.pop_back()
+			for side: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				if area.has_point(at + side) and not reached.has(at + side) and World.terrain(at + side) in World.WALKABLE:
+					reached[at + side] = true
+					queue.append(at + side)
+		var kinds: Dictionary = {}
+		for spawn: Dictionary in World.MONSTER_SPAWNS:
+			if area.has_point(spawn["cell"]):
+				kinds[spawn["monster"]] = true
+				check(reached.has(spawn["cell"]) and spawn["level"] >= definition["min_level"] and spawn["level"] <= definition["max_level"]
+					and Monsters.MONSTERS[spawn["monster"]]["rank"] in ["elite", "champion"],
+					"%s's camps hold elites of its levels, reachable from the stairs" % cave)
+		for camp: Array in definition["camps"] + ([definition["champion"]] if definition.has("champion") else []):
+			check(kinds.has(camp[0]) and (SpriteArt.CREATURES.has(camp[0]) or Monsters.MONSTERS[camp[0]].has("gear")),
+				"%s holds %s, drawn" % [cave, camp[0]])
+			check(Quests.TASKS.values().any(func(task: Dictionary) -> bool: return task["monster"] == camp[0]) and Monsters.LOOT.has(camp[0]),
+				"%s has a task and loot" % camp[0])
+	var world := World.new()
+	var combat := Combat.new(world, 37)
+	var instances := Instances.new(world, combat)
+	world.monsters.clear()
+	check(world.add_player(1, 0.0, "knight"), "cave player")
+	_place(world, 1, World.MOUTH_OF["ogre_warrens"])
+	var events: Array = instances.after_move(1, 1.0)
+	var below: Vector2i = world.players[1]["cell"]
+	check(World.zone_at(below).get("cave", "") == "ogre_warrens" and World.chebyshev(below, World.CAVE_STAIRS["ogre_warrens"]) <= 3
+		and below != World.CAVE_STAIRS["ogre_warrens"], "a cave mouth leads down beside the stairs")
+	check(events.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and event["text"].contains("Ogre Warrens")),
+		"climbing down names the cave")
+	_place(world, 1, World.CAVE_STAIRS["ogre_warrens"])
+	instances.after_move(1, 2.0)
+	var above: Vector2i = world.players[1]["cell"]
+	check(World.OVERWORLD.has_point(above) and World.chebyshev(above, World.MOUTH_OF["ogre_warrens"]) <= 3
+		and above != World.MOUTH_OF["ogre_warrens"], "the stairs lead back out beside the mouth")
+	var targets: Array[Vector2i] = World.task_targets("ogre_brutes", {})
+	check(targets == [World.MOUTH_OF["ogre_warrens"]], "a cave task points at the cave's mouth")
+	var thirties: int = 0
+	for task: String in Quests.TASKS:
+		var level: int = int(Quests.TASKS[task].get("level", 0))
+		thirties += 1 if level >= 30 and level <= 45 and Caves.of_monster(Quests.TASKS[task]["monster"]) != "" else 0
+	check(thirties >= 15, "the elite caves give levels 30-45 fifteen tasks (%d)" % thirties)
+
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
 	check(Dungeons.ORDER.size() == Dungeons.DUNGEONS.size() and World.ENTRANCE_OF.size() == Dungeons.DUNGEONS.size(),
@@ -3097,8 +3164,8 @@ func _dungeon_checks() -> void:
 				and World.walkable(origin + Dungeons.cells(dungeon, "@")[0]), "%s copy %d is painted" % [dungeon, copy])
 	var monster_count: int = 0
 	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		check(World.OVERWORLD.has_point(spawn["cell"]) or World.zone_at(spawn["cell"]).get("name", "") == "The Void Throne",
-			"overworld spawns stay out of dungeon copies")
+		check(World.OVERWORLD.has_point(spawn["cell"]) or World.zone_at(spawn["cell"]).get("name", "") == "The Void Throne"
+			or World.zone_at(spawn["cell"]).has("cave"), "overworld spawns stay out of dungeon copies")
 		monster_count += spawn["count"]
 	check(monster_count > 550, "the smaller overworld is densely populated")
 

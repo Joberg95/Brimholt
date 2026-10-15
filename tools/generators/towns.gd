@@ -54,6 +54,11 @@ const QUEST_GIVERS: Array = [
 	["ranger_aldric", "Ranger Aldric", "Reedmere", Vector2i(117, 191), Vector2i.DOWN],
 	["caravan_master_idris", "Caravan master Idris", "Dunmere", Vector2i(200, 264), Vector2i.DOWN],
 	["skywatch_mera", "Skywatch Mera", "Lastlight", Vector2i(36, 350), Vector2i.DOWN],
+	# The elite caves (game/data/caves.gd): one giver per cave in the town nearest its mouth.
+	["delver_hask", "Delver Hask", "Highmoor", Vector2i(326, 89), Vector2i.DOWN],
+	["icewarden_sigrun", "Icewarden Sigrun", "Highmoor", Vector2i(334, 89), Vector2i.DOWN],
+	["tidewarden_neve", "Tidewarden Neve", "Emberfall", Vector2i(284, 192), Vector2i.DOWN],
+	["forgewarden_kel", "Forgewarden Kel", "Dunmere", Vector2i(196, 272), Vector2i.UP],
 	# Cinder Crossing's training hall (its old bank house): the trial master by the door, and
 	# one vocation trainer in each corner (Quests.TRAINERS).
 	["trial_master", "Master Hesk", "Cinder Crossing", Vector2i(21, 12), Vector2i.DOWN],

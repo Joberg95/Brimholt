@@ -1,5 +1,5 @@
 extends RefCounted
-## Instanced dungeons on the host (layouts and copies in game/data/dungeons.gd). A player who
+## Instanced dungeons on the host, and the way in and out of the shared elite caves (layouts and copies in game/data/dungeons.gd). A player who
 ## steps on a stairway down enters their party's copy of that dungeon: the copy their party
 ## (keyed by its leader, or by the player when alone) already holds, else the first free copy,
 ## whose monsters spawn now. Stairs up lead back beside the stairway. A copy with nobody in it
@@ -9,6 +9,7 @@ extends RefCounted
 const World = preload("res://game/core/world.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
+const Caves = preload("res://game/data/caves.gd")
 const Balance = preload("res://game/data/balance.gd")
 
 var world: World
@@ -42,7 +43,28 @@ func after_move(id: int, now: float) -> Array:
 		return enter(id, World.DUNGEON_ENTRANCES[cell], now)
 	if World.terrain(cell) == "^" and not World.dungeon_at(cell).is_empty():
 		return leave(id, now)
+	if World.CAVE_MOUTHS.has(cell):
+		return enter_cave(id, World.CAVE_MOUTHS[cell], now)
+	if World.terrain(cell) == "^" and World.zone_at(cell).has("cave"):
+		return leave_cave(id, World.zone_at(cell)["cave"], now)
 	return []
+
+
+## Down a cave mouth to the shared cave's stairs up (game/data/caves.gd): no copies, no owner.
+func enter_cave(id: int, cave: String, now: float) -> Array:
+	var definition: Dictionary = Caves.CAVES[cave]
+	var events: Array = []
+	_bounce_to(id, World.CAVE_STAIRS[cave], now, events)
+	events.append({"kind": "message", "id": id, "text": "You climb down into the %s (levels %d-%d)." % [
+		definition["name"], definition["min_level"], definition["max_level"]]})
+	return events
+
+
+func leave_cave(id: int, cave: String, now: float) -> Array:
+	var events: Array = []
+	_bounce_to(id, World.MOUTH_OF[cave], now, events)
+	events.append({"kind": "message", "id": id, "text": "You climb back out into %s." % Caves.CAVES[cave]["region"]})
+	return events
 
 
 func enter(id: int, dungeon: String, now: float) -> Array:

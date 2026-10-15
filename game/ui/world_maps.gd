@@ -243,7 +243,7 @@ func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2) 
 		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#ffcf6a"))
-	for cell: Vector2i in World.DUNGEON_ENTRANCES:
+	for cell: Vector2i in World.DUNGEON_ENTRANCES.keys() + World.CAVE_MOUTHS.keys():
 		var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#c9884a"))
@@ -358,6 +358,8 @@ func _draw_world_map() -> void:
 			labels.append([place, Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0, -3)])
 	for dungeon: String in World.ENTRANCE_OF:
 		labels.append([Dungeons.DUNGEONS[dungeon]["name"], Vector2(World.ENTRANCE_OF[dungeon]) + Vector2(0, 4), Color("#e0a870")])
+	for cave: String in World.MOUTH_OF:
+		labels.append([World.Caves.CAVES[cave]["name"], Vector2(World.MOUTH_OF[cave]) + Vector2(0, 4), Color("#e0a870")])
 	# Named regions first, so towns and ports draw over them where they meet.
 	for region: String in World.REGION_NAMES:
 		var info: Dictionary = World.REGION_INFO[region]

@@ -433,6 +433,21 @@
     {"id": "wraithsteel_shard", "name": "Wraithsteel shard", "look": "crystal", "colors": ["2e2a3a", "6a6488", "b0a8e0"], "value": 75},
     {"id": "hexed_charm", "name": "Hexed charm", "look": "badge", "colors": ["3a4a2a", "6a7a4a", "c88ae0"], "value": 85},
     {"id": "troll_hide", "name": "Troll hide", "look": "pelt", "colors": ["3a3e32", "6a6e5a", "8a8e72"], "value": 110},
+    {"id": "ogre_tooth", "name": "Ogre tooth", "look": "fang", "colors": ["5a4a32", "a8987a", "e8dcc0"], "value": 90},
+    {"id": "ogre_totem", "name": "Ogre totem", "look": "badge", "colors": ["5a4228", "8a6a3e", "e0a040"], "value": 100},
+    {"id": "smasher_brace", "name": "Smasher brace", "look": "coil", "colors": ["4a3a2a", "7a6a52", "b0a080"], "value": 110},
+    {"id": "gorvak_tusk", "name": "Gorvak's tusk", "look": "fang", "colors": ["6a5a3a", "c8b890", "fff0d0"], "value": 600},
+    {"id": "bog_troll_hide", "name": "Bog troll hide", "look": "pelt", "colors": ["2e3a26", "4a5a3a", "7a8a52"], "value": 105},
+    {"id": "leech_ichor", "name": "Leech ichor", "look": "crystal", "colors": ["3a1418", "7a2a30", "d05a5a"], "value": 115},
+    {"id": "drowned_rosary", "name": "Drowned rosary", "look": "coil", "colors": ["2a3a38", "4a6a64", "a0e0d0"], "value": 125},
+    {"id": "drowned_reliquary", "name": "Drowned reliquary", "look": "badge", "colors": ["2a4a46", "5a8a7a", "80f0d0"], "value": 700},
+    {"id": "magma_fang", "name": "Magma fang", "look": "fang", "colors": ["3a1a14", "a04a20", "ffa040"], "value": 120},
+    {"id": "cinder_core", "name": "Cinder core", "look": "crystal", "colors": ["3a1a14", "8a3a1e", "ff8a30"], "value": 135},
+    {"id": "ember_charm", "name": "Ember charm", "look": "badge", "colors": ["4a2218", "8a4a2a", "ffb040"], "value": 145},
+    {"id": "frost_tusk", "name": "Frost tusk", "look": "fang", "colors": ["5a6a78", "b8c8d4", "f0faff"], "value": 140},
+    {"id": "rime_pelt", "name": "Rime pelt", "look": "pelt", "colors": ["6a7a88", "a8c0d0", "e8f4fa"], "value": 150},
+    {"id": "glacial_shard", "name": "Glacial shard", "look": "crystal", "colors": ["3a5a78", "6aa0c8", "c8f0ff"], "value": 165},
+    {"id": "hoarfrost_horn", "name": "Hoarfrost horn", "look": "fang", "colors": ["6a8aa0", "c8e0f0", "ffffff"], "value": 900},
     {"id": "lightning_rune", "name": "Lightning rune", "level": 40, "look": "runestone+sowilo", "colors": ["56545e", "78767e", "ffe060"], "value": 120, "rune": "lightning"}
   ]
 }

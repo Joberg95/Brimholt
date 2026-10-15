@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim bench playtest check \
-	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths clear-boulders map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves clear-boulders map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -137,6 +137,9 @@ towns: ## Build missing shops and banks and move vendors and bankers indoors (ke
 
 island: ## Thin Blackreed Isle's forest to about a quarter of its trees (keeps other edits)
 	$(GODOT) --headless --path . --script res://tools/generators/island.gd
+
+caves: ## Carve the elite caves beyond the Void Throne and open their mouths (a re-run changes nothing)
+	$(GODOT) --headless --path . --script res://tools/generators/caves.gd
 
 town-paths: ## Pave a cobbled path from every town door to the streets (a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/town_paths.gd

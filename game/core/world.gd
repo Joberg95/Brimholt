@@ -4,6 +4,7 @@ const Balance = preload("res://game/data/balance.gd")
 const Items = preload("res://game/data/items.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
+const Caves = preload("res://game/data/caves.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Monsters = preload("res://game/data/monsters.gd")
@@ -50,6 +51,11 @@ static var MONSTER_SPAWNS: Array = []
 ## Dungeon stairways down: cell -> dungeon id, and dungeon id -> cell.
 static var DUNGEON_ENTRANCES: Dictionary = {}
 static var ENTRANCE_OF: Dictionary = {}
+## Elite cave mouths (game/data/caves.gd): cell -> cave id, and cave id -> cell; and each cave's
+## stairs up (its "^" cell), where players arrive and leave.
+static var CAVE_MOUTHS: Dictionary = {}
+static var MOUTH_OF: Dictionary = {}
+static var CAVE_STAIRS: Dictionary = {}
 ## The walkable world players reach on foot; dungeon copies lie right of it.
 static var OVERWORLD: Rect2i = Rect2i()
 ## Town buildings (game/data/buildings.gd), found from the walls: {rect, interior, doors,
@@ -246,6 +252,20 @@ static func _static_init() -> void:
 			if Dungeons.DUNGEONS.has(dungeon):
 				DUNGEON_ENTRANCES[_cell_of(marker)] = dungeon
 				ENTRANCE_OF[dungeon] = _cell_of(marker)
+	if scene.has_node("CaveMouths"):
+		for marker: Node2D in scene.get_node("CaveMouths").get_children():
+			var cave: String = String(marker.get("cave"))
+			if Caves.CAVES.has(cave):
+				CAVE_MOUTHS[_cell_of(marker)] = cave
+				MOUTH_OF[cave] = _cell_of(marker)
+	# Every elite cave is an underground zone too, shared by everyone.
+	for cave: String in Caves.ORDER:
+		var definition: Dictionary = Caves.CAVES[cave]
+		ZONES.append({
+			"name": definition["name"], "rect": Caves.rect(cave), "pvp": false, "full_loot": false, "town": false,
+			"underground": true, "ambient": definition["ambient"], "cave": cave,
+			"min_level": definition["min_level"], "max_level": definition["max_level"],
+		})
 	# Every dungeon copy is an underground zone: a fixed dim light, and monsters stay inside.
 	for dungeon: String in Dungeons.DUNGEONS:
 		var definition: Dictionary = Dungeons.DUNGEONS[dungeon]
@@ -265,10 +285,16 @@ static func _static_init() -> void:
 	scene.free()
 	_find_buildings()
 	_place_dungeon_props()
+	for cave: String in Caves.ORDER:
+		var area: Rect2i = Caves.rect(cave)
+		for y: int in range(area.position.y, area.end.y):
+			for x: int in range(area.position.x, area.end.x):
+				if terrain(Vector2i(x, y)) == "^":
+					CAVE_STAIRS[cave] = Vector2i(x, y)
 	OVERWORLD = Rect2i(0, 0, mini(size.x, Dungeons.BAND_X - Dungeons.COPY_GAP), size.y)
 	_map_regions()
 	MAP_HASH = ("".join(ROWS) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK) + str(ZONES)
-		+ str(MONSTER_SPAWNS) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS)).sha256_text()
+		+ str(MONSTER_SPAWNS) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS) + str(CAVE_MOUTHS)).sha256_text()
 
 
 ## Buildings in town zones, and the signs of the shops and banks among them.
@@ -670,7 +696,7 @@ static func overworld_hash() -> String:
 
 
 ## Where to go for a task you have (the quest guidance on the maps): its giver once it is done,
-## its dungeon's stairway for a dungeon task, else the camps of its monster in the task's level
+## its dungeon's stairway for a dungeon task, its cave's mouth for a cave task, else the camps of its monster in the task's level
 ## band (Quests.counts), or [] when there is nowhere to point.
 static func task_targets(task: String, state: Dictionary) -> Array[Vector2i]:
 	var targets: Array[Vector2i] = []
@@ -684,6 +710,10 @@ static func task_targets(task: String, state: Dictionary) -> Array[Vector2i]:
 	var dungeon: String = Quests.dungeon_of(task)
 	if not dungeon.is_empty() and ENTRANCE_OF.has(dungeon):
 		targets.append(ENTRANCE_OF[dungeon])
+		return targets
+	var cave: String = Caves.of_monster(definition["monster"])
+	if not cave.is_empty() and MOUTH_OF.has(cave):
+		targets.append(MOUTH_OF[cave])
 		return targets
 	var band: Vector2i = task_levels(task)
 	for spawn: Dictionary in MONSTER_SPAWNS:

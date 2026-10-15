@@ -41,7 +41,7 @@ static func _find_herbs() -> Dictionary:
 		blocked[cell] = true
 	for entry: Array in World.GROUND_ITEMS:
 		blocked[entry[0]] = true
-	for group: Dictionary in [World.NPC_CELLS, World.FURNITURE, World.DUNGEON_ENTRANCES]:
+	for group: Dictionary in [World.NPC_CELLS, World.FURNITURE, World.DUNGEON_ENTRANCES, World.CAVE_MOUTHS]:
 		for cell: Vector2i in group:
 			blocked[cell] = true
 	var ground: PackedByteArray = Professions.HERB_GROUND.to_ascii_buffer()

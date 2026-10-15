@@ -428,7 +428,8 @@ something in (or bring a relic keeper a trophy). The same marks appear on the wo
 quest list always ends with **Next**: the open task that fits your level best (monsters up
 to 2 levels above you and not more than 5 below), with its giver, town, and monster levels;
 and when you turn in a giver's last task that suits you, they name the next giver to visit.
-Every level from 1 to 50 has a task that fits.
+Every level from 1 to 50 has a task that fits, and from 32 to 45 the elite caves add
+fifteen more (see [Elite caves](#elite-caves)).
 
 **The Lexicon** (K, or the green bestiary in the micro menu) lists every monster from the lowest
 level up, coloured by rank: where it lives (regions, zones, and dungeons), its levels, the
@@ -550,6 +551,31 @@ Champions have ten times a normal monster's health, hit 1.8 times as hard, give 
 experience, and always drop gear of their tier plus a valuable trophy material. Dungeon copies
 are separate spaces: players and monsters in a copy cannot fight anyone outside it, even if
 the copy is close to the overworld on the host's map.
+
+## Elite caves
+
+Four shared caves give levels 32–45 their own farms. Unlike the instanced dungeons there is one
+cave for everyone: step into a cave mouth (a hole in the ground, orange on the world map) to
+climb down to its stairs, and step on the stairs to climb back out beside the mouth. Its camps
+respawn like the overworld's, and you may meet other hunters (no PvP: caves are not PvP zones).
+
+Every camp holds **elites**, two at a time: four times a normal monster's health, half again its
+damage, and five times its experience, with elite gold and a one-in-four chance of tier gear.
+One elite takes a solo player about as long as four or five normal monsters of its level, and
+two at once is a real fight, so bring potions, or a party. The deepest hall of three caves
+holds a **champion** (ten-minute respawn) that always drops a trophy worth hundreds of gold.
+
+| Cave | Mouth | Levels | Elites | Champion | Tasks from |
+| --- | --- | --- | --- | --- | --- |
+| Ogre Warrens | Smoulder Fells, north of Highmoor | 32–37 | ogre brutes, ogre shamans (magic, 4 tiles), ogre smashers | Gorvak the Gutter | Delver Hask, Highmoor |
+| Drowned Grotto | Mirewood Fen, south of Emberfall | 35–40 | bog trolls, grotto leeches, drowned priests (magic) | The Drowned Abbess | Tidewarden Neve, Emberfall |
+| Ember Deep | Emberwaste, at Dunmere's east wall | 38–43 | magma hounds, cinder brutes, ember witches (magic) | | Forgewarden Kel, Dunmere |
+| Frostvault | Hollow March, south-east of Highmoor | 41–45 | frost ogres, rime stalkers, glacial golems | The Hoarfrost Jarl | Icewarden Sigrun, Highmoor |
+
+Each giver has one task per monster of their cave, none of them chained: fifteen or twenty
+elites (half of what the kills gave, in experience and gold), or the champion (as much again as
+the champion gave, and potions or rune shards). Elites drop materials that sell for 90–165
+gold, potions, rune shards, and from the Ember Deep and the Frostvault fire and frost runes.
 
 ## Inventory
 

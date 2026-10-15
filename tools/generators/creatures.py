@@ -825,6 +825,32 @@ SPECIES = {
                                 troll=True, hands=M("5a5e4a", "stone")), (13, 4)),
     "cave_troll": (giant, dict(skin=M("4e5246", "warts"), cloth=M("3a3028", "fur"), eye="c0e040", weapon="club",
                                troll=True, hands=M("3a3e34", "warts")), (14, 4.5)),
+    "ogre_brute": (giant, dict(skin=M("a08a64"), cloth=M("5a4630", "fur"), eye="e0a040", weapon="club",
+                               hands=M("7a6a4a"), troll=True), (13, 4)),
+    "ogre_smasher": (giant, dict(skin=M("8a7452"), cloth=M("4a3a28", "fur"), eye="f07a3a",
+                                 weapon="hammer", hands=M("5a4a36"), troll=True), (14, 4.5)),
+    "gorvak": (giant, dict(skin=M("74603e"), cloth=M("6a2a22", "fur"), eye="ff4a2a", weapon="hammer",
+                           hands=M("4a3a28"), horn=M("d8ccb0", gloss=0.5), troll=True), (16, 5)),
+    "bog_troll": (giant, dict(skin=M("4e6040", "moss"), cloth=M("3a4430", "fur"), eye="d0f060", weapon="club",
+                              troll=True, hands=M("3e4a32", "moss")), (14, 4.5)),
+    "grotto_leech": (slime, dict(goo=M("6a2a30", "smooth", gloss=1.0), eyes="ffb0a0"), (14, 4.5)),
+    "drowned_abbess": (biped, dict(flesh=M("8aa8a0"), skull=M("9ab8b0"), robe=M("2e5a58", "cloth", spread=1.3),
+                                   hood=M("244a48", "cloth", spread=1.3), eyes="60f0d0", focus="60f0d0",
+                                   crown=M("b0c8b8", gloss=0.6)), (10, 3.5)),
+    "magma_hound": (quadruped, dict(length=26, height=8.5, girth=6.6, head=4.8, snout=1.05, snout_width=0.45, leg=1.3,
+                                    ears="pointed", tail="bushy", body=M("3e241c", "ember", accent="ff7a2a"),
+                                    belly=M("6a3a22", "fur"), ruff=M("5a2a1e", "ember", accent="ffa040"), chest=1.12,
+                                    neck=0.9, eye=emissive("ffd040"), teeth=True, paw=M("1e1410")), (12, 3.5)),
+    "cinder_brute": (golem, dict(rock=M("4a2a20", "ember", accent="ff8a30"), eyes="ffe060", core="ff7a20",
+                                 horns=M("2a2220", "stone")), (14, 4.5)),
+    "frost_ogre": (giant, dict(skin=M("9ab4c8"), cloth=M("d8e4ec", "fur"), eye="70e0ff", weapon="club",
+                               hands=M("7090a8"), troll=True), (14, 4.5)),
+    "rime_stalker": (wraith, dict(robe=M("b8d0e0", "fur"), hood=M("d8e8f2", "fur"), eyes="70e8ff",
+                                  claws=M("e8f8ff", gloss=0.8)), (10, 3)),
+    "glacial_golem": (golem, dict(rock=M("7aa4c4", "stone", spread=1.3), eyes="c0f4ff", core="a0e8ff"), (14, 4.5)),
+    "hoarfrost_jarl": (giant, dict(skin=M("a8c4d8"), cloth=M("5a6a80", "fur"), eye="a0f0ff", weapon="hammer",
+                                   horn=M("e8f8ff", gloss=0.8), hands=M("7a98b0"), shards=M("c8f0ff", gloss=0.9),
+                                   troll=True), (16, 5)),
     "sylvaine": (wraith, dict(robe=M("5a3a80", "cloth"), hood=M("3a5a3a", "fur"), eyes="f0d0ff", claws=M("5a7a40"),
                               flowers=M("e888c0", gloss=0.3), antlers=M("8a6a48", "bone"), scale=1.05), (11, 3.5)),
 }
@@ -838,7 +864,9 @@ ZOOM = {"frostfang_wolf": 1.2, "greymaw": 1.0, "behemoth": 1.05, "cyclops": 1.25
         "bog_hulk": 1.6, "ember_golem": 1.6, "forgemaw": 1.4, "kharzul": 1.35, "obsidian_golem": 1.6,
         "cinder_wraith": 1.15, "mire_stalker": 1.15, "void_wraith": 1.15, "sylvaine": 1.1, "ashmaw_drake": 1.0,
         "thornscale_basilisk": 1.0, "rime_titan": 1.2, "barrow_lich": 1.4, "dire_bear": 1.05, "harpy": 1.15,
-        "dune_scorpion": 1.4, "stone_troll": 1.25, "cave_troll": 1.2}
+        "dune_scorpion": 1.4, "stone_troll": 1.25, "cave_troll": 1.2, "ogre_brute": 1.25, "ogre_smasher": 1.2,
+        "gorvak": 1.1, "bog_troll": 1.2, "grotto_leech": 1.35, "drowned_abbess": 1.3, "magma_hound": 1.2,
+        "cinder_brute": 1.6, "frost_ogre": 1.2, "rime_stalker": 1.15, "glacial_golem": 1.6, "hoarfrost_jarl": 1.1}
 
 
 def frames(kind, direction, frame):

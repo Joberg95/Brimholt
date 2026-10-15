@@ -10,5 +10,6 @@ Outfits from quests, later thing (plan 22)
 
 we should rename the "everyone" on items to something that makes more sense, like "dropped on death" or something.
 
-new farming area for 35+ , killing elite ogres in a large cave that has increased xp but harder monsters (plan 27)
+the lanterns flicker when you go near them, lets address this 
 
+lets change the skull icon to be skull and bones, not just the head
