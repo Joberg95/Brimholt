@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-lets reduce gold gain, at level 19 I have 22k gold, this seems a bit exessive (plan 03)
-
 lets make a gathering node have a chance of gaining you 1-5 items per node and make them spawn like 10% less (plan 04)
 
 we need higher mob density , the outlaw archers is a good example for this, they are spread out way too much to be just 3-4 per group, we need tighter groupings of mobs of 5-7 . now we have to walk a lot to find new ones for the quests that requiire 25. (plan 05)

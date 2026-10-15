@@ -959,7 +959,7 @@ func leave_party(id: int, events: Array) -> void:
 		events.append({"kind": "message", "id": member, "text": note})
 
 
-## Rolls the monster's loot table plus level-scaled gold piles. Returns the dropped item ids.
+## Rolls the monster's loot table plus level-scaled gold coins (Balance.coins_per_kill). Returns the dropped item ids.
 func roll_loot(kind: String, level: int) -> Array[String]:
 	var loot: Array[String] = []
 	for entry: Array in Monsters.LOOT.get(kind, []):
@@ -969,9 +969,8 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 	var definition: Dictionary = Monsters.MONSTERS[kind]
 	if rng.randf() < float(definition.get("gear_chance", GEAR_DROP_CHANCE.get(definition["rank"], 0.0))):
 		loot.append(gear_drop(level))
-	var piles: int = level / 10 + (1 if rng.randf() < 0.6 else 0)
-	if Monsters.MONSTERS[kind]["rank"] != "normal":
-		piles += 3
+	var expected: float = Balance.coins_per_kill(level, definition["rank"])
+	var piles: int = floori(expected) + (1 if rng.randf() < expected - floorf(expected) else 0)
 	if piles > 0:
 		loot.append(World.make_entry("gold_coins", piles))
 	return loot

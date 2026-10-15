@@ -11,6 +11,7 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Items = preload("res://game/data/items.gd")
+const Balance = preload("res://game/data/balance.gd")
 
 ## A level above any real one, replaced by the first placement found.
 const UNPLACED: int = 1 << 20
@@ -60,7 +61,7 @@ static func entry(kind: String) -> Dictionary:
 	return {
 		"kind": kind, "name": definition["name"], "rank": definition["rank"], "levels": levels, "places": places,
 		"drops": Monsters.LOOT.get(kind, []).duplicate(),
-		"gold": roundi((floorf(average / 10.0) + 0.6 + (3.0 if ranked else 0.0)) * World.ITEMS["gold_coins"]["gold"]),
+		"gold": roundi(Balance.coins_per_kill(average, "elite" if ranked else "normal") * World.ITEMS["gold_coins"]["gold"]),
 		"gear": float(Combat.GEAR_DROP_CHANCE.get(definition["rank"], 0.0)),
 		"gear_tiers": Vector2i(Items.tier_for(maxi(levels.x, 1)), Items.tier_for(maxi(levels.y, 1))),
 		"tasks": tasks, "relics": definition.get("relics", []),

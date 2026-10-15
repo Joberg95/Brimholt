@@ -148,6 +148,17 @@ new player survives 18–38 same-level hits instead of 18. Twelve spawns of leve
 and toads ring Cinder Crossing within 45 tiles; beyond that, levels rise by about one per
 8.5 tiles. Spawns stay at least 7 steps from roads and sit in small clearings.
 
+## Gold income
+
+Gold comes from three places: coins from kills, task rewards, and selling loot to vendors.
+Kills dominate, so they set the pace: `Balance.coins_per_kill(level, rank)` is 0.2 + 0.02 x
+level coins of 25 gold (5 gold a kill at level 1, 15 at 19, 30 at 50; elites and bosses 3
+coins more). Task rewards pay a `share` of the same expectation for their kills
+(`Quests.reward`). The kills from level 1 to 19 pay about 5,900 gold, about one vendor gear
+set of level 19 (5,500); the old step curve (a coin per 10 levels plus a 60% chance of one)
+paid about 17,600, which with tasks and sales left a level-19 character near 22,000. A unit
+test keeps kill gold to level 19 within 0.6-1.6 gear sets.
+
 ## Gear tiers
 
 Ten tiers every five levels; accessories from tier 20; relics at level 50 from boss quests.

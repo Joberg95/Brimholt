@@ -35,6 +35,13 @@ const MOB_HEALTH_LEVEL_1: float = 30.0
 const PLAYER_HEALTH_LEVEL_1: float = 150.0
 const PLAYER_MANA_LEVEL_1: float = 60.0
 const BASE_CRITICAL: int = 5
+## Gold coins (25 gold each) a kill drops on average: KILL_COINS + KILL_COINS_PER_LEVEL x level,
+## and RANKED_KILL_COINS more from elites and bosses. About 5 gold a kill at level 1, 15 at 19,
+## and 30 at 50, so the kills from level 1 to 19 pay roughly one vendor gear set of level 19
+## (about 6,000 gold; tasks and sales add the rest).
+const KILL_COINS: float = 0.2
+const KILL_COINS_PER_LEVEL: float = 0.02
+const RANKED_KILL_COINS: float = 3.0
 ## Base health regenerated every 10 seconds, as a fraction of max health (tripled when resting).
 const REGEN_FRACTION: float = 0.04
 ## Health a full healer (healing 1.0) restores per second, as a fraction of paladin health.
@@ -141,6 +148,11 @@ static func mob_experience(level: int, rank: String = "normal") -> int:
 	return roundi(MOB_HEALTH_LEVEL_1 * _scale(level) / 2.0 * RANKS[rank]["experience"])
 
 
+## Gold coins a kill drops on average (see KILL_COINS).
+static func coins_per_kill(level: float, rank: String = "normal") -> float:
+	return KILL_COINS + KILL_COINS_PER_LEVEL * level + (RANKED_KILL_COINS if rank != "normal" else 0.0)
+
+
 ## Same-level normal kills per level: quick early levels (4 for level 2), longer later.
 static func kills_to_level(level: int) -> int:
 	return 4 + 3 * (clampi(level, 1, MAX_LEVEL) - 1)
@@ -233,4 +245,4 @@ static func signature() -> String:
 		HITS_TO_FALL, MOB_HEALTH_LEVEL_1, PLAYER_HEALTH_LEVEL_1, PLAYER_MANA_LEVEL_1, BASE_CRITICAL,
 		REGEN_FRACTION, HEAL_FRACTION, EARLY_DAMAGE_LEVELS, VOCATIONS, RAID, RAID_FIGHT_SECONDS, ENRAGE_SECONDS,
 		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_EVEN, CHASE_SECONDS_FAST, CHASE_GAP_LEVELS,
-		PVP_DAMAGE, PVP_HEALING, PVP_COMBAT_SECONDS, PVP_DAMPENING_SECONDS])
+		PVP_DAMAGE, PVP_HEALING, PVP_COMBAT_SECONDS, PVP_DAMPENING_SECONDS, KILL_COINS, KILL_COINS_PER_LEVEL, RANKED_KILL_COINS])

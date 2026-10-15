@@ -110,8 +110,9 @@ for three, and ×2 for all four.
 Each monster has a loot table in `game/data/monsters.gd` (`Monsters.LOOT`): every `[item,
 chance]` row rolls independently. Rows include materials unique to the monster (vole tails,
 toad slime, boar tusks, ... warden crests; 20–50% chance), which vendors will buy for its
-`value`. On top, gold piles drop as one stack (one pile per 10 levels plus a 60% chance of
-one more; elites and bosses +3), and a piece of **tiered gear** from the monster's level tier (4% from normal
+`value`. On top, gold coins drop as one stack: `Balance.coins_per_kill` on average, 0.2 + 0.02
+per level (about 5 gold a kill at level 1, 15 at level 19, 30 at level 50; elites and bosses 3
+coins more), and a piece of **tiered gear** from the monster's level tier (4% from normal
 monsters, 25% from elites; 30% of those come from the tier below). Loot spills onto nearby
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
 needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.

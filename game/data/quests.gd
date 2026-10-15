@@ -126,8 +126,8 @@ const TRAINERS: Dictionary = {
 }
 ## Bound packs worn in the bag slot, smallest first; each adds backpack slots.
 const PACKS: Array[String] = ["traveler_pack", "explorer_pack", "pathfinder_pack"]
-## Gold coins are worth 25; Combat.roll_loot drops level / 10 piles, one more 60% of the time,
-## and three more for ranked monsters. Reward gold follows the same expectation.
+## Gold coins are worth 25; Combat.roll_loot drops Balance.coins_per_kill of them on average.
+## Reward gold follows the same expectation.
 const COIN_VALUE: int = 25
 
 
@@ -190,7 +190,7 @@ static func reward(task: String) -> Dictionary:
 	var kind: String = definition["monster"]
 	var level: int = definition.get("level", monster_level(kind))
 	var rank: String = Monsters.MONSTERS[kind]["rank"]
-	var piles: float = level / 10 + 0.6 + (3.0 if rank != "normal" else 0.0)
+	var piles: float = Balance.coins_per_kill(level, rank)
 	var share: float = definition["share"]
 	return {
 		"experience": roundi(definition["count"] * Balance.mob_experience(level, rank) * share),

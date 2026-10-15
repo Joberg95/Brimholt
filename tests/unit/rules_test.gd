@@ -345,7 +345,7 @@ func _quest_hub_and_lexicon_checks() -> void:
 	check(spider["places"] == ["Silkhollow (dungeon)"] and spider["tasks"] == ["silk_harvest"] and Lexicon.matches(spider, "SILK")
 		and Lexicon.matches(spider, "spider silk") and not Lexicon.matches(spider, "golem"), "lexicon search finds names, places, and drops")
 	var vole: Dictionary = Lexicon.entry("field_vole")
-	check(vole["gold"] == roundi(0.6 * World.ITEMS["gold_coins"]["gold"]) and vole["places"] == ["Cinder Meadows"],
+	check(vole["gold"] == roundi(Balance.coins_per_kill(1) * World.ITEMS["gold_coins"]["gold"]) and vole["places"] == ["Cinder Meadows"],
 		"the lexicon's gold matches the expected coin piles")
 
 
@@ -490,7 +490,8 @@ func _bot_loot_checks() -> void:
 	var hunter: int = bots.add("knight", 20, "hunter", field, 0.0)["id"]
 	var me: Dictionary = world.players[hunter]
 	# A kill claims every tile its loot spilled onto for the players credited with it.
-	var prey: int = combat.spawn_monster("grey_wolf", 12, me["cell"] + Vector2i(0, 2), 0.0)
+	# Level 40: Balance.coins_per_kill is 1.0, so the kill always drops gold as well as items.
+	var prey: int = combat.spawn_monster("grey_wolf", 40, me["cell"] + Vector2i(0, 2), 0.0)
 	world.monsters[prey]["damage_by"] = {hunter: 100}
 	var events: Array = []
 	combat._kill_monster(prey, 1.0, events)
@@ -4032,12 +4033,20 @@ func _combat_checks() -> void:
 			gear += tally[kind]
 			check(World.ITEMS[kind]["level"] == 1, "a level-1 monster drops tier-1 gear only")
 	check(gear > 110 and gear < 220, "normal monsters drop a piece of gear about 4% of the time")
-	check(tally.get("gold_coins", 0) > 2200 and tally.get("gold_coins", 0) < 2600, "low monsters drop a gold pile about 60% of the time")
+	check(tally.get("gold_coins", 0) > 800 and tally.get("gold_coins", 0) < 960, "level-1 monsters drop a coin about 22% of the time")
 	var warden_loot: Array[String] = loot_rolls.roll_loot("blackreed_warden", 50)
 	var warden_gold: int = _count(warden_loot, "gold_coins")
 	check(warden_loot.filter(func(entry: String) -> bool: return World.kind_of(entry) == "gold_coins").size() == 1,
 		"gold piles drop as one stack")
-	check(warden_gold >= 8 and warden_gold <= 9, "elites add gold piles on top of the level scale")
+	check(warden_gold >= 4 and warden_gold <= 5, "elites add gold coins on top of the level scale")
+	# Gold income: kills from level 1 to 19 pay about one vendor gear set of that level, not three.
+	var kill_gold: float = 0.0
+	for level: int in range(1, 19):
+		kill_gold += Balance.kills_to_level(level) * Balance.coins_per_kill(level) * World.ITEMS["gold_coins"]["gold"]
+	var gear_set: int = 0
+	for slot: String in ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]:
+		gear_set += Items.gear_price(19, slot)
+	check(kill_gold > 0.6 * gear_set and kill_gold < 1.6 * gear_set, "kills to level 19 pay about one gear set (%d gold, set %d)" % [kill_gold, gear_set])
 	# Loot spills around a crowded corpse within the stack limit and never onto walls.
 	var crowd := World.new()
 	var crowd_combat := Combat.new(crowd, 9)
