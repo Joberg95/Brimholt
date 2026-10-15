@@ -1,6 +1,6 @@
 # 14 - Open Redmeere with castle houses
 
-**Effort:** L  **Needs from you:** castle house reference images
+**Effort:** L  **References:** the `art-direction` skill's reference looks
 
 ## Request
 Redesign Redmeere as an open town inside its walls, with gates west, north and south. Houses

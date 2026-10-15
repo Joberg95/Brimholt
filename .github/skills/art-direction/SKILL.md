@@ -25,9 +25,41 @@ Saturated colour and glow are for relics, ores, magic, and fire only.
 | `mountain` + `_rock_field` | Seamless texture across tiles (`ROCK_SPAN`), top-left light from a height field, cracks, ragged open edges, cliff faces of lit/shaded columns |
 | `castle_block`, `cuboid`, `_ashlar` | Build anything boxy in the oblique view: footprint, raised top, south and east faces, ashlar courses, outlined lower edges, merlons drawn back to front |
 | `ore_vein` | A small bright accent on a dull surface: nuggets lit top-left, dark seam around them, a glint frame |
-| `thin_wall`, `door` | Thin town walls and their doorway porches |
+| `thin_wall`, `house_door` | Full-tile house walls and the doors set into them |
 | `wall_torch`, `waystone` | Small props with their own light and a single accent colour |
 | `tree`, `boulder` | Organic silhouettes with broken edges and clustered shading |
+
+## Reference looks (from the owner's Tibia and OpenTibia screenshots)
+
+Described in words on purpose: we match the feel, never the pixels.
+
+- **Caves.** Floors of warm red-brown earth or flat grey stone, with patches of gravel and a
+  sandy pebble border where earth meets rock. Rock walls are masses of rounded grey boulders,
+  darker and outlined at the bottom, filling whole tiles; the unreachable rock beyond is a
+  flat textured grey or dark earth. Props: cobwebs in corners, bones, loose stones, small
+  rubble, roots in the walls, puddles. Moody and dark, lit by the player's light.
+- **Snow and ice.** White snow floor with soft blue shadows, frozen water in pale cyan sheets
+  with frosted edges, ice-crystal clusters as obstacles, a cold purple vignette.
+- **Woodland.** Bright grass with fine darker blades, dense firs and round bushes overlapping,
+  a few broad dark trees, bones and logs scattered.
+- **Towns.** Tall sandstone or grey-stone walls with timber strips and small windows; tiled
+  roofs (green, red, slate) with ridge rows, dormers and chimneys; cobblestone streets of
+  rounded grey setts with a lighter curb where they meet walls or grass; street lamps with a
+  real flame, barrels, signs on brackets, flower boxes. Streets are wide and laid out on a
+  grid with squares.
+- **Interiors.** Stone-tile or plank floors, light-wood counters in L shapes, stairs as
+  lighter steps, crates, chests, a shield or banner on the wall, a fenced garden with
+  flowers. Furnished but readable: never cover every tile.
+- **Cellars.** Dark red-brown brick walls, a patterned dark earth or brick floor, crates and
+  barrels stacked by the walls, a heraldic shield on the wall, dim light.
+- **Swamp hub and walkways.** Palisade log walls, thatched roofs, wooden docks and plank
+  walkways on posts over dark water, torches on poles, lush plants.
+- **World map.** A painted map: deep blue sea, green land with darker forests, white snow,
+  yellow plains, sandy desert, dark red for dangerous land, grey mountains; towns as small
+  clusters of roofs; a red pin for you.
+- **Area spells.** Tile-based shapes: a filled circle (radius 3 is about 29-37 tiles), a wave
+  or cone fanning out in front of the caster, a beam line. Every affected tile shows its own
+  effect frame (fire bursts, ice shards, sparks), so the area is readable at a glance.
 
 ## Rules
 
@@ -80,5 +112,7 @@ third-party files, with a license and a `CREDITS.md` row.
    compare against the reference builder again rather than nudging numbers.
 6. Update the sheet's row in `docs/art.md` (size, layout, anchor, builder name).
 
-`make sprites` regenerates **every** sheet. If someone has hand-edited a PNG, it is the
-source of truth: regenerate only your own sheet (or skip that file) and say so.
+`make sprites` regenerates **every** sheet, and some (castle, mountains, objects, ores,
+terrain palette) come out different from the committed files. Write only your own sheet:
+`python tools/generators/make_sprites.py --only house_walls.png` (several names allowed). A
+hand-edited PNG is the source of truth; never overwrite it.

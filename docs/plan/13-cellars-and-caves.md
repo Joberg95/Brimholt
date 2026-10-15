@@ -1,6 +1,6 @@
 # 13 - Bigger cellars and caves
 
-**Effort:** L  **Needs from you:** Tibia cellar reference images
+**Effort:** L  **References:** the `art-direction` skill's reference looks
 
 ## Request
 More monsters in cellars and caves. Caves get the rock textures and become about twice as large.

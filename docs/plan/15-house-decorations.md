@@ -1,6 +1,6 @@
 # 15 - House decorations
 
-**Effort:** M-L  **Needs from you:** Tibia decoration reference images
+**Effort:** M-L  **References:** the `art-direction` skill's reference looks
 
 ## Request
 Decorate houses the Tibia way (references to come).

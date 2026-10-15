@@ -29,7 +29,11 @@ backpack slot.
 5. **Bots.** Rune use for bots at level 40+ (simple: cast at a group of 3+ monsters).
 6. **Balance.** Runes add damage on top of a rotation; check the final-boss raid math and PvP
    burst (maybe runes do reduced damage to players).
-7. Art: three rune icons with the `art-direction` skill (glow and saturated colour allowed:
+7. Area shapes, Tibia-style (see the `art-direction` skill's "Area spells"): a filled tile
+   circle for fire (radius 3), ice in the same circle with shards, lightning as a beam or wave.
+   Every affected tile plays its own effect frame, so you see exactly what was hit. Spell info
+   in the book: rune type, damage type, range (7), cooldown, area preview on a small grid.
+8. Art: three rune icons with the `art-direction` skill (glow and saturated colour allowed:
    magic).
 
 ## Tests

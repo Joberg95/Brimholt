@@ -1,6 +1,6 @@
 # 17 - World textures overhaul
 
-**Effort:** L  **Needs from you:** OpenTibia tile references by tile type
+**Effort:** L  **References:** the `art-direction` skill's reference looks
 
 ## Request
 Update the world textures to match the new rock design, much more like OpenTibia (references to

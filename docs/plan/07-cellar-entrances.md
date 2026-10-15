@@ -1,6 +1,6 @@
 # 07 - One cellar hole per entrance
 
-**Effort:** M  **Needs from you:** OpenTibia hole and stair references (optional)
+**Effort:** M  **References:** the `art-direction` skill's reference looks
 
 ## Request
 Some cellar entrances look like two holes next to each other; there should be one. Better hole

@@ -197,10 +197,10 @@ func _run() -> void:
 			"Ground item sprite is not drawn on its tile"):
 		return
 	# Wall (8, 7) has open ground to its north/west; its raised top must reach over tile (7, 6).
-	var wall_origin: Vector2 = Vector2(8, 7) * World.TILE_SIZE - Vector2.ONE * SpriteArt.WALL_RAISE
+	var wall_origin: Vector2 = Vector2(8, 7) * World.TILE_SIZE - Vector2.ONE * SpriteArt.wall_raise(Vector2i(8, 7))
 	var wall_region: Rect2 = SpriteArt.wall_region(Vector2i(8, 7))
 	# Thin walls: the centre post's top (sprite 12..16) lies over tile (7, 6), up-left of the wall's own tile.
-	if not _expect(_matches_texel(image, SpriteArt.WALLS, Rect2(wall_region.position + Vector2(12, 12), Vector2(4, 4)),
+	if not _expect(_matches_texel(image, SpriteArt.wall_sheet(Vector2i(8, 7)), Rect2(wall_region.position + Vector2(12, 12), Vector2(4, 4)),
 			wall_origin + Vector2(12, 12)), "Oblique wall top is not raised over the tile behind it"):
 		return
 	if unequipped.save_png("res://.tools/visual-unequipped.png") != OK:
@@ -1019,8 +1019,8 @@ func _check_town_torches() -> bool:
 	game._publish_actor(1)
 	await create_timer(0.8).timeout
 	var lighting: Node2D = game._world_view.lighting
-	var flame: Vector2i = Vector2i(game.map_to_screen(Vector2(torch) * World.TILE_SIZE + Vector2(16, 8)))
-	var wall: Vector2i = Vector2i(game.map_to_screen(Vector2(torch) * World.TILE_SIZE + Vector2(4, 22)))
+	var flame: Vector2i = Vector2i(game.map_to_screen(SpriteArt.torch_foot(torch) - Vector2(0, 17)))
+	var wall: Vector2i = Vector2i(game.map_to_screen(SpriteArt.torch_foot(torch) - Vector2(12, 3)))
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
 	var day: Image = screen.get_texture().get_image()

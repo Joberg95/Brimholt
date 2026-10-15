@@ -8,9 +8,11 @@ extends RefCounted
 const TILE: int = 32
 const SWATCH: int = 32
 const MATERIALS: int = 3
-## A thin wall's band top face, relative to its cell corner: centre +-5, raised 16 px.
+## A house wall's band top face, relative to its cell corner: centre +-5, raised RAISE px up-left
+## (SpriteArt.HOUSE_RAISE, a full tile). The band's centre is half a tile in, so the roof is drawn
+## RAISE - TILE / 2 px up and left of the band's place on the ground.
 const BAND_HALF: int = 5
-const RAISE: int = 16
+const RAISE: int = 32
 const OVERHANG: int = 2
 ## Ridge height as a share of the roof's depth, and how far height leans left (walls lean 1:1).
 const PITCH: float = 0.26
@@ -81,7 +83,7 @@ static func build(building: Dictionary, sheet: Texture2D) -> Dictionary:
 	for row: int in SHADOW_ROWS:
 		image.fill_rect(Rect2i(x0 + 1 - origin.x, y_s + 1 + row - origin.y, x1 - x0 - 1, 1),
 			Color(0, 0, 0, 0.32 * (1.0 - float(row) / SHADOW_ROWS)))
-	return {"texture": ImageTexture.create_from_image(image), "origin": Vector2(origin)}
+	return {"texture": ImageTexture.create_from_image(image), "origin": Vector2(origin) - Vector2.ONE * (RAISE - TILE / 2)}
 
 
 ## A stone chimney standing on the near slope just below the ridge: a lit front, a shaded

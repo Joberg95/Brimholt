@@ -32,26 +32,24 @@ const FURNITURE: Array[String] = ["counter_shop", "counter_bank", "shelf_potions
 	"crate", "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth"]
 ## Herb patches (Crafting.HERBS): two 32x32 variants per resource band (make_sprites.py herb_patch).
 const HERBS: Texture2D = preload("res://assets/sprites/herbs.png")
-## Row 3 of walls.png: thin walls for "#", indexed by connected sides (1 N, 2 W, 4 S, 8 E).
-const THIN_WALL_ROW: int = 3
+## House and town walls ("#") stand a full tile tall, as in Tibia: house_walls.png holds HOUSE_SIZE
+## frames drawn HOUSE_RAISE px up and left of their tile, 16 thin walls indexed by connected sides
+## (1 N, 2 W, 4 S, 8 E), then a doorway in a west-east wall (HOUSE_DOOR) and in a north-south one.
+const HOUSE_WALLS: Texture2D = preload("res://assets/sprites/house_walls.png")
+const HOUSE_RAISE: float = 32.0
+const HOUSE_SIZE: float = 64.0
+const HOUSE_DOOR: int = 16
 static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
 const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan"]
-## Building doorways (World.BUILDINGS doors): DOOR_CELL frames with the doorway tile's corner at
-## DOOR_ORIGIN. Doors people walk through stand upright like them (a raised wall face would lean):
-## a south door's porch (frame 0) and an east door's leaf swung open outward (frame 1), both drawn
-## after the roof (draw_porch). North and west doorways show only their room side: the wall-height
-## door of a west-east (frame 2) or north-south (frame 3) wall, drawn like a wall (draw_door).
-const DOORS: Texture2D = preload("res://assets/sprites/doors.png")
-const DOOR_CELL: Vector2 = Vector2(48, 64)
-const DOOR_ORIGIN: Vector2 = Vector2(8, 38)
 ## Wall torches (World.TORCHES): 16x24 frames, unlit then three flame frames.
 const TORCH: Texture2D = preload("res://assets/sprites/torch.png")
 ## Where a sign's centre hangs from its wall cell's corner, by the direction the door faces:
-## on the visible south or east face, or standing on the roof edge for a north or west door.
+## at mid-height on the visible south or east face (a face point leans one px up-left per px of
+## height), or standing on the roof edge for a north or west door.
 const SIGN_OFFSETS: Dictionary = {
-	Vector2i.DOWN: Vector2(14, 16), Vector2i.UP: Vector2(0, -24), Vector2i.RIGHT: Vector2(14, 8), Vector2i.LEFT: Vector2(-12, 6),
+	Vector2i.DOWN: Vector2(4, 6), Vector2i.UP: Vector2(-16, -40), Vector2i.RIGHT: Vector2(6, 0), Vector2i.LEFT: Vector2(-28, -10),
 }
 ## Trees are 64x96 cells in objects.png with the trunk base on the tile centre at (32, 80).
 const TREE_SIZE: Vector2 = Vector2(64, 96)
@@ -339,11 +337,12 @@ static func wall_mask(cell: Vector2i) -> int:
 	return mask
 
 
+## The sheet region of a wall cell's sprite, in wall_sheet(cell), drawn wall_raise(cell) px up-left.
 static func wall_region(cell: Vector2i) -> Rect2:
-	# Row 0: grey stone; row 1: obsidian; row 2: cave rock; row 3: thin walls ("#"); row 4: cliffs ("L");
-	# row 5: rock outcrops ("C" on the overworld).
+	# House walls ("#"): house_walls.png. walls.png rows: 0 grey stone, 1 obsidian, 2 cave rock,
+	# 4 cliffs ("L"), 5 rock outcrops ("C" on the overworld).
 	if tile_at(cell) == "#":
-		return Rect2(thin_wall_mask(cell) * WALL_SIZE, THIN_WALL_ROW * WALL_SIZE, WALL_SIZE, WALL_SIZE)
+		return Rect2(thin_wall_mask(cell) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
 	var row: int = {"O": 1, "L": 4}.get(tile_at(cell), 2)
 	if row == 2 and World.OVERWORLD.has_point(cell):
 		row = 5
@@ -417,37 +416,32 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 		canvas.draw_texture_rect_region(CASTLE_TOWERS if high else CASTLE_WALLS,
 			Rect2(Vector2(cell) * TILE - Vector2.ONE * lift, Vector2.ONE * size), Rect2(castle_mask(cell) * size, 0, size, size))
 		return
-	var dest: Rect2 = Rect2(Vector2(cell) * TILE - Vector2.ONE * WALL_RAISE, Vector2.ONE * WALL_SIZE)
+	var raise: float = wall_raise(cell)
+	var dest: Rect2 = Rect2(Vector2(cell) * TILE - Vector2.ONE * raise, Vector2.ONE * (TILE + raise))
 	if natural_rock(cell):
 		# Natural rock: a block of the seamless rock texture with cliff faces where it meets open ground.
 		var part: int = posmod(cell.x, ROCK_SPAN) + posmod(cell.y, ROCK_SPAN) * ROCK_SPAN
 		canvas.draw_texture_rect_region(MOUNTAINS, dest, Rect2(rock_mask(cell) * WALL_SIZE, part * WALL_SIZE, WALL_SIZE, WALL_SIZE))
 		return
-	canvas.draw_texture_rect_region(WALLS, dest, wall_region(cell))
+	canvas.draw_texture_rect_region(wall_sheet(cell), dest, wall_region(cell))
 
 
-## Whether a doorway facing `outward` has an upright porch or leaf, drawn after its roof.
-static func porch_door(outward: Vector2i) -> bool:
-	return outward == Vector2i.DOWN or outward == Vector2i.RIGHT
+## The sheet a wall cell is drawn from (house_walls.png for "#", else walls.png).
+static func wall_sheet(cell: Vector2i) -> Texture2D:
+	return HOUSE_WALLS if tile_at(cell) == "#" else WALLS
 
 
-## A doorway's wall-height door in its wall line, drawn raised like a wall on the doorway tile in
-## depth order (nothing for a south door, whose porch replaces it).
-static func draw_door(canvas: CanvasItem, cell: Vector2i, outward: Vector2i) -> void:
-	if outward == Vector2i.DOWN:
-		return
+## How far up and left a wall cell's sprite is raised: a full tile for house walls.
+static func wall_raise(cell: Vector2i) -> float:
+	return HOUSE_RAISE if tile_at(cell) == "#" else WALL_RAISE
+
+
+## A doorway in a house wall: the wall runs on over it with a door standing ajar in its visible
+## face (south for a west-east wall, east for a north-south one), drawn like a wall in depth order.
+static func draw_door(canvas: CanvasItem, cell: Vector2i) -> void:
 	var vertical: bool = tile_at(cell + Vector2i.UP) in World.WALLS and not tile_at(cell + Vector2i.UP).is_empty()
-	_draw_door_frame(canvas, cell, 3 if vertical else 2)
-
-
-## A south door's porch or an east door's open leaf, standing upright (drawn after the roof).
-static func draw_porch(canvas: CanvasItem, cell: Vector2i, outward: Vector2i) -> void:
-	_draw_door_frame(canvas, cell, 0 if outward == Vector2i.DOWN else 1)
-
-
-static func _draw_door_frame(canvas: CanvasItem, cell: Vector2i, frame: int) -> void:
-	canvas.draw_texture_rect_region(DOORS, Rect2(Vector2(cell) * TILE - DOOR_ORIGIN, DOOR_CELL),
-		Rect2(frame * DOOR_CELL.x, 0, DOOR_CELL.x, DOOR_CELL.y))
+	canvas.draw_texture_rect_region(HOUSE_WALLS, Rect2(Vector2(cell) * TILE - Vector2.ONE * HOUSE_RAISE, Vector2.ONE * HOUSE_SIZE),
+		Rect2((HOUSE_DOOR + (1 if vertical else 0)) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE))
 
 
 ## A building's pitched roof (roof_art.gd), rasterized the first time it is drawn.
@@ -478,9 +472,15 @@ static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
 
 
 
+## Where a wall torch's bracket meets the south face of its wall cell: the same height up the
+## face for every wall, so a taller house wall puts it further up and left.
+static func torch_foot(cell: Vector2i) -> Vector2:
+	return Vector2(cell) * TILE + Vector2(16, 25) - Vector2.ONE * roundf((wall_raise(cell) - WALL_RAISE) * 0.6)
+
+
 ## A wall torch on the south face of its wall cell; frame 0 is unlit, 1-3 flicker.
 static func draw_torch(canvas: CanvasItem, cell: Vector2i, frame: int) -> void:
-	var foot: Vector2 = Vector2(cell) * TILE + Vector2(16, 25)
+	var foot: Vector2 = torch_foot(cell)
 	canvas.draw_texture_rect_region(TORCH, Rect2(foot - Vector2(8, 24), Vector2(16, 24)), Rect2(frame * 16, 0, 16, 24))
 
 

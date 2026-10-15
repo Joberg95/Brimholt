@@ -9,6 +9,7 @@ extends Node2D
 const World = preload("res://game/core/world.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Weather = preload("res://game/render/weather.gd")
+const SpriteArt = preload("res://game/render/sprite_art.gd")
 const LIGHT_TEXTURE: Texture2D = preload("res://assets/third_party/kenney_particle_pack/light_01.png")
 ## A full day and night, in seconds of host time; a session starts in the morning.
 const DAY_SECONDS: float = 2400.0
@@ -108,7 +109,7 @@ func _process(_delta: float) -> void:
 		for cell: Vector2i in World.TORCHES:
 			if area.has_point(cell):
 				var flicker: float = 0.9 + 0.1 * sin(time * 9.0 + cell.x * 1.7) * sin(time * 5.3 + cell.y)
-				_light(Vector2(cell) * World.TILE_SIZE + Vector2(16, 20), TORCH_GLOW, 3.2 * flicker, 1.1 * darkness)
+				_light(SpriteArt.torch_foot(cell) - Vector2(0, 5), TORCH_GLOW, 3.2 * flicker, 1.1 * darkness)
 	# Coloured light from relics, glowing bosses, and waystone runes, faint even by day.
 	var tint: float = maxf(darkness, 0.18)
 	for id: String in World.FERRYMEN:

@@ -2,8 +2,6 @@ TODO LIST:
 
 Each open item has an implementation plan in docs/plan/ (see docs/plan/README.md for the order). Remove an item here when its plan is done.
 
-lets make the door design a little better, they look way too small for a char to enter the room currently. (plan 01)
-
 when selling something to a vendor the list snaps back to the top, lets keep the list where the scroll is so we dont get layout shifts when interacting with a vendor. (plan 02)
 
 lets reduce gold gain, at level 19 I have 22k gold, this seems a bit exessive (plan 03)
