@@ -293,6 +293,33 @@ def sheet_row(frames):
     return result
 
 
+# The rig is authored tall and thin; compact_humanoid bakes it into the stocky outfitter build.
+# Below the neck (rig y >= NECK) rows are squashed by BODY_SQUASH towards the feet at y=53; the
+# head and anything worn on it keep full size, so the head is about a third of the figure.
+# Rig columns WIDEN are drawn twice (two pixels wider through the head, chest and hips) while
+# the outer columns, where the outlines run, move out by one: outlines stay one pixel thick.
+NECK = 21
+BODY_SQUASH = 0.8
+WIDEN = (29, 34)
+
+
+def _rig_x(x):
+    """The rig column drawn at frame column x (the inverse of widening about x=32)."""
+    left, right = WIDEN
+    if x < left - 1:
+        return x + 1
+    if x <= left:
+        return left
+    if x > right + 1:
+        return x - 1
+    return min(x, right)
+
+
+def _rig_y(y):
+    neck = 53 + (NECK - 53) * BODY_SQUASH
+    return round(53 + (y - 53) / BODY_SQUASH) if y >= neck else round(NECK - (neck - y))
+
+
 def compact_humanoid(image):
     """Bake the same pixel-grid rig into every body/gear layer, with feet kept at y=53.
 
@@ -301,9 +328,9 @@ def compact_humanoid(image):
     """
     result = Image(FRAME, FRAME)
     for y in range(FRAME):
-        source_y = round(53 + (y - 53) / 0.8)
+        source_y = _rig_y(y)
         for x in range(FRAME):
-            result.set(x, y, image.get(x, source_y))
+            result.set(x, y, image.get(_rig_x(x), source_y))
     return result
 
 
@@ -359,14 +386,15 @@ def weapon_hand(direction, frame):
 
 
 def reaching_arm(shoulder, hand):
-    """An arm from shoulder to hand at any angle: a 2-pixel sleeve and forearm, a cuff, and a
-    2x2 fist on the hand."""
+    """An arm from shoulder to hand at any angle: a 3-pixel tunic sleeve, a linen forearm, a
+    cuff, and a 2x2 fist on the hand."""
     sx, sy = shoulder
     hx, hy = hand
     ex, ey = round(sx + (hx - sx) * 0.55), round(sy + (hy - sy) * 0.55)
-    sleeve = thick(line(sx, sy, ex, ey), box(-1, 0, 2, 2))
-    fore = thick(line(ex, ey, hx, hy), box(-1, 0, 2, 2)) - box(hx - 1, hy - 1, 2, 2)
-    image = layer(sleeve | fore, LINEN, False)
+    sleeve = thick(line(sx, sy, ex, ey), box(-1, -1, 3, 3))
+    fore = thick(line(ex, ey, hx, hy), box(-1, 0, 2, 2)) - box(hx - 1, hy - 1, 2, 2) - sleeve
+    image = layer(sleeve, TABARD, False)
+    image.over(layer(fore, LINEN, False))
     cx, cy = round(hx - (hx - sx) * 0.2), round(hy - (hy - sy) * 0.2)
     image.set(cx, cy, LINEN[2])
     image.over(layer(box(hx - 1, hy - 1, 2, 2), SKIN_TONES, False))
@@ -416,51 +444,53 @@ TABARD = grey(222, 185, 142)
 HOOD = grey(191, 158, 116)
 CLOAK = grey(169, 137, 98)
 CLOAK_FOLD = grey(90)[0]
-EMBLEM = grey(252)[0]
-CLOTH_COLORS = set(TABARD) | set(HOOD) | {EMBLEM}
+CLOTH_COLORS = set(TABARD) | set(HOOD)
 CLOAK_COLORS = set(CLOAK) | {CLOAK_FOLD}
 
+# Rig-space heads (10 wide, drawn at x 27, y 11): columns 2 and 7 are doubled by WIDEN, so the
+# eyes sit on columns 3 and 6, two pixels apart in the sheet. Full hair lit from the top-left, a
+# fringe, ears ("r"), and a shaded jaw, outfitter style.
 HEADS = {
     "down": [
         "..hhhhhh..",
-        ".hjjhhhhh.",
-        "hjhhhhhhhH",
-        "hhhhhhhhhH",
-        "hhssssssHH",
-        "hsssssssSH",
-        "hseskseSH",
-        "hsskssSS.",
-        ".sssmsSS.",
-        "..sssssS..",
+        ".hjjjhhhh.",
+        "hjjhhhhhhH",
+        "hjhhjhhhHH",
+        "hhjhhhhhHH",
+        "hkssshssSH",
+        "rsseksesSr",
+        "rkssssssSr",
+        ".ssssmsSS.",
+        "..SssSSS..",
     ],
     "up": [
         "..hhhhhh..",
-        ".hjjhhhhh.",
-        "hjhhhhhhhH",
-        "hjhhhhhhhH",
+        ".hjjjhhhh.",
+        "hjjhhhhhhH",
+        "hjhhhhhhHH",
         "hhhhhhhhHH",
         "hhhhhhhhHH",
-        "hhhhhhhhHH",
-        "hhhhhhhHHH",
-        ".hhhhhhHH.",
-        "..SsssSS..",
+        "rhhhhhhhHr",
+        "rhhhhhhHHr",
+        ".hhhhhHHH.",
+        "..SssSSS..",
     ],
     "left": [
         "..hhhhhh..",
-        ".hhjjhhhh.",
+        ".hjjjhhhh.",
         "hjjhhhhhhH",
-        "hhhhhhhhhH",
-        ".ssssshhHH",
-        "sssssShhHH",
-        "seksSShhHH",
-        "skssSShhHH",
-        ".smssShhH.",
-        "..sssShH..",
+        "shjhhhhhHH",
+        "kssshhhhHH",
+        "sekssrhhHH",
+        "ssssSrhhHH",
+        ".mssShhhH.",
+        "..sSShhH..",
+        "..SSShH...",
     ],
 }
 HEAD_PALETTE = {
     "h": HAIR_TONES[1], "H": HAIR_TONES[2], "j": HAIR_TONES[0], "s": SKIN_TONES[1], "S": SKIN_TONES[2],
-    "k": SKIN_TONES[0], "e": rgba("1f1a1c"), "m": rgba("9c6048"),
+    "k": SKIN_TONES[0], "r": SKIN_TONES[2], "e": rgba("1f1a1c"), "m": rgba("9c6048"),
 }
 
 
@@ -539,22 +569,29 @@ def leg_layers(direction, frame):
     return images
 
 
+ARM_W = 3
+
+
 def arm_layer(x, top):
-    """A hanging 2-pixel arm: sleeve, cuff, and hand."""
-    image = layer(box(x, top + 1, 2, 13), LINEN, False)
-    image.rect(x, top + 13, 2, 1, LINEN[2])
-    image.over(layer(box(x, top + 14, 2, 3), SKIN_TONES, False))
+    """A hanging 3-pixel arm (columns x to x+2): a tunic sleeve to the elbow, a linen forearm
+    with a cuff, and a rounded hand."""
+    sleeve = box(x, top, ARM_W, 7) - {(x, top), (x + ARM_W - 1, top)}
+    image = layer(sleeve, TABARD, False)
+    image.over(layer(box(x, top + 7, ARM_W, 6), LINEN, False))
+    image.rect(x, top + 12, ARM_W, 1, LINEN[2])
+    image.over(layer(box(x, top + 13, ARM_W, 3) - {(x, top + 15), (x + ARM_W - 1, top + 15)}, SKIN_TONES, False))
     return image
 
 
-# Front arms hang at x 24-25 and 38-39 beside a 12-pixel torso.
-ARM_X = (24, 38)
+# Front arms hang at x 23-25 and 38-40 beside a 12-pixel torso.
+ARM_X = (23, 38)
 TORSO_FRONT = box(26, 23, 12, 4) - {(26, 23), (37, 23)} | box(27, 27, 10, 10)
 TORSO_SIDE = box(28, 23, 8, 14) - {(28, 23), (35, 23)}
 HOOD_FRONT = box(29, 21, 6, 1) | box(27, 22, 10, 1) | box(26, 23, 12, 2) | box(27, 25, 10, 1)
 HOOD_SIDE = box(29, 21, 7, 1) | box(28, 22, 9, 3)
-TABARD_FRONT = box(29, 25, 6, 16) | box(30, 41, 4, 1)
-TABARD_SIDE = box(28, 25, 3, 16) | box(28, 41, 2, 1)
+# The tinted tunic: the whole torso, flaring into a short skirt over the hips.
+TUNIC_FRONT = TORSO_FRONT | box(27, 37, 10, 3) | box(26, 40, 12, 2) - {(26, 41), (37, 41)}
+TUNIC_SIDE = TORSO_SIDE | box(28, 37, 8, 3) | box(27, 40, 9, 2) - {(27, 41)}
 
 
 def body_layers(direction, frame, with_cloak=False):
@@ -566,19 +603,17 @@ def body_layers(direction, frame, with_cloak=False):
         if direction == "down" and with_cloak:
             layers.append((cloak, True))
         layers.append((leg_layers(direction, frame)[0], True))
-        torso = layer(TORSO_FRONT, LINEN)
-        torso.over(arm_layer(ARM_X[0], 24 + swing(frame)))
+        tunic = layer(TUNIC_FRONT, TABARD)
+        for y in range(27, 41, 2):
+            tunic.set(32, y, TABARD[2])
+        layers.append((tunic, True))
         attacking = frame in ATTACK_HANDS
+        layers.append((arm_layer(ARM_X[0], 24 + swing(frame)), True))
         if not attacking:
-            torso.over(arm_layer(ARM_X[1], 24 - swing(frame)))
+            layers.append((arm_layer(ARM_X[1], 24 - swing(frame)), True))
         elif direction == "up":
-            torso.over(reaching_arm(weapon_shoulder(direction, frame), weapon_hand(direction, frame)))
-        layers.append((torso, True))
+            layers.append((reaching_arm(weapon_shoulder(direction, frame), weapon_hand(direction, frame)), True))
         if direction == "down":
-            tabard = layer(TABARD_FRONT, TABARD)
-            for x, y in ((31, 29), (32, 29), (30, 30), (33, 30), (30, 31), (33, 31), (31, 32), (32, 32)):
-                tabard.set(x, y, EMBLEM)
-            layers.append((tabard, True))
             belt = Image(FRAME, FRAME)
             belt.rect(27, 35, 10, 2, BELT_TONE)
             belt.rect(31, 35, 2, 2, BUCKLE_TONE)
@@ -604,11 +639,8 @@ def body_layers(direction, frame, with_cloak=False):
             layers.append((cloak, True))
         for leg in leg_layers(direction, frame):
             layers.append((leg, True))
-        layers.append((layer(TORSO_SIDE, LINEN), True))
-        tabard = layer(TABARD_SIDE, TABARD)
-        tabard.set(29, 30, EMBLEM)
-        tabard.set(29, 31, EMBLEM)
-        layers.append((tabard, True))
+        tunic = layer(TUNIC_SIDE, TABARD)
+        layers.append((tunic, True))
         belt = Image(FRAME, FRAME)
         belt.rect(28, 35, 8, 2, BELT_TONE)
         belt.rect(28, 35, 2, 2, BUCKLE_TONE)
@@ -801,7 +833,7 @@ def armor_builder(kind):
             if pauldron:
                 extra = layer(ellipse(arm_x + 1, 24.5, 2.6, 2.4), palette)
             else:
-                extra = layer(box(arm_x, 24, 2, 4 if tunic else 6), palette)
+                extra = layer(box(arm_x, 24, ARM_W, 4 if tunic else 6), palette)
         else:
             reach = frame in ATTACK_HANDS
             for x, lift in ((ARM_X[0], swing(frame)), (ARM_X[1], -swing(frame))):
@@ -809,7 +841,7 @@ def armor_builder(kind):
                 if pauldron:
                     extra.over(layer(ellipse(x + 1, 24.5, 2.6, 2.4), palette))
                 else:
-                    extra.over(layer(box(x, 24 + lift, 2, 2 if short else (4 if tunic else 6)), palette))
+                    extra.over(layer(box(x, 24 + lift, ARM_W, 2 if short else (4 if tunic else 6)), palette))
             if pauldron and "spikes" in extras:
                 extra.over(layer({(24, 21), (24, 22), (23, 22), (39, 21), (39, 22), (40, 22)}, BONE, False))
             if pauldron and "trim" in extras:
@@ -846,10 +878,10 @@ def armor_builder(kind):
         collar(image, box(28, 22, 9, 3) if side else box(26, 22, 12, 3), extras, accent)
         image = image.outlined().cut(covers)
         if side:
-            sleeve = layer(box(side_arm_x(frame) - 1, 24, 4, 7), palette)
+            sleeve = layer(box(side_arm_x(frame) - 1, 24, ARM_W + 2, 7), palette)
         else:
-            sleeve = layer(box(ARM_X[0] - 1, 24 + swing(frame), 3, 7), palette)
-            sleeve.over(layer(box(ARM_X[1], 24 - swing(frame), 3, 3 if frame in ATTACK_HANDS else 7), palette))
+            sleeve = layer(box(ARM_X[0] - 1, 24 + swing(frame), ARM_W + 1, 7), palette)
+            sleeve.over(layer(box(ARM_X[1], 24 - swing(frame), ARM_W + 1, 3 if frame in ATTACK_HANDS else 7), palette))
         return image.over(sleeve.outlined())
     return build
 

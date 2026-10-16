@@ -8,8 +8,11 @@ The game window shows 15×11 tiles at 2× zoom and follows your character smooth
 Tibia-style; the dedicated-server window centres the whole map. Walls are oblique:
 their tops are raised up and to the left, and the world is drawn row by row so
 walls nearer the camera (south/east) cover characters and items behind them.
-Characters have compact adult proportions: an unarmoured silhouette is about 36 pixels
-tall (previously 44–45), with a 3/4 view, a tinted hood and tabard, and a two-step walk.
+Characters have stocky outfitter proportions (the Tibia outfitter is the reference for the feel,
+nothing is copied): an unarmoured silhouette is about 38 pixels tall and 22 wide, the head
+a full-size third of it with lit hair, a fringe, ears and a shaded jaw. They wear a tinted
+collar and a tinted tunic with short sleeves, a belt, linen forearms, trousers, and boots, and
+walk in two steps.
 **There is no default cape.** A cape is drawn only when an item occupies the cape slot,
 including on NPCs and humanoid monsters.
 Grass, dirt, sand, cobblestone, animated water, plank piers, stone walls, trees, worn
@@ -65,10 +68,13 @@ Base body/cloth have neither cape fill nor cape outlines baked into them.
 Gear sheets leave holes where the hood or near arm must stay visible, so each item
 needs only one sheet rather than one per combination.
 
-The rig is slim, after classic 32-pixel outfits: a 10-pixel head, a 12-pixel torso, 2-pixel
-arms hanging at x 24–25 and 38–39, and 3-pixel legs (`leg_parts` is shared by the body and by
+The rig is authored tall and slim: a 10-pixel head, a 12-pixel torso, 3-pixel arms (`ARM_W`)
+hanging at x 23–25 and 38–40, and 3-pixel legs (`leg_parts` is shared by the body and by
 worn legs and boots so they line up). The generator applies `compact_humanoid` to every body, cloth and worn-item frame using
-the same integer pixel mapping (80% authored height, feet anchored at frame y=53).
+the same integer pixel mapping: rows below the neck (`NECK`) are squashed to 80% towards the
+feet at frame y=53 while the head and headgear keep full size, and rig columns 29 and 34
+(`WIDEN`) are drawn twice, so head, chest and hips are two pixels wider and outlines stay one
+pixel thick. Rig rows 25, 31, 35, 41, 45 and 51 fall out in the squash; put details elsewhere.
 This is baked into the PNGs, not a runtime stretch. It keeps grips, masks, capes and
 walk poses registered without altering the 64×64 frame or gameplay collision footprint.
 Monster bodies keep their own proportions; humanoid monsters use the compact character rig.

@@ -1530,8 +1530,8 @@ func _sprite_checks() -> void:
 					var pixel := Vector2i(x, y)
 					bounds = Rect2i(pixel, Vector2i.ONE) if pixels == 0 else bounds.merge(Rect2i(pixel, Vector2i.ONE))
 					pixels += 1
-			check(pixels > 150 and bounds.size.y >= 33 and bounds.size.y <= 37,
-				"compact character height is 33-37 pixels in every pose")
+			check(pixels > 150 and bounds.size.y >= 35 and bounds.size.y <= 39,
+				"compact character height is 35-39 pixels in every pose")
 			check(bounds.end.y >= 53 and bounds.end.y <= 55 and bounds.size.x <= 26,
 				"compact characters keep their foot anchor without a baked-in cape silhouette")
 	var weapon_masks: Dictionary = {}

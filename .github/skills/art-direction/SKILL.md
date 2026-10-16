@@ -83,7 +83,7 @@ taller than a tile are `32 + raise` square and drawn `raise` pixels up-left of t
 (walls 48×48 with raise 16, castle walls raise 16 + 6 pad, towers raise 32). Draw back to
 front (larger `x + y + height` is nearer).
 
-**Scale.** A character is ~36 px tall (feet at frame y 53 in a 64×64 frame, so about 1.1
+**Scale.** A character is ~38 px tall (feet at frame y 53 in a 64×64 frame, so about 1.1
 tiles); a tile is 32 px; the game shows 15×11 tiles at 2×. Size anything people use against
 that: doorways at least as tall as a character (~34 px opening) and ~16 px wide, counters
 waist-high (~16 px), trees about two tiles. **Check scale first**; too small reads as a toy.
