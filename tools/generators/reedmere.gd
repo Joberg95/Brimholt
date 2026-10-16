@@ -10,6 +10,7 @@ extends "res://tools/generators/landscape.gd"
 ##   godot --headless --path . --script res://tools/generators/reedmere.gd
 
 ## Top-left cell of LAYOUT; a space keeps the cell as it is.
+const CobbleTowns = preload("res://tools/generators/cobble_towns.gd")
 const ORIGIN: Vector2i = Vector2i(105, 180)
 const LAYOUT: Array[String] = [
 	"...WWWWWWWWWWWWWWWWWWWWWWWWW",
@@ -90,7 +91,7 @@ static func rebuild(scene_root: Node) -> int:
 	for y: int in range(EAST.position.y, EAST.end.y):
 		for x: int in range(EAST.position.x, EAST.end.x):
 			if _terrain_of(layer, Vector2i(x, y)) == "T":
-				wanted[Vector2i(x, y)] = "."
+				wanted[Vector2i(x, y)] = "="
 	for cell: Vector2i in WAYSTONE_SQUARE:
 		wanted[cell] = "="
 	var stone: Node2D = scene_root.get_node_or_null("Ferrymen/" + WAYSTONE)
@@ -101,6 +102,9 @@ static func rebuild(scene_root: Node) -> int:
 		changed += 1
 	for cell: Vector2i in wanted:
 		var tile: String = wanted[cell]
+		# Towns are paved inside their walls (cobble_towns.gd): open ground is cobbles or quay.
+		if tile in CobbleTowns.PAVED and CobbleTowns.in_town(cell):
+			tile = "b" if _terrain_of(layer, cell) == "b" else "="
 		if _terrain_of(layer, cell) == tile:
 			continue
 		if tile in "#WT" and blocked.has(cell):

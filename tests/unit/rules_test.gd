@@ -21,6 +21,7 @@ const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const TownPaths = preload("res://tools/generators/town_paths.gd")
 const ClearWalls = preload("res://tools/generators/clear_walls.gd")
+const CobbleTowns = preload("res://tools/generators/cobble_towns.gd")
 const Landscape = preload("res://tools/generators/landscape.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Atlas = preload("res://game/data/atlas.gd")
@@ -3445,6 +3446,9 @@ func _stray_wall_checks() -> void:
 	var stray: Array[Vector2i] = ClearWalls.stray_walls()
 	check(stray.is_empty(), "no stray walls on the map (%d, first %s)" % [stray.size(), stray.slice(0, 3)])
 	check(Landscape.PASTURES_PER_TOWN == 0, "the landscape fences no pastures")
+	# Towns are paved inside their walls, as in Tibia (tools/generators/cobble_towns.gd).
+	var unpaved: Dictionary = CobbleTowns.paving()
+	check(unpaved.is_empty(), "every town is paved (%d tiles left, first %s)" % [unpaved.size(), unpaved.keys().slice(0, 3)])
 
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
@@ -3918,8 +3922,7 @@ func _building_checks() -> void:
 	var street: Array[String] = ["lamp_post", "well", "bench", "stall"]
 	check(World.LAMPS.size() >= 40, "town streets have lamp posts (%d)" % World.LAMPS.size())
 	for lamp: Vector2i in World.LAMPS:
-		check(World.terrain(lamp) in World.LAMP_VERGE and [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT].any(
-			func(side: Vector2i) -> bool: return World.terrain(lamp + side) == "="), "the lamp at %s stands beside a street, not on it" % lamp)
+		check(World._against_wall(lamp), "the lamp at %s stands against a wall with room in front" % lamp)
 	for zone: Dictionary in World.ZONES:
 		if zone["town"]:
 			var with_pieces: int = _town_areas(zone["rect"], street, false)

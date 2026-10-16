@@ -10,6 +10,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/castle_town.gd
 
 ## Must match World.TERRAINS (the rules check verifies it).
+const CobbleTowns = preload("res://tools/generators/cobble_towns.gd")
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILE: int = 32
@@ -85,7 +86,10 @@ static func plan() -> Dictionary:
 		for y: int in patch[1].size():
 			for x: int in patch[1][y].length():
 				if patch[1][y][x] != " ":
-					cells[patch[0] + Vector2i(x, y)] = patch[1][y][x]
+					# Towns are paved inside their walls (cobble_towns.gd): open ground is cobbles.
+					var cell: Vector2i = patch[0] + Vector2i(x, y)
+					var paved: bool = patch[1][y][x] in CobbleTowns.PAVED and CobbleTowns.in_town(cell)
+					cells[cell] = "=" if paved else patch[1][y][x]
 	for run: Array in WALLS:
 		var step: Vector2i = (run[1] - run[0]).sign()
 		var cell: Vector2i = run[0]

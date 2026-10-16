@@ -9,7 +9,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim bench playtest check \
-	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls clear-boulders map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -140,6 +140,9 @@ island: ## Thin Blackreed Isle's forest to about a quarter of its trees (keeps o
 
 fill-gaps: ## Put camps in the countryside's empty stretches, copying each region's camps (a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/fill_gaps.gd
+
+cobble-towns: ## Pave every town inside its walls, with a plank quay by its piers (a re-run changes nothing)
+	$(GODOT) --headless --path . --script res://tools/generators/cobble_towns.gd
 
 clear-walls: ## Clear stone walls that belong to no building or town wall (a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/clear_walls.gd

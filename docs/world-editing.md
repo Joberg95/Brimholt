@@ -163,6 +163,12 @@ the arms a town wall pushes inward, dry-stone pens, and loose bits in the countr
 to the ground most common round them. A re-run changes nothing; the rules check fails while any
 stray wall is left. Run it after painting walls, then `make town-paths world-map`.
 
+**Paved towns** (`tools/generators/cobble_towns.gd`, `make cobble-towns`): inside every town
+zone the grass, sand, dirt, snow, and trees become cobblestone (snowy cobbles on the frost isles),
+and shore within 8 tiles of a town's pier becomes a plank quay, as Tibia's cities are paved. The
+castle and Reedmere painters plan cobbles there too. A re-run changes nothing; the rules check
+fails while a town tile is unpaved. Run it after editing a town, then `make world-map`.
+
 **Door paths** (`tools/generators/town_paths.gd`, `make town-paths`): every town door gets a
 cobbled path to the nearest street, the shortest walk over open ground (a tree is cut only if
 there is no other way). After adding a house, run it; the rules check fails while a door opens
