@@ -265,7 +265,7 @@ func _run() -> void:
 		return
 	if not await _check_mount():
 		return
-	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 16 hunting weapons in 192 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, "
+	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 22 hunting weapons in 264 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
 		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
@@ -312,7 +312,7 @@ func _check_cape_layers() -> bool:
 
 func _check_weapon_study() -> bool:
 	var viewport := SubViewport.new()
-	viewport.size = WeaponStudy.CARD * Vector2i(3, 6)
+	viewport.size = WeaponStudy.CARD * Vector2i(3, 8)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	root.add_child(viewport)
@@ -330,7 +330,7 @@ func _check_weapon_study() -> bool:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var bare: Image = viewport.get_texture().get_image()
-	var visible: bool = study.weapons.size() == 16
+	var visible: bool = study.weapons.size() == 22
 	for index: int in study.weapons.size():
 		var origin: Vector2i = Vector2i(index % 3, index / 3) * WeaponStudy.CARD
 		for pose: int in 3:
