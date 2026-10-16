@@ -34,8 +34,6 @@ const Professions = preload("res://game/data/professions.gd")
 const Solo = preload("res://game/core/solo.gd")
 const Nav = preload("res://game/core/nav.gd")
 const SpriteArtSheets = preload("res://game/render/sprite_art.gd")
-const Sounds = preload("res://game/data/sounds.gd")
-const Sound = preload("res://game/audio/sound.gd")
 var failures: int = 0
 var checks: int = 0
 var clock: float = 0.0
@@ -105,7 +103,6 @@ func _run() -> void:
 	_rune_checks()
 	_map_guidance_checks()
 	_trophy_steal_checks()
-	_sound_checks()
 	for spawn: Vector2i in World.SPAWNS:
 		check(World.walkable(spawn), "walkable spawn")
 	check(not World.walkable(Vector2i(-1, 1)), "negative bounds")
@@ -5317,77 +5314,3 @@ func _death_and_skull_checks() -> void:
 	a["skull_until"] = 500.0
 	fight.tick(500.0)
 	check(a["skull"] == "", "white skulls expire")
-
-
-## Sound: every sound's files exist on a bus, every event, monster, ground, and place maps to a
-## known sound or none, and the effect pool never grows past its size (dummy audio driver).
-func _sound_checks() -> void:
-	for id: String in Sounds.SOUNDS:
-		var entry: Dictionary = Sounds.SOUNDS[id]
-		check(entry["bus"] in Sounds.BUSES and not entry["files"].is_empty(), "every sound has files and a bus")
-		for path: String in entry["files"]:
-			check(ResourceLoader.exists(path), "sound file exists: " + path)
-	var events: Array = [{"kind": "player"}, {"kind": "message"}, {"kind": "monster"}, {"kind": "ground"}]
-	for style: String in ["damage", "critical", "heal", "mana", "experience"]:
-		for amount: int in [0, 5]:
-			events.append({"kind": "hit", "style": style, "amount": amount})
-	var elements: Array = ["", "heal", "home"] + Spells.ELEMENTS.values() + Spells.RUNES_BY_ELEMENT.keys()
-	for element: String in elements:
-		events.append({"kind": "missile", "element": element})
-		events.append({"kind": "area", "element": element})
-	for event: Dictionary in events:
-		var id: String = Sounds.for_event(event)
-		check(id.is_empty() or Sounds.exists(id), "event %s maps to a sound or none" % [event])
-		var landing: String = Sounds.landing(event)
-		check(landing.is_empty() or Sounds.exists(landing), "missile landings map to a sound or none")
-	check(Sounds.for_event({"kind": "hit", "style": "damage", "amount": 0}) == "miss", "a blocked blow whooshes")
-	check(Sounds.for_event({"kind": "hit", "style": "experience", "amount": 9}).is_empty(), "experience is silent")
-	check(Sounds.for_event({"kind": "area", "element": "fire"}) == "fire", "a fire rune crackles")
-	for kind: String in Monsters.MONSTERS:
-		for voice: String in Sounds.monster_voices(kind, Monsters.MONSTERS[kind]["look"]):
-			check(Sounds.exists(voice), "every monster has a voice and a death sound")
-	check(Sounds.monster_voices("grey_wolf", "quadruped")[0] == "voice_wolf", "wolves howl")
-	for ground: String in World.WALKABLE:
-		check(Sounds.exists(Sounds.FOOTSTEPS.get(ground, "step_dirt")), "every walkable ground has a footstep")
-	check(Sounds.footstep(World.SPAWNS[0]).begins_with("step_"), "footsteps where players start")
-	for kind: String in ["", "town", "dungeon", "region"]:
-		for night: float in [0.0, 1.0]:
-			for rain: float in [0.0, 0.7]:
-				for flag: String in ["", "desert", "isles", "underground"]:
-					var place: Dictionary = {"kind": kind, "night": night, "rain": rain, "region": "Mirewood Fen" if night > 0.0 else ""}
-					if not flag.is_empty():
-						place[flag] = true
-					var layers: Dictionary = Sounds.ambience(place)
-					for layer: String in ["bed", "rain"]:
-						var wanted: Array = layers[layer]
-						check(wanted[0].is_empty() or (Sounds.exists(wanted[0]) and Sounds.SOUNDS[wanted[0]].get("loop", false)),
-							"ambience layers are known loops")
-						check(wanted[1] >= 0.0 and wanted[1] <= 1.0, "ambience volumes stay within 0..1")
-	check(Sounds.ambience({"underground": true, "rain": 1.0})["rain"][0].is_empty(), "no rain underground")
-	check(Sounds.ambience({"kind": "town"})["bed"][0] == "town", "towns murmur by day")
-	check(Sounds.ambience({"night": 1.0})["bed"][0] == "crickets", "crickets at night")
-	check(Keybinds.DEFAULTS.has("mute"), "a key mutes the sound")
-	var engine := Sound.new()
-	root.add_child(engine)
-	engine.setup(null, null)
-	for bus: String in Sounds.BUSES:
-		check(AudioServer.get_bus_index(bus) >= 0, "the audio buses exist")
-	var used: Dictionary = {}
-	for index: int in Sound.POOL_SIZE * 3:
-		var player: Node = engine.play("hit", Vector2i(index % 3, 0))
-		check(player != null, "nearby effects play")
-		used[player] = true
-	var pooled: int = 0
-	for child: Node in engine.get_children():
-		pooled += 1 if child is AudioStreamPlayer2D else 0
-	check(used.size() == Sound.POOL_SIZE and pooled == Sound.POOL_SIZE, "the effect pool never grows past its size")
-	check(engine.play("hit", Vector2i(Sound.HEARING_TILES + 1, 0)) == null, "sounds too far away are not played")
-	check(engine.play("no_such_sound") == null, "unknown sounds are ignored")
-	check(engine.play("level_up") is AudioStreamPlayer, "sounds without a place play flat")
-	engine.set_ambience({"bed": ["birds", 1.0], "rain": ["", 0.0]})
-	check(engine.layer_state("bed")["want"].is_empty(), "no ambience outside a game")
-	engine.toggle_mute()
-	check(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")), "mute silences the master bus")
-	engine.toggle_mute()
-	check(not AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")), "unmute restores it")
-	engine.queue_free()

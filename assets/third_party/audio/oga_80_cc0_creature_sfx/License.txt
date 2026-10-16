@@ -1,8 +1,0 @@
-80 CC0 creature SFX
-by rubberduck (OpenGameArt.org)
-https://opengameart.org/content/80-cc0-creature-sfx
-
-License: Creative Commons Zero (CC0 1.0), public domain dedication
-https://creativecommons.org/publicdomain/zero/1.0/
-
-The pack ships without a license file; this one records the license stated on its page.

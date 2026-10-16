@@ -34,11 +34,9 @@ game/
     monsters.gd          Monster catalog, loot tables, bosses and their relics
     spells.gd            Spell catalog and cooldown groups
     professions.gd       Gathering and crafting skills, resource bands, skill curve, recipe derivation, food
-    sounds.gd            Every sound id (files, bus, volume) and which sound an event, monster, footstep, or place makes
   persistence/           Host-side saves and the client identity
     character_store.gd   Signed per-character save files; capture, restore, and sanitizing
     identity.gd          This computer's secret identity token (user://identity.cfg)
-  audio/sound.gd         Sound engine: buses and saved volumes, a pool of positional players, ambience loops, thunder
   input/keybinds.gd      Rebindable keys and the spells-only action bar
   ui/                    UI components; each gets the main node and builds controls into its UI layer
     layout.gd            Shared screen layout constants (game window, panel origin, zoom, bar slot)
@@ -81,7 +79,7 @@ game/
     markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster markers
 assets/sprites/          Original generated sprite sheets, imported painted outfits/ and icons/ (+ Godot .import files)
 art/outfits/             Painted outfit sources and manifest.json (imported by make outfits)
-assets/third_party/      CC0 textures and sounds (audio/) with their licenses (CREDITS.md)
+assets/third_party/      CC0 textures with their licenses (CREDITS.md)
 tests/
   unit/                  Deterministic rule checks (no networking, no rendering)
   integration/           Real ENet peers and the two-bot playthrough

@@ -34,7 +34,6 @@ const MicroMenu = preload("res://game/ui/micro_menu.gd")
 const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 const Bots = preload("res://game/core/bots.gd")
 const Solo = preload("res://game/core/solo.gd")
-const Sound = preload("res://game/audio/sound.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -128,7 +127,6 @@ var spell_book: SpellBook
 var character_window: CharacterWindow
 ## The cogwheel's menu: status, players, settings, Controls, and Leave game.
 var game_menu: GameMenu
-var sound: Sound
 var professions_window: ProfessionsWindow
 var party_window: PartyWindow
 var micro_menu: MicroMenu
@@ -430,10 +428,6 @@ func _run_action(action: String) -> void:
 		quest_list.shown = not quest_list.shown
 	elif action == "spell_book":
 		spell_book.toggle()
-		sound.play("book_open" if spell_book.visible else "book_close")
-	elif action == "mute":
-		sound.toggle_mute()
-		last_action_message = "Sound off." if sound.muted else "Sound on."
 	elif action == "character":
 		character_window.toggle()
 	elif action == "professions":
@@ -442,7 +436,6 @@ func _run_action(action: String) -> void:
 		party_window.toggle()
 	elif action == "lexicon":
 		lexicon.toggle()
-		sound.play("book_open" if lexicon.visible else "book_close")
 	elif not connected:
 		return
 	elif action == "pick_up":
@@ -1478,8 +1471,6 @@ func monster_gone(id: int) -> void:
 func _monster_died(id: int) -> void:
 	if monsters.has(id) and _world_view != null:
 		_world_view.fx.burst("death", (monsters[id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color(0.75, 0.7, 0.8))
-	if monsters.has(id) and sound != null:
-		sound.monster_died(monsters[id])
 	monsters.erase(id)
 	_monster_index.remove(id)
 
@@ -1516,8 +1507,6 @@ func _map_point(cell: Vector2i) -> Vector2:
 
 func _show_effect(event: Dictionary) -> void:
 	var born: float = Time.get_ticks_msec() / 1000.0
-	if sound != null:
-		sound.on_event(event)
 	match event.get("kind", ""):
 		"hit":
 			var view: Dictionary = creature_view(event["target"])
@@ -1721,8 +1710,6 @@ func _apply_actor(state: Dictionary, movement: bool = false) -> void:
 		"duration": remaining, "elapsed": 0.0, "received": _now(),
 	}
 	_keep_attack(previous, actors[id])
-	if id == self_id and sound != null and not previous.is_empty():
-		sound.own_update(previous["state"], state)
 	if id == self_id and connected:
 		_remember_character(state)
 	if id == self_id:
@@ -1746,9 +1733,6 @@ func _build_ui() -> void:
 	_view.setup(self)
 	layer.add_child(_view)
 	_world_view = _view.world_view
-	sound = Sound.new()
-	add_child(sound)
-	sound.setup(self, _world_view)
 	hud = Hud.new()
 	inventory = InventoryPanel.new()
 	maps = WorldMaps.new()

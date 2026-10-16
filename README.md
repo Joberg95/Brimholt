@@ -119,7 +119,6 @@ These are the default keys; every key can be changed (see below).
 | Hover an item | Show its slot and stats |
 | Right-click a person | Open their menu (ferrymen: **Travel**; vendors: **Trade**; bankers: **Bank**; quest givers: **Quests**) |
 | Q / E | Drink a health / mana potion |
-| N | Mute or unmute all sound (volumes are in the game menu) |
 | Right-click / click a bar slot | Choose its spell / cast it |
 | M | Open or close the world map (drag to move, mouse wheel to zoom) |
 | K | Open or close the Lexicon (monsters, where they live, and their drops) |
@@ -190,7 +189,7 @@ for the player bots), MIT-licensed and vendored as a GDExtension in `addons/limb
 Windows x86_64, and Linux x86_64 builds) with its `LICENSE.md`; the Windows export ships
 that license beside its DLL. After a fresh clone run `make import` so Godot registers the
 extension. The only third-party assets
-are CC0 (public domain) textures and sounds, listed with their licenses in
+are CC0 (public domain) textures, listed with their licenses in
 [`assets/third_party/CREDITS.md`](assets/third_party/CREDITS.md). Do not
 copy or translate GPL code into this project without a licensing decision.
 MIT reuse requires checking the specific files/dependencies and retaining their
