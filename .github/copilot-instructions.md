@@ -1,6 +1,6 @@
 # Brimholt repository instructions
 
-- Brimholt is an original working name, not verified trademark/name clearance. Do not reuse proprietary Tibia artwork, maps, names, or code.
+- Brimholt is an original working name, not verified trademark/name clearance. Tibia is the design reference and may be imitated closely: item, outfit, and monster concepts, silhouettes, colour schemes, layouts, and names. Never copy Tibia's files (sprites, traced or recoloured art, maps, client data) or code: every pixel is drawn in this repository.
 - Use Godot 4.5+, typed GDScript, and native ENet/MultiplayerAPI. No Node server, third-party APIs, or paid services. The one vendored code dependency is LimboAI v1.6.0 (MIT GDExtension in `addons/limboai/`, keep its LICENSE.md) for bot AI behavior trees; run `make import` after a fresh clone so the extension is registered. Downloaded assets must be CC0, kept in `assets/third_party/` with their license file and a row in `assets/third_party/CREDITS.md`.
 - Open Tibia engines are high-level references, not dependencies: do not copy/translate GPL code without a licensing decision; MIT reuse needs file/dependency checks and applicable notices. Neither source license licenses proprietary Tibia assets. See README.md.
 - The world is `game/maps/overworld.tscn`, painted in Godot's TileMap editor (terrain custom data, plus Spawns/Ferrymen/Items markers). Treat that scene as the source of truth; do not regenerate it with `tools/generators/make_map.gd --force` without the user's approval.
@@ -14,7 +14,7 @@
 - Player input goes through `game/input/keybinds.gd`: never hard-code gameplay keys. New actions need a default binding there; the action bar has nine rebindable slots (default 1-9) that hold spells only (`"spell:<id>"` or empty); other actions get their own bindings in `Keybinds.DEFAULTS`.
 - Peer 1 owns all gameplay state. Keep input ownership separate from node multiplayer authority. Validate RPC senders; clients request actions, never positions or authoritative appearance.
 - Enforce movement timing, walkability, occupancy, item moves (reach, slot type, capacity, cooldown), and player limits on the server. Synchronize spawn, late-join, equipment, ground-item, and disconnect state reliably; send backpack contents only to their owner.
-- Preserve host/client behavior parity. Art is original sprite sheets in `assets/sprites` (see `docs/art.md`): one layered sheet per worn item, never a sprite per combination, and never ripped, proprietary, or Tibia-derived assets (CC0 effect textures live in `assets/third_party/`).
+- Preserve host/client behavior parity. Art is original sprite sheets in `assets/sprites` (see `docs/art.md`): one layered sheet per worn item, never a sprite per combination, and never ripped or proprietary files: close imitations of Tibia designs are drawn here, not copied (CC0 effect textures live in `assets/third_party/`).
 - Inspect actual files and reuse existing helpers before editing. Make surgical changes, keep types explicit, and surface errors.
 - Consult the relevant repository skill before gameplay, networking, equipment, monster (`monster-authoring`), or validation work.
 - Check tooling before claiming results. Use bounded checks, report what actually ran, and never bypass denied permissions.
