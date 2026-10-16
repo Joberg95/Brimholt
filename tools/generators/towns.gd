@@ -58,6 +58,7 @@ const QUEST_GIVERS: Array = [
 	# The elite caves (game/data/caves.gd): one giver per cave in the town nearest its mouth.
 	["delver_hask", "Delver Hask", "Highmoor", Vector2i(326, 89), Vector2i.DOWN],
 	["icewarden_sigrun", "Icewarden Sigrun", "Highmoor", Vector2i(334, 89), Vector2i.DOWN],
+	["watchman_brega", "Watchman Brega", "Highmoor", Vector2i(330, 90), Vector2i.DOWN],
 	["tidewarden_neve", "Tidewarden Neve", "Emberfall", Vector2i(284, 192), Vector2i.DOWN],
 	["forgewarden_kel", "Forgewarden Kel", "Dunmere", Vector2i(196, 272), Vector2i.UP],
 	# The frost isles: Hrimvik's square (tools/generators/frost_isles.gd).

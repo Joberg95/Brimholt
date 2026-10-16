@@ -582,6 +582,14 @@ elites (half of what the kills gave, in experience and gold), or the champion (a
 the champion gave, and potions or rune shards). Elites drop materials that sell for 90–165
 gold, potions, rune shards, and from the Ember Deep and the Frostvault fire and frost runes.
 
+**The Cyclops Hollow** (a hole in the Smoulder Fells, north of Highmoor; levels 30-36) is a shared
+cave of cyclopes and cyclops smiths in dense camps of five, normal monsters like the trench's.
+**Watchman Brega** in Highmoor gives its long hunt, **The Hundred-Eyed Hollow**: 75 cyclopes or
+smiths, killed inside the Hollow (kills outside it do not count). It pays half the kills'
+experience and gold, 10 health and 10 mana potions, and one turn-in in four one of the Hollow's own
+bound Epic pieces: the **Cyclops-eye amulet**, the **Hollowforge hammer** (a Warrior's), or the
+**Cyclops-hide cloak** (keep a backpack slot free for it).
+
 ## The frost isles and Hrimvik
 
 West of the mainland, across open sea, lie the **frost isles**: Hrimfold, the largest, with the

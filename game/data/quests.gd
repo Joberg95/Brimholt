@@ -8,6 +8,9 @@ extends RefCounted
 ## pay experience and gold derived from Balance (see reward()): `share` of what the kills
 ## themselves gave, so a boss task (share 1) doubles the boss's experience.
 ##
+## Caves: a task with "cave" (game/data/caves.gd) counts only kills inside that cave. Rare rolls:
+## "rare" ({chance, items}) adds one of its items, drawn at random, to the reward that often.
+##
 ## Chains: a task with "requires" opens only once that task is done. Tasks may also pay
 ## "items" ([item, count] pairs: potions, rune shards, a boss task's bound accessory) and "gear"
 ## (an equipment slot: the chain's bound quest piece of that slot for your class, World.quest_piece,
@@ -133,6 +136,14 @@ const TASKS: Dictionary = {
 	"hoarfrost_jarl": {"title": "The Hoarfrost Jarl", "giver": "icewarden_sigrun", "monster": "hoarfrost_jarl", "count": 1,
 		"level": 45, "reward": "experience", "share": 1.0, "items": [["rune_shard", 3]],
 		"intro": "The ogres' jarl sits in the deepest hall on a throne of ice. End his reign."},
+	# The Cyclops Hollow (game/data/caves.gd): a long hunt inside the cave only ("cave"), paying
+	# potions and, one turn-in in four, one of the Hollow's own pieces ("rare": a chance and the
+	# items one is drawn from; turning in needs a free slot for it).
+	"hundred_eyed_hollow": {"title": "The Hundred-Eyed Hollow", "giver": "watchman_brega", "monster": "cyclops",
+		"also": ["cyclops_smith"], "target": "cyclopes in the Hollow", "count": 75, "level": 33, "cave": "cyclops_hollow",
+		"reward": "experience", "share": 0.5, "items": [["health_potion", 10], ["mana_potion", 10]],
+		"rare": {"chance": 0.25, "items": ["cyclops_eye_amulet", "hollowforge_hammer", "cyclops_hide_cloak"]},
+		"intro": "A whole tribe of cyclopes lives in the Hollow under the fells, and their smiths keep its forges hot. Seventy-five of them, and they will think twice before coming up again."},
 	# The frost isles (Hrimvik, by boat): tundra hunts from Huntswoman Eyra and the Rimewater
 	# Trench from Trenchwarden Olav, none chained.
 	"snow_wolves": {"title": "Wolves on the snow", "giver": "huntswoman_eyra", "monster": "snow_wolf", "count": 25,

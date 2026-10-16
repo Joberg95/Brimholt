@@ -16,6 +16,7 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Items = preload("res://game/data/items.gd")
 const Quests = preload("res://game/data/quests.gd")
+const Caves = preload("res://game/data/caves.gd")
 const Titles = preload("res://game/data/titles.gd")
 
 const TICK_SECONDS: float = 0.1
@@ -695,7 +696,7 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 	var definition: Dictionary = monster_def(id)
 	var experience: int = Balance.mob_experience(monster["level"], definition["rank"])
 	var credited: Array[int] = _award_experience(experience, monster["damage_by"], monster["cell"], now, events)
-	_credit_tasks(monster["kind"], credited, events)
+	_credit_tasks(monster["kind"], credited, events, monster["cell"])
 	if definition.has("relics"):
 		_award_trophies(monster["kind"], monster["fought"], monster["cell"], events)
 	_drop_loot(monster, credited, now, events)
@@ -879,6 +880,13 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 				return {"ok": false, "reason": "Slay %s first" % (target if definition["count"] == 1
 					else "%d %s" % [definition["count"], target]), "events": []}
 			var items: Array = World.task_items(task, player["vocation"])
+			# A rare roll needs a slot ready for its prize, whether or not it comes.
+			var rare: Dictionary = definition.get("rare", {})
+			if not rare.is_empty() and World.with_items(player["backpack"], items + [[rare["items"][0], 1]]).is_empty():
+				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % (items.size() + 1),
+					"events": []}
+			if not rare.is_empty() and rng.randf() < float(rare["chance"]):
+				items.append([rare["items"][rng.randi_range(0, rare["items"].size() - 1)], 1])
 			var packed: Array = World.with_items(player["backpack"], items)
 			if not items.is_empty() and packed.is_empty():
 				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % items.size(),
@@ -933,11 +941,15 @@ static func next_task_hint(player: Dictionary, current_giver: String) -> String:
 	return " Next: %s in %s has work for levels %d-%d." % [giver["name"], giver["place"], band.x, band.y]
 
 
-func _credit_tasks(kind: String, credited: Array[int], events: Array) -> void:
+## Counts a kill toward the credited players' tasks; a task bound to a cave ("cave") counts only
+## kills at `at` inside it.
+func _credit_tasks(kind: String, credited: Array[int], events: Array, at: Vector2i = Vector2i(-1, -1)) -> void:
 	for id: int in credited:
 		var tasks: Dictionary = world.players[id]["tasks"]
 		for task: String in tasks:
 			var definition: Dictionary = Quests.TASKS[task]
+			if definition.has("cave") and Caves.at(at) != definition["cave"]:
+				continue
 			if Quests.counts(task, kind) and tasks[task] < definition["count"]:
 				tasks[task] += 1
 				var done: bool = tasks[task] == definition["count"]

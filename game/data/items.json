@@ -460,6 +460,9 @@
     {"id": "frostcrown_plate", "name": "Frostcrown plate", "slot": "armor", "level": 35, "look": "plate+trim", "colors": ["a83a2a", "e0b040", "f0e0a0"], "armor": "plate", "loot_only": true},
     {"id": "rimerelic_blade", "name": "Rimerelic blade", "slot": "main_hand", "level": 35, "look": "greatsword+fuller", "colors": ["a8c0d0", "e8f4fc", "4a5a6a"], "vocations": ["knight"], "loot_only": true},
     {"id": "glacier_robe", "name": "Glacier robe", "slot": "armor", "level": 35, "look": "robe+runes", "colors": ["3a6aa8", "8ac0f0", "e8f8ff"], "armor": "cloth", "loot_only": true},
+    {"id": "cyclops_eye_amulet", "name": "Cyclops-eye amulet", "slot": "necklace", "level": 35, "look": "amulet", "colors": ["5a4a32", "c8a050", "ff6a3a"], "bound": true, "quest": "hundred_eyed_hollow"},
+    {"id": "hollowforge_hammer", "name": "Hollowforge hammer", "slot": "main_hand", "level": 35, "look": "hammer", "colors": ["6a6058", "b0a898", "ff8a3a"], "vocations": ["knight"], "bound": true, "quest": "hundred_eyed_hollow"},
+    {"id": "cyclops_hide_cloak", "name": "Cyclops-hide cloak", "slot": "cape", "level": 35, "look": "cape", "colors": ["6a5236", "9a7a52", "c8a070"], "bound": true, "quest": "hundred_eyed_hollow"},
     {"id": "lightning_rune", "name": "Lightning rune", "level": 40, "look": "runestone+sowilo", "colors": ["56545e", "78767e", "ffe060"], "value": 120, "rune": "lightning"}
   ]
 }

@@ -11,7 +11,8 @@ extends RefCounted
 const BAND_X: int = 624
 ## Rows between caves, stacked top to bottom in ORDER.
 const GAP: int = 4
-const ORDER: Array[String] = ["ogre_warrens", "drowned_grotto", "ember_deep", "frostvault", "rimewater_trench"]
+const ORDER: Array[String] = ["ogre_warrens", "drowned_grotto", "ember_deep", "frostvault", "rimewater_trench",
+	"cyclops_hollow"]
 ## name, region (where the mouth opens), near (the mouth is placed as close to this as fits),
 ## size, levels, ambient light, hall count, and the camps: [monster, lowest level, highest level,
 ## monsters per camp (two: an elite takes a solo player the time of four or five normal kills, so
@@ -40,6 +41,11 @@ const CAVES: Dictionary = {
 		"size": Vector2i(58, 42), "min_level": 34, "max_level": 37, "ambient": Color(0.5, 0.64, 0.78), "halls": 11,
 		"camps": [["trench_crab", 34, 35, 5], ["icetide_raider", 35, 36, 5], ["icetide_shaman", 36, 37, 5]],
 		"champion": ["grimclaw", 37]},
+	# Not an elite cave either: the Cyclops Hollow under the Smoulder Fells, cyclopes and their
+	# smiths in dense camps for the 75-kill hunt "The Hundred-Eyed Hollow" (game/data/quests.gd).
+	"cyclops_hollow": {"name": "Cyclops Hollow", "region": "Smoulder Fells", "near": Vector2i(296, 26), "elite": false,
+		"size": Vector2i(58, 42), "min_level": 30, "max_level": 36, "ambient": Color(0.7, 0.58, 0.46), "halls": 11,
+		"camps": [["cyclops", 30, 33, 5], ["cyclops_smith", 33, 36, 5]]},
 }
 
 

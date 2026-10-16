@@ -84,6 +84,7 @@ func _run() -> void:
 	_spell_fx_checks()
 	_title_checks()
 	_gap_checks()
+	_hollow_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -2332,6 +2333,9 @@ func _quest_piece_checks() -> void:
 			for entry: Array in World.task_items(task, vocation):
 				if World.ITEMS[entry[0]].has("quest"):
 					paid[entry[0]] = true
+		# A task's rare roll ("rare") pays its pieces too, one turn-in in a few.
+		for kind: String in definition.get("rare", {}).get("items", []):
+			paid[kind] = true
 		if definition.has("gear") and definition.get("chain", "") == "hunters_lodge":
 			for vocation: String in Balance.VOCATIONS:
 				var piece: String = World.quest_piece("hunters_lodge", definition["gear"], vocation)
@@ -3380,6 +3384,44 @@ func _gap_checks() -> void:
 		var region: String = World.region_at(spawn["cell"])
 		if spawn["count"] == 5 and spawn["radius"] == 2 and by_region.has(region) and World.zone_at(spawn["cell"]).is_empty() 				and Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal":
 			check(by_region[region].has("%s/%d" % [spawn["monster"], spawn["level"]]), "%s camps keep %s's levels" % [spawn["monster"], region])
+
+
+## The Cyclops Hollow (plan 37): its 75-kill hunt counts only kills inside the cave, pays its
+## potions, and rolls one of the Hollow's rare pieces about one turn-in in four.
+func _hollow_checks() -> void:
+	var task: String = "hundred_eyed_hollow"
+	var definition: Dictionary = Quests.TASKS[task]
+	check(definition["count"] == 75 and Quests.counts(task, "cyclops") and Quests.counts(task, "cyclops_smith")
+		and Caves.CAVES.has(definition["cave"]) and World.MOUTH_OF.has(definition["cave"]), "the Hollow's hunt asks for 75 cyclopes in its cave")
+	for kind: String in definition["rare"]["items"]:
+		check(World.ITEMS[kind]["level"] == 35 and World.bound(kind) and World.ITEMS[kind].has("quest")
+			and Items.rarity(World.ITEMS[kind])[0] == "Epic", "%s is the Hollow's own Epic piece" % kind)
+	var world := World.new()
+	var combat := Combat.new(world, 37)
+	world.monsters.clear()
+	check(world.add_player(1, 0.0, "knight"), "hollow player")
+	var player: Dictionary = world.players[1]
+	player["level"] = 35
+	player["tasks"][task] = 0
+	var inside: Vector2i = World.CAVE_STAIRS[definition["cave"]]
+	combat._credit_tasks("cyclops", [1], [], Vector2i(310, 40))
+	check(player["tasks"][task] == 0, "a cyclops killed outside the Hollow does not count")
+	combat._credit_tasks("cyclops_smith", [1], [], inside)
+	check(player["tasks"][task] == 1, "a smith killed inside the Hollow counts")
+	var giver: Vector2i = World.QUEST_GIVERS[definition["giver"]]["cell"]
+	var rare: int = 0
+	for attempt: int in 40:
+		player["done_tasks"].erase(task)
+		player["tasks"][task] = definition["count"]
+		player["backpack"].fill("")
+		_place(world, 1, giver + Vector2i.DOWN)
+		var done: Dictionary = combat.task_action(1, definition["giver"], task, "complete", 1.0)
+		check(done["ok"], "the Hollow's hunt can be turned in (%s)" % done.get("reason", ""))
+		var kinds: Array = player["backpack"].map(func(entry: String) -> String: return World.kind_of(entry))
+		check(kinds.has("health_potion") and kinds.has("mana_potion"), "the Hollow pays its potions")
+		if kinds.any(func(kind: String) -> bool: return kind in definition["rare"]["items"]):
+			rare += 1
+	check(rare >= 3 and rare <= 20, "a rare piece comes about one turn-in in four (%d of 40)" % rare)
 
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
