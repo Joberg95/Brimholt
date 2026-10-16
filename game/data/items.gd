@@ -5,6 +5,7 @@ extends RefCounted
 ## and boots have an "armor" type (plate, mail, leather, cloth) that only its class wears (Balance.ARMOR_OF).
 
 const Balance = preload("res://game/data/balance.gd")
+const Monsters = preload("res://game/data/monsters.gd")
 const PATH: String = "res://game/data/items.json"
 const TIER_LEVELS: Array[int] = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45]
 const ACCESSORY_LEVEL: int = 20
@@ -60,6 +61,8 @@ const RARITIES: Array = [
 ]
 ## Lowest material value of each grade (Common, Uncommon, Rare, Epic, Legendary).
 const QUALITY_VALUES: Array[int] = [0, 50, 150, 400, 1000]
+## RARITIES index of Epic, the first grade only bosses, champions, and quests give equipment.
+const EPIC: int = 3
 ## Gathered resources (game/data/professions.gd) grade by their band's value instead.
 const GATHERED_LOOKS: Array[String] = ["ore", "log", "herb", "fish"]
 const RESOURCE_VALUES: Array[int] = [0, 4, 7, 10, 14]
@@ -95,6 +98,8 @@ static func load_catalog() -> Dictionary:
 			item["sold"] = true
 		if entry.has("quest"):
 			item["quest"] = String(entry["quest"])
+		if boss_drops().has(String(entry["id"])):
+			item["boss_drop"] = true
 		for key: String in ["gold", "value", "price", "slots"]:
 			if entry.has(key):
 				item[key] = int(entry[key])
@@ -226,7 +231,8 @@ static func _magic(level: int, part: String) -> int:
 
 
 ## [name, colour] of an item's quality, or [] for gold. Gear grades by tier (two tiers per
-## grade), mythic gear and relics have their own; everything else grades by worth: materials and
+## grade) up to Rare; Epic and Legendary only for boss and champion drops and quest rewards; mythic
+## gear and relics have their own; everything else grades by worth: materials and
 ## resources by value (QUALITY_VALUES), potions by strength, food by its regeneration, and bags
 ## and packs by their slots.
 static func rarity(item: Dictionary) -> Array:
@@ -249,6 +255,10 @@ static func quality(item: Dictionary) -> int:
 		for index: int in RARITIES.size():
 			if item.get("level", 1) >= RARITIES[index][0]:
 				grade = index
+		# Epic and Legendary mean a boss or a quest: tier gear from vendors and ordinary monsters
+		# stops at Rare, however high its level (mythic level-50 sets keep their own grade).
+		if grade >= EPIC and grade < RARITIES.size() - 1 and not item.has("quest") and not item.get("boss_drop", false):
+			grade = EPIC - 1
 		return grade
 	if item.has("drink"):
 		var share: float = 0.0
@@ -264,6 +274,23 @@ static func quality(item: Dictionary) -> int:
 		if value >= thresholds[index]:
 			result = index
 	return result
+
+
+## Items only champions and bosses drop (their own loot in Monsters.LOOT, no ordinary monster's):
+## with quest rewards, the only equipment that grades Epic or Legendary.
+static func boss_drops() -> Dictionary:
+	var boss: Dictionary = {}
+	var common: Dictionary = {}
+	for kind: String in Monsters.LOOT:
+		var rank: String = Monsters.MONSTERS[kind]["rank"]
+		for entry: Array in Monsters.LOOT[kind]:
+			if rank in ["champion", "boss"]:
+				boss[entry[0]] = true
+			else:
+				common[entry[0]] = true
+	for id: String in common:
+		boss.erase(id)
+	return boss
 
 
 ## Whether an item is mythic: unbound level-50 equipment that monsters drop (not a relic).

@@ -3881,11 +3881,26 @@ func _building_checks() -> void:
 		and graded.call(["vole_tail", "rune_shard", "forge_heart"]) == ["Common", "Rare", "Legendary"],
 		"potions, resources, food, bags, and materials grade by their worth")
 	var grades: Array = []
+	var special: Array = []
 	for level: int in Items.TIER_LEVELS:
 		var grade: String = Items.rarity({"slot": "helmet", "level": level})[0]
 		if grades.is_empty() or grades[-1] != grade:
 			grades.append(grade)
-	check(grades == ["Common", "Uncommon", "Rare", "Epic", "Legendary"], "tiers climb through every rarity (%s)" % [grades])
+		var earned: String = Items.rarity({"slot": "helmet", "level": level, "quest": "any"})[0]
+		if special.is_empty() or special[-1] != earned:
+			special.append(earned)
+	check(grades == ["Common", "Uncommon", "Rare"], "tier gear climbs only to Rare (%s)" % [grades])
+	check(special == ["Common", "Uncommon", "Rare", "Epic", "Legendary"], "quest gear climbs through every rarity (%s)" % [special])
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		# Bags and packs grade by their slots, not by where they come from.
+		if item["slot"] in ["", "bag", "container"] or item.has("glow") or Items.mythic(item):
+			continue
+		var name: String = Items.rarity(item)[0]
+		if name in ["Epic", "Legendary"]:
+			check(item.has("quest") or item.get("boss_drop", false), "%s is %s, so a boss or a quest gives it" % [kind, name])
+	check(Items.boss_drops().has("mourning_estoc") and not Items.boss_drops().has("health_potion"),
+		"boss drops are what only champions and bosses drop")
 	for kind: String in World.ITEMS:
 		if World.ITEMS[kind].has("glow"):
 			check(Items.rarity(World.ITEMS[kind])[0] == "Relic", "relics are their own rarity")

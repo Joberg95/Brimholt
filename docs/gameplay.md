@@ -663,8 +663,10 @@ stack always moves whole; there is no splitting yet. Loot and death drops merge 
 way, and a dead player's purse becomes one gold stack. Equipment never stacks.
 
 Hover an item for its tooltip: wearable gear shows its rarity, from **Common** (tiers 1 and 5)
-through **Uncommon** (10, 15), **Rare** (20, 25), and **Epic** (30, 35) to **Legendary** (40, 45)
-and **Mythic** (level-50 monster sets), with relics as **Relic**. The name and the tooltip's frame take the rarity's colour. Gear you
+through **Uncommon** (10, 15) to **Rare** (20 and up). **Epic** (30, 35) and **Legendary** (40, 45)
+gear only comes from champions and bosses (what they alone drop) and from quests, so the same
+tier bought or found on an ordinary monster stays Rare; **Mythic** marks the level-50 monster
+sets, and relics are **Relic**. The name and the tooltip's frame take the rarity's colour. Gear you
 cannot use yet is tinted red in its slot.
 
 ## Gear tiers

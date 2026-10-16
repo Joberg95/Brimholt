@@ -251,8 +251,8 @@ raises the weapon (wind-up), then cuts or thrusts it toward the target (strike).
 turns the drawn pose (`SpriteArt.posed`); the creature's real facing is unchanged.
 
 **Rarity** is not drawn on inventory slots. Wearables have a grade by tier (Common from 1,
-Uncommon 10, Rare 20, Epic 30, Legendary 40; relics are Relic in their glow colour,
-`Items.rarity`), shown on hover: `game/ui/item_slot.gd` colours the tooltip's name, rarity line,
+Uncommon 10, Rare 20; Epic 30 and Legendary 40 only for champion and boss drops and quest gear;
+relics are Relic in their glow colour, `Items.rarity`), shown on hover: `game/ui/item_slot.gd` colours the tooltip's name, rarity line,
 and frame. Items you cannot use yet are tinted red.
 
 **Thin walls and roofs.** Town walls (`#`) are thin: a masonry band through the tile centre,

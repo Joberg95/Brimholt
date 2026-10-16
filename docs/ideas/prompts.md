@@ -18,8 +18,6 @@ we should redesign the map to have 1 major city per continent and 1 smaller one 
 
 lets add more hunt quests, for example a quest where you enter a cyclops cave and have to kill 75 cyclops in there. this will give a lot of exp and potions and a chance for a rare item. (plan 37)
 
-we should restrict epic items to bosses and endgame quests, same with legendary items. (plan 36)
-
 the text when entering a cave or dungeon can be removed, the area we are in is enough next to the minimap bottom right.
 
 lets add "elite" prefix next to monsters that are elite rarity, and also reduce fontsizes in the game overall.

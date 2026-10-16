@@ -125,7 +125,7 @@ on the map or in a dungeon, boss relics), long-session safety (ground decay timi
 exemptions for starting items and relics; the client spatial index; monsters closing in on a
 player in one tick never sharing a tile), bot loot (kills claim their loot for who earned them; bots collect only their own group's, leave a human's and what does not fit, give up on stacks they cannot reach, and sell at a vendor when nearly full, keeping their potions), and buildings (door and room detection, the town painter is a no-op on the
 map, two or more buildings per town, furniture inside keepers' buildings that blocks without
-cutting rooms off, rarity grades (Common to Legendary by tier, relics apart, none for potions or packs), every vendor and the banker inside a building of their own
+cutting rooms off, rarity grades (Common to Rare by tier, Epic and Legendary only from bosses and quests, relics apart, none for potions or packs), every vendor and the banker inside a building of their own
 facing the door with a matching sign beside it, open rooms and doors, and no trading or banking
 through a wall).
 
