@@ -126,6 +126,9 @@ const MOVE_SECONDS: float = 0.18
 const SLOWED_STEP: float = 2.0
 ## A rider's steps take this share of a walker's (25% faster). Mounts carry you only above ground.
 const MOUNT_STEP: float = 0.8
+## Stats only gear gives (none of them in Balance.STATS): movement speed and maximum mana in percent
+## (speed_factor, stats), and frost spell and rune damage in percent (Combat.ELEMENT_STATS).
+const GEAR_STATS: Array[String] = ["speed", "mana_percent", "frost"]
 const MAX_PLAYERS: int = 24
 const PORT: int = 1234
 const PROTOCOL: int = 13
@@ -918,10 +921,18 @@ static func stats(level: int, equipment: Dictionary, vocation: String = Balance.
 		var kind: Variant = equipment.get(slot, "")
 		if typeof(kind) == TYPE_STRING and requirement_error(kind, level, vocation).is_empty():
 			var bonus: Dictionary = ITEMS[kind]["stats"]
-			# Gear-only stats (Combat.ELEMENT_STATS: frost damage) start from nothing.
+			# Gear-only stats (GEAR_STATS) start from nothing.
 			for stat: String in bonus:
 				result[stat] = result.get(stat, 0) + bonus[stat]
+	if result.has("mana_percent"):
+		result["mana"] = roundi(result["mana"] * (1.0 + result["mana_percent"] / 100.0))
 	return result
+
+
+## How much faster than walking a character's steps are, from movement speed gear (percent):
+## the step lasts 1 / (1 + speed / 100) of a plain step.
+static func speed_factor(stats_now: Dictionary) -> float:
+	return 1.0 / (1.0 + float(stats_now.get("speed", 0)) / 100.0)
 
 
 ## Players and monsters on a tile and, while stepping, the tile they left. Players walk through
@@ -1114,7 +1125,7 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	player["from"] = player["cell"]
 	player["cell"] = destination
 	player["facing"] = direction
-	player["step"] = MOVE_SECONDS * (SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0) 		* (MOUNT_STEP if riding(player["equipment"], destination) else 1.0)
+	player["step"] = MOVE_SECONDS * (SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0) 		* (MOUNT_STEP if riding(player["equipment"], destination) else 1.0) * speed_factor(player_stats(id))
 	player["next_move"] = now + player["step"]
 	player["gathering"] = {}
 	return {"ok": true, "state": export_player(id, now)}

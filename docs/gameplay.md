@@ -168,6 +168,26 @@ the wearer's frost spells (Frost bolt, Hailstorm) and frost runes. Their icons m
 visage's spikes burn, the crown's frost crystal pulses, the masks' and hood's eyes glow, the hat's halo sparkles, and light
 sweeps across the polished metal of the crown helm, hornhelm and visor.
 
+### Showpiece boots
+
+Seven pairs of boots drop from hunts (about 1% a kill, at or above their level) with stats no
+other gear has (`World.GEAR_STATS`): **movement speed** (each step takes 1 / (1 + speed%) as long,
+on top of a mount) and **maximum mana** in percent. Those with an armor type also keep 85% of their
+tier's defenses and add a focus bonus like the showpiece helmets.
+
+| Boots | Level, armor | Stats | Dropped by |
+| --- | --- | --- | --- |
+| Brockhide boots | 20 mail | +5% speed, health | dire bears |
+| Hastewind boots | 25, anyone | +10% speed, no defense | dune scorpions (0.8%) |
+| Mossbloom boots | 35 leather | +5% speed, healing | bog trolls |
+| Frostbloom slippers | 35 cloth | +8% max mana | rime stalkers |
+| Emberwalk boots | 40 plate | +4% speed, regeneration | magma hounds |
+| Phialbound boots | 45 cloth | +6% max mana, mana | void wraiths |
+| Drakescale greaves | 45 plate | +4% speed, health | ashmaw drakes |
+
+Their icons move too: Hastewind wings beat, Emberwalk boots burn, the ice flowers, blossoms and
+potion vials glow, and light sweeps across the drakescale.
+
 ### Focused rings
 
 Eight rings drop from overworld hunts (1.5% a kill, only at or above the ring's level). Each

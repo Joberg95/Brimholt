@@ -160,8 +160,8 @@ def main():
         old.unlink()
     made, skipped = 0, []
     for kind, item in M.ITEMS.items():
-        # Showpiece helmets draw their own icon (make_sprites.py helm_icon).
-        if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.HELM_STYLES:
+        # Showpiece helmets and boots draw their own icon (make_sprites.py helm_icon).
+        if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.SHOWPIECE_STYLES:
             continue
         name = template_for(kind, item)
         if name is None:

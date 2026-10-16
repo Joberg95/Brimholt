@@ -944,6 +944,7 @@ def boots_builder(kind):
     palette, accent = tones(kind)
     light, main, dark = palette
     shape, extras = look(kind)
+    shape = BOOT_WORN.get(shape, shape)
     rows = {"sabatons": 3, "striders": 4, "boots": 3, "slippers": 0}[shape]
 
     def build(direction, frame):
@@ -1817,7 +1818,7 @@ def painted_held(kind, icon):
 def gear_builder(kind):
     slot = ITEMS[kind]["slot"]
     icon = painted_icon(kind)
-    if icon is None and look(kind)[0] in HELM_STYLES:
+    if icon is None and look(kind)[0] in SHOWPIECE_STYLES:
         icon = helm_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
@@ -2285,15 +2286,19 @@ def mount_icon(kind):
 
 HELM_WORN = {"fangmask": "greathelm", "dreadmask": "greathelm", "hornhelm": "helm", "crownhelm": "helm",
              "lanternhelm": "kettle", "nimbus": "hat", "visor": "greathelm", "cobra": "cowl", "rootcrown": "hood"}
-HELM_STYLES = tuple(HELM_WORN)
-# Styles that move on their own: flames, a halo, glowing eyes.
-HELM_ALIVE = ("fangmask", "dreadmask", "lanternhelm", "nimbus", "cobra", "rootcrown")
+# Showpiece boots (gear3d.boots) wear as these generated boots, textured with the icon.
+BOOT_WORN = {"wingboots": "boots", "furboots": "boots", "flameboots": "sabatons", "frostboots": "slippers",
+             "vialboots": "boots", "scaleboots": "sabatons", "bloomboots": "boots"}
+SHOWPIECE_STYLES = tuple(HELM_WORN) + tuple(BOOT_WORN)
+# Styles that move on their own: flames, a halo, glowing eyes, beating wings, glowing flowers and vials.
+SHOWPIECE_ALIVE = ("fangmask", "dreadmask", "lanternhelm", "nimbus", "cobra", "rootcrown", "wingboots", "flameboots",
+                   "frostboots", "vialboots", "bloomboots")
 ANIM_FRAMES = 12
 
 
 def helm_icon(kind, frame=0):
-    """The showpiece helmet's icon, modelled and rendered in 3D (gear3d.py); frame moves its
-    flames, halo, and eyes."""
+    """A showpiece helmet's or boots' icon, modelled and rendered in 3D (gear3d.py); frame moves
+    its flames, halo, eyes, wings, flowers, or vials."""
     image = Image(TILE, TILE)
     image.pixels = gear3d.icon(kind, ITEMS[kind]["look"], ITEMS[kind]["colors"], frame)
     return image
@@ -2320,7 +2325,7 @@ def _sheen(icon, frame):
 
 def animated(kind):
     shape, _ = look(kind)
-    return shape in HELM_ALIVE or ITEMS[kind].get("shine") == "sheen"
+    return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"
 
 
 def icon_frames(kind):
@@ -2328,7 +2333,7 @@ def icon_frames(kind):
     shape, _ = look(kind)
     frames = []
     for frame in range(ANIM_FRAMES):
-        icon = helm_icon(kind, frame) if shape in HELM_STYLES else item_icon(kind)
+        icon = helm_icon(kind, frame) if shape in SHOWPIECE_STYLES else item_icon(kind)
         if ITEMS[kind].get("shine") == "sheen":
             icon = _sheen(icon, frame)
         frames.append(icon)
@@ -2600,7 +2605,7 @@ def item_icon(kind):
         return mount_icon(kind)
     if shape == "ring":
         return ring_icon(kind)
-    if shape in HELM_STYLES:
+    if shape in SHOWPIECE_STYLES:
         return helm_icon(kind)
     image = Image(TILE, TILE)
     gem = (scale(accent, 1.12), accent, scale(accent, 0.65))

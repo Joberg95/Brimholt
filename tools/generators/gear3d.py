@@ -3,8 +3,8 @@ and tubes of them for horns, seen from in front and a little above, lit from the
 posterized into five-tone ramps per material with gloss on metal and gems, glowing eyes and
 flames, a dark edge round the silhouette, and dark seams where a nearer part overlaps.
 
-make_sprites.py calls icon(kind, look, colors, frame) for the helmets in HELM_STYLES; frame
-(0..ANIM_FRAMES-1) moves flames, halos, and eyes. World units are icon pixels: x to the right,
+make_sprites.py calls icon(kind, look, colors, frame) for the helmets and boots in SHOWPIECE_STYLES;
+frame (0..ANIM_FRAMES-1) moves flames, halos, eyes, wings, and glowing flowers and vials. World units are icon pixels: x to the right,
 y away from the viewer, z up; the helmet's front faces the viewer (-y).
 """
 
@@ -57,6 +57,21 @@ def spike(base, tip, radius, material, group=None):
     steps = 4
     points = [add(base, mul(sub(tip, base), i / steps)) for i in range(steps + 1)]
     return tube(points, radius, radius * 0.25, material, group)
+
+
+def _scaled(parts, k):
+    """The parts grown by k about the floor centre."""
+    grown = []
+    for part in parts:
+        part = dict(part, c=mul(part["c"], k))
+        if part["kind"] == "box":
+            part["h"] = mul(part["h"], k)
+        elif part["kind"] == "cyl":
+            part["r"], part["len"] = part["r"] * k, part["len"] * k
+        else:
+            part["r"] = mul(part["r"], k)
+        grown.append(part)
+    return grown
 
 
 def render(parts):
@@ -282,8 +297,94 @@ def model(style, extras, main, light, accent, frame):
     return parts
 
 
+# ---------------------------------------------------------------- boots
+# A pair seen from the side, toes to the left, the left boot of the pair a step behind and higher.
+
+BOOT_SPOTS = ((-2.6, 5.0), (3.6, -3.0))
+BOOT_SCALE = 1.25
+
+
+def _boot(x, y, leather, sole, cuff, height=13.0, side=1):
+    """One boot at (x, y): sole, foot towards -x, heel, shaft, and cuff (its own group)."""
+    g = "boot%d" % side
+    sx = x + 1.2
+    return [P.box((x - 2.6, y, 0.9), (5.0, 2.7, 0.9), sole, group=g),
+            P.ell((x - 2.8, y, 3.2), (4.8, 2.8, 2.9), leather, group=g),
+            P.box((sx + 1.4, y, 1.6), (1.6, 2.5, 1.6), sole, group=g),
+            P.cyl((sx, y, 2.0), 3.0, height - 2.0, leather, group=g),
+            P.cyl((sx, y, height - 0.4), 3.6, 2.4, cuff, group=g)]
+
+
+def boots(style, main, light, accent, frame):
+    leather = Material(main, "cloth" if style in ("frostboots", "vialboots") else "smooth",
+                       gloss=0.7 if style == "scaleboots" else 0.25)
+    sole = Material(_hex(C._shift(C._hex(main), -0.22, 0, 0)))
+    trim = Material(light, gloss=0.5)
+    gem = Material(accent, gloss=1.0)
+    parts = []
+    for index, (x, y) in enumerate(BOOT_SPOTS):
+        sx = x + 1.2
+        if style == "wingboots":
+            parts += _boot(x, y, leather, sole, trim, 12.5, side=index)
+            beat = math.sin(frame * math.tau / ANIM_FRAMES * 2) * 0.3
+            wing = Material(accent, gloss=0.4)
+            for k, (dz, length) in enumerate(((11.0, 8.0), (8.8, 6.4), (6.8, 4.6))):
+                parts.append(P.ell((sx + 3.0 + length * 0.45, y, dz + length * 0.3), (length * 0.55, 0.7, 1.4), wing,
+                                   P.turn_y(-(0.6 + beat)), group="wing%d%d" % (index, k)))
+        elif style == "furboots":
+            fur = Material(light, "fur")
+            parts += _boot(x, y, leather, sole, fur, 12.0, side=index)
+            parts.append(P.ell((sx, y, 12.0), (4.4, 3.8, 2.2), fur, group="fur%d" % index))
+            parts.append(P.box((x - 2.0, y - 2.6, 4.6), (1.8, 0.5, 0.7), Material(accent, gloss=0.8), group="buckle%d" % index))
+        elif style == "flameboots":
+            parts += _boot(x, y, leather, sole, trim, 13.0, side=index)
+            for z in (5.0, 8.4):
+                parts.append(P.cyl((sx, y, z), 3.25, 1.0, trim, group="plate%d" % index))
+            parts.append(P.ell((x - 5.6, y, 3.0), (2.2, 2.4, 2.2), trim, group="toecap%d" % index))
+            for k, dx in enumerate((-1.6, 0.6, 2.6)):
+                parts += _flame((sx + dx, y - 0.4, 14.6), 4.0 + k % 2, frame, index * 3 + k)
+        elif style == "frostboots":
+            parts += _boot(x, y, leather, sole, trim, 10.0, side=index)
+            glow = 0.5 + 0.5 * math.cos((frame + index * 3) * math.tau / ANIM_FRAMES)
+            ice = emissive(_hex(C._shift(C._hex(accent), -0.22 + 0.18 * glow, 0, 0)))
+            for k in range(5):
+                a = k * math.tau / 5
+                parts.append(P.ell((sx + 1.5 * math.cos(a), y - 3.0, 6.5 + 1.5 * math.sin(a)), (1.0, 0.6, 1.0), ice,
+                                   group="flower%d" % index))
+            parts.append(P.ell((sx, y - 3.3, 6.5), (0.8, 0.5, 0.8), emissive("fff8e0"), group="flower%d" % index))
+            parts.append(P.ell((x - 6.2, y, 3.6), (1.0, 0.8, 1.6), trim, group="curl%d" % index))
+        elif style == "vialboots":
+            parts += _boot(x, y, leather, sole, trim, 13.0, side=index)
+            for z in (4.6, 8.4):
+                parts.append(P.cyl((sx, y, z), 3.2, 0.8, Material("5a4030"), group="belt%d" % index))
+                parts.append(P.box((sx - 1.2, y - 2.9, z + 0.4), (0.8, 0.4, 0.7), GOLD, group="buckle%d" % index))
+            bubble = (frame + index * 5) % ANIM_FRAMES
+            potion = emissive(_hex(C._shift(C._hex(accent), -0.2 + (0.16 if bubble < 3 else 0.0), 0, 0)))
+            parts.append(P.ell((sx + 1.0, y - 3.4, 6.6), (1.2, 1.0, 1.7), potion, group="vial%d" % index))
+            parts.append(P.cyl((sx + 1.0, y - 3.4, 8.2), 0.55, 1.2, Material("8a6440"), group="vial%d" % index))
+        elif style == "scaleboots":
+            scales = Material(main, "scales", gloss=0.7)
+            parts += _boot(x, y, scales, sole, trim, 13.0, side=index)
+            parts.append(P.ell((x - 6.4, y, 2.8), (1.8, 1.8, 1.6), gem, group="toe%d" % index))
+            parts += spike((sx + 2.6, y, 11.5), (sx + 5.0, y, 15.0), 1.0, IVORY, group="fin%d" % index)
+            parts += spike((sx + 2.8, y, 8.0), (sx + 4.8, y, 10.5), 0.8, IVORY, group="fin%d" % index)
+        elif style == "bloomboots":
+            parts += _boot(x, y, leather, sole, Material("4e8a34", "leaf"), 12.0, side=index)
+            for k, (dx, dz) in enumerate(((-2.6, 12.4), (2.4, 12.8), (-0.4, 8.0))):
+                parts.append(P.ell((sx + dx, y - 2.6, dz), (1.7, 0.8, 1.2), Material("5a9a3a", "leaf"), group="leaf%d%d" % (index, k)))
+            glow = 0.5 + 0.5 * math.cos((frame + index * 4) * math.tau / ANIM_FRAMES)
+            parts.append(P.ell((sx + 0.8, y - 3.2, 12.4), (1.1, 0.6, 1.0),
+                               emissive(_hex(C._shift(C._hex(accent), -0.15 + 0.15 * glow, 0, 0))), group="bloom%d" % index))
+    return parts
+
+
+BOOT_STYLES = ("wingboots", "furboots", "flameboots", "frostboots", "vialboots", "scaleboots", "bloomboots")
+
+
 def icon(kind, look, colors, frame=0):
-    """RGBA rows of a 32x32 icon for a showpiece helmet."""
+    """RGBA rows of a 32x32 icon for a showpiece helmet or pair of boots."""
     style, *extras = look.split("+")
     main, light, accent = colors
+    if style in BOOT_STYLES:
+        return render(_scaled(boots(style, main, light, accent, frame), BOOT_SCALE))
     return render(model(style, set(extras), main, light, accent, frame))

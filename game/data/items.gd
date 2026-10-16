@@ -42,7 +42,7 @@ const RING_SHARE: float = 0.03
 ## critical for more of one thing: twice the health or mana share, CRITICAL_RING * 2 + 1 critical,
 ## a charm's healing or 1.5x its regen with half the health, or a cape's defenses.
 const RING_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "regen", "defense"]
-## Focused helmets (showpieces that monsters drop) keep HELMET_FOCUS_DEFENSE of their defenses and
+## Focused helmets and boots (showpieces that monsters drop) keep HELMET_FOCUS_DEFENSE of their defenses and
 ## add one bonus: half a rod's healing, half a book's mana, a ring's critical, an armor's regen,
 ## or half an amulet's health.
 const HELMET_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "regen"]
@@ -205,7 +205,7 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 			var piece: Dictionary = _armor(level, item["slot"], item.get("armor", ""))
 			if item["slot"] == "armor":
 				piece["regen"] = maxi(1, roundi(reference_health(level) * ARMOR_REGEN))
-			if item["slot"] == "helmet" and item.has("focus"):
+			if item["slot"] in ["helmet", "boots"] and item.has("focus"):
 				for stat: String in piece:
 					piece[stat] = maxi(1, roundi(piece[stat] * HELMET_FOCUS_DEFENSE))
 				match String(item["focus"]):

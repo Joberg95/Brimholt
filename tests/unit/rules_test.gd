@@ -1569,6 +1569,38 @@ func _sprite_checks() -> void:
 					and bounds.position.y > 0 and bounds.end.y < 64, "%s stays visible and unclipped in every compact pose" % kind)
 
 
+func _showpiece_boot_checks() -> void:
+	var pairs: Array[String] = []
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] != "boots" or not (item["stats"].has("speed") or item["stats"].has("mana_percent")):
+			continue
+		pairs.append(kind)
+		var sources: int = 0
+		for monster: String in Monsters.LOOT:
+			for entry: Array in Monsters.LOOT[monster]:
+				sources += 1 if entry[0] == kind else 0
+		check(item.get("loot_only", false) and not World.bound(kind) and sources == 1 and SpriteArt.GEAR.has(kind),
+			"%s is a worn pair one monster drops" % kind)
+	check(pairs.size() == 7, "seven pairs of showpiece boots with speed or mana")
+	check(World.ITEMS["hastewind_boots"]["stats"] == {"speed": 10} and World.ITEMS["hastewind_boots"]["vocations"].is_empty()
+		and not World.ITEMS["hastewind_boots"].has("armor"), "Hastewind boots: 10% speed for anyone, and no armor")
+	# Speed shortens every step; mana percent raises maximum mana.
+	var world := World.new()
+	world.add_player(1, 0.0)
+	world.players[1]["level"] = 30
+	world.players[1]["equipment"]["boots"] = "hastewind_boots"
+	world.move(1, Vector2i.RIGHT, 0.0)
+	check(is_equal_approx(world.players[1]["next_move"], World.MOVE_SECONDS / 1.1), "10% speed boots step 10% faster")
+	world.players[1]["equipment"]["mount"] = "void_steed_mount"
+	world.players[1]["next_move"] = 0.0
+	world.move(1, Vector2i.LEFT, 1.0)
+	check(is_equal_approx(world.players[1]["next_move"], 1.0 + World.MOVE_SECONDS * World.MOUNT_STEP / 1.1), "speed boots stack with a mount")
+	var plain: int = World.stats(35, {}, "sorcerer")["mana"]
+	var slippers: Dictionary = World.stats(35, {"boots": "frostbloom_slippers"}, "sorcerer")
+	check(slippers["mana"] >= roundi(plain * 1.08), "8% mana slippers raise maximum mana by 8% (%d -> %d)" % [plain, slippers["mana"]])
+
+
 func _showpiece_helmet_checks() -> void:
 	var count: int = 0
 	for kind: String in World.ITEMS:
@@ -1599,7 +1631,8 @@ func _showpiece_helmet_checks() -> void:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 9, "the nine showpiece helmets move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 15, "nine showpiece helmets and six pairs of boots move in the inventory")
+	_showpiece_boot_checks()
 
 
 func _ring_checks() -> void:
@@ -1693,7 +1726,7 @@ func _slot_and_stat_checks() -> void:
 		var item: Dictionary = World.ITEMS[kind]
 		check(item["slot"] in ["", "container"] or item["slot"] in World.SLOT_TYPES.values(), "item slot type is known")
 		for stat: String in item["stats"]:
-			check((stat in Balance.STATS or stat in Combat.ELEMENT_STATS.values()) and typeof(item["stats"][stat]) == TYPE_INT,
+			check((stat in Balance.STATS or stat in World.GEAR_STATS) and typeof(item["stats"][stat]) == TYPE_INT,
 				"item stat is known")
 	check(World.fits("garnet_ring", "ring_1") and World.fits("garnet_ring", "ring_2"), "rings fit both ring slots")
 	check(not World.fits("garnet_ring", "necklace") and not World.fits("glowcap", "charm"), "wrong slot types rejected")
