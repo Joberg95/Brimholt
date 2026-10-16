@@ -1069,7 +1069,11 @@ func _check_town_lamps() -> bool:
 	var night: Image = screen.get_texture().get_image()
 	night.save_png("res://.tools/visual-lamps.png")
 	lighting.time_override = 0.5
-	# The ground on screen farthest from every lamp and lantern-carrying NPC.
+	# The ground on screen farthest from every light: lamps, lantern-carrying NPCs, and characters
+	# (held torches and glowing gear light the ground around them too).
+	var lights: Array = World.LAMPS + World.NPC_CELLS.keys()
+	for id: int in game.actors:
+		lights.append(Vector2i(game.actors[id]["visual"].round()))
 	var far: Vector2i = lamp
 	var darkest: int = 0
 	var visible_area := Rect2(Vector2(40, 120), Vector2(night.get_size()) - Vector2(80, 240))
@@ -1080,7 +1084,7 @@ func _check_town_lamps() -> bool:
 			if not World.terrain(cell) in World.LAND or not visible_area.has_point(at):
 				continue
 			var gap: int = 99
-			for other: Vector2i in World.LAMPS + World.NPC_CELLS.keys():
+			for other: Vector2i in lights:
 				gap = mini(gap, World.chebyshev(other, cell))
 			if gap > darkest:
 				darkest = gap
@@ -1385,10 +1389,20 @@ func _check_bots() -> bool:
 	await process_frame
 	if not _expect(opened and not game.party_window.visible, "The party window does not open and close from the micro menu (%s)" % [party_text]):
 		return false
-	var buttons: Array = game.hud.leave_button.get_parent().get_children().filter(func(node: Node) -> bool: return node is Button)
+	game.toggle_panel("controls")
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-game-menu.png")
+	var buttons: Array = game.game_menu.leave_button.get_parent().get_children().filter(func(node: Node) -> bool: return node is Button)
 	var labels: Array = buttons.map(func(button: Button) -> String: return button.text)
-	if not _expect(labels == ["Controls", "Leave game"] and buttons.all(func(button: Button) -> bool: return button.is_visible_in_tree()),
-			"The top bar should offer only Controls and Leave game (%s)" % [labels]):
+	var menu_text: PackedStringArray = []
+	_texts(game.game_menu, menu_text)
+	var listed: bool = "You" in menu_text and game.game_menu.visible and game.panel_open("controls")
+	game.toggle_panel("controls")
+	await process_frame
+	if not _expect(labels == ["Controls", "Leave game", "Close"] and listed and not game.game_menu.visible,
+			"The cogwheel should open the game menu with you listed, Controls, Leave game, and Close (%s)" % [labels]):
 		return false
 	var refused: String = game.spawn_bot("knight", 30, "dummy")
 	await create_timer(0.4).timeout

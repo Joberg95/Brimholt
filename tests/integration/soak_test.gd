@@ -36,7 +36,7 @@ func _process(_delta: float) -> bool:
 
 func _setup() -> void:
 	screen = SubViewport.new()
-	screen.size = Vector2i(1200, 800)
+	screen.size = Vector2i(1200, 740)
 	screen.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(screen)
 	game = load("res://game/main.tscn").instantiate()

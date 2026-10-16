@@ -51,7 +51,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	panel.position = Layout.VIEW_ORIGIN + Vector2(Layout.VIEW_SIZE.x / 2.0 - 150, 120)
 	panel.custom_minimum_size = Vector2(300, 0)
 	var backdrop := StyleBoxFlat.new()
-	backdrop.bg_color = Color("#151a20f0")
+	backdrop.bg_color = Color("#12161cfa")
 	backdrop.border_color = Color("#3a4450")
 	backdrop.set_border_width_all(1)
 	backdrop.set_content_margin_all(10)

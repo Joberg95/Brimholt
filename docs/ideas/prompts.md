@@ -15,3 +15,12 @@ the lanterns flicker when you go near them, lets address this
 lets look over the world design walls again, I feel like I can see a lot of building walls in the world that serve no purpose. (plan 31)
 
 we should redesign the map to have 1 major city per continent and 1 smaller one per continent. (plan 32)
+
+lets add more hunt quests, for example a quest where you enter a cyclops cave and have to kill 75 cyclops in there. this will give a lot of exp and potions and a chance for a rare item.
+
+we should restrict epic items to bosses and endgame quests, same with legendary items. 
+
+lets increase overall mob health with 20% , in a party mobs die too fast
+
+lets add more monsters in empty spots of the map, and lower the spawn rate to balance this out. 
+

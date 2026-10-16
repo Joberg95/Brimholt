@@ -1,6 +1,6 @@
 extends Node
 ## The micro menu right of the action bar: small painted buttons that open the character window,
-## spell book, professions, quest list, lexicon, world map, party, and Controls menu, the same as their keys. Each button's
+## spell book, professions, quest list, lexicon, world map, party, and the game menu (the cogwheel), the same as their keys. Each button's
 ## tooltip names it and its key, and an open panel's button is framed in gold.
 
 const ItemSlot = preload("res://game/ui/item_slot.gd")
@@ -24,7 +24,7 @@ const ENTRIES: Array = [
 	["lexicon", "Lexicon", "Every monster: where it lives, its levels, and what it drops"],
 	["world_map", "World map", "Towns, ferries, dungeons, and PvP zones"],
 	["party", "Party", "Your party's members and health, invitations, and (solo) the raid"],
-	["controls", "Controls", "Rebind keys"],
+	["controls", "Game menu", "Players on the host, settings, controls, and leaving the game"],
 ]
 
 var game: Node

@@ -44,7 +44,7 @@ gdscript/warnings/confusable_local_usage=2
 [display]
 
 window/size/viewport_width=1200
-window/size/viewport_height=800
+window/size/viewport_height=740
 window/size/window_width_override=1200
 window/size/window_height_override=800
 window/stretch/mode="canvas_items"
@@ -55,3 +55,4 @@ textures/canvas_textures/default_texture_filter=0
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.055, 0.067, 0.082, 1)
+

@@ -26,6 +26,8 @@ const CellIndex = preload("res://game/render/cell_index.gd")
 const QuestList = preload("res://game/ui/quest_list.gd")
 const SpellBook = preload("res://game/ui/spell_book.gd")
 const CharacterWindow = preload("res://game/ui/character_window.gd")
+const GameMenu = preload("res://game/ui/game_menu.gd")
+const UiTheme = preload("res://game/ui/ui_theme.gd")
 const ProfessionsWindow = preload("res://game/ui/professions_window.gd")
 const PartyWindow = preload("res://game/ui/party_window.gd")
 const MicroMenu = preload("res://game/ui/micro_menu.gd")
@@ -123,6 +125,8 @@ var hud: Hud
 var quest_list: QuestList
 var spell_book: SpellBook
 var character_window: CharacterWindow
+## The cogwheel's menu: status, players, settings, Controls, and Leave game.
+var game_menu: GameMenu
 var professions_window: ProfessionsWindow
 var party_window: PartyWindow
 var micro_menu: MicroMenu
@@ -160,6 +164,8 @@ var _npc_menu_target: String:
 
 func _ready() -> void:
 	keybinds.load_saved()
+	# Menus and dialogs read small and minimal: every control without its own size uses this.
+	ThemeDB.get_default_theme().default_font_size = UiTheme.FONT_SIZE
 	_build_ui()
 	get_tree().auto_accept_quit = false
 	multiplayer.peer_connected.connect(_peer_connected)
@@ -337,6 +343,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_world_map.hide()
 		_close_travel()
 		_controls.hide()
+		game_menu.hide()
 		spell_book.hide()
 		character_window.hide()
 		professions_window.hide()
@@ -365,7 +372,9 @@ static func _escape(event: InputEventKey) -> bool:
 ## Opens or closes a panel from the micro menu: a Keybinds action, or "controls".
 func toggle_panel(action: String) -> void:
 	if action == "controls":
-		_controls.visible = not _controls.visible
+		var open: bool = game_menu.visible or _controls.visible
+		_controls.hide()
+		game_menu.visible = not open
 	else:
 		_run_action(action)
 
@@ -388,7 +397,7 @@ func panel_open(action: String) -> bool:
 		"world_map":
 			return _world_map.visible
 		"controls":
-			return _controls.visible
+			return game_menu.visible or _controls.visible
 	return false
 
 
@@ -1510,8 +1519,9 @@ func _show_effect(event: Dictionary) -> void:
 			}
 			var style: Array = styles.get(event["style"], styles["damage"])
 			var at: Vector2 = (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
-			effects.append({"kind": "text", "pos": at, "text": style[0], "color": style[1], "born": born,
-				"big": event["style"] == "critical"})
+			if game_menu == null or game_menu.settings.get("damage_numbers", true):
+				effects.append({"kind": "text", "pos": at, "text": style[0], "color": style[1], "born": born,
+					"big": event["style"] == "critical"})
 			var attacker: Dictionary = creature_view(int(event.get("source", 0)))
 			if not attacker.is_empty() and event["style"] in ["damage", "critical"]:
 				# Presentation only: the attacker swings toward the target; its real facing is unchanged.
@@ -1763,10 +1773,13 @@ func _build_ui() -> void:
 	micro_menu = MicroMenu.new()
 	add_child(micro_menu)
 	micro_menu.build(self, layer)
+	game_menu = GameMenu.new()
+	layer.add_child(game_menu)
+	game_menu.build(self, func() -> void: hud.controls.show())
 	# Stacking, bottom to top: the panels above, then the start menu, zone banner, vitals, quest
 	# list, location line, spell book, character window, lexicon, world map, dialog panel, and Controls menu.
 	for top: Control in [hud.zone_label, hud.vitals, quest_list, hud.location_label, spell_book, character_window,
-			professions_window, party_window, lexicon, maps.world_map, dialogs.panel, hud.controls]:
+			professions_window, party_window, lexicon, maps.world_map, dialogs.panel, game_menu, hud.controls]:
 		layer.move_child(top, -1)
 	_address = hud.address
 	_controls = hud.controls
@@ -1780,6 +1793,7 @@ func _build_ui() -> void:
 
 func _update_labels() -> void:
 	hud.update_labels()
+	game_menu.refresh()
 	inventory.update_stats()
 
 

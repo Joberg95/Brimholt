@@ -27,8 +27,10 @@ open; hover a button for its key. The **character window** explains every stat (
 value, what your gear adds, and what the stat does, such as how much your defense cuts
 damage), shows experience to the next level, and your status: gold and bank, party, skull,
 unjustified kills, town rest, your meal, and relic trophies waiting at a relic keeper. Change gear on the equipment panel; targeting, pick up, gathering (F), the professions window (P), the world map, and the
-health and mana potions (Q and E), the quest list (L), the spell book (B), and the character window (C) have their own keys. Click **Controls** in the top bar (beside **Leave game**, which saves and returns to the start
-screen) to rebind any action: click a key button, then
+health and mana potions (Q and E), the quest list (L), the spell book (B), and the character window (C) have their own keys. The cogwheel at the end of the micro menu opens the **game menu**: the
+connection status, everyone on the host with their class (or title) and level, settings (weather
+effects, damage numbers, fullscreen, kept between sessions), **Leave game** (save and return to
+the start screen), and **Controls**, where you rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
 position, so WASD stays under your hand on any keyboard layout. Bindings and bar contents

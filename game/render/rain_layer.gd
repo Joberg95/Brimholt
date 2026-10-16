@@ -7,6 +7,8 @@ const RAIN: Shader = preload("res://game/render/rain.gdshader")
 const Layout = preload("res://game/ui/layout.gd")
 
 var world_view: Node2D
+## Off when the player turns weather effects off in the game menu.
+var enabled: bool = true
 
 
 func _ready() -> void:
@@ -19,7 +21,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	var weather: Dictionary = world_view.lighting.weather
-	visible = weather.get("rain", 0.0) > 0.01
+	visible = enabled and weather.get("rain", 0.0) > 0.01
 	if not visible:
 		return
 	var light: Color = world_view.lighting.modulate_node.color

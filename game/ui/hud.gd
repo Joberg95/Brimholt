@@ -1,16 +1,14 @@
 extends Node
-## Heads-up display around the game window: the title row (Controls and Leave game; hosting
-## and joining happen on the start screen), the connection status line, the centred action message, the zone
-## banner, the health and mana bars, the target frame (your target's name, level, and health
+## Heads-up display around the game window: the centred action message, the zone banner, the health and mana bars, the target frame (your target's name, level, and health
 ## beside your bars), and the Controls menu.
 
 const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ControlsMenu = preload("res://game/ui/controls_menu.gd")
+const UiTheme = preload("res://game/ui/ui_theme.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Regions = preload("res://game/data/regions.gd")
-const UiTheme = preload("res://game/ui/ui_theme.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const MESSAGE_SECONDS: float = 4.0
 
@@ -18,14 +16,10 @@ var game: Node
 ## The host's LAN address for Join, edited on the start screen (kept here, hidden, for main.gd).
 var address: LineEdit
 var controls: PanelContainer
-## The title row's buttons.
-var controls_button: Button
-var leave_button: Button
 var zone_label: Label
 var vitals: Control
 ## Your target's name, level, and health, right of the vitals; hidden without a target.
 var target_frame: Control
-var _status: Label
 var _action: Label
 var _zone_name: String = ""
 ## The continent you were last on (World.continent_at): sailing to another one is announced.
@@ -39,29 +33,10 @@ var _message_since: float = 0.0
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
-	var title := Label.new()
-	title.text = "BRIMHOLT"
-	title.position = Vector2(16, 8)
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", UiTheme.GOLD)
-	title.add_theme_color_override("font_outline_color", Color("#1a1420"))
-	title.add_theme_constant_override("outline_size", 6)
-	layer.add_child(title)
 	address = LineEdit.new()
 	address.text = "127.0.0.1"
 	address.visible = false
 	layer.add_child(address)
-	var row := HBoxContainer.new()
-	row.theme = UiTheme.build()
-	row.add_theme_constant_override("separation", 8)
-	row.alignment = BoxContainer.ALIGNMENT_END
-	row.position = Vector2(Layout.PANEL_ORIGIN.x - 8, 12)
-	row.size = Vector2(1184 - (Layout.PANEL_ORIGIN.x - 8), 32)
-	layer.add_child(row)
-	controls_button = _add_button(row, "Controls", func() -> void: controls.visible = not controls.visible)
-	controls_button.tooltip_text = "Rebind your keys"
-	leave_button = _add_button(row, "Leave game", Callable(game, "leave_game"))
-	leave_button.tooltip_text = "Save and return to the start screen"
 	vitals = Control.new()
 	vitals.position = Layout.VIEW_ORIGIN + Vector2(10, 8)
 	vitals.size = Vector2(220, 34)
@@ -72,9 +47,6 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	target_frame.size = Vector2(240, 34)
 	target_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	target_frame.draw.connect(_draw_target)
-	_status = Label.new()
-	_status.position = Vector2(16, 48)
-	layer.add_child(_status)
 	_action = Label.new()
 	_action.position = Layout.VIEW_ORIGIN + Vector2(0, Layout.VIEW_SIZE.y - 40 - Layout.BAR_SLOT - 8)
 	_action.size = Vector2(Layout.VIEW_SIZE.x, 32)
@@ -107,6 +79,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	layer.add_child(vitals)
 	layer.add_child(target_frame)
 	controls = ControlsMenu.new()
+	controls.theme = UiTheme.build()
 	controls.visible = false
 	controls.setup(game.keybinds, func() -> void: controls.hide(), Layout.VIEW_SIZE.y - 140)
 	layer.add_child(controls)
@@ -162,13 +135,8 @@ func _draw_target() -> void:
 		HORIZONTAL_ALIGNMENT_RIGHT, 36, 11, Color.WHITE)
 
 
-## The status line, and the action message until it has shown for MESSAGE_SECONDS.
+## The action message until it has shown for MESSAGE_SECONDS (the status line is in the game menu).
 func update_labels() -> void:
-	var connected: bool = game.connected
-	var actors: Dictionary = game.actors
-	var status_message: String = game._status_message
-	_status.text = status_message + ("  |  %d/%d players" % [actors.size(), World.MAX_PLAYERS] if connected else "")
-	_status.modulate = Color("#9ccea4") if connected else Color("#e4bd8a")
 	var message: String = game.last_action_message
 	var now: float = game._now()
 	if message != _shown_message:
@@ -178,14 +146,6 @@ func update_labels() -> void:
 		game.last_action_message = ""
 		_shown_message = ""
 	_action.text = game.last_action_message
-
-
-func _add_button(parent: Node, text: String, callback: Callable) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.pressed.connect(callback)
-	parent.add_child(button)
-	return button
 
 
 func _draw_vitals() -> void:

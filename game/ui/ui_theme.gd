@@ -1,13 +1,29 @@
 extends RefCounted
-## The game's dark-and-gold look for buttons and text fields (start screen, top bar).
+## The game's dark-and-gold look for buttons and text fields (start screen, game menu), and the
+## solid panel behind menus.
 
 const GOLD: Color = Color("#ffcf6a")
 const TEXT: Color = Color("#e8e4da")
+## The text size of menus, dialogs, and windows that do not set their own (main.gd sets it on
+## the default theme too).
+const FONT_SIZE: int = 13
+
+
+## A menu's background: nearly opaque, so the world behind does not show through the text.
+static func panel() -> StyleBoxFlat:
+	var frame := StyleBoxFlat.new()
+	frame.bg_color = Color(0.05, 0.06, 0.08, 0.97)
+	frame.border_color = Color("#6a5a3a")
+	frame.set_border_width_all(2)
+	frame.set_content_margin_all(12)
+	frame.anti_aliasing = false
+	return frame
 
 
 ## Buttons and fields in the game's dark-and-gold look.
 static func build() -> Theme:
 	var look := Theme.new()
+	look.default_font_size = FONT_SIZE
 	var looks: Dictionary = {"normal": [Color("#2a2320"), Color("#6a5a3a")], "hover": [Color("#3a2f24"), GOLD],
 		"pressed": [Color("#1e1a16"), GOLD], "disabled": [Color("#1a1c20"), Color("#3a4450")], "focus": [Color(0, 0, 0, 0), GOLD]}
 	for state: String in looks:

@@ -5,6 +5,7 @@ extends PanelContainer
 ## scrolls if it would be taller than `max_height`.
 
 const Keybinds = preload("res://game/input/keybinds.gd")
+const UiTheme = preload("res://game/ui/ui_theme.gd")
 
 const FONT_SIZE: int = 13
 const ROW_HEIGHT: int = 24
@@ -22,6 +23,7 @@ var _max_height: float = 0.0
 
 func setup(binds: Keybinds, close: Callable, max_height: float = 480.0) -> void:
 	keybinds = binds
+	add_theme_stylebox_override("panel", UiTheme.panel())
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	add_child(box)
