@@ -192,7 +192,7 @@ func redraw_slots() -> void:
 			if World.count_of(entry) > 1:
 				slot.tooltip_text += "\nStack of %d" % World.count_of(entry)
 			slot.queue_redraw()
-		elif World.ITEMS.has(kind) and (World.ITEMS[kind].has("glow") or potion_cooldown(kind) > 0.0):
+		elif World.ITEMS.has(kind) and (World.ITEMS[kind].has("glow") or SpriteArt.ANIMATED.has(kind) or potion_cooldown(kind) > 0.0):
 			slot.queue_redraw()
 	if stale:
 		var alive: Array[Control] = []

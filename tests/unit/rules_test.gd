@@ -188,6 +188,7 @@ func _run() -> void:
 	_slot_and_stat_checks()
 	_mount_checks()
 	_ring_checks()
+	_showpiece_helmet_checks()
 	_balance_checks()
 	_adventurer_checks()
 	_quest_hub_and_lexicon_checks()
@@ -1566,6 +1567,31 @@ func _sprite_checks() -> void:
 				var bounds: Rect2i = sheet.get_region(Rect2i(pose * 64, facing * 64, 64, 64)).get_used_rect()
 				check(bounds.has_area() and bounds.position.x > 0 and bounds.end.x < 64
 					and bounds.position.y > 0 and bounds.end.y < 64, "%s stays visible and unclipped in every compact pose" % kind)
+
+
+func _showpiece_helmet_checks() -> void:
+	var count: int = 0
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] != "helmet" or not item.has("focus"):
+			continue
+		count += 1
+		var sources: int = 0
+		for monster: String in Monsters.LOOT:
+			for entry: Array in Monsters.LOOT[monster]:
+				sources += 1 if entry[0] == kind else 0
+		var plain: Dictionary = Items.tier_stats({"slot": "helmet", "level": item["level"], "armor": item["armor"], "vocations": []})
+		var focus: String = item["focus"]
+		check(focus in Items.HELMET_FOCUS and item.get("loot_only", false) and not World.bound(kind) and sources == 1
+			and item["stats"].get(focus, 0) > plain.get(focus, 0) and item["stats"]["defense"] < plain["defense"],
+			"%s trades some defense for %s and drops from one monster" % [kind, focus])
+		check(SpriteArt.GEAR.has(kind), "%s has a worn sheet" % kind)
+	check(count == 8, "eight showpiece helmets drop from monsters")
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
+			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
+				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
+	check(SpriteArt.ANIMATED.size() == 8, "the eight showpiece helmets move in the inventory")
 
 
 func _ring_checks() -> void:
@@ -4657,7 +4683,7 @@ func _armor_and_control_checks() -> void:
 	var helmets: Dictionary = {}
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
-		if item["slot"] == "helmet" and item["level"] == 45 and item.has("armor") and not item.has("quest"):
+		if item["slot"] == "helmet" and item["level"] == 45 and item.has("armor") and not item.has("quest") and not item.has("focus"):
 			helmets[item["armor"]] = item["stats"]
 	check(helmets.size() == 4 and helmets["plate"]["defense"] > helmets["mail"]["defense"]
 		and helmets["mail"]["defense"] > helmets["leather"]["defense"] and helmets["leather"]["defense"] > helmets["cloth"]["defense"]

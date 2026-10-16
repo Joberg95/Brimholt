@@ -42,6 +42,11 @@ const RING_SHARE: float = 0.03
 ## critical for more of one thing: twice the health or mana share, CRITICAL_RING * 2 + 1 critical,
 ## a charm's healing or 1.5x its regen with half the health, or a cape's defenses.
 const RING_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "regen", "defense"]
+## Focused helmets (showpieces that monsters drop) keep HELMET_FOCUS_DEFENSE of their defenses and
+## add one bonus: half a rod's healing, half a book's mana, a ring's critical, an armor's regen,
+## or half an amulet's health.
+const HELMET_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "regen"]
+const HELMET_FOCUS_DEFENSE: float = 0.85
 ## Magic defense of capes, amulets, and books, as shares of their tier's set defense.
 const MAGIC_SHARE: Dictionary = {"cape": 0.15, "necklace": 0.10, "book": 0.10}
 ## Critical chance (percent) on Hunters' and Sorcerers' weapons: CRITICAL_WEAPON, plus one more
@@ -73,7 +78,7 @@ const RESOURCE_VALUES: Array[int] = [0, 4, 7, 10, 14]
 
 
 ## id -> {name, slot, level, vocations, look, colors, stats, [armor], [outfit], [gold], [value], [price], [sell],
-## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only], [sold], [quest], [focus]} in file order. "sold" puts
+## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only], [sold], [quest], [focus], [shine]} in file order. "sold" puts
 ## an item without a gear slot (a bag) in vendor stock. Potions sharing a
 ## "timer" share one cooldown (a strong health potion waits on the health potion's timer). "price" is the tier valuation,
 ## "sell" what vendors pay; loot_only items are never vendor stock or generic gear rolls.
@@ -104,6 +109,8 @@ static func load_catalog() -> Dictionary:
 			item["quest"] = String(entry["quest"])
 		if entry.has("focus"):
 			item["focus"] = String(entry["focus"])
+		if entry.has("shine"):
+			item["shine"] = String(entry["shine"])
 		if boss_drops().has(String(entry["id"])):
 			item["boss_drop"] = true
 		for key: String in ["gold", "value", "price", "slots"]:
@@ -195,6 +202,20 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 			var piece: Dictionary = _armor(level, item["slot"], item.get("armor", ""))
 			if item["slot"] == "armor":
 				piece["regen"] = maxi(1, roundi(reference_health(level) * ARMOR_REGEN))
+			if item["slot"] == "helmet" and item.has("focus"):
+				for stat: String in piece:
+					piece[stat] = maxi(1, roundi(piece[stat] * HELMET_FOCUS_DEFENSE))
+				match String(item["focus"]):
+					"healing":
+						piece["healing"] = maxi(1, roundi(reference_health(level) * ROD_HEALING * 0.5))
+					"mana":
+						piece["mana"] = maxi(5, roundi(reference_mana(level) * BOOK_MANA * 0.5))
+					"critical":
+						piece["critical"] = CRITICAL_RING
+					"regen":
+						piece["regen"] = maxi(1, roundi(reference_health(level) * ARMOR_REGEN))
+					"health":
+						piece["health"] = roundi(reference_health(level) * AMULET_HEALTH * 0.5)
 			return piece
 		"off_hand":
 			if item["look"] == "book":

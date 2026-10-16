@@ -100,6 +100,11 @@ static var CREATURES: Dictionary = _creature_sheets()
 ## mount's shape and, facing toward or away from you, shows only frame rows above RIDER_CUT.
 ## Both match tools/generators/make_sprites.py.
 static var MOUNTS: Dictionary = _mount_sheets()
+## Items whose icon moves (assets/sprites/items_anim/<id>.png, ANIM_FRAMES 32x32 frames in a row,
+## from make_sprites.py icon_frames): flames flicker, halos and eyes glow, sheen sweeps across.
+static var ANIMATED: Dictionary = _anim_sheets()
+const ANIM_FRAMES: int = 12
+const ANIM_SECONDS: float = 0.1
 static var MOUNTS_FRONT: Dictionary = _mount_sheets("_front")
 const RIDER_LIFT: Dictionary = {"steed": 10, "wolf": 6, "spider": 9, "lizard": 6}
 const RIDER_CUT: float = 45.0
@@ -217,6 +222,15 @@ static func _creature_sheets(suffix: String = "") -> Dictionary:
 	var sheets: Dictionary = {}
 	for kind: String in Monsters.MONSTERS:
 		var path: String = "res://assets/sprites/creatures/%s%s.png" % [kind, suffix]
+		if ResourceLoader.exists(path):
+			sheets[kind] = load(path)
+	return sheets
+
+
+static func _anim_sheets() -> Dictionary:
+	var sheets: Dictionary = {}
+	for kind: String in World.ITEMS:
+		var path: String = "res://assets/sprites/items_anim/%s.png" % kind
 		if ResourceLoader.exists(path):
 			sheets[kind] = load(path)
 	return sheets
@@ -723,6 +737,10 @@ static func item_region(kind: String) -> Rect2:
 ## Draws an item icon centred on a 32-pixel slot or ground tile.
 static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: Color = Color.WHITE, size: float = TILE) -> void:
 	var dest := Rect2(center - Vector2.ONE * size / 2.0, Vector2.ONE * size)
+	if ANIMATED.has(kind):
+		var frame: int = int(Time.get_ticks_msec() / 1000.0 / ANIM_SECONDS) % ANIM_FRAMES
+		canvas.draw_texture_rect_region(ANIMATED[kind], dest, Rect2(frame * TILE, 0, TILE, TILE), tint)
+		return
 	if ICONS.has(kind):
 		canvas.draw_texture_rect(ICONS[kind], dest, false, tint)
 		return

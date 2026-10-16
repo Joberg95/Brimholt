@@ -1027,6 +1027,7 @@ def helmet_builder(kind):
     palette, accent = tones(kind)
     light, main, dark = palette
     shape, extras = look(kind)
+    shape = HELM_WORN.get(shape, shape)
 
     def build(direction, frame):
         image = Image(FRAME, FRAME)
@@ -1816,6 +1817,8 @@ def painted_held(kind, icon):
 def gear_builder(kind):
     slot = ITEMS[kind]["slot"]
     icon = painted_icon(kind)
+    if icon is None and look(kind)[0] in HELM_STYLES:
+        icon = helm_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
         return build
@@ -2012,6 +2015,7 @@ def wraith(direction, frame):
 # same 64x64 frames and rows as characters (stand, step A, step B).
 import creatures  # noqa: E402
 import props  # noqa: E402
+import gear3d  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2270,6 +2274,65 @@ def mount_icon(kind):
             if color is not None and opaque >= 0.45:
                 icon.set(x, y, _crisp(color))
     return icon.mirrored()
+
+
+# ---------------------------------------------------------------- showpiece helmets
+# Named helmets with their own icon, modelled in 3D and rendered with the props' look (gear3d.py):
+# masks, horned and crowned helms, a lamp helm, a haloed hat, a crested visor, a serpent hood. Worn, they use the generated helmet of
+# HELM_WORN's shape textured with that icon (textured), so the head shows the same colours.
+# Some move in the inventory (icon_frames, ANIM_FRAMES frames): flames flicker, halos and eyes
+# glow, and items with "shine": "sheen" in items.json catch a light that sweeps across them.
+
+HELM_WORN = {"fangmask": "greathelm", "dreadmask": "greathelm", "hornhelm": "helm", "crownhelm": "helm",
+             "lanternhelm": "kettle", "nimbus": "hat", "visor": "greathelm", "cobra": "cowl"}
+HELM_STYLES = tuple(HELM_WORN)
+# Styles that move on their own: flames, a halo, glowing eyes.
+HELM_ALIVE = ("fangmask", "dreadmask", "lanternhelm", "nimbus", "cobra")
+ANIM_FRAMES = 12
+
+
+def helm_icon(kind, frame=0):
+    """The showpiece helmet's icon, modelled and rendered in 3D (gear3d.py); frame moves its
+    flames, halo, and eyes."""
+    image = Image(TILE, TILE)
+    image.pixels = gear3d.icon(kind, ITEMS[kind]["look"], ITEMS[kind]["colors"], frame)
+    return image
+
+
+def _sheen(icon, frame):
+    """A soft white band sweeping down-right across the icon in the first half of the loop; the
+    second half rests."""
+    if frame >= ANIM_FRAMES // 2:
+        return icon
+    centre = -8 + frame * 10
+    result = Image(TILE, TILE)
+    result.over(icon)
+    for y in range(TILE):
+        for x in range(TILE):
+            pixel = icon.pixels[y][x]
+            if pixel is None or pixel == OUTLINE:
+                continue
+            distance = abs(x + y - centre - 16)
+            if distance <= 3:
+                result.pixels[y][x] = blend(pixel, rgba("ffffff"), 0.6 if distance <= 1 else 0.28)
+    return result
+
+
+def animated(kind):
+    shape, _ = look(kind)
+    return shape in HELM_ALIVE or ITEMS[kind].get("shine") == "sheen"
+
+
+def icon_frames(kind):
+    """ANIM_FRAMES icons in a row, for items that move in the inventory and on the ground."""
+    shape, _ = look(kind)
+    frames = []
+    for frame in range(ANIM_FRAMES):
+        icon = helm_icon(kind, frame) if shape in HELM_STYLES else item_icon(kind)
+        if ITEMS[kind].get("shine") == "sheen":
+            icon = _sheen(icon, frame)
+        frames.append(icon)
+    return sheet_row(frames)
 
 
 # ---------------------------------------------------------------- rings
@@ -2537,6 +2600,8 @@ def item_icon(kind):
         return mount_icon(kind)
     if shape == "ring":
         return ring_icon(kind)
+    if shape in HELM_STYLES:
+        return helm_icon(kind)
     image = Image(TILE, TILE)
     gem = (scale(accent, 1.12), accent, scale(accent, 0.65))
     if shape == "cap":
@@ -5304,6 +5369,7 @@ def main():
         "items_glow.png": None,
         **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
         **{f"creatures/{kind}.png": creature_sheet(kind) for kind in creatures.SPECIES},
+        **{f"items_anim/{kind}.png": icon_frames(kind) for kind in ITEMS if animated(kind)},
         **{f"mounts/{kind}{suffix}.png": mount_sheet(kind, part) for kind, item in ITEMS.items()
            if item.get("slot") == "mount" for part, suffix in ((0, ""), (1, "_front"))},
         **{f"creatures/{kind}_glow.png": None for kind in GLOWING_CREATURES},
