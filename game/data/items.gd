@@ -38,6 +38,10 @@ const CAPE_MANA: float = 0.06
 const CHARM_REGEN: float = 0.02
 const CHARM_HEALING: float = 0.01
 const RING_SHARE: float = 0.03
+## Focused rings (items.json "focus"; monster drops) trade the tier ring's health, mana, and
+## critical for more of one thing: twice the health or mana share, CRITICAL_RING * 2 + 1 critical,
+## a charm's healing or 1.5x its regen with half the health, or a cape's defenses.
+const RING_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "regen", "defense"]
 ## Magic defense of capes, amulets, and books, as shares of their tier's set defense.
 const MAGIC_SHARE: Dictionary = {"cape": 0.15, "necklace": 0.10, "book": 0.10}
 ## Critical chance (percent) on Hunters' and Sorcerers' weapons: CRITICAL_WEAPON, plus one more
@@ -69,7 +73,7 @@ const RESOURCE_VALUES: Array[int] = [0, 4, 7, 10, 14]
 
 
 ## id -> {name, slot, level, vocations, look, colors, stats, [armor], [outfit], [gold], [value], [price], [sell],
-## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only], [sold], [quest]} in file order. "sold" puts
+## [drink, cooldown, timer], [eat], [bound], [slots], [loot_only], [sold], [quest], [focus]} in file order. "sold" puts
 ## an item without a gear slot (a bag) in vendor stock. Potions sharing a
 ## "timer" share one cooldown (a strong health potion waits on the health potion's timer). "price" is the tier valuation,
 ## "sell" what vendors pay; loot_only items are never vendor stock or generic gear rolls.
@@ -98,6 +102,8 @@ static func load_catalog() -> Dictionary:
 			item["sold"] = true
 		if entry.has("quest"):
 			item["quest"] = String(entry["quest"])
+		if entry.has("focus"):
+			item["focus"] = String(entry["focus"])
 		if boss_drops().has(String(entry["id"])):
 			item["boss_drop"] = true
 		for key: String in ["gold", "value", "price", "slots"]:
@@ -202,8 +208,21 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 		"charm":
 			return {"regen": roundi(reference_health(level) * CHARM_REGEN), "healing": roundi(reference_health(level) * CHARM_HEALING)}
 		"ring":
-			return {"health": roundi(reference_health(level) * RING_SHARE), "mana": roundi(reference_mana(level) * RING_SHARE),
-				"critical": CRITICAL_RING}
+			var health: int = roundi(reference_health(level) * RING_SHARE)
+			match String(item.get("focus", "")):
+				"health":
+					return {"health": health * 2}
+				"mana":
+					return {"mana": roundi(reference_mana(level) * RING_SHARE) * 2}
+				"critical":
+					return {"critical": CRITICAL_RING * 2 + 1}
+				"healing":
+					return {"healing": maxi(1, roundi(reference_health(level) * CHARM_HEALING)), "health": health / 2}
+				"regen":
+					return {"regen": maxi(1, roundi(reference_health(level) * CHARM_REGEN * 1.5)), "health": health / 2}
+				"defense":
+					return {"defense": _defense(level, "cape"), "magic_defense": _magic(level, "cape")}
+			return {"health": health, "mana": roundi(reference_mana(level) * RING_SHARE), "critical": CRITICAL_RING}
 	return {}
 
 

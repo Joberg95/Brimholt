@@ -37,7 +37,6 @@ TEMPLATES = {
     "wand": ["template_pieces_wand", "storm_wand", "blaze_wand", "starfire_wand", "wyrmglass_wand"],
     "rod": ["template_pieces_staff", "tide_rod", "emberthorn_rod", "duskbloom_rod", "starbloom_rod"],
     "book": ["template_pieces_book"],
-    "ring": ["template_voidweaver_offhand"],
     "charm": ["template_verdant_spirit_offhand", "template_wildroot_offhand"],
     "amulet": ["template_astral_veil_offhand", "template_arcane_eclipse_offhand"],
     "orb": ["template_astral_veil_offhand", "template_arcane_eclipse_offhand"],
@@ -99,7 +98,7 @@ def recolour(template, item, wooden):
 
 
 def hollow(image):
-    """Clears large near-black areas enclosed by the item (a ring's middle, the gap between a bow's
+    """Clears large near-black areas enclosed by the item (the gap between a bow's
     limb and string): dark regions of at least 12 pixels at least 85% surrounded by the item."""
     dark = {(x, y) for y in range(image.height) for x in range(image.width)
             if image.pixels[y][x] is not None and hls(image.pixels[y][x])[1] < 0.16}
@@ -169,7 +168,7 @@ def main():
             continue
         shape = M.look(kind)[0]
         icon = recolour(painted(name), item, shape in WOODEN)
-        if shape in ("ring", "bow"):
+        if shape == "bow":
             icon = hollow(icon)
         icon.save(DERIVED / f"{kind}.png")
         made += 1

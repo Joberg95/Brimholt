@@ -2272,6 +2272,132 @@ def mount_icon(kind):
     return icon.mirrored()
 
 
+# ---------------------------------------------------------------- rings
+# A ring icon is a small band seen tilted (a 3/4 ellipse with its outer wall showing at the front
+# and its inner wall at the back, the back of the band in shadow), lit from the top-left, with a
+# centrepiece standing on top: look "ring+<style>" (gem, signet, plasma, wreath, serpent, claw,
+# skull, twin, crystal, star). Metal is the item's main/light colours, the stone its accent.
+
+RING_CENTRE = (16, 20)
+
+
+def _ring_band(image, palette, cx, cy, rx, ry, width, wall):
+    """Top face, outer front wall, and inner back wall of a tilted band."""
+    light, main, dark = palette
+    outer, inner = ellipse(cx, cy, rx, ry), ellipse(cx, cy, rx - width, ry - width * 0.6)
+    top = outer - inner
+    front = {(x, y) for x, y in ellipse(cx, cy + wall, rx, ry) - outer if y >= cy}
+    back = {(x, y) for x, y in inner - ellipse(cx, cy + wall, rx - width, ry - width * 0.6) if y < cy + 1}
+    for x, y in back:
+        image.set(x, y, scale(dark, 0.7))
+    for x, y in front:
+        image.set(x, y, dark if x > cx + rx * 0.3 else scale(main, 0.8))
+    for x, y in top:
+        far = y < cy
+        lit = x < cx - 1 and (y < cy or x < cx - rx * 0.6)
+        color = light if lit and not far else main
+        if x > cx + rx * 0.45 or (far and x > cx):
+            color = dark
+        elif far:
+            color = scale(main, 0.85)
+        image.set(x, y, color)
+    return top | front
+
+
+def _gem(image, cx, cy, rx, ry, stone):
+    lit, main, dark = stone
+    for x, y in ellipse(cx, cy, rx, ry):
+        image.set(x, y, dark if x + y > cx + cy + 1 else main)
+    image.set(round(cx - rx / 2), round(cy - ry / 2), lit)
+    image.set(round(cx - rx / 2) + 1, round(cy - ry / 2), lit)
+    image.set(round(cx - rx / 2), round(cy - ry / 2) - 1 if ry > 2 else round(cy - ry / 2), (250, 250, 240, 255))
+
+
+def ring_icon(kind):
+    palette, accent = tones(kind)
+    light, main, dark = palette
+    _, extras = look(kind)
+    style = next(iter(extras), "gem")
+    stone = (scale(accent, 1.3), accent, scale(accent, 0.6))
+    cx, cy = RING_CENTRE
+    image = Image(TILE, TILE)
+    if style == "plasma":
+        for index in range(12):
+            angle = index * math.tau / 12
+            x, y = cx + 6.2 * math.cos(angle), cy + 3.6 * math.sin(angle)
+            tones_ = stone if index % 2 == 0 else (light, main, dark)
+            if y < cy:
+                tones_ = tuple(scale(c, 0.75) for c in tones_)
+            shade(image, ellipse(x, y, 1.9, 1.7), tones_, False)
+        for index in range(0, 12, 2):
+            angle = index * math.tau / 12
+            image.set(round(cx + 6.2 * math.cos(angle) - 0.8), round(cy + 3.6 * math.sin(angle) - 0.8), (250, 250, 240, 255))
+        return image.outlined()
+    if style == "twin":
+        _ring_band(image, palette, cx, cy - 2, 7, 4, 1.4, 1)
+        _ring_band(image, (scale(accent, 1.2), accent, scale(accent, 0.7)), cx, cy + 1, 7, 4, 1.4, 2)
+        return image.outlined()
+    if style == "serpent":
+        _ring_band(image, palette, cx, cy, 7, 4.5, 2, 2)
+        for x, y in ellipse(cx, cy, 7, 4.5) - ellipse(cx, cy, 5, 3.3):
+            if (x + y * 2) % 4 == 0:
+                image.set(x, y, scale(dark, 0.85))
+        head = ellipse(cx + 5, cy - 4, 2.6, 2) | {(cx + 3, cy - 3), (cx + 4, cy - 2)}
+        shade(image, head, palette, False)
+        image.set(cx + 6, cy - 5, stone[1])
+        image.set(cx + 8, cy - 3, scale(accent, 0.8))
+        shade(image, ellipse(cx - 6, cy - 2, 1.6, 1.6), palette, False)
+        return image.outlined()
+    if style == "wreath":
+        twig = (rgba("8a6440"), rgba("6e4a2e"), rgba("4f3420"))
+        _ring_band(image, twig, cx, cy, 7, 4.5, 1.6, 2)
+        for index in range(10):
+            angle = index * math.tau / 10 + 0.3
+            x, y = round(cx + 6.6 * math.cos(angle)), round(cy + 4 * math.sin(angle))
+            leaf = LEAF_TONES if y >= cy else tuple(scale(c, 0.75) for c in LEAF_TONES)
+            shade(image, {(x, y), (x + 1, y), (x, y - 1)}, leaf, False)
+        for x, y in ((cx, cy - 6), (cx - 1, cy - 5), (cx + 1, cy - 5), (cx, cy - 4)):
+            image.set(x, y, stone[1])
+        image.set(cx, cy - 5, rgba("ffe08a"))
+        return image.outlined()
+    _ring_band(image, palette, cx, cy, 7, 4.5, 1.8, 2)
+    top = cy - 5
+    if style == "signet":
+        face = ellipse(cx, top, 4, 2.8)
+        shade(image, face, palette, False)
+        for x, y in face:
+            if abs(x - cx) + abs(y - top) * 1.4 <= 2:
+                image.set(x, y, stone[1])
+        image.set(cx - 2, top - 2, light)
+    elif style == "claw":
+        for x0, lean in ((cx - 4, 1), (cx + 4, -1), (cx, 0)):
+            for x, y in line(x0, top + 3, x0 + lean, top - 2):
+                image.set(x, y, light if lean > 0 else dark)
+        _gem(image, cx, top - 1, 2.6, 2.4, stone)
+    elif style == "skull":
+        bone = ellipse(cx, top - 1, 3.6, 3) | box(cx - 2, top + 1, 5, 2)
+        shade(image, bone, BONE, False)
+        image.set(cx - 2, top - 1, stone[1])
+        image.set(cx + 1, top - 1, stone[1])
+        image.set(cx - 1, top - 1, scale(stone[2], 0.6))
+        image.set(cx + 2, top - 1, scale(stone[2], 0.6))
+        for x in (cx - 1, cx + 1):
+            image.set(x, top + 2, scale(BONE[2], 0.7))
+    elif style == "crystal":
+        for x0, height in ((cx - 2, 5), (cx, 8), (cx + 2, 6)):
+            shard = polygon([(x0 - 1, top + 2), (x0 + 0.5, top + 2 - height), (x0 + 2, top + 2)])
+            shade(image, shard, stone, False)
+        image.set(cx, top - 4, (250, 250, 240, 255))
+    else:
+        for x, y in ((cx - 3, top + 1), (cx + 3, top + 1), (cx - 2, top - 2), (cx + 2, top - 2)):
+            image.set(x, y, light)
+        _gem(image, cx, top, 3, 2.6, stone)
+        if style == "star":
+            for x, y in ((cx, top - 4), (cx - 5, top), (cx + 5, top), (cx, top - 5)):
+                image.set(x, y, scale(accent, 1.4))
+    return image.outlined()
+
+
 # ---------------------------------------------------------------- items
 
 def material_icon(image, shape, palette, accent):
@@ -2409,6 +2535,8 @@ def item_icon(kind):
         return runestone_icon(kind)
     if shape in MOUNT_SHAPES:
         return mount_icon(kind)
+    if shape == "ring":
+        return ring_icon(kind)
     image = Image(TILE, TILE)
     gem = (scale(accent, 1.12), accent, scale(accent, 0.65))
     if shape == "cap":

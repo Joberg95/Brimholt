@@ -35,7 +35,7 @@ filtering:
 | Sheet | Layout |
 | --- | --- |
 | `body.png`, `cloth.png`, `marker.png`, `gear/<item>.png` | 64×64 frames; columns stand / step A / step B / attack wind-up / strike; rows down / up / left / right; tile centre at frame pixel (32, 40). Monster sheets have only the first three columns |
-| `items.png` | 32×32 icons in `SpriteArt.ITEM_ORDER` |
+| `items.png` | 32×32 icons in `SpriteArt.ITEM_ORDER`. Rings (`ring_icon`) are small tilted bands, about 15 pixels across: the top face lit from the top-left, the outer wall showing at the front and the inner wall in shadow at the back, and a centrepiece on top from the look's style (`ring+gem`, `signet`, `plasma` beads, `wreath`, `serpent`, `claw`, `skull`, `twin` bands, `crystal`, `star`), in the item's metal colours with its accent as the stone |
 | `spells.png` | 32×32 rune stones, eight per row in `Spells.SPELLS` order: a weathered stone (its outline varies per spell) with the spell's Elder Futhark rune (`Spells.RUNES`, strokes in `RUNE_STROKES`; two Anglo-Saxon runes, Ear and Yr, past the twenty-four) carved in and glowing in the spell's colour |
 | `world_map.png` | The painted world map, 4 px per overworld tile, baked by `tools/generators/world_map.gd` (not `make_sprites.py`): sea with shallows and surf, land with soft variation, forest canopy clumps, lit and shaded ridges, roofs in towns. `world_map.json` holds the map hash it was baked from |
 | `rune_fx.png` | 32×32 frames of a spell or rune landing (`rune_fx`), one row per element (`Spells.ELEMENTS`: fire, frost, lightning, holy, nature, slash, pierce, heal), four frames each: flame tongues that bloom and die to embers, ice shards that rise and shatter, a forked bolt that scatters sparks, golden rays round a bright core, thorny tendrils in a burst of leaves, a pale sword arc, an arrow's strike with splinters, and green motes rising. Drawn on every tile hit (`SpriteArt.draw_rune_fx`), 6 px up so they stand on the tile; bolts and shots play theirs on the target when they land |
@@ -127,10 +127,9 @@ template of the same kind (`TEMPLATES`, plain to ornate by level; for helmets, a
 boots the nearest-tier painted piece of the same slot and armor type; a catalog `template`
 names a specific painted icon instead, as the mythic sets do), recoloured to the item's
 catalog colours: outlines and wood stay, gold trim takes the accent colour, and everything else
-follows its brightness on a ramp from the main to the light colour. Rings lose the template's
-dark middle. They are written to `assets/sprites/icons_derived/` every run. The extra templates
+follows its brightness on a ramp from the main to the light colour. They are written to `assets/sprites/icons_derived/` every run. The extra templates
 (`template_*` icons) come from the unused weapon and off-hand cells of `class_sets.png` and the
-single pieces of `class_pieces.png`. Axes, maces, hammers, crossbows, torches, capes, packs,
+single pieces of `class_pieces.png`. Rings, axes, maces, hammers, crossbows, torches, capes, packs,
 potions, food, gathered resources (looks `ore`, `log`, `herb`, `fish`, `food`), and most materials have no template yet and keep their generated `items.png` cell.
 
 Worn helmets, armor, legs, and boots with a painted icon wear that icon like a paper doll

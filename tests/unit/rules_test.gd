@@ -187,6 +187,7 @@ func _run() -> void:
 	_sprite_checks()
 	_slot_and_stat_checks()
 	_mount_checks()
+	_ring_checks()
 	_balance_checks()
 	_adventurer_checks()
 	_quest_hub_and_lexicon_checks()
@@ -1565,6 +1566,32 @@ func _sprite_checks() -> void:
 				var bounds: Rect2i = sheet.get_region(Rect2i(pose * 64, facing * 64, 64, 64)).get_used_rect()
 				check(bounds.has_area() and bounds.position.x > 0 and bounds.end.x < 64
 					and bounds.position.y > 0 and bounds.end.y < 64, "%s stays visible and unclipped in every compact pose" % kind)
+
+
+func _ring_checks() -> void:
+	var styles: Array[String] = ["gem", "signet", "plasma", "wreath", "serpent", "claw", "skull", "twin", "crystal", "star"]
+	var focused: int = 0
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] != "ring":
+			continue
+		check(String(item["look"]).get_slice("+", 0) == "ring" and String(item["look"]).get_slice("+", 1) in styles,
+			"%s is drawn as a ring with a centrepiece" % kind)
+		if not item.has("focus"):
+			continue
+		focused += 1
+		var sources: int = 0
+		for monster: String in Monsters.LOOT:
+			for entry: Array in Monsters.LOOT[monster]:
+				sources += 1 if entry[0] == kind else 0
+		var plain: Dictionary = Items.tier_stats({"slot": "ring", "level": item["level"], "vocations": []})
+		check(item["focus"] in Items.RING_FOCUS and item.get("loot_only", false) and not World.bound(kind) and sources == 1
+			and not item["stats"].is_empty() and item["stats"] != plain,
+			"%s is a focused ring one monster drops" % kind)
+		if item["focus"] in ["health", "mana", "critical"]:
+			check(item["stats"].size() == 1 and item["stats"][item["focus"]] > plain[item["focus"]],
+				"%s gives more %s than its tier's ring and nothing else" % [kind, item["focus"]])
+	check(focused == 8, "eight focused rings drop from monsters")
 
 
 func _mount_checks() -> void:

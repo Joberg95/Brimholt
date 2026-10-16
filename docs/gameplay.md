@@ -152,6 +152,18 @@ monsters, 25% from elites; 30% of those come from the tier below). Loot spills o
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
 needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
 
+### Focused rings
+
+Eight rings drop from overworld hunts (1.5% a kill, only at or above the ring's level). Each
+gives up the tier ring's mix of health, mana and critical for more of one thing
+(`Items.RING_FOCUS`): the **Briarwreath ring** (level 20, healing; lizard shamans), the
+**Bloodstone signet** (20, double health; dire bears), the **Warding coil** (25, a cape's defense
+and magic defense; stone trolls), the **Stormglass ring** (25, 5% critical; harpies), the
+**Wellspring ring** (30, double mana; cinder wraiths), the **Mending band** (35, regeneration
+and some health; marsh witches), the **Gravewyrm signet** (40, double health; cave trolls), and
+the **Talonheart ring** (45, 5% critical; bog hulks). They are unbound, so trade them, and wear
+two to stack a focus.
+
 ### Mounts
 
 Every champion and final boss has its own mount, dropped on **1% of kills**
