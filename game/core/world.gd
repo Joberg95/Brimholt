@@ -1064,6 +1064,10 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["skills"] = player["skills"].duplicate(true)
 		if not player["fed"].is_empty() and player["fed"]["until"] > now:
 			state["fed"] = [player["fed"]["kind"], player["fed"]["until"] - now]
+		# Seconds left rooted or slowed, for the buff bar (Combat.restrain).
+		for held: String in ["rooted", "slowed"]:
+			if player.get(held + "_until", -INF) > now:
+				state[held] = player[held + "_until"] - now
 		state["experience"] = player["experience"]
 		state["gold"] = player["gold"]
 	return state

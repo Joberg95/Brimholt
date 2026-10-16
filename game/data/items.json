@@ -463,6 +463,7 @@
     {"id": "cyclops_eye_amulet", "name": "Cyclops-eye amulet", "slot": "necklace", "level": 35, "look": "amulet", "colors": ["5a4a32", "c8a050", "ff6a3a"], "bound": true, "quest": "hundred_eyed_hollow"},
     {"id": "hollowforge_hammer", "name": "Hollowforge hammer", "slot": "main_hand", "level": 35, "look": "hammer", "colors": ["6a6058", "b0a898", "ff8a3a"], "vocations": ["knight"], "bound": true, "quest": "hundred_eyed_hollow"},
     {"id": "cyclops_hide_cloak", "name": "Cyclops-hide cloak", "slot": "cape", "level": 35, "look": "cape", "colors": ["6a5236", "9a7a52", "c8a070"], "bound": true, "quest": "hundred_eyed_hollow"},
+    {"id": "homeward_rune", "name": "Homeward rune", "level": 30, "look": "runestone+othala", "colors": ["5c5a56", "7e7a72", "9ae0ff"], "value": 60, "rune": "home"},
     {"id": "lightning_rune", "name": "Lightning rune", "level": 40, "look": "runestone+sowilo", "colors": ["56545e", "78767e", "ffe060"], "value": 120, "rune": "lightning"}
   ]
 }

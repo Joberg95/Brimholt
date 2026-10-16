@@ -519,7 +519,8 @@ func _rune_to_use(id: int) -> String:
 		return ""
 	for entry: String in player["backpack"]:
 		var kind: String = World.kind_of(entry)
-		if World.ITEMS.get(kind, {}).has("rune") and player["level"] >= World.ITEMS[kind]["level"]:
+		if World.ITEMS.get(kind, {}).has("rune") and player["level"] >= World.ITEMS[kind]["level"] \
+				and Spells.rune_of(World.ITEMS[kind])["shape"] != "recall":
 			return kind
 	return ""
 

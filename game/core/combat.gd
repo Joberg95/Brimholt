@@ -19,6 +19,9 @@ const Quests = preload("res://game/data/quests.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Titles = preload("res://game/data/titles.gd")
 
+## Any monster above HOMEWARD_LEVEL may drop a Homeward rune (Spells.RUNES_BY_ELEMENT "home").
+const HOMEWARD_LEVEL: int = 30
+const HOMEWARD_CHANCE: float = 0.015
 const TICK_SECONDS: float = 0.1
 const REGEN_SECONDS: float = 2.0
 ## Mana restored per 10 seconds, as a fraction of max mana.
@@ -616,6 +619,8 @@ func use_rune(id: int, kind: Variant, now: float) -> Dictionary:
 	var slot: int = player["backpack"].find_custom(func(entry: String) -> bool: return World.kind_of(entry) == kind)
 	if slot < 0:
 		return {"ok": false, "reason": "You have no %s left" % item["name"].to_lower(), "events": []}
+	if rune["shape"] == "recall":
+		return _recall(id, slot, now)
 	var target: int = player["target"]
 	if target == 0 or not hostile(id, target) or not in_reach(player["cell"], creature(target)["cell"], Spells.RUNE_RANGE):
 		return {"ok": false, "reason": "You need a target in range", "events": []}
@@ -658,6 +663,33 @@ func use_rune(id: int, kind: Variant, now: float) -> Dictionary:
 		for victim: int in struck:
 			if exists(victim):
 				restrain(victim, "slow", rune["slow"], now, events)
+	return {"ok": true, "events": events}
+
+
+## The Homeward rune: spends one and carries the player to a free start-town spawn (where the
+## dead wake), dropping their target; refused while a monster hunts them.
+func _recall(id: int, slot: int, now: float) -> Dictionary:
+	var player: Dictionary = world.players[id]
+	for monster: int in world.monsters:
+		if world.monsters[monster]["target"] == id:
+			return {"ok": false, "reason": "You cannot find the way home while monsters hunt you", "events": []}
+	var kind: String = World.kind_of(player["backpack"][slot])
+	var left: int = World.count_of(player["backpack"][slot]) - 1
+	player["backpack"][slot] = World.make_entry(kind, left) if left > 0 else ""
+	player["groups"]["rune"] = now + Spells.GROUP_SECONDS["rune"]
+	var events: Array = [{"kind": "area", "cells": [player["cell"]], "color": Spells.RUNES_BY_ELEMENT["home"]["color"], "element": "heal"}]
+	var home: Vector2i = World.SPAWNS[0]
+	for spawn: Vector2i in World.SPAWNS:
+		if not world.occupied(spawn, now, id):
+			home = spawn
+			break
+	player["cell"] = home
+	player["from"] = home
+	player["next_move"] = now
+	player["target"] = 0
+	events.append({"kind": "area", "cells": [home], "color": Spells.RUNES_BY_ELEMENT["home"]["color"], "element": "heal"})
+	events.append({"kind": "player", "id": id, "movement": false})
+	events.append({"kind": "message", "id": id, "text": "The rune of Othala carries you home to %s." % Spells.HOME_TOWN})
 	return {"ok": true, "events": events}
 
 
@@ -1169,6 +1201,8 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 		if rng.randf() < float(entry[1]) and (item["slot"].is_empty() and not item.has("rune") or level >= item["level"]):
 			loot.append(entry[0])
 	var definition: Dictionary = Monsters.MONSTERS[kind]
+	if level > HOMEWARD_LEVEL and rng.randf() < HOMEWARD_CHANCE:
+		loot.append("homeward_rune")
 	if rng.randf() < float(definition.get("gear_chance", GEAR_DROP_CHANCE.get(definition["rank"], 0.0))):
 		loot.append(gear_drop(level))
 	var expected: float = Balance.coins_per_kill(level, definition["rank"])

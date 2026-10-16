@@ -90,6 +90,7 @@ func _run() -> void:
 	_hollow_checks()
 	_stray_wall_checks()
 	_monster_title_checks()
+	_homeward_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -3408,7 +3409,8 @@ func _gap_checks() -> void:
 	check(samples > 500 and near >= samples * 0.95, "open country lies within sight of a camp (%d of %d)" % [near, samples])
 	for spawn: Dictionary in World.MONSTER_SPAWNS:
 		var region: String = World.region_at(spawn["cell"])
-		if spawn["count"] == 5 and spawn["radius"] == 2 and by_region.has(region) and World.zone_at(spawn["cell"]).is_empty() 				and Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal":
+		if spawn["count"] == 5 and spawn["radius"] == 2 and by_region.has(region) and World.zone_at(spawn["cell"]).is_empty() \
+				and Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal":
 			check(by_region[region].has("%s/%d" % [spawn["monster"], spawn["level"]]), "%s camps keep %s's levels" % [spawn["monster"], region])
 
 
@@ -3470,6 +3472,35 @@ func _monster_title_checks() -> void:
 		check(title.begins_with("Elite ") == (definition["rank"] == "elite") and title.ends_with("%s 30" % definition["name"]),
 			"%s's title is \"%s\"" % [kind, title])
 	check(Monsters.title("grimclaw", 37, true).ends_with("ENRAGED"), "a raging boss's title says so")
+
+
+## The Homeward rune (Othala): carries you to the start town's spawns, not while hunted; monsters
+## above level 30 drop it, bots never spend it in a fight.
+func _homeward_checks() -> void:
+	var rune: Dictionary = World.ITEMS["homeward_rune"]
+	check(rune["level"] == 30 and Spells.rune_of(rune)["shape"] == "recall", "the Homeward rune is a level-30 recall rune")
+	var world := World.new()
+	var combat := Combat.new(world, 9)
+	world.monsters.clear()
+	check(world.add_player(1, 0.0, "druid"), "homeward player")
+	var player: Dictionary = world.players[1]
+	player["level"] = 30
+	player["backpack"][5] = "homeward_rune#2"
+	_place(world, 1, Vector2i(120, 60))
+	var wolf: int = combat.spawn_monster("grey_wolf", 10, Vector2i(122, 60), 0.0)
+	world.monsters[wolf]["target"] = 1
+	check(combat.use_rune(1, "homeward_rune", 1.0).get("reason", "").contains("hunt"), "no way home while monsters hunt you")
+	world.monsters[wolf]["target"] = 0
+	var used: Dictionary = combat.use_rune(1, "homeward_rune", 2.0)
+	check(used["ok"] and player["cell"] in World.SPAWNS and player["backpack"][5] == "homeward_rune",
+		"the rune spends one and carries you to the start town")
+	var drops: int = 0
+	for roll: int in 3000:
+		drops += combat.roll_loot("grey_wolf", 31).count("homeward_rune")
+	var low: int = 0
+	for roll: int in 3000:
+		low += combat.roll_loot("grey_wolf", 30).count("homeward_rune")
+	check(drops > 10 and low == 0, "only monsters above level 30 drop Homeward runes (%d in 3000)" % drops)
 
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
@@ -4789,7 +4820,8 @@ func _test_wall() -> Vector2i:
 	for y: int in range(2, 120):
 		for x: int in range(2, 120):
 			var cell := Vector2i(x, y)
-			if World.terrain(cell) == "#" and World.walkable(cell + Vector2i.LEFT) and World.walkable(cell + Vector2i.RIGHT) 					and World.walkable(cell + Vector2i.UP):
+			if World.terrain(cell) == "#" and World.walkable(cell + Vector2i.LEFT) and World.walkable(cell + Vector2i.RIGHT) \
+					and World.walkable(cell + Vector2i.UP):
 				return cell
 	return Vector2i.ZERO
 

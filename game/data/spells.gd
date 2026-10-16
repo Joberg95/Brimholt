@@ -38,6 +38,9 @@ const RUNES_BY_ELEMENT: Dictionary = {
 	"frost": {"name": "Frost rune", "shape": "circle", "radius": 2, "power": 1.2, "slow": 2.0, "color": Color("#8ad8ff")},
 	"lightning": {"name": "Lightning rune", "shape": "chain", "power": 2.4, "jumps": 2, "reach": 3, "chain_power": 1.2,
 		"color": Color("#ffe060")},
+	# Othala, the homeland: no target; carries you home to the start town (where the dead wake),
+	# but not while monsters hunt you. Monsters above level 30 drop it (Combat.HOMEWARD_CHANCE).
+	"home": {"name": "Homeward rune", "shape": "recall", "color": Color("#9ae0ff")},
 }
 ## Spell ranks: a class trainer raises a known spell one rank for rune shards (rank 2 costs
 ## RANK_COSTS[0], rank 3 RANK_COSTS[1]); each rank above 1 adds RANK_POWER to its power
@@ -224,6 +227,10 @@ static func info(id: String, stats: Dictionary, level: int, rank: int = 1) -> Di
 
 
 ## A rune item's spell (RUNES_BY_ELEMENT), or {} for any other item.
+## Where the Homeward rune (and death) takes you.
+const HOME_TOWN: String = "Cinder Crossing"
+
+
 static func rune_of(item: Dictionary) -> Dictionary:
 	return RUNES_BY_ELEMENT.get(item.get("rune", ""), {})
 
@@ -233,6 +240,12 @@ static func rune_text(item: Dictionary) -> String:
 	var rune: Dictionary = rune_of(item)
 	if rune.is_empty():
 		return ""
+	if rune["shape"] == "recall":
+		return "
+".join(PackedStringArray([
+			"Rune of Othala: carries you home to %s, where the fallen wake. Not while monsters hunt you." % HOME_TOWN,
+			"Any class from level %d. Drag it to the action bar; each use spends one." % item["level"],
+			"Cooldown %s s for all runes." % number(GROUP_SECONDS["rune"])]))
 	var effect: String
 	if rune["shape"] == "circle":
 		effect = "Rune spell: hits every enemy within %d tiles of your target for %s× a geared attack of your level." % [

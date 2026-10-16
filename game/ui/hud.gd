@@ -1,6 +1,6 @@
 extends Node
 ## Heads-up display around the game window: the centred action message, the zone banner, the health and mana bars, the target frame (your target's name, level, and health
-## beside your bars), and the Controls menu.
+## beside your bars), the buff bar (game/ui/buff_bar.gd), and the Controls menu.
 
 const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -10,6 +10,7 @@ const UiTheme = preload("res://game/ui/ui_theme.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const BuffBar = preload("res://game/ui/buff_bar.gd")
 const MESSAGE_SECONDS: float = 4.0
 
 var game: Node
@@ -18,6 +19,8 @@ var address: LineEdit
 var controls: PanelContainer
 var zone_label: Label
 var vitals: Control
+## The effects on you (a meal, roots, slows), above the minimap.
+var buff_bar: Node
 ## Your target's name, level, and health, right of the vitals; hidden without a target.
 var target_frame: Control
 var _action: Label
@@ -78,6 +81,9 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	layer.add_child(location_label)
 	layer.add_child(vitals)
 	layer.add_child(target_frame)
+	buff_bar = BuffBar.new()
+	add_child(buff_bar)
+	buff_bar.build(game, layer)
 	controls = ControlsMenu.new()
 	controls.theme = UiTheme.build()
 	controls.visible = false
@@ -93,6 +99,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 ## Per frame: the zone banner and the vitals.
 func refresh() -> void:
 	_update_zone()
+	buff_bar.refresh()
 	vitals.queue_redraw()
 	target_frame.queue_redraw()
 
@@ -213,7 +220,8 @@ func _update_zone() -> void:
 	# Caves and dungeons need no banner or announcement: the line under the minimap names them.
 	var below: bool = zone.has("cave") or zone.get("underground", false)
 	# Announce the zone unless a newer message (such as a death report) is still showing.
-	if zone_name != _zone_name and not zone_name.is_empty() and not below 			and (message.is_empty() or game._now() - _message_since > 2.0):
+	if zone_name != _zone_name and not zone_name.is_empty() and not below \
+			and (message.is_empty() or game._now() - _message_since > 2.0):
 		game.last_action_message = "Entering %s." % zone_name
 	_zone_name = zone_name
 	var continent: String = World.continent_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else ""

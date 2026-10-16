@@ -57,6 +57,15 @@ sword arc; area spells flare on every tile they hit; heals raise green motes:
 | Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
 | Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Entangling roots (12, roots your target in place for 3 s), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
 
+**Homeward rune.** Any monster above level 30 may drop a Homeward rune (the rune of Othala, the
+homeland; 1.5% a kill). From level 30, use it from the action bar to be carried home to Cinder
+Crossing, where the fallen wake; it needs no target but will not work while a monster hunts you,
+and it shares the runes' cooldown. Bots never spend it.
+
+**Buff bar.** Above the minimap a small icon stands for each effect on you, with the time it has
+left and a tooltip: the meal you ate (green frame, its regeneration bonus) and roots or slows
+(red frame).
+
 **Rune spells.** Level 40+ hunting grounds drop runes: small carved stones of fire, frost, or
 lightning (behemoths and obsidian golems fire, bog hulks and mire stalkers frost, reedfangs and
 void wraiths lightning; the level-50 elites more often). Any class from level 40 casts one at its

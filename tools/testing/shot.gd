@@ -2,11 +2,12 @@ extends SceneTree
 ## Screenshots of places in the real game (offscreen, solo, noon, clear sky), for looking at art
 ## and map work: each argument is x,y (a tile) and becomes .tools/shot-x-y.png with you there;
 ## level=N first makes you that level (so monsters in the shot do not kill you), and night
-## makes the following shots at midnight.
+## makes the following shots at midnight, and buffs puts a meal and a slow on you (the buff bar).
 ##
 ##   godot --position 99999,99999 --resolution 64x64 --path . --script res://tools/testing/shot.gd -- 140,193 120,190
 
 const Weather = preload("res://game/render/weather.gd")
+const World = preload("res://game/core/world.gd")
 
 var game: Node
 var screen: SubViewport
@@ -41,6 +42,13 @@ func _run() -> void:
 	for argument: String in OS.get_cmdline_user_args():
 		if argument == "night":
 			game._world_view.lighting.time_override = 0.0
+			continue
+		if argument == "buffs":
+			# A meal and a slow on you, to look at the buff bar.
+			var fed: Dictionary = game.world.players[game.self_id]
+			var food: String = World.ITEMS.keys().filter(func(kind: String) -> bool: return World.ITEMS[kind].has("eat"))[0]
+			fed["fed"] = {"kind": food, "until": game._now() + 600.0}
+			fed["slowed_until"] = game._now() + 30.0
 			continue
 		if argument.begins_with("level="):
 			var me: Dictionary = game.world.players[game.self_id]

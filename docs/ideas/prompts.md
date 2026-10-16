@@ -14,10 +14,6 @@ we should redesign the map to have 1 major city per continent and 1 smaller one 
 
 i noticed a lot of the areas are missing the updated art we should align
 
-lets add a buff bar so I can see if I have a active food buff or not, this can also get extended to buff spells that increase power for the party and yourself
-
-lets add a return home rune spell that can be found on monsters above level 30
-
 lets look at adding mounts that increase movement speed 
 
 we need more spells variety for each 10th level bracket, lets brainstorm on this of what spells could be added, or if we should just make endgame spells rune based so the really high damage spells comes from runes
