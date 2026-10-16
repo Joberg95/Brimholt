@@ -724,7 +724,7 @@ Choosing a class hands you its tier-1 kit (helmet, armor, legs, boots, weapon, a
 its armor type) that you lack: the trainer takes back each starter piece the class cannot use,
 worn or carried, and puts the class's piece for that slot in its place, so only the remaining
 gifts need free backpack slots. Druids keep the leather starter pieces. Tier-5 gear for every class lies around Cinder Crossing. Rings
-fit either ring slot; right-clicking a ring fills an empty ring slot first. Helmets, capes,
+fit either ring slot; right-clicking a ring fills an empty ring slot first. Every slot marks its item's rarity with a small triangle in the top-left corner, in the rarity's colour (relics in their glow). Helmets, capes,
 armor, and both hands are drawn on the character (a cape appears only when equipped);
 legs and boots too; rings, amulets, and charms are too small to show. Items can be dropped on any walkable
 tile, stacking up to six per tile, and the top item is picked up. Ground tiles must be

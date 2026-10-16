@@ -27,6 +27,8 @@ const PAPERDOLL: Dictionary = {
 	"mount": Vector2(3.2, 3),
 }
 const BACKPACK_COLUMNS: int = 5
+## Size of the rarity notch in a slot's top-left corner, in pixels.
+const NOTCH: float = 6.0
 const LOCKED_TOOLTIP: String = "Locked: finish a town hunting task for a bigger pack"
 const STAT_LABELS: Dictionary = {
 	"health": "Health", "mana": "Mana", "attack": "Attack", "defense": "Defense", "magic_defense": "Magic def.", "critical": "Critical",
@@ -454,6 +456,17 @@ func local_item(location: Dictionary) -> String:
 	return backpack[location["index"]] if location["index"] < backpack.size() else ""
 
 
+## The item's rarity as a small triangle in the slot's top-left corner, in its rarity colour
+## (Items.RARITIES; relics in their glow), with a dark edge so it reads over any icon.
+func _draw_rarity_notch(slot: Control, item: Dictionary) -> void:
+	var grade: Array = Items.rarity(item)
+	if grade.is_empty():
+		return
+	var notch := PackedVector2Array([Vector2(1, 1), Vector2(1 + NOTCH, 1), Vector2(1, 1 + NOTCH)])
+	slot.draw_colored_polygon(notch, grade[1])
+	slot.draw_line(Vector2(1 + NOTCH, 1), Vector2(1, 1 + NOTCH), Color("#0b0e12"), 1.0)
+
+
 func _draw_slot(slot: Control, location: Dictionary) -> void:
 	if _locked(location, slot):
 		slot.draw_rect(Rect2(Vector2.ZERO, slot.size), Color("#171c22"))
@@ -470,8 +483,9 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 		var usable: bool = item.get("slot", "").is_empty() or requirement_for(kind).is_empty()
 		var now: float = game._now()
 		SpriteArt.draw_item_glow(slot, slot.size / 2.0, kind, 0.6 + 0.25 * sin(now * 2.6))
-		# Rarity is shown in the tooltip; an item you cannot use yet is tinted red.
+		# An item you cannot use yet is tinted red.
 		SpriteArt.draw_item(slot, slot.size / 2.0, kind, Color.WHITE if usable else Color(1.0, 0.55, 0.55), slot.size.x)
+		_draw_rarity_notch(slot, item)
 		var cooling: float = potion_cooldown(kind)
 		if cooling > 0.0:
 			# Shade the part of the potion still cooling down, draining from the top.
