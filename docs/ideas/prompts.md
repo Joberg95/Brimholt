@@ -20,8 +20,6 @@ lets add more hunt quests, for example a quest where you enter a cyclops cave an
 
 we should restrict epic items to bosses and endgame quests, same with legendary items. (plan 36)
 
-lets add more monsters in empty spots of the map, and lower the spawn rate to balance this out. (plan 35)
-
 the text when entering a cave or dungeon can be removed, the area we are in is enough next to the minimap bottom right.
 
 lets add "elite" prefix next to monsters that are elite rarity, and also reduce fontsizes in the game overall.

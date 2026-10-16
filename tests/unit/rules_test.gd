@@ -83,6 +83,7 @@ func _run() -> void:
 	_scale_checks()
 	_spell_fx_checks()
 	_title_checks()
+	_gap_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -3346,6 +3347,39 @@ func _title_checks() -> void:
 	CharacterStore.restore(restored, 1, JSON.parse_string(JSON.stringify(saved)), 0.0)
 	check(restored.players[1]["title"] == 1 and restored.players[1]["slain"].has(Titles.final_bosses()[0]),
 		"titles and slain bosses are saved and restored")
+
+
+## The countryside is populated (tools/generators/fill_gaps.gd): nearly all open ground lies within
+## sight of a camp, the gap-filling camps copy a normal camp of their own region, and monsters come
+## back at a calm pace.
+func _gap_checks() -> void:
+	check(is_equal_approx(Monsters.RESPAWN_SECONDS, 75.0), "monsters respawn after 75 seconds")
+	var camps: Array[Vector2i] = []
+	var by_region: Dictionary = {}
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		camps.append(spawn["cell"])
+		if Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal" and World.zone_at(spawn["cell"]).is_empty():
+			var region: String = World.region_at(spawn["cell"])
+			if not by_region.has(region):
+				by_region[region] = {}
+			by_region[region]["%s/%d" % [spawn["monster"], spawn["level"]]] = true
+	var near: int = 0
+	var samples: int = 0
+	for y: int in range(0, World.OVERWORLD.end.y, 6):
+		for x: int in range(0, World.OVERWORLD.end.x, 6):
+			var cell := Vector2i(x, y)
+			if World.terrain(cell) not in [".", ":", "m", "s"] or not World.zone_at(cell).is_empty():
+				continue
+			samples += 1
+			for camp: Vector2i in camps:
+				if World.chebyshev(camp, cell) <= 11:
+					near += 1
+					break
+	check(samples > 500 and near >= samples * 0.95, "open country lies within sight of a camp (%d of %d)" % [near, samples])
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var region: String = World.region_at(spawn["cell"])
+		if spawn["count"] == 5 and spawn["radius"] == 2 and by_region.has(region) and World.zone_at(spawn["cell"]).is_empty() 				and Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal":
+			check(by_region[region].has("%s/%d" % [spawn["monster"], spawn["level"]]), "%s camps keep %s's levels" % [spawn["monster"], region])
 
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")

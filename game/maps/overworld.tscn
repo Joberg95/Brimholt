@@ -4228,6 +4228,710 @@ monster = "icetide_shaman"
 level = 37
 count = 5
 
+[node name="Gap_outlaw_archer_1" type="Marker2D" parent="MonsterSpawns" unique_id=2069563321]
+position = Vector2(2928, 6576)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 20
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_1" type="Marker2D" parent="MonsterSpawns" unique_id=500249682]
+position = Vector2(8880, 2864)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 24
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_1" type="Marker2D" parent="MonsterSpawns" unique_id=1480177360]
+position = Vector2(4272, 112)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 12
+count = 5
+radius = 2
+
+[node name="Gap_road_bandit_1" type="Marker2D" parent="MonsterSpawns" unique_id=1461566025]
+position = Vector2(848, 4048)
+script = ExtResource("5_xkg0o")
+monster = "road_bandit"
+level = 10
+count = 5
+radius = 2
+
+[node name="Gap_snow_wolf_1" type="Marker2D" parent="MonsterSpawns" unique_id=464529600]
+position = Vector2(1968, 16336)
+script = ExtResource("5_xkg0o")
+monster = "snow_wolf"
+level = 30
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_1" type="Marker2D" parent="MonsterSpawns" unique_id=1370723436]
+position = Vector2(4944, 3376)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 17
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_2" type="Marker2D" parent="MonsterSpawns" unique_id=2075735810]
+position = Vector2(1424, 4752)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 12
+count = 5
+radius = 2
+
+[node name="Gap_outlaw_archer_2" type="Marker2D" parent="MonsterSpawns" unique_id=480995302]
+position = Vector2(2448, 6640)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 20
+count = 5
+radius = 2
+
+[node name="Gap_cyclops_smith_1" type="Marker2D" parent="MonsterSpawns" unique_id=1739459893]
+position = Vector2(12048, 2416)
+script = ExtResource("5_xkg0o")
+monster = "cyclops_smith"
+level = 37
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_2" type="Marker2D" parent="MonsterSpawns" unique_id=943014763]
+position = Vector2(2000, 6576)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 17
+count = 5
+radius = 2
+
+[node name="Gap_barbarian_raider_1" type="Marker2D" parent="MonsterSpawns" unique_id=1075444351]
+position = Vector2(2096, 15920)
+script = ExtResource("5_xkg0o")
+monster = "barbarian_raider"
+level = 33
+count = 5
+radius = 2
+
+[node name="Gap_outlaw_archer_3" type="Marker2D" parent="MonsterSpawns" unique_id=1955104029]
+position = Vector2(2864, 7088)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 20
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_3" type="Marker2D" parent="MonsterSpawns" unique_id=758579922]
+position = Vector2(6352, 560)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 16
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_1" type="Marker2D" parent="MonsterSpawns" unique_id=1884809588]
+position = Vector2(2096, 10096)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 30
+count = 5
+radius = 2
+
+[node name="Gap_outlaw_archer_4" type="Marker2D" parent="MonsterSpawns" unique_id=1115630042]
+position = Vector2(2928, 6128)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 20
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_2" type="Marker2D" parent="MonsterSpawns" unique_id=1340673896]
+position = Vector2(3696, 8240)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 25
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_3" type="Marker2D" parent="MonsterSpawns" unique_id=38323504]
+position = Vector2(944, 4624)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 13
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_3" type="Marker2D" parent="MonsterSpawns" unique_id=137547063]
+position = Vector2(8848, 2448)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 27
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_4" type="Marker2D" parent="MonsterSpawns" unique_id=250694260]
+position = Vector2(5360, 1328)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 14
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_2" type="Marker2D" parent="MonsterSpawns" unique_id=1967390989]
+position = Vector2(10096, 5328)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 32
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_4" type="Marker2D" parent="MonsterSpawns" unique_id=1980096569]
+position = Vector2(2224, 9136)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 26
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_4" type="Marker2D" parent="MonsterSpawns" unique_id=590641526]
+position = Vector2(6672, 2960)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 18
+count = 5
+radius = 2
+
+[node name="Gap_barbarian_raider_2" type="Marker2D" parent="MonsterSpawns" unique_id=71773836]
+position = Vector2(1264, 15664)
+script = ExtResource("5_xkg0o")
+monster = "barbarian_raider"
+level = 33
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_5" type="Marker2D" parent="MonsterSpawns" unique_id=1592940986]
+position = Vector2(4336, 3632)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 16
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_5" type="Marker2D" parent="MonsterSpawns" unique_id=986861761]
+position = Vector2(4048, 2640)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 13
+count = 5
+radius = 2
+
+[node name="Gap_road_bandit_2" type="Marker2D" parent="MonsterSpawns" unique_id=1358014211]
+position = Vector2(880, 3632)
+script = ExtResource("5_xkg0o")
+monster = "road_bandit"
+level = 10
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_6" type="Marker2D" parent="MonsterSpawns" unique_id=512220459]
+position = Vector2(4720, 336)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 14
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_6" type="Marker2D" parent="MonsterSpawns" unique_id=278030502]
+position = Vector2(1584, 6128)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 17
+count = 5
+radius = 2
+
+[node name="Gap_hollow_knight_1" type="Marker2D" parent="MonsterSpawns" unique_id=698175518]
+position = Vector2(8400, 7824)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 34
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_7" type="Marker2D" parent="MonsterSpawns" unique_id=75639388]
+position = Vector2(5968, 112)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 16
+count = 5
+radius = 2
+
+[node name="Gap_cyclops_1" type="Marker2D" parent="MonsterSpawns" unique_id=760122855]
+position = Vector2(9264, 144)
+script = ExtResource("5_xkg0o")
+monster = "cyclops"
+level = 29
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_5" type="Marker2D" parent="MonsterSpawns" unique_id=164890718]
+position = Vector2(4656, 7344)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 25
+count = 5
+radius = 2
+
+[node name="Gap_mire_stalker_1" type="Marker2D" parent="MonsterSpawns" unique_id=844952330]
+position = Vector2(8112, 11088)
+script = ExtResource("5_xkg0o")
+monster = "mire_stalker"
+level = 39
+count = 5
+radius = 2
+
+[node name="Gap_thornback_boar_1" type="Marker2D" parent="MonsterSpawns" unique_id=1376929377]
+position = Vector2(3024, 80)
+script = ExtResource("5_xkg0o")
+monster = "thornback_boar"
+level = 6
+count = 5
+radius = 2
+
+[node name="Gap_road_bandit_3" type="Marker2D" parent="MonsterSpawns" unique_id=1733933964]
+position = Vector2(2992, 2256)
+script = ExtResource("5_xkg0o")
+monster = "road_bandit"
+level = 9
+count = 5
+radius = 2
+
+[node name="Gap_bog_hulk_1" type="Marker2D" parent="MonsterSpawns" unique_id=1529522845]
+position = Vector2(12112, 9328)
+script = ExtResource("5_xkg0o")
+monster = "bog_hulk"
+level = 43
+count = 5
+radius = 2
+
+[node name="Gap_reedfang_1" type="Marker2D" parent="MonsterSpawns" unique_id=766574520]
+position = Vector2(10128, 10864)
+script = ExtResource("5_xkg0o")
+monster = "reedfang"
+level = 41
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_6" type="Marker2D" parent="MonsterSpawns" unique_id=1890483013]
+position = Vector2(8592, 400)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 24
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_3" type="Marker2D" parent="MonsterSpawns" unique_id=1633816062]
+position = Vector2(10128, 1904)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 31
+count = 5
+radius = 2
+
+[node name="Gap_harpy_1" type="Marker2D" parent="MonsterSpawns" unique_id=1573740462]
+position = Vector2(3088, 12112)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 27
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_7" type="Marker2D" parent="MonsterSpawns" unique_id=982861982]
+position = Vector2(1264, 8688)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 26
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_4" type="Marker2D" parent="MonsterSpawns" unique_id=988553200]
+position = Vector2(8048, 7088)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 29
+count = 5
+radius = 2
+
+[node name="Gap_outlaw_archer_5" type="Marker2D" parent="MonsterSpawns" unique_id=99835158]
+position = Vector2(2544, 8080)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 23
+count = 5
+radius = 2
+
+[node name="Gap_outlaw_archer_6" type="Marker2D" parent="MonsterSpawns" unique_id=357759991]
+position = Vector2(2256, 7632)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 23
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_8" type="Marker2D" parent="MonsterSpawns" unique_id=1678727144]
+position = Vector2(8912, 3280)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 24
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_5" type="Marker2D" parent="MonsterSpawns" unique_id=1154911600]
+position = Vector2(1232, 10416)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 31
+count = 5
+radius = 2
+
+[node name="Gap_reedfang_2" type="Marker2D" parent="MonsterSpawns" unique_id=152952585]
+position = Vector2(7856, 11696)
+script = ExtResource("5_xkg0o")
+monster = "reedfang"
+level = 42
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_8" type="Marker2D" parent="MonsterSpawns" unique_id=473164202]
+position = Vector2(5072, 3792)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 17
+count = 5
+radius = 2
+
+[node name="Gap_reedfang_3" type="Marker2D" parent="MonsterSpawns" unique_id=1517724042]
+position = Vector2(12176, 8112)
+script = ExtResource("5_xkg0o")
+monster = "reedfang"
+level = 41
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_6" type="Marker2D" parent="MonsterSpawns" unique_id=1485236984]
+position = Vector2(10736, 48)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 31
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_7" type="Marker2D" parent="MonsterSpawns" unique_id=715421266]
+position = Vector2(4208, 2160)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 11
+count = 5
+radius = 2
+
+[node name="Gap_barbarian_raider_3" type="Marker2D" parent="MonsterSpawns" unique_id=790797973]
+position = Vector2(2544, 16048)
+script = ExtResource("5_xkg0o")
+monster = "barbarian_raider"
+level = 33
+count = 5
+radius = 2
+
+[node name="Gap_mire_stalker_2" type="Marker2D" parent="MonsterSpawns" unique_id=1067398277]
+position = Vector2(3760, 11568)
+script = ExtResource("5_xkg0o")
+monster = "mire_stalker"
+level = 36
+count = 5
+radius = 2
+
+[node name="Gap_cyclops_smith_2" type="Marker2D" parent="MonsterSpawns" unique_id=1798243465]
+position = Vector2(11760, 3568)
+script = ExtResource("5_xkg0o")
+monster = "cyclops_smith"
+level = 36
+count = 5
+radius = 2
+
+[node name="Gap_hollow_knight_2" type="Marker2D" parent="MonsterSpawns" unique_id=886387595]
+position = Vector2(10448, 7056)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 34
+count = 5
+radius = 2
+
+[node name="Gap_mire_stalker_3" type="Marker2D" parent="MonsterSpawns" unique_id=1128278379]
+position = Vector2(11440, 6640)
+script = ExtResource("5_xkg0o")
+monster = "mire_stalker"
+level = 39
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_9" type="Marker2D" parent="MonsterSpawns" unique_id=981606934]
+position = Vector2(6480, 144)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 16
+count = 5
+radius = 2
+
+[node name="Gap_mire_stalker_4" type="Marker2D" parent="MonsterSpawns" unique_id=1033399808]
+position = Vector2(9424, 8976)
+script = ExtResource("5_xkg0o")
+monster = "mire_stalker"
+level = 37
+count = 5
+radius = 2
+
+[node name="Gap_marsh_toad_1" type="Marker2D" parent="MonsterSpawns" unique_id=1737765967]
+position = Vector2(1552, 2032)
+script = ExtResource("5_xkg0o")
+monster = "marsh_toad"
+level = 3
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_8" type="Marker2D" parent="MonsterSpawns" unique_id=543639150]
+position = Vector2(2992, 3536)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 11
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_10" type="Marker2D" parent="MonsterSpawns" unique_id=1521201306]
+position = Vector2(752, 5936)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 17
+count = 5
+radius = 2
+
+[node name="Gap_road_bandit_4" type="Marker2D" parent="MonsterSpawns" unique_id=1825878525]
+position = Vector2(2384, 3664)
+script = ExtResource("5_xkg0o")
+monster = "road_bandit"
+level = 9
+count = 5
+radius = 2
+
+[node name="Gap_barbarian_raider_4" type="Marker2D" parent="MonsterSpawns" unique_id=1789700780]
+position = Vector2(1712, 15280)
+script = ExtResource("5_xkg0o")
+monster = "barbarian_raider"
+level = 33
+count = 5
+radius = 2
+
+[node name="Gap_outlaw_archer_7" type="Marker2D" parent="MonsterSpawns" unique_id=1696358614]
+position = Vector2(7184, 2224)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 22
+count = 5
+radius = 2
+
+[node name="Gap_snow_wolf_2" type="Marker2D" parent="MonsterSpawns" unique_id=1288066873]
+position = Vector2(1712, 14576)
+script = ExtResource("5_xkg0o")
+monster = "snow_wolf"
+level = 28
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_9" type="Marker2D" parent="MonsterSpawns" unique_id=945931276]
+position = Vector2(3504, 3312)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 11
+count = 5
+radius = 2
+
+[node name="Gap_outlaw_archer_8" type="Marker2D" parent="MonsterSpawns" unique_id=1029414180]
+position = Vector2(8048, 3440)
+script = ExtResource("5_xkg0o")
+monster = "outlaw_archer"
+level = 23
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_7" type="Marker2D" parent="MonsterSpawns" unique_id=1410698436]
+position = Vector2(9712, 2224)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 31
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_9" type="Marker2D" parent="MonsterSpawns" unique_id=1197390827]
+position = Vector2(9392, 3664)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 28
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_10" type="Marker2D" parent="MonsterSpawns" unique_id=1037591212]
+position = Vector2(9264, 4560)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 28
+count = 5
+radius = 2
+
+[node name="Gap_cinder_wraith_8" type="Marker2D" parent="MonsterSpawns" unique_id=1302850295]
+position = Vector2(11344, 144)
+script = ExtResource("5_xkg0o")
+monster = "cinder_wraith"
+level = 32
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_11" type="Marker2D" parent="MonsterSpawns" unique_id=377545386]
+position = Vector2(7824, 1968)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 24
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_12" type="Marker2D" parent="MonsterSpawns" unique_id=961911623]
+position = Vector2(8496, 3280)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 24
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_10" type="Marker2D" parent="MonsterSpawns" unique_id=148711019]
+position = Vector2(4176, 528)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 12
+count = 5
+radius = 2
+
+[node name="Gap_bog_hulk_2" type="Marker2D" parent="MonsterSpawns" unique_id=1589131546]
+position = Vector2(12240, 8880)
+script = ExtResource("5_xkg0o")
+monster = "bog_hulk"
+level = 43
+count = 5
+radius = 2
+
+[node name="Gap_reedfang_4" type="Marker2D" parent="MonsterSpawns" unique_id=1277830183]
+position = Vector2(10960, 7792)
+script = ExtResource("5_xkg0o")
+monster = "reedfang"
+level = 40
+count = 5
+radius = 2
+
+[node name="Gap_hollow_knight_3" type="Marker2D" parent="MonsterSpawns" unique_id=1131766594]
+position = Vector2(3280, 11216)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 33
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_11" type="Marker2D" parent="MonsterSpawns" unique_id=1709743556]
+position = Vector2(1296, 4208)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 13
+count = 5
+radius = 2
+
+[node name="Gap_grey_wolf_12" type="Marker2D" parent="MonsterSpawns" unique_id=969533477]
+position = Vector2(1360, 5168)
+script = ExtResource("5_xkg0o")
+monster = "grey_wolf"
+level = 12
+count = 5
+radius = 2
+
+[node name="Gap_bog_lurker_11" type="Marker2D" parent="MonsterSpawns" unique_id=1866053757]
+position = Vector2(4528, 3216)
+script = ExtResource("5_xkg0o")
+monster = "bog_lurker"
+level = 17
+count = 5
+radius = 2
+
+[node name="Gap_bog_hulk_3" type="Marker2D" parent="MonsterSpawns" unique_id=1428721448]
+position = Vector2(10192, 12144)
+script = ExtResource("5_xkg0o")
+monster = "bog_hulk"
+level = 45
+count = 5
+radius = 2
+
+[node name="Gap_road_bandit_5" type="Marker2D" parent="MonsterSpawns" unique_id=1686369517]
+position = Vector2(3664, 752)
+script = ExtResource("5_xkg0o")
+monster = "road_bandit"
+level = 8
+count = 5
+radius = 2
+
+[node name="Gap_stone_golem_13" type="Marker2D" parent="MonsterSpawns" unique_id=976473299]
+position = Vector2(5072, 7344)
+script = ExtResource("5_xkg0o")
+monster = "stone_golem"
+level = 26
+count = 5
+radius = 2
+
+[node name="Gap_reedfang_5" type="Marker2D" parent="MonsterSpawns" unique_id=619125836]
+position = Vector2(11312, 8816)
+script = ExtResource("5_xkg0o")
+monster = "reedfang"
+level = 41
+count = 5
+radius = 2
+
+[node name="Gap_hollow_knight_4" type="Marker2D" parent="MonsterSpawns" unique_id=2055959294]
+position = Vector2(11184, 5200)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 35
+count = 5
+radius = 2
+
+[node name="Gap_road_bandit_6" type="Marker2D" parent="MonsterSpawns" unique_id=792470751]
+position = Vector2(1520, 2480)
+script = ExtResource("5_xkg0o")
+monster = "road_bandit"
+level = 8
+count = 5
+radius = 2
+
+[node name="Gap_mire_stalker_5" type="Marker2D" parent="MonsterSpawns" unique_id=818815841]
+position = Vector2(9392, 9808)
+script = ExtResource("5_xkg0o")
+monster = "mire_stalker"
+level = 38
+count = 5
+radius = 2
+
+[node name="Gap_hollow_knight_5" type="Marker2D" parent="MonsterSpawns" unique_id=403997185]
+position = Vector2(12080, 912)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 35
+count = 5
+radius = 2
+
 [node name="DungeonEntrances" type="Node2D" parent="." unique_id=385780822]
 
 [node name="CinderCellar" type="Marker2D" parent="DungeonEntrances" unique_id=1519778943]

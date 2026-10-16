@@ -150,6 +150,11 @@ shows the isles west of the mainland: `game/data/atlas.gd` lays out the sheets, 
 them so, and the map window converts every cell with `Atlas.to_map`. After editing the isles, run
 `make towns town-paths caves world-map`.
 
+**Filling empty stretches** (`tools/generators/fill_gaps.gd`, `make fill-gaps`): every open,
+reachable spot of the countryside more than 10 tiles from any camp gets a camp (`Gap_<monster>_<n>`)
+copying the nearest normal camp of its region, monster and level, so the region's levels and tasks
+stay the same. Run it after adding land; existing camps are kept.
+
 **Door paths** (`tools/generators/town_paths.gd`, `make town-paths`): every town door gets a
 cobbled path to the nearest street, the shortest walk over open ground (a tree is cut only if
 there is no other way). After adding a house, run it; the rules check fails while a door opens

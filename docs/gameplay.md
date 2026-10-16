@@ -88,8 +88,8 @@ than you (0.17 s per tile against your 0.18 s), and much quicker when it outleve
 to 0.13 s from 10 levels above: you cannot outrun a monster far above your level, and kiting
 one of your own level gains you little. Fight with armor, spells, and potions, or flee. A monster gives up if you reach a town, drag it more than 12 tiles from its spawn, or
 get more than 12 tiles away. It then heals to full at once and walks home, ignoring everyone
-and taking no damage until it gets there, so you cannot wear one down and run. Every camp holds a fixed number of monsters (usually three). A killed monster respawns at its
-camp 45 seconds later, once no player stands within 4 tiles of the camp, so hunting is
+and taking no damage until it gets there, so you cannot wear one down and run. Every camp holds a fixed number of monsters (usually five). A killed monster respawns at its
+camp 75 seconds later, once no player stands within 4 tiles of the camp, so hunting is
 unlimited but limited by how fast camps refill: good camps are worth holding, and worth
 fighting over in PvP zones. A camp that cannot place a monster (its ground is blocked) keeps
 retrying every 5 seconds until it is full. Monsters chase along real paths around trees and walls. Level 1–4 voles and toads
