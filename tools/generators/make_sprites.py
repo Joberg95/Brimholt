@@ -1979,6 +1979,7 @@ def wraith(direction, frame):
 # Painted-style creatures (tools/generators/creatures.py): one untinted sheet per species, the
 # same 64x64 frames and rows as characters (stand, step A, step B).
 import creatures  # noqa: E402
+import props  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -4029,308 +4030,13 @@ OAK = (rgba("a07a4c"), rgba("82603a"), rgba("5f4429"), rgba("3f2c1b"))
 IRON = (rgba("8c8e8c"), rgba("5d605f"), rgba("3a3c3c"))
 
 
-def plank_block(image, x, y, width, height, top_depth, wood=OAK):
-    """A wooden block in 3/4 view: a lit top `top_depth` deep and a front face below it."""
-    light, base, dark, deep = wood
-    for py in range(y, y + top_depth):
-        for px in range(x, x + width):
-            image.set(px, py, light if (px - x) % 9 else base)
-    for py in range(y + top_depth, y + height):
-        for px in range(x, x + width):
-            color = base if (py - y - top_depth) % 5 else dark
-            if px in (x, x + width - 1):
-                color = dark
-            image.set(px, py, color)
-    for px in range(x, x + width):
-        image.set(px, y + top_depth, deep)
-        image.set(px, y + height - 1, deep)
 
 
 def furniture(kind):
+    """A 32x48 furniture frame, painted from 3D solids (tools/generators/props.py)."""
     image = Image(TILE, 48)
-    light, base, dark, deep = OAK
-    if kind.startswith("counter"):
-        plank_block(image, 1, 22, 30, 24, 8)
-        if kind == "counter_shop":
-            for x, color in ((5, rgba("a3332b")), (11, rgba("3f62a8")), (17, rgba("a3332b"))):
-                image.template(x, 16, [".o.", "ogo", "occ", "occ", "ooo"], {"o": OUTLINE, "g": rgba("9fb7bf"), "c": color})
-            image.template(22, 21, ["oooooo", "owwwwo", "oooooo"], {"o": OUTLINE, "w": rgba("d9cfb4")})
-        else:
-            gold, shine, shadow_gold = rgba("d4a73c"), rgba("f3d77a"), rgba("8f6a1e")
-            for cx, cy in ((7, 25), (7, 23), (11, 25)):
-                image.rect(cx - 2, cy - 1, 5, 2, gold)
-                image.set(cx - 1, cy - 1, shine)
-                image.rect(cx - 2, cy + 1, 5, 1, shadow_gold)
-            image.rect(19, 11, 1, 13, IRON[1])
-            image.rect(15, 12, 9, 1, IRON[0])
-            for side in (15, 23):
-                image.rect(side - 2, 16, 5, 1, IRON[1])
-                image.set(side, 13, IRON[2])
-                image.set(side, 14, IRON[2])
-                image.set(side, 15, IRON[2])
-            image.rect(17, 23, 5, 1, IRON[2])
-    elif kind.startswith("shelf"):
-        for x in (2, 29):
-            image.rect(x, 4, 2, 42, dark)
-        for y in (4, 15, 26, 37):
-            image.rect(2, y, 29, 2, base)
-            image.rect(2, y + 2, 29, 1, deep)
-        image.rect(4, 6, 25, 40, rgba("2b231b"))
-        for y in (15, 26, 37):
-            image.rect(2, y, 29, 2, base)
-            image.rect(2, y + 2, 29, 1, deep)
-        image.rect(2, 45, 29, 2, deep)
-        for row, top in enumerate((7, 18, 29)):
-            for slot in range(5):
-                x = 5 + slot * 5
-                seed = hash_cell(slot, row + (7 if kind == "shelf_books" else 0))
-                if kind == "shelf_potions":
-                    color = (rgba("a3332b"), rgba("3f62a8"), rgba("5a8a3a"), rgba("a3332b"))[seed % 4]
-                    image.template(x, top + 1, [".o.", "ogo", "occ", "occ", "ooo"],
-                                   {"o": OUTLINE, "g": rgba("9fb7bf"), "c": color})
-                else:
-                    color = (rgba("6b2f2a"), rgba("2f4a6b"), rgba("4f5a2c"), rgba("6b5a2f"))[seed % 4]
-                    height = 6 + seed % 3
-                    image.rect(x, top + 8 - height, 4, height, color)
-                    image.rect(x, top + 8 - height, 1, height, scale(color, 1.3))
-                    image.rect(x + 1, top + 9 - height, 2, 1, rgba("c9a24a"))
-    elif kind == "weapon_rack":
-        image.rect(3, 40, 26, 6, dark)
-        image.rect(3, 40, 26, 2, base)
-        image.rect(3, 14, 26, 3, base)
-        image.rect(3, 16, 26, 1, deep)
-        for x in (4, 27):
-            image.rect(x, 14, 2, 32, dark)
-        for x, blade in ((9, rgba("c9cfd2")), (16, rgba("aab3b8")), (23, rgba("c9cfd2"))):
-            image.rect(x, 4, 2, 30, blade)
-            image.set(x, 3, blade)
-            image.rect(x + 1, 4, 1, 30, scale(blade, 0.8))
-            image.rect(x - 2, 33, 6, 2, rgba("c9a24a"))
-            image.rect(x, 35, 2, 5, rgba("5a3f25"))
-    elif kind == "barrel":
-        for y in range(16, 46):
-            bulge = 2 if 22 <= y <= 40 else (1 if 18 <= y <= 43 else 0)
-            for x in range(7 - bulge, 26 + bulge):
-                stave = (x - 4) % 5
-                color = base if stave else dark
-                if x == 7 - bulge or x == 25 + bulge:
-                    color = deep
-                image.set(x, y, color)
-        for y in (20, 40):
-            image.rect(5, y, 23, 2, IRON[1])
-            image.rect(5, y, 23, 1, IRON[0])
-        for x, y in ellipse(16, 16, 9, 3):
-            image.set(x, y, light if (x + y) % 4 else base)
-    elif kind == "crate":
-        plank_block(image, 4, 20, 25, 26, 7)
-        for y in range(28, 45):
-            image.set(4 + (y - 28) * 24 // 17, y, deep)
-        image.rect(12, 6, 2, 16, rgba("aab3b8"))
-        image.rect(10, 18, 6, 2, rgba("c9a24a"))
-        image.rect(19, 9, 2, 13, rgba("6b4a2c"))
-        image.rect(17, 8, 6, 3, IRON[0])
-    elif kind == "strongbox":
-        plank_block(image, 4, 24, 25, 22, 7, (rgba("6b5a46"), rgba("54473a"), rgba("3d342b"), rgba("2a241e")))
-        for x in (6, 26):
-            image.rect(x, 24, 2, 22, IRON[1])
-        image.rect(4, 31, 25, 2, IRON[1])
-        image.rect(14, 33, 5, 5, IRON[0])
-        image.set(16, 35, OUTLINE)
-        image.set(16, 36, OUTLINE)
-    elif kind == "anvil":
-        # An iron anvil with a horn on a wooden stump, a hammer resting on it.
-        plank_block(image, 9, 33, 14, 13, 4)
-        iron = (scale(IRON[0], 1.15), IRON[1], IRON[2])
-        shade(image, box(7, 24, 19, 4) | {(x, y) for x in range(2, 7) for y in range(24, 27) if y - 24 <= (x - 2) // 2},
-              iron, False)
-        shade(image, box(12, 28, 9, 5) | box(9, 31, 15, 2), iron, False)
-        image.rect(8, 24, 17, 1, scale(IRON[0], 1.3))
-        for x, y in line(16, 22, 25, 18):
-            image.set(x, y, rgba("6b4a2c"))
-            image.set(x, y + 1, rgba("4a321c"))
-        image.rect(24, 15, 4, 4, IRON[1])
-        image.rect(24, 15, 4, 1, IRON[0])
-    elif kind == "workbench":
-        # A sturdy bench with a saw, a mallet, and offcuts on top.
-        plank_block(image, 1, 26, 30, 20, 7)
-        image.rect(4, 22, 12, 2, rgba("c9cfd2"))
-        for x in range(4, 16, 2):
-            image.set(x, 24, rgba("8c9294"))
-        image.rect(15, 21, 4, 4, rgba("6b4a2c"))
-        image.rect(21, 20, 7, 4, light)
-        image.rect(21, 23, 7, 1, dark)
-        image.rect(23, 17, 2, 4, rgba("6b4a2c"))
-        image.rect(21, 15, 6, 3, base)
-    elif kind == "cauldron":
-        # An iron cauldron of bubbling green brew over embers.
-        for x in range(10, 23):
-            if x % 3 == 0:
-                image.rect(x, 43, 2, 2, rgba("ff9a3c"))
-            image.set(x, 45, rgba("5a2a14"))
-        for x in (8, 24):
-            image.rect(x, 38, 2, 8, IRON[2])
-        shade(image, {p for p in ellipse(16, 33, 12, 10) if p[1] >= 27}, (IRON[1], IRON[2], scale(IRON[2], 0.7)))
-        shade(image, ellipse(16, 27, 12, 3.5), (IRON[0], IRON[1], IRON[2]), False)
-        brew = ellipse(16, 27, 9.5, 2.4)
-        shade(image, brew, (rgba("b8f080"), rgba("6ac040"), rgba("3a8a2a")), False)
-        for x, y in ((12, 26), (19, 27), (16, 25)):
-            image.set(x, y, rgba("e8ffc0"))
-        for x, y in ((14, 21), (18, 18), (15, 15)):
-            image.set(x, y, rgba("b8f080", 170))
-    elif kind == "bed":
-        # A wooden bed seen from the foot: a tall headboard at the back, a white pillow, and a
-        # red wool blanket folded over the sheet, the frame's side lit from the left.
-        image.rect(4, 12, 24, 14, dark)
-        image.rect(4, 12, 24, 3, base)
-        image.rect(5, 15, 22, 1, deep)
-        for x in (4, 27):
-            image.rect(x, 12, 1, 34, deep)
-        plank_block(image, 4, 24, 24, 22, 5)
-        sheet = (rgba("e8e2d0"), rgba("d0c8b4"), rgba("a8a090"))
-        image.rect(6, 22, 20, 7, sheet[0])
-        image.rect(8, 21, 16, 4, rgba("f4f0e4"))
-        image.rect(8, 24, 16, 1, sheet[2])
-        blanket = (rgba("b8463a"), rgba("963428"), rgba("6e2418"))
-        image.rect(6, 29, 20, 13, blanket[0])
-        image.rect(6, 29, 20, 2, scale(blanket[0], 1.15))
-        for y in range(31, 42, 3):
-            image.rect(6, y, 20, 1, blanket[1])
-        image.rect(25, 29, 1, 13, blanket[2])
-        image.rect(6, 41, 20, 1, blanket[2])
-    elif kind == "table":
-        # A plank table on four legs with a candle, a bowl, and a cup.
-        plank_block(image, 3, 26, 26, 8, 6)
-        for x in (4, 26):
-            image.rect(x, 34, 2, 12, dark)
-            image.rect(x, 34, 1, 12, base)
-        image.rect(13, 34, 2, 10, deep)
-        image.rect(8, 20, 3, 6, rgba("e8e2d0"))
-        image.set(9, 19, rgba("ffd060"))
-        image.set(9, 18, rgba("fff0a0"))
-        for x, y in ellipse(19, 27, 4, 1.6):
-            image.set(x, y, rgba("8a6a44") if y < 27 else rgba("5a4228"))
-        image.rect(24, 24, 3, 4, rgba("7a8a94"))
-        image.rect(24, 24, 3, 1, rgba("a8b8c0"))
-    elif kind == "chair":
-        # A ladder-back chair: the seat lit on top, two rails behind.
-        for x in (10, 21):
-            image.rect(x, 14, 2, 32, dark)
-            image.rect(x, 14, 1, 32, base)
-        for y in (17, 22):
-            image.rect(10, y, 13, 2, base)
-            image.rect(10, y + 2, 13, 1, deep)
-        plank_block(image, 8, 30, 17, 5, 3)
-        for x in (9, 23):
-            image.rect(x, 35, 2, 11, dark)
-    elif kind == "plant":
-        # A clay pot with a leafy plant: leaves in clusters, lit from the top-left.
-        clay = (rgba("c8784a"), rgba("a85a34"), rgba("7a3e22"))
-        shade(image, box(10, 34, 13, 11) | box(9, 32, 15, 3), clay, False)
-        image.rect(9, 32, 15, 1, scale(clay[0], 1.15))
-        leaves = (rgba("7ab04a"), rgba("4e8a34"), rgba("2e5a22"))
-        for cx, cy, rx, ry in ((16, 25, 7, 6), (10, 21, 5, 4), (22, 20, 5, 4), (16, 15, 5, 5), (12, 28, 4, 3), (21, 28, 4, 3)):
-            shade(image, ellipse(cx, cy, rx, ry), leaves, False)
-        for x, y in ((14, 13), (19, 18), (9, 20)):
-            image.set(x, y, rgba("b8e070"))
-    elif kind == "chest":
-        # A wooden chest with an arched lid, iron bands, and a brass lock.
-        plank_block(image, 5, 28, 23, 18, 6)
-        for x, y in ellipse(16, 28, 11.5, 4):
-            if y <= 28:
-                image.set(x, y, OAK[0] if x < 16 else OAK[1])
-        for x in (8, 24):
-            image.rect(x, 25, 2, 21, IRON[1])
-            image.rect(x, 25, 1, 21, IRON[0])
-        image.rect(14, 34, 5, 5, rgba("c9a24a"))
-        image.set(16, 36, OUTLINE)
-    elif kind == "lamp_post":
-        # An iron lamp post on a stone foot, its glass lantern lit (the light comes from lighting.gd).
-        image.rect(12, 41, 9, 5, COBBLE[2])
-        image.rect(12, 41, 9, 1, COBBLE[0])
-        image.rect(15, 10, 3, 32, IRON[1])
-        image.rect(15, 10, 1, 32, IRON[0])
-        image.rect(17, 10, 1, 32, IRON[2])
-        image.rect(11, 3, 11, 2, IRON[2])
-        image.rect(12, 5, 9, 8, IRON[2])
-        image.rect(13, 6, 7, 6, rgba("ffd878"))
-        image.rect(14, 7, 5, 4, rgba("fff2b8"))
-        image.rect(16, 6, 1, 6, IRON[2])
-        image.rect(11, 13, 11, 1, IRON[2])
-        image.rect(15, 1, 3, 2, IRON[1])
-    elif kind == "well":
-        # A round stone well under a little shingled roof with a rope and bucket.
-        stone = (COBBLE[0], COBBLE[1], COBBLE[2])
-        ring = {p for p in ellipse(16, 38, 13, 8) if p[1] >= 33}
-        shade(image, ring | box(3, 33, 27, 6), stone)
-        for x, y in ellipse(16, 33, 11, 4):
-            image.set(x, y, rgba("1a2830") if y >= 32 else rgba("2a3a44"))
-        for x, y in ellipse(16, 33, 13, 5) - ellipse(16, 33, 11, 4):
-            image.set(x, y, stone[0] if x + y < 50 else stone[1])
-        for x in (5, 26):
-            image.rect(x, 12, 2, 23, OAK[2])
-            image.rect(x, 12, 1, 23, OAK[1])
-        for y in range(6, 13):
-            left, right = 3 + (12 - y), 29 - (12 - y)
-            image.rect(left, y, right - left, 1, OAK[0] if y % 2 else OAK[1])
-        image.rect(3, 12, 27, 1, OAK[3])
-        image.rect(16, 13, 1, 12, rgba("c8b890"))
-        image.rect(14, 25, 5, 4, OAK[2])
-        image.rect(14, 25, 5, 1, OAK[1])
-    elif kind == "bench":
-        # A wooden bench: a lit seat on two stone feet.
-        for x in (5, 24):
-            image.rect(x, 36, 4, 10, COBBLE[2])
-            image.rect(x, 36, 4, 1, COBBLE[0])
-        plank_block(image, 2, 30, 29, 7, 4)
-        image.rect(2, 26, 29, 3, OAK[1])
-        image.rect(2, 26, 29, 1, OAK[0])
-        for x in (4, 27):
-            image.rect(x, 28, 2, 3, OAK[2])
-    elif kind == "stall":
-        # A market stall: a striped awning on poles over a counter with fruit and cloth.
-        for x in (2, 29):
-            image.rect(x, 8, 2, 38, OAK[2])
-            image.rect(x, 8, 1, 38, OAK[1])
-        awning = (rgba("c8463a"), rgba("e8dcc0"))
-        for y in range(4, 14):
-            for x in range(1, 32):
-                image.set(x, y, awning[(x // 4) % 2] if y < 12 else scale(awning[(x // 4) % 2], 0.75))
-        for x in range(1, 32, 4):
-            image.set(x + 1, 14, awning[0])
-        plank_block(image, 3, 30, 27, 16, 5)
-        for x, color in ((7, rgba("d84a2a")), (11, rgba("e8b030")), (15, rgba("6aa83a")), (19, rgba("d84a2a"))):
-            shade(image, ellipse(x, 28, 2, 2), (scale(color, 1.2), color, scale(color, 0.7)), False)
-        image.rect(22, 25, 6, 5, rgba("3f62a8"))
-        image.rect(22, 25, 6, 1, rgba("6a8ad0"))
-    elif kind == "loom":
-        # A weaving loom: posts, beams, and half a striped cloth on the warp.
-        for x in (3, 27):
-            image.rect(x, 8, 2, 38, dark)
-            image.rect(x, 8, 1, 38, base)
-        for y in (8, 36):
-            image.rect(3, y, 26, 3, base)
-            image.rect(3, y + 2, 26, 1, deep)
-        for x in range(6, 27, 2):
-            image.rect(x, 11, 1, 25, rgba("d9cfb4"))
-        stripes = (rgba("a3332b"), rgba("d9cfb4"), rgba("3f62a8"), rgba("d9cfb4"))
-        for y in range(22, 36):
-            image.rect(5, y, 22, 1, stripes[(y // 3) % 4])
-        image.rect(5, 21, 22, 1, deep)
-        image.rect(8, 40, 16, 6, dark)
-        image.rect(8, 40, 16, 2, base)
-    elif kind == "hearth":
-        # A ring of stones round a fire, with a pot hanging from a tripod.
-        stone = (rgba("9a958c"), rgba("77736b"), rgba("55524c"))
-        for x, y in ((6, 41), (11, 43), (17, 43), (23, 41), (8, 37), (24, 37)):
-            shade(image, ellipse(x, y, 3.2, 2.4), stone, False)
-        for x, y, h, color in ((12, 41, 7, "ff8a2a"), (15, 41, 10, "ffb040"), (18, 41, 8, "ff8a2a"), (16, 41, 5, "fff0a0")):
-            for dy in range(h):
-                image.rect(x - max(0, (h - dy) // 4), y - dy, 1 + 2 * max(0, (h - dy) // 4), 1, rgba(color))
-        for x, y in line(5, 44, 16, 10) | line(27, 44, 16, 10):
-            image.set(x, y, rgba("4a321c"))
-        image.rect(16, 11, 1, 12, IRON[2])
-        shade(image, ellipse(16, 26, 5, 4), (IRON[1], IRON[2], scale(IRON[2], 0.7)), False)
-    return image.outlined()
+    image.pixels = props.furniture(kind)
+    return image
 
 
 # ---------------------------------------------------------------- micro menu icons
@@ -4606,24 +4312,11 @@ HERB_KINDS = ["sunflax", "mirereed", "silverthistle", "nightcotton", "starpetal"
 
 
 def herb_patch(kind, variant):
+    """A 32x32 herb patch in the band's item colours, painted from 3D solids (props.py)."""
     main, light, accent = PALETTES[kind]
-    dark = scale(main, 0.6)
     image = Image(TILE, TILE)
-    for x, y in ellipse(16, 27, 9, 2.5):
-        image.set(x, y, SHADOW)
-    tufts = ((16, 27, 16, 11), (16, 27, 9, 15), (16, 27, 23, 14), (16, 27, 12, 19), (16, 27, 20, 20))
-    if variant:
-        tufts = tuple((x0, y0, 32 - x1, y1 + 1) for x0, y0, x1, y1 in tufts)
-    for x0, y0, x1, y1 in tufts:
-        for x, y in line(x0, y0, x1, y1):
-            image.set(x, y, dark)
-    for index, (x0, y0, x1, y1) in enumerate(tufts):
-        mx, my = (x0 + x1) // 2, (y0 + y1) // 2
-        shade(image, ellipse(mx - 2, my, 2.6, 1.4) | ellipse(mx + 2, my + 2, 2.6, 1.4), (light, main, dark), False)
-        if index < 3:
-            shade(image, ellipse(x1, y1, 2, 2), (scale(accent, 1.2), accent, scale(accent, 0.7)), False)
-            image.set(x1 - 1, y1 - 1, scale(accent, 1.4))
-    return image.outlined(scale(main, 0.4))
+    image.pixels = props.herb(main, light, accent, variant)
+    return image
 
 
 # ---------------------------------------------------------------- roofs and signs
@@ -4745,88 +4438,11 @@ SIGN_IRON = rgba("3b3a38")
 
 
 def sign(kind):
-    """A hanging board on an iron bracket (32x32, board centred), painted with what is
-    sold inside: a red flask and a sword for a merchant, a coin stack for a banker."""
-    light, base, dark = SIGN_WOOD
+    """A 32x32 hanging sign with its service's emblem, painted from 3D solids (props.py)."""
     image = Image(TILE, TILE)
-    for x in range(4, 28):  # bracket
-        image.set(x, 5, SIGN_IRON)
-    image.set(4, 4, SIGN_IRON)
-    image.set(27, 4, SIGN_IRON)
-    for chain_x in (8, 23):
-        for y in range(6, 10):
-            image.set(chain_x, y, SIGN_IRON if y % 2 else rgba("5c5a55"))
-    image.rect(4, 10, 24, 16, OUTLINE)
-    image.rect(5, 11, 22, 14, dark)
-    image.rect(6, 12, 20, 12, base)
-    for y in range(12, 24, 3):  # plank seams and grain
-        for x in range(6, 26):
-            if (x * 7 + y * 3) % 11 == 0:
-                image.set(x, y, light)
-    for x in range(6, 26):
-        image.set(x, 12, light)
-        image.set(x, 23, dark)
-    if kind == "artisan":
-        image.template(7, 12, [
-            "ooooooo",
-            "ossssso",
-            "ooooooo",
-            "..obo..",
-            "..obo..",
-            "..obo..",
-            "..obo..",
-            "..obo..",
-            "..ooo..",
-        ], {"o": OUTLINE, "s": rgba("aab3b8"), "b": rgba("8a6440")})
-        image.template(17, 13, [
-            "..ooo..",
-            "..oco..",
-            "..ogo..",
-            ".oogoo.",
-            "orrhrro",
-            "orrrrro",
-            "orrrrro",
-            ".ooooo.",
-        ], {"o": OUTLINE, "c": rgba("b08a5a"), "g": rgba("9fb7bf"), "r": rgba("4a9a3a"), "h": rgba("a8e080")})
-    elif kind == "vendor":
-        image.template(8, 13, [
-            "..ooo..",
-            "..oco..",
-            "..ogo..",
-            ".oogoo.",
-            "orrhrro",
-            "orrrrro",
-            "orrrrro",
-            ".ooooo.",
-        ], {"o": OUTLINE, "c": rgba("b08a5a"), "g": rgba("9fb7bf"), "r": rgba("a3332b"), "h": rgba("e07a62")})
-        image.template(17, 12, [
-            "...o.",
-            "..owo",
-            "..oso",
-            "..oso",
-            "..oso",
-            "..oso",
-            "ooooo",
-            ".obo.",
-            ".obo.",
-            ".opo.",
-        ], {"o": OUTLINE, "w": rgba("e2e6e8"), "s": rgba("aab3b8"), "b": rgba("6b4a2c"), "p": rgba("c9a24a")})
-    else:
-        gold, shine, shade = rgba("d4a73c"), rgba("f3d77a"), rgba("8f6a1e")
-        for index, (cx, cy) in enumerate(((11, 20), (11, 17), (11, 14), (20, 20), (20, 17))):
-            image.rect(cx - 4, cy - 1, 9, 3, OUTLINE)
-            image.rect(cx - 3, cy - 1, 7, 2, gold)
-            image.set(cx - 2, cy - 1, shine)
-            image.set(cx - 1, cy - 1, shine)
-            image.rect(cx - 3, cy + 1, 7, 1, shade)
-        image.template(17, 12, [
-            ".ooo.",
-            "oyyyo",
-            "oyoyo",
-            "oyyyo",
-            ".ooo.",
-        ], {"o": OUTLINE, "y": rgba("f3d77a")})
+    image.pixels = props.sign(kind)
     return image
+
 
 # ---------------------------------------------------------------- spell icons
 
