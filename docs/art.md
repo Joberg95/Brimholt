@@ -4,6 +4,8 @@ How the world is drawn, the sprite sheet layouts, and how to add or edit art.
 
 ## Presentation
 
+The window scales the game by whole numbers only (`scale_mode="integer"`), and 2D transforms snap to
+the pixel grid, so every art pixel is the same size on screen; a window between multiples shows a border.
 The game window shows 15×11 tiles at 2× zoom and follows your character smoothly,
 Tibia-style; the dedicated-server window centres the whole map. Walls are oblique:
 their tops are raised up and to the left, and the world is drawn row by row so
