@@ -11,7 +11,7 @@ library only) and drawn by `game/render/sprite_art.gd`. Before inventing anythin
 
 ## The look in one paragraph
 
-Grounded classic-RPG pixel art, Tibia-like in scale and readability but never copied.
+Grounded classic-RPG pixel art, Tibia-like in scale, readability, and design: imitating Tibia's items and looks closely is welcome, copying its pixels is not.
 Restrained earth colours, light from the **top-left**, shading in **pixel clusters** (no
 checkerboard dithering, no pillow shading, no gradients smeared across a surface), a dark
 **coloured** outline on the lower and outer edges, and **construction you can read**: stones
@@ -31,7 +31,7 @@ Saturated colour and glow are for relics, ores, magic, and fire only.
 
 ## Reference looks (from the owner's Tibia and OpenTibia screenshots)
 
-Described in words on purpose: we match the feel, never the pixels.
+Match these looks closely; draw every pixel here.
 
 - **Caves.** Floors of warm red-brown earth or flat grey stone, with patches of gravel and a
   sandy pebble border where earth meets rock. Rock walls are masses of rounded grey boulders,
@@ -95,8 +95,10 @@ contrast (`_grain`).
 **Tiling.** Anything repeated over many tiles needs variants or a seamless field (see
 `ROCK_SPAN`) so no grid shows. Edges that meet neighbours must match at the tile border.
 
-**Originality.** Never trace, recolour, or import Tibia or other proprietary art. CC0 only for
-third-party files, with a license and a `CREDITS.md` row.
+**Originality.** Tibia is the reference: matching its item concepts, silhouettes, colour schemes, and
+names closely is allowed (the owner's decision, 2026-10-16). Never trace, recolour, or import Tibia's
+or other proprietary sprite files. CC0 only for third-party files, with a license and a
+`CREDITS.md` row.
 
 ## Workflow (look once, not every tweak)
 

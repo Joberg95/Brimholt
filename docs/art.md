@@ -23,8 +23,8 @@ The visual direction is grounded, original classic-RPG pixel art: restrained ear
 directional shading in pixel clusters rather than checkerboard borders, broken foliage
 canopies, weathered masonry, wood grain, and subdued water reflections. Item icons use
 smaller silhouettes and quieter trim; metal, leather and cloth retain distinct tier hues.
-Relic halos remain visible without bleaching out the equipment underneath. No artwork,
-maps or character designs from Tibia are copied.
+Relic halos remain visible without bleaching out the equipment underneath. Designs may imitate
+Tibia closely, but no Tibia artwork files, maps, or client data are copied: every pixel is drawn here.
 
 ## Art and sprites
 
@@ -171,9 +171,9 @@ shields). Add the set to `manifest.json` with `"layout": "grid"` and run `make o
 
 The user-selected theme reference is the [Tibia item index](https://tibia.fandom.com/wiki/Items)
 ([alternative category index](https://www.tibiawiki.com.br/wiki/Itens)). Use it for broad
-equipment families and readability at small sizes, not as an asset source or a tracing guide.
-Brimholt keeps its own silhouettes, ornament, names and palettes. Do not download, recolour,
-trace or import reference sprites into the game.
+equipment families, silhouettes, ornament, palettes, and names: items may imitate it closely
+(the owner's decision, 2026-10-16). It is a model to draw from, not an asset source: do not
+download, recolour, trace or import reference sprites into the game.
 
 Weapon proportion references also include [Tibia's hammer](https://tibia.fandom.com/wiki/Hammer)
 and [sword families](https://tibia.fandom.com/wiki/Sword_Weapons), plus
@@ -306,4 +306,4 @@ stays unlit. Set `Weather.override` (for example `"storm"`) to pin the weather i
 Original art is generated; the only third-party assets are CC0 textures in
 `assets/third_party/` (currently eight 128 px textures from Kenney's Particle Pack, used for
 lights and particles). Add a CC0 pack only with its original license file beside it and a row
-in `assets/third_party/CREDITS.md`; never import ripped, proprietary, or Tibia-derived art.
+in `assets/third_party/CREDITS.md`; never import ripped or proprietary art files (Tibia's included).
