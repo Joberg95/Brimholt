@@ -101,8 +101,12 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 		if effect["kind"] == "missile":
 			var weight: float = clampf(age / 0.25, 0.0, 1.0)
 			var at: Vector2 = effect["from"].lerp(effect["to"], weight)
-			draw_line(at - (effect["to"] - effect["from"]).normalized() * 6.0, at, effect["color"], 2.0)
-			draw_circle(at, 2.0, effect["color"])
+			var direction: Vector2 = (effect["to"] - effect["from"]).normalized()
+			if effect.get("element", "") == "slash" or weight >= 1.0:
+				continue
+			if not SpriteArt.draw_missile(self, at, direction, effect.get("element", ""), age):
+				draw_line(at - direction * 6.0, at, effect["color"], 2.0)
+				draw_circle(at, 2.0, effect["color"])
 		elif effect["kind"] == "text":
 			var at: Vector2 = effect["pos"] + Vector2(-8, -20.0 - age * 22.0)
 			var size: int = 11 if effect.get("big", false) else 9

@@ -1521,13 +1521,26 @@ func _show_effect(event: Dictionary) -> void:
 			elif event["style"] in ["heal", "mana"]:
 				_world_view.fx.burst("heal", at, style[1])
 		"missile":
+			var element: String = event.get("element", "")
 			effects.append({"kind": "missile", "from": _map_point(event["from"]), "to": _map_point(event["to"]),
-				"color": event["color"], "born": born})
+				"color": event["color"], "born": born, "element": element})
 			var landing: Vector2 = _map_point(event["to"])
 			var tint: Color = event["color"]
-			get_tree().create_timer(0.25).timeout.connect(func() -> void:
-				if _world_view != null:
-					_world_view.fx.burst("impact", landing, tint))
+			var target: Vector2i = event["to"]
+			# The spell's impact plays on the target's tile when the missile lands (at once for a
+			# melee strike, which does not fly).
+			var lands: float = 0.0 if element == "slash" else 0.25
+			var impact: Callable = func() -> void:
+				if _world_view == null:
+					return
+				_world_view.fx.burst("impact", landing, tint)
+				if not element.is_empty():
+					effects.append({"kind": "area", "cells": [target], "color": tint, "born": Time.get_ticks_msec() / 1000.0,
+						"element": element})
+			if lands <= 0.0:
+				impact.call()
+			else:
+				get_tree().create_timer(lands).timeout.connect(impact)
 		"area":
 			effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born,
 				"element": event.get("element", "")})

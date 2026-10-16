@@ -80,6 +80,7 @@ func _run() -> void:
 	_cave_checks()
 	_isles_checks()
 	_scale_checks()
+	_spell_fx_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -3254,6 +3255,34 @@ func _scale_checks() -> void:
 			check(World.continent_at(cell) == sheet["name"], "%s lies on %s" % [cell, sheet["name"]])
 	check(World.continent_at(World.FERRYMEN["hrimvik"]["cell"]) == "the frost isles"
 		and World.continent_at(World.SPAWNS[0]) == "the mainland", "Hrimvik is on the frost isles, Cinder Crossing on the mainland")
+
+
+## Spell effects (plan 33): every spell has an element with impact art, bolts and shots have
+## projectile art, and casts carry the element to the client.
+func _spell_fx_checks() -> void:
+	for spell: String in Spells.SPELLS:
+		var element: String = Spells.element_of(spell)
+		check(Spells.ELEMENTS.has(spell) and (element.is_empty() or element in SpriteArt.RUNE_FX_ELEMENTS),
+			"%s has an element with impact art (%s)" % [spell, element])
+		if Spells.SPELLS[spell]["kind"] in ["target", "root", "slow"]:
+			check(element in SpriteArt.MISSILE_ELEMENTS or element == "slash", "%s flies as a sprite or strikes in melee" % spell)
+	check(SpriteArt.RUNE_FX.get_height() == SpriteArt.RUNE_FX_ELEMENTS.size() * World.TILE_SIZE
+		and SpriteArt.SPELL_MISSILES.get_height() == SpriteArt.MISSILE_ELEMENTS.size() * SpriteArt.MISSILE_SIZE,
+		"the effect sheets hold a row for every element")
+	var world := World.new()
+	var combat := Combat.new(world, 33)
+	world.monsters.clear()
+	check(world.add_player(1, 0.0, "sorcerer") and world.add_player(2, 0.0, "druid"), "spell effect players")
+	_place(world, 1, Vector2i(5, 6))
+	_place(world, 2, Vector2i(6, 6))
+	var vole: int = combat.spawn_monster("field_vole", 1, Vector2i(5, 9), 0.0)
+	combat.set_target(1, vole, 0.0)
+	var bolt: Dictionary = combat.cast(1, "ember_bolt", 1.0)
+	check(bolt["ok"] and bolt["events"].any(func(event: Dictionary) -> bool:
+		return event["kind"] == "missile" and event.get("element", "") == "fire"), "an ember bolt flies as fire")
+	var mend: Dictionary = combat.cast(2, "mass_mend", 1.0)
+	check(mend["ok"] and mend["events"].any(func(event: Dictionary) -> bool:
+		return event["kind"] == "area" and event.get("element", "") == "heal"), "a mass mend lands as healing motes")
 
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")

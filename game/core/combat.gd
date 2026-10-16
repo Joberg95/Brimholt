@@ -413,13 +413,14 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	player["cooldowns"][spell] = now + definition["cooldown"]
 	player["groups"][definition["group"]] = now + Spells.GROUP_SECONDS[definition["group"]]
 	var power: float = Spells.ranked_power(spell, int(player["spell_ranks"].get(spell, 1)))
+	var element: String = Spells.element_of(spell)
 	match definition["kind"]:
 		"target":
-			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
 			_hit(id, target, power, now, events)
 		"area_self", "area_target":
 			var center: Vector2i = player["cell"] if definition["kind"] == "area_self" else creature(target)["cell"]
-			_area(center, definition["radius"], definition["color"], events)
+			_area(center, definition["radius"], definition["color"], events, element)
 			for victim: int in _enemies_near(id, center, definition["radius"]):
 				_hit(id, victim, power, now, events)
 		"taunt":
@@ -429,12 +430,12 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 					world.monsters[monster]["target"] = id
 			events.append({"kind": "message", "id": id, "text": "You challenge every monster around you."})
 		"root", "slow":
-			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
 			_hit(id, target, power, now, events)
 			if exists(target):
 				restrain(target, definition["kind"], definition["seconds"], now, events)
 		"taunt_target":
-			_missile(player["cell"], creature(target)["cell"], definition["color"], events)
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
 			_area(creature(target)["cell"], 0, definition["color"], events)
 			world.monsters[target]["target"] = id
 			events.append({"kind": "monster", "id": target, "movement": false})
@@ -443,10 +444,10 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 				else "the " + provoked["name"].to_lower())})
 		"heal_self":
 			_heal(id, roundi(limits["health"] * power * rng.randf_range(0.9, 1.1)), events, id, now)
-			_area(player["cell"], 0, definition["color"], events)
+			_area(player["cell"], 0, definition["color"], events, element)
 		"heal_area":
 			var amount: int = maxi(1, roundi(limits["healing"] * power))
-			_area(player["cell"], definition["radius"], definition["color"], events)
+			_area(player["cell"], definition["radius"], definition["color"], events, element)
 			# Group heals mend the caster and anyone they could not attack (never a foe in a PvP zone).
 			for friend: int in world.players:
 				if distance(world.players[friend]["cell"], player["cell"]) <= definition["radius"] and not hostile(id, friend):
@@ -668,19 +669,24 @@ static func circle(center: Vector2i, radius: int) -> Array[Vector2i]:
 	return cells
 
 
-func _missile(from: Vector2i, to: Vector2i, color: Color, events: Array) -> void:
+## A projectile from one tile to another; `element` (Spells.ELEMENTS) picks its sprite and the
+## impact it plays where it lands.
+func _missile(from: Vector2i, to: Vector2i, color: Color, events: Array, element: String = "") -> void:
 	if from != to:
-		events.append({"kind": "missile", "from": from, "to": to, "color": color})
+		events.append({"kind": "missile", "from": from, "to": to, "color": color, "element": element})
 
 
-func _area(center: Vector2i, radius: int, color: Color, events: Array) -> void:
+func _area(center: Vector2i, radius: int, color: Color, events: Array, element: String = "") -> void:
 	var cells: Array[Vector2i] = []
 	for dy: int in range(-radius, radius + 1):
 		for dx: int in range(-radius, radius + 1):
 			var cell: Vector2i = center + Vector2i(dx, dy)
 			if World.terrain(cell) not in [" ", ""] and World.terrain(cell) not in World.WALLS:
 				cells.append(cell)
-	events.append({"kind": "area", "cells": cells, "color": color})
+	var area: Dictionary = {"kind": "area", "cells": cells, "color": color}
+	if not element.is_empty():
+		area["element"] = element
+	events.append(area)
 
 
 func _kill_monster(id: int, now: float, events: Array) -> void:

@@ -47,10 +47,16 @@ static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
 const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan"]
-## Rune spells landing (Combat.use_rune): per element (fire, frost, lightning) a row of
+## Spells and runes landing (Combat.cast, Combat.use_rune; Spells.ELEMENTS): per element a row of
 ## RUNE_FX_FRAMES 32x32 frames, played once over RUNE_FX_SECONDS on every tile hit.
 const RUNE_FX: Texture2D = preload("res://assets/sprites/rune_fx.png")
-const RUNE_FX_ELEMENTS: Array[String] = ["fire", "frost", "lightning"]
+const RUNE_FX_ELEMENTS: Array[String] = ["fire", "frost", "lightning", "holy", "nature", "slash", "pierce", "heal"]
+## Spell projectiles (make_sprites.py spell_missile): a row of MISSILE_FRAMES frames per element,
+## pointing right; drawn turned toward the target.
+const SPELL_MISSILES: Texture2D = preload("res://assets/sprites/spell_missiles.png")
+const MISSILE_ELEMENTS: Array[String] = ["fire", "frost", "lightning", "holy", "nature", "pierce"]
+const MISSILE_FRAMES: int = 4
+const MISSILE_SIZE: int = 16
 const RUNE_FX_FRAMES: int = 4
 const RUNE_FX_SECONDS: float = 0.6
 ## Where a sign's centre hangs from its wall cell's corner, by the direction the door faces:
@@ -538,6 +544,20 @@ static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
 	var index: int = maxi(0, SIGN_KINDS.find(sign["kind"]))
 	canvas.draw_texture_rect_region(SIGNS, Rect2(centre - Vector2(16, 16), Vector2(32, 32)), Rect2(index * TILE, 0, TILE, TILE))
 
+
+
+## A spell projectile at `at` (map pixels) flying along `direction`; false when its element has no
+## sprite (melee strikes and tinted spells), so the caller draws the plain line instead.
+static func draw_missile(canvas: CanvasItem, at: Vector2, direction: Vector2, element: String, age: float) -> bool:
+	var row: int = MISSILE_ELEMENTS.find(element)
+	if row < 0:
+		return false
+	var frame: int = int(age * 24.0) % MISSILE_FRAMES
+	canvas.draw_set_transform(at, direction.angle(), Vector2.ONE)
+	canvas.draw_texture_rect_region(SPELL_MISSILES, Rect2(-Vector2.ONE * MISSILE_SIZE / 2.0, Vector2.ONE * MISSILE_SIZE),
+		Rect2(frame * MISSILE_SIZE, row * MISSILE_SIZE, MISSILE_SIZE, MISSILE_SIZE))
+	canvas.draw_set_transform(Vector2.ZERO)
+	return true
 
 
 ## One tile of a rune spell `age` seconds after it landed; false once it has played out.

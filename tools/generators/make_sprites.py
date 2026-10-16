@@ -4915,7 +4915,7 @@ def runestone_icon(kind):
     return image.outlined(rgba("17140f"))
 
 
-RUNE_FX_ELEMENTS = ("fire", "frost", "lightning")
+RUNE_FX_ELEMENTS = ("fire", "frost", "lightning", "holy", "nature", "slash", "pierce", "heal")
 RUNE_FX_FRAMES = 4
 
 
@@ -4975,6 +4975,82 @@ def rune_fx(element, frame):
                 x, y = rng.randrange(6, 26), rng.randrange(14, 27)
                 image.set(x, y, rng.choice(ramp[:3]))
                 image.set(x + 1, y, ramp[3])
+    elif element == "holy":
+        # Golden rays bursting from a bright core, then a ring of light settling to motes.
+        ramp = (rgba("ffffff"), rgba("fff4c0"), rgba("ffd860"), rgba("e0a030"), rgba("7a5a18"))
+        if frame < 3:
+            rays = 8
+            for ray in range(rays):
+                angle = ray / rays * math.tau + frame * 0.2
+                length = (6 + 8 * grow) * (1.0 if ray % 2 == 0 else 0.65)
+                for step in range(int(length)):
+                    x = round(16 + math.cos(angle) * step)
+                    y = round(17 + math.sin(angle) * step * 0.8)
+                    image.set(x, y, ramp[1] if step < length * 0.5 else ramp[2])
+            for x, y in ellipse(16, 17, 3.5 * grow + 1, 3.5 * grow + 1):
+                image.set(x, y, ramp[0])
+        else:
+            for x, y in ellipse(16, 18, 9, 6) - ellipse(16, 18, 7.5, 4.8):
+                image.set(x, y, ramp[2])
+            for _ in range(8):
+                image.set(rng.randrange(8, 25), rng.randrange(8, 25), ramp[1])
+    elif element == "nature":
+        # Thorny tendrils whipping up from the ground in a burst of green leaves.
+        ramp = (rgba("e8ffa0"), rgba("9ad84a"), rgba("5aa02e"), rgba("2e6a1e"), rgba("5a3a1e"))
+        if frame < 3:
+            for vine in range(4):
+                base = 8 + vine * 5.5
+                height = (10 + vine % 2 * 6) * grow
+                for step in range(int(height)):
+                    x = round(base + math.sin(step * 0.5 + vine) * 2.5)
+                    image.set(x, 27 - step, ramp[3])
+                    image.set(x + 1, 27 - step, ramp[2])
+                    if step % 4 == 2:
+                        image.set(x + 2, 26 - step, ramp[4])
+            for _ in range(5 + frame * 3):
+                x, y = rng.randrange(6, 26), rng.randrange(6, 24)
+                for px, py in ellipse(x, y, 1.6, 1):
+                    image.set(px, py, rng.choice(ramp[:3]))
+        else:
+            for _ in range(10):
+                x, y = rng.randrange(6, 26), rng.randrange(14, 28)
+                image.set(x, y, rng.choice(ramp[1:4]))
+    elif element == "slash":
+        # A pale crescent sword arc sweeping across the tile and fading.
+        ramp = (rgba("ffffff"), rgba("e8eef4"), rgba("b0bcc8"), rgba("6a7480"))
+        sweep = (0.35, 0.7, 1.0, 1.0)[frame]
+        fade = 0 if frame < 3 else 2
+        for step in range(int(40 * sweep)):
+            angle = -2.4 + step / 40.0 * 2.8
+            for width in range(4 if frame < 3 else 2):
+                radius = 11 - width
+                x = round(16 + math.cos(angle) * radius)
+                y = round(17 + math.sin(angle) * radius * 0.8)
+                image.set(x, y, ramp[min(3, width + fade)])
+    elif element == "pierce":
+        # An arrow's strike: a bright point of impact with splinters thrown back along the shot.
+        ramp = (rgba("ffffff"), rgba("f0e6c8"), rgba("c8b080"), rgba("6a5434"))
+        if frame < 3:
+            for x, y in ellipse(16, 17, 1.5 + frame, 1.5 + frame):
+                image.set(x, y, ramp[0] if frame < 2 else ramp[1])
+            for _ in range(4 + frame * 3):
+                angle = rng.random() * math.tau
+                reach = (2 + rng.random() * 6) * grow
+                image.set(round(16 + math.cos(angle) * reach), round(17 + math.sin(angle) * reach * 0.7), ramp[2])
+        else:
+            for _ in range(5):
+                image.set(rng.randrange(10, 22), rng.randrange(12, 22), ramp[3])
+    elif element == "heal":
+        # Green motes and small crosses rising and fading over the tile.
+        ramp = (rgba("ffffff"), rgba("c8ffd0"), rgba("7fe08a"), rgba("3a9a4a"))
+        for mote in range(7):
+            x = 7 + (mote * 13) % 19
+            y = round(27 - ((mote * 5 + frame * 6) % 22))
+            tone = ramp[min(3, frame // 2 + (mote % 2))]
+            image.set(x, y, tone)
+            if mote % 3 == 0:
+                for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    image.set(x + dx, y + dy, ramp[2])
     else:
         ramp = (rgba("ffffff"), rgba("fff6b0"), rgba("ffe060"), rgba("e0a020"), rgba("6a4a10"))
         if frame < 2:
@@ -5003,7 +5079,85 @@ def rune_fx(element, frame):
             x, y = round(16 + math.cos(angle) * reach), round(24 + math.sin(angle) * reach * 0.5)
             image.set(x, y, ramp[1])
             image.set(x + 1, y, ramp[2])
-    return image.outlined(rgba("26140a") if element == "fire" else rgba("0e1c30") if element == "frost" else rgba("2a2008"))
+    outline = {"fire": "26140a", "frost": "0e1c30", "holy": "3a2a08", "nature": "142a0e", "slash": "1e2228",
+               "pierce": "2a1e10", "heal": "0e2a14"}.get(element, "2a2008")
+    return image.outlined(rgba(outline))
+
+
+# Spell missiles (game/render/world_overlay.gd): small animated projectiles, drawn turned toward the
+# target, one row per element in MISSILE_ELEMENTS, MISSILE_FRAMES frames of MISSILE_SIZE pixels.
+MISSILE_ELEMENTS = ("fire", "frost", "lightning", "holy", "nature", "pierce")
+MISSILE_FRAMES = 4
+MISSILE_SIZE = 16
+
+
+def spell_missile(element, frame):
+    """A projectile pointing right (+x), centred: an ember trailing sparks, an ice shard, a crackling
+    spark, a holy orb with a halo, a spinning thorn, and an arrow. Saturated, glowing colours are
+    for magic only; the arrow is wood and steel."""
+    rng = random.Random(9500 + MISSILE_ELEMENTS.index(element) * 10 + frame)
+    image = Image(MISSILE_SIZE, MISSILE_SIZE)
+    c = MISSILE_SIZE // 2
+    if element == "fire":
+        ramp = (rgba("fff6c0"), rgba("ffd050"), rgba("ff8a28"), rgba("d8461a"))
+        for x, y in ellipse(c + 2, c, 3.2, 2.6):
+            image.set(x, y, ramp[1])
+        for x, y in ellipse(c + 3, c, 1.6, 1.3):
+            image.set(x, y, ramp[0])
+        for step in range(6):
+            image.set(c - 1 - step, c + round(math.sin(step + frame) * 1.2), ramp[2 if step < 3 else 3])
+        for _ in range(2):
+            image.set(rng.randrange(1, c - 2), c + rng.randrange(-3, 4), ramp[2])
+    elif element == "frost":
+        ramp = (rgba("ffffff"), rgba("c8f0ff"), rgba("8ad8ff"), rgba("4a90c8"))
+        for step in range(10):
+            half = max(0, round(2.4 - abs(step - 6) * 0.5))
+            for dy in range(-half, half + 1):
+                image.set(c - 5 + step, c + dy, ramp[1] if dy < 0 else ramp[2] if dy == 0 else ramp[3])
+        image.set(c + 5, c, ramp[0])
+        if frame % 2:
+            image.set(c - 6, c - 2, ramp[1])
+            image.set(c - 7, c + 2, ramp[1])
+    elif element == "lightning":
+        ramp = (rgba("ffffff"), rgba("fff6b0"), rgba("ffe060"), rgba("e0a020"))
+        y = c
+        for x in range(2, MISSILE_SIZE - 2):
+            y += rng.choice((-1, 0, 1)) if x % 2 == 0 else 0
+            y = max(c - 3, min(c + 3, y))
+            image.set(x, y, ramp[0])
+            image.set(x, y - 1, ramp[2])
+            image.set(x, y + 1, ramp[3])
+    elif element == "holy":
+        ramp = (rgba("ffffff"), rgba("fff4c0"), rgba("ffd860"), rgba("e0a030"))
+        for x, y in ellipse(c, c, 4.5, 4.5) - ellipse(c, c, 3.5, 3.5):
+            if (x + y + frame) % 3:
+                image.set(x, y, ramp[2])
+        for x, y in ellipse(c, c, 2.4, 2.4):
+            image.set(x, y, ramp[0] if (x - c) ** 2 + (y - c) ** 2 < 2 else ramp[1])
+    elif element == "nature":
+        ramp = (rgba("9ad84a"), rgba("5aa02e"), rgba("2e6a1e"), rgba("5a3a1e"))
+        angle = frame * math.pi / 4
+        for step in range(-5, 6):
+            x = round(c + math.cos(angle) * step)
+            y = round(c + math.sin(angle) * step)
+            image.set(x, y, ramp[3] if abs(step) < 4 else ramp[2])
+        for spike in (-3, 0, 3):
+            x = round(c + math.cos(angle) * spike - math.sin(angle) * 2)
+            y = round(c + math.sin(angle) * spike + math.cos(angle) * 2)
+            image.set(x, y, ramp[1])
+            image.set(round(c + math.cos(angle) * spike + math.sin(angle) * 2),
+                      round(c + math.sin(angle) * spike - math.cos(angle) * 2), ramp[0])
+    else:
+        wood, steel, feather = (rgba("8a6440"), rgba("5a3e24")), (rgba("e0e4e8"), rgba("8a9098")), rgba("e8e0d0")
+        for x in range(2, 12):
+            image.set(x, c, wood[0])
+            image.set(x, c + 1, wood[1])
+        for dx, dy in ((12, 0), (12, 1), (13, 0), (13, 1), (14, 0), (12, -1), (12, 2)):
+            image.set(dx, c + dy, steel[0] if dy in (0, -1) else steel[1])
+        for dx in (2, 3, 4):
+            image.set(dx, c - 1, feather)
+            image.set(dx, c + 2, feather)
+    return image.outlined(rgba("2a1a0e") if element in ("fire", "nature", "pierce") else rgba("0e1c30"))
 
 
 RUNE_STONE = (rgba("a29a8e"), rgba("7e776d"), rgba("5a544c"))
@@ -5073,6 +5227,8 @@ def main():
         "marker.png": character_sheet(marker, columns=POSE_COLUMNS),
         "items.png": sheet([item_icon(kind) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
         "spells.png": sheet([spell_icon(spell, rune, color) for spell, rune, color in spell_catalog()], 8, TILE),
+        "spell_missiles.png": sheet([spell_missile(element, frame) for element in MISSILE_ELEMENTS for frame in range(MISSILE_FRAMES)],
+                                    MISSILE_FRAMES, MISSILE_SIZE),
         "rune_fx.png": sheet([rune_fx(element, frame) for element in RUNE_FX_ELEMENTS for frame in range(RUNE_FX_FRAMES)],
                              RUNE_FX_FRAMES, TILE),
         "tiles.png": sheet([grass_tile(v) for v in range(4)] + [dirt_tile(v) for v in range(4)]

@@ -114,6 +114,25 @@ static func allows(id: String, vocation: String) -> bool:
 
 
 ## A vocation's spells by unlock level (catalog order within a level): the action bar's order.
+## How each spell looks when it lands (SpriteArt.RUNE_FX_ELEMENTS; bolts and shots also fly as
+## SpriteArt.MISSILE_ELEMENTS): fire, frost, and lightning like the runes, holy light, nature,
+## a sword arc for melee strikes, an arrow strike, and rising motes for heals.
+const ELEMENTS: Dictionary = {
+	"light_heal": "heal", "holy_mend": "heal", "mend": "heal", "mass_mend": "heal", "wild_growth": "heal",
+	"brutal_blow": "slash", "whirling_strike": "slash", "rending_cut": "slash", "sundering_blow": "slash",
+	"earthshaker": "slash", "challenge": "", "provoke": "slash",
+	"piercing_shot": "pierce", "arrow_volley": "pierce", "crippling_arrow": "pierce",
+	"radiant_arrow": "holy", "sunlance_barrage": "holy",
+	"ember_bolt": "fire", "flame_wave": "fire", "firestorm": "fire", "arc_lightning": "lightning", "starfall": "holy",
+	"frost_bolt": "frost", "hailstorm": "frost", "thorn_lash": "nature", "entangling_roots": "nature",
+}
+
+
+## The spell's element ("" for none: the effect is only tinted in the spell's colour).
+static func element_of(spell: String) -> String:
+	return ELEMENTS.get(spell, "")
+
+
 static func for_vocation(vocation: String) -> Array[String]:
 	var result: Array[String] = []
 	var order: Dictionary = {}

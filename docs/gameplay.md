@@ -44,7 +44,9 @@ it, water does not. If your target is out of reach and you are not steering, you
 toward it. Spells sit on the action bar; each costs mana, has its own cooldown, and starts
 a shared cooldown for its group (attack 2 s, healing 1 s). Every class has Light heal, and each
 unlocks stronger spells as it levels, so its damage keeps growing (spell damage is your attack
-times the spell's power):
+times the spell's power). Every spell shows its element: bolts and shots fly as an ember, an ice
+shard, a spark, a holy orb, a thorn, or an arrow and burst on their target; melee strikes cut a
+sword arc; area spells flare on every tile they hit; heals raise green motes:
 
 | Class | Spells (unlock level) |
 | --- | --- |
