@@ -16,7 +16,7 @@ const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const ItemTip = preload("res://game/ui/item_tip.gd")
-const SLOT_STEP: float = 30.0
+const SLOT_STEP: float = 34.0
 ## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/legs/ring,
 ## and cape/boots/charm; the mount sits under the three bag slots.
 const PAPERDOLL: Dictionary = {
@@ -57,7 +57,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_add_panel_label(layer, "Equipment", Layout.PANEL_ORIGIN + Vector2(0, 6))
 	for slot: String in World.SLOTS:
 		_add_slot(layer, {"type": "equipment", "slot": slot}, slot_position({"type": "equipment", "slot": slot}))
-	_backpack_label = _add_panel_label(layer, "Backpack", Layout.PANEL_ORIGIN + Vector2(0, 154))
+	_backpack_label = _add_panel_label(layer, "Backpack", Layout.PANEL_ORIGIN + Vector2(0, 166))
 	for index: int in World.BACKPACK_MAX:
 		_add_slot(layer, {"type": "backpack", "index": index}, slot_position({"type": "backpack", "index": index}))
 	for bag: int in World.BAG_SLOTS:
@@ -152,7 +152,7 @@ func slot_position(location: Dictionary) -> Vector2:
 	if location["type"] == "bag":
 		return Layout.PANEL_ORIGIN + Vector2(40, 28) + Vector2(3.2, location["bag"]) * SLOT_STEP
 	var index: int = location["index"]
-	return Layout.PANEL_ORIGIN + Vector2(4, 176) + Vector2(index % BACKPACK_COLUMNS, index / BACKPACK_COLUMNS) * SLOT_STEP
+	return Layout.PANEL_ORIGIN + Vector2(4, 186) + Vector2(index % BACKPACK_COLUMNS, index / BACKPACK_COLUMNS) * SLOT_STEP
 
 
 ## Main backpack slots you can use: 8, plus your pack's slots (bags have their own windows).
@@ -204,13 +204,13 @@ func redraw_slots() -> void:
 
 
 func _build_stat_sheet(layer: CanvasLayer) -> void:
-	_add_panel_label(layer, "Stats", Layout.PANEL_ORIGIN + Vector2(0, 304))
+	_add_panel_label(layer, "Stats", Layout.PANEL_ORIGIN + Vector2(0, 322))
 	var grid := GridContainer.new()
 	grid.columns = 2
-	grid.position = Layout.PANEL_ORIGIN + Vector2(0, 328)
+	grid.position = Layout.PANEL_ORIGIN + Vector2(0, 342)
 	grid.add_theme_constant_override("h_separation", 16)
 	# Twelve rows must end above the minimap: lines sit a little closer than a label's own height.
-	grid.add_theme_constant_override("v_separation", -2)
+	grid.add_theme_constant_override("v_separation", -3)
 	layer.add_child(grid)
 	for stat: String in ["vocation", "level", "experience", "gold"] + Array(Balance.STATS):
 		var stat_label := Label.new()

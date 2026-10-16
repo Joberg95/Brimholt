@@ -22,7 +22,9 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
 	for index: int in MAX_ICONS:
 		var icon := Control.new()
-		icon.position = Layout.PANEL_ORIGIN + Vector2(index * (ICON + GAP), 540)
+		icon.position = Layout.PANEL_ORIGIN + Vector2(index * (ICON + GAP), 544)
+		# Icons are shrunk to ICON pixels: blend them down instead of dropping pixel rows.
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		icon.size = Vector2(ICON, ICON + 10)
 		icon.mouse_filter = Control.MOUSE_FILTER_STOP
 		icon.visible = false

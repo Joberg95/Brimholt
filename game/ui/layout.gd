@@ -9,7 +9,7 @@ const VIEW_TILES: Vector2i = Vector2i(15, 11)
 const VIEW_ORIGIN: Vector2 = Vector2(16, 16)
 const VIEW_SIZE: Vector2 = Vector2(VIEW_TILES * World.TILE_SIZE) * ZOOM
 const PANEL_ORIGIN: Vector2 = Vector2(992, 16)
-## Item slots, the action bar, and the micro menu are drawn about a fifth smaller than their
-## 32-pixel art (SpriteArt.draw_item and SpellRune.draw_rune scale it), to keep the screen calm.
-const SLOT_SIZE: float = 26.0
+## Item slots show their 32-pixel icons at full size: a smaller slot would drop rows and columns
+## of pixels (nearest filtering), which is what made icons look rough.
+const SLOT_SIZE: float = 32.0
 const BAR_SLOT: float = 36.0
