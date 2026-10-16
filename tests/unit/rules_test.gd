@@ -79,6 +79,7 @@ func _run() -> void:
 	_dungeon_checks()
 	_cave_checks()
 	_isles_checks()
+	_scale_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -1869,7 +1870,7 @@ func _zone_checks() -> void:
 				"%s camp at %s is a tight pack of 5-7 (%d within %d)" % [spawn["monster"], spawn["cell"], spawn["count"], spawn["radius"]])
 	var filled := Combat.new(World.new(), 5)
 	filled.world.monsters.clear()
-	filled.populate(0.0)
+	filled.populate(0.0, true)
 	check(filled.respawns.size() * 100 < filled.world.monsters.size(),
 		"populate places nearly every camp monster at once (%d waiting, %d placed)" % [filled.respawns.size(), filled.world.monsters.size()])
 	# Raised walls, rock, and trees lean up and left over the cells west and north of them, so a
@@ -3186,6 +3187,74 @@ func _isles_checks() -> void:
 	check(World.region_at(boat + Vector2i(-14, 0)) in isle_regions and World.region_at(Vector2i(60, 370)) not in isle_regions,
 		"the isles keep their own regions")
 
+
+## Performance at scale (plan 29): a tick visits only monsters near players or busy, camps spawn
+## when first visited, the bots' nearby lookup misses nothing, and continents cover the overworld.
+func _scale_checks() -> void:
+	var world := World.new()
+	var combat := Combat.new(world, 29)
+	world.monsters.clear()
+	combat.populate(0.0)
+	check(world.monsters.is_empty() and combat.dormant_camps() == World.MONSTER_SPAWNS.size(),
+		"camps wait dormant until someone comes near")
+	check(world.add_player(1, 0.0, "knight"), "scale player")
+	# Level 50, so the camp it wakes does not kill it and send it home to wake others.
+	world.players[1]["level"] = Balance.MAX_LEVEL
+	world.players[1]["health"] = world.player_stats(1)["health"]
+	var index: int = -1
+	for spawn: int in World.MONSTER_SPAWNS.size():
+		if World.MONSTER_SPAWNS[spawn]["monster"] == "snow_wolf":
+			index = spawn
+			break
+	var camp: Dictionary = World.MONSTER_SPAWNS[index]
+	_place(world, 1, camp["cell"] + Vector2i(4, 0))
+	for step: int in 20:
+		combat.tick(1.0 + step * 0.5)
+	var placed: int = world.monsters.values().filter(func(monster: Dictionary) -> bool: return monster["spawn"] == index).size()
+	check(placed == camp["count"], "a camp fills when a player comes near (%d of %d)" % [placed, camp["count"]])
+	check(combat.dormant_camps() > World.MONSTER_SPAWNS.size() * 0.8 and world.monsters.size() < 200,
+		"camps far from everyone stay dormant (%d live)" % world.monsters.size())
+	var far: Vector2i = World.SPAWNS[0]
+	check(not world.monsters.values().any(func(monster: Dictionary) -> bool:
+		return Combat.distance(monster["home"], camp["cell"]) > (Combat.WAKE_REACH + 2) * Combat.SLEEP_CHUNK)
+		and Combat.distance(far, camp["cell"]) > 100, "only the camps round the player woke")
+	# Every camp filled at once, as tools and tests may ask: a tick visits a small share.
+	var full_world := World.new()
+	var full := Combat.new(full_world, 30)
+	full_world.monsters.clear()
+	full.populate(0.0, true)
+	check(full.dormant_camps() == 0 and full_world.monsters.size() > 1000, "populate can still fill every camp at once")
+	full_world.add_player(1, 0.0, "knight")
+	_place(full_world, 1, camp["cell"] + Vector2i(4, 0))
+	var visited: Array = full._near_players()
+	check(visited.size() * 10 < full_world.monsters.size(), "a tick visits only the monsters near players (%d of %d)" % [
+		visited.size(), full_world.monsters.size()])
+	var in_order: bool = true
+	for at: int in range(1, visited.size()):
+		in_order = in_order and visited[at - 1] > visited[at]
+	check(in_order, "monsters are visited oldest first, as world.monsters keeps them")
+	# The bots' lookup finds every monster a full scan finds.
+	for probe: Vector2i in [camp["cell"], World.SPAWNS[0], Vector2i(200, 150)]:
+		var near: Array = full.monsters_near(probe, 10)
+		var missed: int = 0
+		for id: int in full_world.monsters:
+			if Combat.distance(full_world.monsters[id]["cell"], probe) <= 10 and not near.has(id):
+				missed += 1
+		check(missed == 0, "monsters_near misses nothing within its radius of %s" % probe)
+	# Adding and removing monsters behind Combat's back rebuilds the index.
+	var odd: int = -900001
+	full_world.monsters[odd] = {"id": odd, "kind": "snow_wolf", "home": camp["cell"], "cell": camp["cell"], "target": 0,
+		"engaged_at": -1.0}
+	check(full._near_players().has(odd), "a monster added directly is indexed")
+	full_world.monsters.erase(odd)
+	check(not full._near_players().has(odd), "a monster removed directly leaves the index")
+	# Continents.
+	for sheet: Dictionary in Atlas.SHEETS:
+		for cell: Vector2i in [sheet["cells"].position, sheet["cells"].get_center(), sheet["cells"].end - Vector2i.ONE]:
+			check(World.continent_at(cell) == sheet["name"], "%s lies on %s" % [cell, sheet["name"]])
+	check(World.continent_at(World.FERRYMEN["hrimvik"]["cell"]) == "the frost isles"
+		and World.continent_at(World.SPAWNS[0]) == "the mainland", "Hrimvik is on the frost isles, Cinder Crossing on the mainland")
+
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
 	check(Dungeons.ORDER.size() == Dungeons.DUNGEONS.size() and World.ENTRANCE_OF.size() == Dungeons.DUNGEONS.size(),
@@ -4153,7 +4222,7 @@ func _spawn_and_rest_checks() -> void:
 	for cell: Vector2i in blockers:
 		world.monsters[-90000 - held.size()] = {"cell": cell, "from": cell, "next_move": 0.0}
 		held[cell] = -90000 - (held.size())
-	combat.populate(0.0)
+	combat.populate(0.0, true)
 	var in_camp: Callable = func() -> int:
 		return world.monsters.values().filter(func(monster: Dictionary) -> bool:
 			return monster.get("spawn", -1) == index).size()
@@ -4498,7 +4567,7 @@ func _combat_checks() -> void:
 	# Populating the map.
 	var map_world := World.new()
 	var map_combat := Combat.new(map_world, 3)
-	map_combat.populate(0.0)
+	map_combat.populate(0.0, true)
 	var expected: int = 0
 	for spawn: Dictionary in World.MONSTER_SPAWNS:
 		expected += spawn["count"]

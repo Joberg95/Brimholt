@@ -12,8 +12,6 @@ we should rename the "everyone" on items to something that makes more sense, lik
 
 the lanterns flicker when you go near them, lets address this 
 
-![world suggestions](image-1.png) Before we move on to making the world map massive and rendered so its performance friendly, we could make it so nothing renders outside like 100 tiles or something from the user perspective ? what is the best pracitce here to make a map performance focused while not breaking gameplay? could we make the islands its own like zone, so it only loads what "continent" you are on? (plan 29)
-
 lets add titles based on the quests you have completed in the endgame, ![alt text](tibia-titles.png) (plan 30)
 
 lets look over the world design walls again, I feel like I can see a lot of building walls in the world that serve no purpose. (plan 31)

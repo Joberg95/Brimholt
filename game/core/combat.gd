@@ -96,6 +96,16 @@ const LOOT_SWEEP_SECONDS: float = 10.0
 var _next_claim_sweep: float = 0.0
 var _next_id: int = -1
 var _last_tick: float = -INF
+## Monsters by the SLEEP_CHUNK of their home (chunk -> {id: true}) and the active ones (chasing,
+## away from home, or in a fight). A tick visits only the monsters homed near a player plus the
+## active set, so its cost does not grow with camps far from everyone. Rebuilt if world.monsters
+## changes behind Combat's back (tests add and remove monsters directly).
+var _by_home: Dictionary = {}
+var _indexed: int = 0
+var _active: Dictionary = {}
+## Camps not spawned yet (populate's lazy mode): marker chunk -> [spawn indices]. A camp spawns the
+## first time a player or bot comes within WAKE_REACH chunks of it, and stays.
+var _dormant: Dictionary = {}
 ## Occupied tiles (cell -> number of creatures on or reserving it) for one moment, built once and
 ## kept current as monsters step, instead of scanning every creature for each step.
 var _taken: Dictionary = {}
@@ -251,13 +261,53 @@ func monster_snapshot(now: float) -> Dictionary:
 
 ## Fills every overworld spawn to its count. A monster that finds no free tile now is queued like
 ## a respawn and retried every SPAWN_RETRY_SECONDS, so every camp reaches its full count.
-func populate(now: float) -> Array:
+## Fills the camps: every one now when `everywhere` (tests and tools), else each the first time a
+## player or bot comes near it (_wake_camps), so startup and memory do not grow with the map.
+func populate(now: float, everywhere: bool = false) -> Array:
 	var events: Array = []
 	for index: int in World.MONSTER_SPAWNS.size():
-		for count: int in World.MONSTER_SPAWNS[index]["count"]:
-			if not _spawn_at_marker(index, now, events):
-				respawns.append([now + SPAWN_RETRY_SECONDS, index])
+		if not everywhere:
+			var chunk: Vector2i = World.MONSTER_SPAWNS[index]["cell"] / SLEEP_CHUNK
+			if not _dormant.has(chunk):
+				_dormant[chunk] = []
+			_dormant[chunk].append(index)
+			continue
+		_fill_camp(index, now, events)
 	return events
+
+
+func _fill_camp(index: int, now: float, events: Array) -> void:
+	for count: int in World.MONSTER_SPAWNS[index]["count"]:
+		if not _spawn_at_marker(index, now, events):
+			respawns.append([now + SPAWN_RETRY_SECONDS, index])
+
+
+## Spawns the dormant camps within WAKE_REACH chunks of every player and bot, at most
+## WAKE_BUDGET camps a tick (nearest players first), so a band walking out spreads the work.
+func _wake_camps(now: float, events: Array) -> void:
+	if _dormant.is_empty():
+		return
+	var budget: int = WAKE_BUDGET
+	for id: int in world.players:
+		var centre: Vector2i = world.players[id]["cell"] / SLEEP_CHUNK
+		for dy: int in range(-WAKE_REACH, WAKE_REACH + 1):
+			for dx: int in range(-WAKE_REACH, WAKE_REACH + 1):
+				var chunk: Vector2i = centre + Vector2i(dx, dy)
+				while _dormant.has(chunk) and budget > 0:
+					_fill_camp(_dormant[chunk].pop_back(), now, events)
+					budget -= 1
+					if _dormant[chunk].is_empty():
+						_dormant.erase(chunk)
+				if budget == 0:
+					return
+
+
+## Camps still waiting for a visitor.
+func dormant_camps() -> int:
+	var total: int = 0
+	for chunk: Vector2i in _dormant:
+		total += _dormant[chunk].size()
+	return total
 
 
 func _spawn_at_marker(index: int, now: float, events: Array) -> bool:
@@ -279,6 +329,7 @@ func despawn(id: int, events: Array) -> void:
 	if not world.monsters.has(id):
 		return
 	var cell: Vector2i = world.monsters[id]["cell"]
+	_unindex(id)
 	world.monsters.erase(id)
 	_taken_at = NAN
 	events.append({"kind": "monster_gone", "id": id, "cell": cell})
@@ -305,6 +356,7 @@ func spawn_monster(kind: String, level: int, cell: Vector2i, now: float, spawn: 
 		## Players who damaged this monster, were hit by it, or healed someone in the fight.
 		"fought": {},
 	}
+	_index(id)
 	events.append({"kind": "monster", "id": id, "movement": false})
 	return id
 
@@ -640,6 +692,7 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 	if definition.has("relics"):
 		_award_trophies(monster["kind"], monster["fought"], monster["cell"], events)
 	_drop_loot(monster, credited, now, events)
+	_unindex(id)
 	world.monsters.erase(id)
 	_taken_at = NAN
 	events.append({"kind": "monster_gone", "id": id, "cell": monster["cell"]})
@@ -1290,10 +1343,13 @@ func tick(now: float) -> Array:
 	for id: int in world.players.keys():
 		if world.players.has(id):
 			_player_tick(id, now, events)
+	_wake_camps(now, events)
 	var awake: Dictionary = _awake_chunks()
-	for id: int in world.monsters.keys():
+	for id: int in _near_players():
 		if world.monsters.has(id) and _awake(world.monsters[id], awake):
 			_monster_tick(id, now, events)
+			if world.monsters.has(id):
+				_track_active(id)
 	for index: int in range(respawns.size() - 1, -1, -1):
 		if now >= respawns[index][0]:
 			var spawn: int = respawns[index][1]
@@ -1361,6 +1417,91 @@ func resting(id: int, now: float) -> bool:
 ## Monsters sleep at home with nobody near: no target search or AI runs for them. A monster
 ## wakes when a player enters a nearby SLEEP_CHUNK, and stays awake while it fights or walks home.
 const SLEEP_CHUNK: int = 16
+## Chunks round a player whose monsters a tick visits (a monster strays at most Monsters.LEASH
+## from home, under a chunk) and whose dormant camps spawn: well beyond the view and INTEREST.
+const WAKE_REACH: int = 3
+const WAKE_BUDGET: int = 4
+
+
+func _index(id: int) -> void:
+	var monster: Dictionary = world.monsters[id]
+	var chunk: Vector2i = monster.get("home", monster.get("cell", Vector2i.ZERO)) / SLEEP_CHUNK
+	if not _by_home.has(chunk):
+		_by_home[chunk] = {}
+	if not _by_home[chunk].has(id):
+		_by_home[chunk][id] = true
+		_indexed += 1
+	_track_active(id)
+
+
+func _unindex(id: int) -> void:
+	_active.erase(id)
+	var monster: Dictionary = world.monsters.get(id, {})
+	var chunk: Vector2i = monster.get("home", monster.get("cell", Vector2i.ZERO)) / SLEEP_CHUNK
+	if _by_home.has(chunk) and _by_home[chunk].has(id):
+		_by_home[chunk].erase(id)
+		_indexed -= 1
+		if _by_home[chunk].is_empty():
+			_by_home.erase(chunk)
+
+
+func _track_active(id: int) -> void:
+	var monster: Dictionary = world.monsters[id]
+	if monster.get("target", 0) != 0 or monster.get("cell") != monster.get("home") or monster.get("engaged_at", -1.0) >= 0.0:
+		_active[id] = true
+	else:
+		_active.erase(id)
+
+
+## Keeps the index true to world.monsters when something added or removed monsters directly.
+func _check_index() -> void:
+	if _indexed == world.monsters.size():
+		return
+	_by_home.clear()
+	_active.clear()
+	_indexed = 0
+	for id: int in world.monsters:
+		_index(id)
+
+
+## Monsters homed within WAKE_REACH chunks of a player or bot, and the active ones, oldest first
+## (the order world.monsters keeps), so ticks and target choices stay deterministic.
+func _near_players() -> Array:
+	_check_index()
+	var picked: Dictionary = _active.duplicate()
+	var seen: Dictionary = {}
+	for player: int in world.players:
+		var centre: Vector2i = world.players[player]["cell"] / SLEEP_CHUNK
+		for dy: int in range(-WAKE_REACH, WAKE_REACH + 1):
+			for dx: int in range(-WAKE_REACH, WAKE_REACH + 1):
+				var chunk: Vector2i = centre + Vector2i(dx, dy)
+				if seen.has(chunk) or not _by_home.has(chunk):
+					continue
+				seen[chunk] = true
+				picked.merge(_by_home[chunk])
+	return _oldest_first(picked)
+
+
+## Monsters that may stand within `radius` of `cell` (homed within reach, plus the active ones),
+## oldest first: what bots scan instead of every monster. Callers still check the distance.
+func monsters_near(cell: Vector2i, radius: int) -> Array:
+	_check_index()
+	var picked: Dictionary = _active.duplicate()
+	var reach: int = ceili(float(radius + Monsters.LEASH) / SLEEP_CHUNK)
+	var centre: Vector2i = cell / SLEEP_CHUNK
+	for dy: int in range(-reach, reach + 1):
+		for dx: int in range(-reach, reach + 1):
+			var chunk: Vector2i = centre + Vector2i(dx, dy)
+			if _by_home.has(chunk):
+				picked.merge(_by_home[chunk])
+	return _oldest_first(picked)
+
+
+## Monster ids count down from -1 as they spawn: descending is the order they were made.
+static func _oldest_first(picked: Dictionary) -> Array:
+	var ids: Array = picked.keys()
+	ids.sort_custom(func(a: int, b: int) -> bool: return a > b)
+	return ids
 
 
 func _awake_chunks() -> Dictionary:

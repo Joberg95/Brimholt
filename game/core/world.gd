@@ -5,6 +5,7 @@ const Items = preload("res://game/data/items.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Caves = preload("res://game/data/caves.gd")
+const Atlas = preload("res://game/data/atlas.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Monsters = preload("res://game/data/monsters.gd")
@@ -293,8 +294,13 @@ static func _static_init() -> void:
 					CAVE_STAIRS[cave] = Vector2i(x, y)
 	OVERWORLD = Rect2i(0, 0, mini(size.x, Dungeons.BAND_X - Dungeons.COPY_GAP), size.y)
 	_map_regions()
-	MAP_HASH = ("".join(ROWS) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK) + str(ZONES)
-		+ str(MONSTER_SPAWNS) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS) + str(CAVE_MOUTHS)).sha256_text()
+	# The terrain bytes are hashed as they are (joining every row into one string costs more).
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
+	hashing.update(GRID)
+	hashing.update((str(GRID_SIZE) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK)
+		+ str(ZONES) + str(MONSTER_SPAWNS) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS) + str(CAVE_MOUTHS)).to_utf8_buffer())
+	MAP_HASH = hashing.finish().hex_encode()
 
 
 ## Buildings in town zones, and the signs of the shops and banks among them.
@@ -459,11 +465,13 @@ static func _decorate_streets() -> void:
 		for y: int in range(rect.position.y, rect.end.y):
 			for x: int in range(rect.position.x, rect.end.x):
 				var cell := Vector2i(x, y)
-				if not free.call(cell) or _walls_beside(cell) == 0 and terrain(cell + Vector2i.UP) == "=":
+				# Cheapest tests first: the street and lamp spacing, then the full free-tile check.
+				if terrain(cell) != "=" or not LAMPS.all(func(lamp: Vector2i) -> bool: return chebyshev(lamp, cell) >= LAMP_GAP):
 					continue
-				if LAMPS.all(func(lamp: Vector2i) -> bool: return chebyshev(lamp, cell) >= LAMP_GAP):
-					FURNITURE[cell] = "lamp_post"
-					LAMPS.append(cell)
+				if _walls_beside(cell) == 0 and terrain(cell + Vector2i.UP) == "=" or not free.call(cell):
+					continue
+				FURNITURE[cell] = "lamp_post"
+				LAMPS.append(cell)
 
 
 ## Whether blocking `cell` could cut a way: its walkable neighbours (all eight, in a ring) must
@@ -678,6 +686,14 @@ static func _cell_of(marker: Node2D) -> Vector2i:
 	return Vector2i((marker.position / TILE_SIZE).floor())
 
 
+## The continent (an Atlas sheet) a cell lies on, or "" off the overworld or in open sea.
+static func continent_at(cell: Vector2i) -> String:
+	for sheet: Dictionary in Atlas.SHEETS:
+		if (sheet["cells"] as Rect2i).has_point(cell):
+			return sheet["name"]
+	return ""
+
+
 static func width() -> int:
 	return GRID_SIZE.x
 
@@ -689,10 +705,12 @@ static func height() -> int:
 ## The overworld's terrain and buildings, hashed: what the baked world map (tools/generators/
 ## world_map.gd) was painted from, so a map edited since shows its stale bake.
 static func overworld_hash() -> String:
-	var rows: PackedStringArray = []
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
 	for y: int in OVERWORLD.size.y:
-		rows.append(ROWS[y].substr(0, OVERWORLD.size.x))
-	return ("".join(rows) + str(ROOF_AT.keys().size())).sha256_text()
+		hashing.update(GRID.slice(y * GRID_SIZE.x, y * GRID_SIZE.x + OVERWORLD.size.x))
+	hashing.update(str(ROOF_AT.size()).to_utf8_buffer())
+	return hashing.finish().hex_encode()
 
 
 ## Where to go for a task you have (the quest guidance on the maps): its giver once it is done,

@@ -28,6 +28,8 @@ var target_frame: Control
 var _status: Label
 var _action: Label
 var _zone_name: String = ""
+## The continent you were last on (World.continent_at): sailing to another one is announced.
+var _continent: String = ""
 ## Under the minimap: where you are and its monster levels (World.location_at).
 var location_label: Label
 var _location_key: String = ""
@@ -253,6 +255,11 @@ func _update_zone() -> void:
 	if zone_name != _zone_name and not zone_name.is_empty() and (message.is_empty() or game._now() - _message_since > 2.0):
 		game.last_action_message = "Entering %s." % zone_name
 	_zone_name = zone_name
+	var continent: String = World.continent_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else ""
+	if not continent.is_empty() and continent != _continent:
+		if not _continent.is_empty():
+			game.last_action_message = "You arrive on %s." % continent
+		_continent = continent
 	zone_label.visible = not zone.is_empty()
 	if not zone.is_empty():
 		var rule: String = "PvP zone: other players can attack you" if zone["pvp"] else "safe zone"

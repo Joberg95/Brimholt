@@ -5,8 +5,9 @@ extends SceneTree
 ##   godot --position 99999,99999 --resolution 64x64 --path . --script res://tools/testing/bench.gd
 ##
 ## Scenes: "town" (you, your companions, and the rival bands in Cinder Crossing), "hunt" (your
-## group at a camp of outlaw archers, fighting), and "raid" (level 50, a full twenty-player raid
-## at the Hollow Reach's gate). Numbers go to stdout as BENCH lines and to .tools/bench.txt.
+## group at a camp of outlaw archers, fighting), "isles" (Hrimvik's square in the snow), and "raid"
+## (level 50, a full twenty-player raid at the Hollow Reach's gate). A startup line gives the time
+## to start a solo game and how many camps are still dormant (Combat spawns them when visited). Numbers go to stdout as BENCH lines and to .tools/bench.txt.
 
 const Weather = preload("res://game/render/weather.gd")
 const World = preload("res://game/core/world.gd")
@@ -44,7 +45,10 @@ func _run() -> void:
 	game.save_enabled = false
 	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
 	game.port = 0
+	var started: int = Time.get_ticks_usec()
 	game.play_solo()
+	_line("BENCH startup %d ms  monsters live %d  camps dormant %d" % [(Time.get_ticks_usec() - started) / 1000,
+		game.world.monsters.size(), game.combat.dormant_camps()])
 	Weather.override = "clear"
 	if not game.connected:
 		quit(1)
@@ -54,6 +58,9 @@ func _run() -> void:
 	await _scene("town")
 	_place(_camp_of("outlaw_archer"))
 	await _scene("hunt")
+	me["level"] = 35
+	_place(Vector2i(80, 466))
+	await _scene("isles")
 	me["level"] = Balance.MAX_LEVEL
 	game.raid_local(true)
 	await _scene("raid")

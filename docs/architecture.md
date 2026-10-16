@@ -163,8 +163,26 @@ cannot bind its UDP port or the supplied join address is empty.
 
 ## Performance and memory
 
-The host holds every monster (about 1,800) and every ground stack, so per-frame and per-tick
-code must not scan them all:
+The map can grow without the game slowing down, because only what is near a player costs
+anything. The static map is kept whole (its terrain is a few hundred kilobytes); live entities and
+their work follow the players:
+
+- **Rendering** draws only the visible cells; floors are built in 16-tile chunks near the camera.
+- **Network**: clients get monsters and effects within `main.INTEREST_RADIUS` (24 tiles) only.
+- **Camps spawn when first visited** (`Combat.populate`): a camp's monsters appear the first
+  time a player or bot comes within `Combat.WAKE_REACH` chunks (3 x 16 tiles, beyond the view),
+  at most `WAKE_BUDGET` camps a tick, and stay. Tools and tests can fill every camp at once
+  (`populate(now, true)`). Startup no longer spawns 2,000+ monsters.
+- **A tick visits only nearby monsters**: `Combat` indexes monsters by the chunk of their home
+  and keeps an active set (chasing, away from home, fighting); a tick walks the chunks round
+  players plus that set, so its cost does not grow with far camps (2.2 ms a tick for 2,272
+  sleeping monsters before, 0.02 ms after). Bots ask `Combat.monsters_near(cell, radius)`
+  instead of scanning every monster. Both keep the order monsters were made (descending ids),
+  so behaviour is deterministic.
+- **Continents** (`game/data/atlas.gd`, `World.continent_at`) are the world map's sheets,
+  crossed only by boat; the HUD announces arriving on another.
+
+Per-frame and per-tick code must still never scan every monster or ground stack:
 
 - Rendering asks `main.monsters_in(area)` and `main.ground_in(area)` (chunked
   `game/render/cell_index.gd`) for what is near the camera; keep the index current when adding
@@ -186,8 +204,11 @@ code must not scan them all:
 - Bots take their turns at their own moment in each `Bots.THINK_SECONDS`
   (`Bots.think_phase`), so twenty raid bots never all think in the same frame.
 
-**Measuring.** `make bench` plays solo offscreen without vsync through three scenes and
-prints the frame time and where it goes (`main.frame_profile`, opt-in per frame section):
+**Measuring.** `make bench` plays solo offscreen without vsync through four scenes (town,
+hunt, the frost isles, raid), prints the time to start a solo game and how many camps are still
+dormant, and the frame time and where it goes (`main.frame_profile`, opt-in per frame section).
+With camps spawned on demand (plan 29) the town scene averages 3.8 ms with bots at 0.12 ms a frame
+(0.42 before), and a solo game starts in 25 ms after the map loads. Earlier results:
 
 | Scene | Before (avg / worst) | After (avg / worst) |
 | --- | --- | --- |

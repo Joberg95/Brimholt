@@ -346,7 +346,8 @@ func choose_target(id: int, now: float) -> int:
 			nearest = close
 	if best != 0:
 		return best
-	for monster: int in world.monsters:
+	# Monsters chasing the bot are active, so the nearby ones (combat.monsters_near) include them.
+	for monster: int in combat.monsters_near(player["cell"], maxi(Combat.TARGET_RANGE, HUNT_RADIUS)):
 		var state: Dictionary = world.monsters[monster]
 		var close: int = Combat.distance(player["cell"], state["cell"])
 		var chasing: bool = state["target"] == id
@@ -456,7 +457,7 @@ func _defend_group(id: int, now: float) -> int:
 		if attacking and combat.hostile(id, other):
 			best = other
 			nearest = close
-	for monster: int in world.monsters:
+	for monster: int in combat.monsters_near(own, Combat.TARGET_RANGE):
 		var state: Dictionary = world.monsters[monster]
 		if state["target"] == 0 or not state["target"] in group:
 			continue
@@ -518,7 +519,7 @@ func _loose_monster(id: int, reach: int) -> int:
 	var own: Vector2i = world.players[id]["cell"]
 	var best: int = 0
 	var nearest: int = reach + 1
-	for monster: int in world.monsters:
+	for monster: int in combat.monsters_near(own, reach):
 		var state: Dictionary = world.monsters[monster]
 		var victim: int = state["target"]
 		var gap: int = Combat.distance(own, state["cell"])
@@ -533,7 +534,7 @@ func _should_taunt(id: int, radius: int, now: float) -> bool:
 	if group.size() < 2:
 		return false
 	var own: Vector2i = world.players[id]["cell"]
-	for monster: int in world.monsters:
+	for monster: int in combat.monsters_near(own, radius):
 		var state: Dictionary = world.monsters[monster]
 		var victim: int = state["target"]
 		if victim == id or victim not in group or Combat.distance(own, state["cell"]) > radius:
@@ -777,7 +778,7 @@ func _camp_prey(id: int) -> int:
 	var marker: Vector2i = bots[id]["plan"].get("marker", bots[id]["post"])
 	var best: int = 0
 	var nearest: int = 1 << 30
-	for monster: int in world.monsters:
+	for monster: int in combat.monsters_near(marker, CAMP_REACH):
 		var state: Dictionary = world.monsters[monster]
 		var close: int = Combat.distance(player["cell"], state["cell"])
 		if Combat.distance(state["cell"], marker) <= CAMP_REACH and close < nearest and not state.get("returning", false) \

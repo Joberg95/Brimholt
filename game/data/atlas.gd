@@ -1,7 +1,7 @@
 extends RefCounted
-## How the overworld's pieces sit on the world map. The grid keeps the frost isles south of the
-## mainland (Biomes.ISLES), where they cost no coordinate changes; the world map shows them to
-## the west instead, like islands off the coast. Each sheet is a rectangle of cells drawn with its
+## The overworld's continents and how they sit on the world map. The grid keeps the frost isles
+## south of the mainland (Biomes.ISLES), where they cost no coordinate changes; the world map
+## shows them to the west instead, like islands off the coast. Each sheet is a rectangle of cells drawn with its
 ## corner at `at` in map tiles. The baker (tools/generators/world_map.gd) paints the sheets this
 ## way, and the map window (game/ui/world_maps.gd) places everything through to_map().
 
@@ -11,9 +11,10 @@ const Biomes = preload("res://game/data/biomes.gd")
 const STRAIT: int = 16
 const ISLES_TOP: int = 16
 const MAINLAND: Rect2i = Rect2i(0, 0, 384, 384)
+## Each sheet is one continent: you cross between them only by boat.
 const SHEETS: Array = [
-	{"cells": MAINLAND, "at": Vector2i(160 + STRAIT, 0)},
-	{"cells": Biomes.ISLES, "at": Vector2i(0, ISLES_TOP)},
+	{"name": "the mainland", "cells": MAINLAND, "at": Vector2i(160 + STRAIT, 0)},
+	{"name": "the frost isles", "cells": Biomes.ISLES, "at": Vector2i(0, ISLES_TOP)},
 ]
 ## The world map in tiles: the isles, the strait, and the mainland.
 const SIZE: Vector2i = Vector2i(160 + STRAIT + 384, 384)
