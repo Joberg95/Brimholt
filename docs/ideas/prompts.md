@@ -11,5 +11,3 @@ Outfits from quests, later thing (plan 22)
 we should rename the "everyone" on items to something that makes more sense, like "dropped on death" or something.
 
 the lanterns flicker when you go near them, lets address this 
-
-lets change the skull icon to be skull and bones, not just the head

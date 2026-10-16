@@ -184,8 +184,9 @@ Attacking an unmarked player gives you a **white skull** for 15 minutes (renewed
 keep attacking). Fighting back against someone who attacked you, or attacking a skulled
 player, is self-defence and gives no skull. Killing an unmarked player who did not attack
 you is an **unjustified kill**; three within 24 hours give a **red skull** for 30 days, and a
-red-skulled player who dies loses everything they wear as well. Skulls show next to the
-name above the character and stay after death. Yellow and black skulls are not used.
+red-skulled player who dies loses everything they wear as well. Skulls (a skull and
+crossbones) show next to the name above the character and stay after death. Yellow and black
+skulls are not used.
 
 On screen, creatures show a name and a health bar that turns yellow and red, damage rises
 in red (critical hits in orange), healing in green, and experience in white. Ranged attacks

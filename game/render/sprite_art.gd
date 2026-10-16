@@ -701,9 +701,20 @@ static func danger_color(monster_level: int, player_level: int) -> Color:
 	return Color("#f2f0e6")
 
 
-## A small PvP skull: white for attacking unmarked players, red after three unjustified kills.
+## A small PvP skull and crossbones: white for attacking unmarked players, red after three
+## unjustified kills. The bones cross behind the jaw, each end a double knuckle.
 static func draw_skull(canvas: CanvasItem, at: Vector2, skull: String) -> void:
 	var bone: Color = Color("#f2f0e6") if skull == "white" else Color("#e0362a")
+	var bones: Array = [[at + Vector2(-5.5, -1.5), at + Vector2(5.5, 6.5)], [at + Vector2(5.5, -1.5), at + Vector2(-5.5, 6.5)]]
+	for pass_color: Color in [OUTLINE, bone]:
+		var outline: bool = pass_color == OUTLINE
+		for ends: Array in bones:
+			canvas.draw_line(ends[0], ends[1], pass_color, 3.0 if outline else 1.5)
+			for end: Vector2 in ends:
+				var along: Vector2 = (end - at - Vector2(0, 2.5)).normalized()
+				var across := Vector2(-along.y, along.x)
+				for side: float in [-1.0, 1.0]:
+					canvas.draw_circle(end + across * side * 1.1, 1.7 if outline else 1.0, pass_color)
 	canvas.draw_circle(at, 4.5, OUTLINE)
 	canvas.draw_rect(Rect2(at + Vector2(-3, 1), Vector2(6, 4.5)), OUTLINE)
 	canvas.draw_circle(at, 3.5, bone)
