@@ -986,6 +986,31 @@ def boots_builder(kind):
                 image.set(min(x for x, _ in points), top, LEAF_TONES[0])
             if "spikes" in extras:
                 image.set(max(x for x, _ in points) + (0 if direction == "left" else 1), top + 1, BONE[0])
+            # Showpiece details (BOOT_WORN): a cuff, wings, flames, a bloom or a glowing stone.
+            left, right = min(x for x, _ in points), max(x for x, _ in points)
+            outer = right if direction == "left" or left >= 32 else left
+            step = 1 if outer == right else -1
+            if "furcuff" in extras:
+                for x in range(left - 1, right + 2):
+                    for y in (top, top + 1):
+                        image.set(x, y, FUR[(x + y) % 2] if not far else scale(FUR[(x + y) % 2], 0.8))
+            if "wings" in extras:
+                feather = (tones_[0], scale(accent, 1.1), accent)
+                for index, (dx, dy) in enumerate(((1, 0), (2, -1), (3, -2), (1, 1), (2, 0), (3, -1), (1, 2), (2, 1))):
+                    image.set(outer + step * dx, top + dy, feather[index % 3])
+            if "blaze" in extras:
+                for x in range(left, right + 1):
+                    tall = 1 + (x * 3 + frame) % 3
+                    for y in range(tall):
+                        image.set(x, top - 1 - y, FLAME_TONES[min(2, y)])
+            if "bloom" in extras:
+                image.set(outer + step, top, LEAF_TONES[0])
+                image.set(outer + step, top + 1, LEAF_TONES[1])
+                image.set(outer - step, top, LEAF_TONES[1])
+                image.set((left + right) // 2, top + 2, scale(accent, 1.2))
+            if "glow" in extras:
+                image.set((left + right) // 2, top + 2, scale(accent, 1.3))
+                image.set((left + right) // 2 + 1, top + 2, accent)
             result.over(image.outlined())
         return result.cut(covers)
     return build
@@ -1818,7 +1843,9 @@ def painted_held(kind, icon):
 def gear_builder(kind):
     slot = ITEMS[kind]["slot"]
     icon = painted_icon(kind)
-    if icon is None and look(kind)[0] in SHOWPIECE_STYLES:
+    # Showpiece helmets wear their icon; showpiece boots are too small for that and are drawn
+    # as generated boots in their colours with their own details (boots_builder).
+    if icon is None and look(kind)[0] in SHOWPIECE_STYLES and look(kind)[0] not in BOOT_WORN:
         icon = helm_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
@@ -2286,7 +2313,8 @@ def mount_icon(kind):
 
 HELM_WORN = {"fangmask": "greathelm", "dreadmask": "greathelm", "hornhelm": "helm", "crownhelm": "helm",
              "lanternhelm": "kettle", "nimbus": "hat", "visor": "greathelm", "cobra": "cowl", "rootcrown": "hood"}
-# Showpiece boots (gear3d.boots) wear as these generated boots, textured with the icon.
+# Showpiece boots (gear3d.boots) wear as these generated boots in their own colours, with the
+# details their look names (furcuff, wings, blaze, bloom, glow, trim, spikes).
 BOOT_WORN = {"wingboots": "boots", "furboots": "boots", "flameboots": "sabatons", "frostboots": "slippers",
              "vialboots": "boots", "scaleboots": "sabatons", "bloomboots": "boots"}
 SHOWPIECE_STYLES = tuple(HELM_WORN) + tuple(BOOT_WORN)
