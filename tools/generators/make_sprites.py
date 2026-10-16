@@ -2046,6 +2046,7 @@ import creatures  # noqa: E402
 import props  # noqa: E402
 import gear3d  # noqa: E402
 import pixel_axes  # noqa: E402
+import pixel_bags  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2360,9 +2361,21 @@ def _sheen(icon, frame):
     return result
 
 
+# Backpacks whose details glow (pixel_bags "g"): the ghost's eyes, the rune of holding.
+BACKPACK_ALIVE = ("ghost", "holding")
+
+
+def backpack_icon(kind, frame=0):
+    """A hand-pixelled backpack (pixel_bags.py) in the item's colours."""
+    _, extras = look(kind)
+    image = Image(TILE, TILE)
+    image.pixels = pixel_bags.icon(next(iter(extras)), ITEMS[kind]["colors"], frame)
+    return image
+
+
 def animated(kind):
-    shape, _ = look(kind)
-    return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"
+    shape, extras = look(kind)
+    return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE)))
 
 
 def icon_frames(kind):
@@ -2370,7 +2383,13 @@ def icon_frames(kind):
     shape, _ = look(kind)
     frames = []
     for frame in range(ANIM_FRAMES):
-        icon = icon_finish(helm_icon(kind, frame) if shape in SHOWPIECE_STYLES else item_icon(kind))
+        if shape in SHOWPIECE_STYLES:
+            icon = helm_icon(kind, frame)
+        elif shape == "backpack":
+            icon = backpack_icon(kind, frame)
+        else:
+            icon = item_icon(kind)
+        icon = icon_finish(icon)
         if ITEMS[kind].get("shine") == "sheen":
             icon = _sheen(icon, frame)
         frames.append(icon)
@@ -2711,6 +2730,8 @@ def item_icon(kind):
         return mount_icon(kind)
     if shape == "ring":
         return ring_icon(kind)
+    if shape == "backpack":
+        return backpack_icon(kind)
     if shape in SHOWPIECE_STYLES:
         return helm_icon(kind)
     image = Image(TILE, TILE)

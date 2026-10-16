@@ -1631,7 +1631,19 @@ func _showpiece_helmet_checks() -> void:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 20, "showpiece helmets, six pairs of boots, and five axes move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 22, "showpiece helmets, boots, axes, and two backpacks move in the inventory")
+	var themed: Array[String] = []
+	for kind: String in World.ITEMS:
+		if String(World.ITEMS[kind]["look"]).begins_with("backpack+"):
+			themed.append(kind)
+			var sources: int = 0
+			for monster: String in Monsters.LOOT:
+				for entry: Array in Monsters.LOOT[monster]:
+					sources += 1 if entry[0] == kind else 0
+			check(World.is_bag(kind) and World.ITEMS[kind].get("loot_only", false) and sources >= 1
+				and not Economy.stock().has(kind), "%s is a rare backpack that monsters drop" % kind)
+	check(themed.size() == 7 and World.ITEMS["holding_backpack"]["slots"] == World.BAG_MAX,
+		"seven themed backpacks; the Backpack of holding holds the most a bag can")
 	var axes: int = 0
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
@@ -2322,7 +2334,8 @@ func _gear_tier_checks() -> void:
 			continue
 		if item["slot"] == "container":
 			check(item["stats"].is_empty() and not World.bound(kind) and item["slots"] > 0 and item["slots"] <= World.BAG_MAX
-				and Crafting.RECIPES.has(kind) and Economy.sell_price(kind) > 0, "%s is an unbound, craftable bag" % kind)
+				and (Crafting.RECIPES.has(kind) or item.get("loot_only", false)) and Economy.sell_price(kind) > 0,
+				"%s is an unbound bag, crafted or a rare drop" % kind)
 			continue
 		if item["slot"] == "mount":
 			continue

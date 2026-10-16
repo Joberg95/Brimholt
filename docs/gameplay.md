@@ -748,6 +748,16 @@ on death, but what they hold is carried like the backpack and follows its death 
 | Silkthistle pack | 10 | Tailoring 20 |
 | Nightcotton haversack | 12 | Tailoring 30 |
 | Starweave rucksack | 14 | Tailoring 40 |
+| Pillow backpack | 10 | sewer rats (0.5%) |
+| Adventurer backpack | 12 | road bandits (0.5%) |
+| Lilypad backpack | 12 | bog lurkers (0.5%) |
+| Sailor's backpack | 12 | trench crabs (0.5%) |
+| Winged backpack | 14 | harpies (0.4%) |
+| Ghost backpack | 14 | wraith knights (0.4%) |
+| Backpack of holding | 16 | the four final bosses (2%) |
+
+The themed backpacks are rare drops, never crafted or sold by vendors; the ghost backpack's skull
+eyes and the rune on the Backpack of holding glow.
 
 Peer 1 validates every item move: location shape, reach, slot type, level and class,
 free space, stack limit, and a 150 ms item cooldown. Dragging onto an occupied slot swaps
