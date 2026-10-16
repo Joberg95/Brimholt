@@ -20,7 +20,26 @@ lets add more hunt quests, for example a quest where you enter a cyclops cave an
 
 we should restrict epic items to bosses and endgame quests, same with legendary items. (plan 36)
 
-lets increase overall mob health with 20% , in a party mobs die too fast (plan 34)
-
 lets add more monsters in empty spots of the map, and lower the spawn rate to balance this out. (plan 35)
 
+the text when entering a cave or dungeon can be removed, the area we are in is enough next to the minimap bottom right.
+
+lets add "elite" prefix next to monsters that are elite rarity, and also reduce fontsizes in the game overall.
+
+i noticed a lot of the areas are missing the updated art we should align
+
+lets make sure bots use potions so they can cast spells in a more fluent way as intended
+
+lets add a buff bar so I can see if I have a active food buff or not, this can also get extended to buff spells that increase power for the party and yourself
+
+lets add a return home rune spell that can be found on monsters above level 30
+
+lets look at adding mounts that increase movement speed 
+
+we need more spells variety for each 10th level bracket, lets brainstorm on this of what spells could be added, or if we should just make endgame spells rune based so the really high damage spells comes from runes
+
+you should not be able to entangle bosses
+
+lets reduce the ui size and icon size with around 20% 
+
+lets update the char models, https://tibia.fandom.com/wiki/Outfiter , the outfitter shows the perfect example of the direction of art we want. ![alt text](outfitter-tibia.png)

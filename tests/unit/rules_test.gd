@@ -1610,14 +1610,17 @@ func _slot_and_stat_checks() -> void:
 func _balance_checks() -> void:
 	check(Balance.mob_health(Balance.MAX_LEVEL, "boss") == Balance.FINAL_BOSS_HEALTH, "final boss has 700,000 health")
 	check(Balance.FINAL_BOSS_HEALTH == 700000, "final boss anchor")
-	check(Balance.mob_health(1) == 30 and Balance.mob_health(Balance.MAX_LEVEL) == 1966, "normal mob health range")
+	check(Balance.mob_health(1) == roundi(30 * Balance.MOB_HEALTH_SCALE)
+		and Balance.mob_health(Balance.MAX_LEVEL) == roundi(Balance.max_level_mob_health() * Balance.MOB_HEALTH_SCALE),
+		"normal mob health range (the curve, 20% tougher)")
 	check(Balance.boss_ratio() > 150.0, "the boss is a raid boss, well over a hundred normal mobs")
 	check(is_equal_approx(Balance.ATTACK_SECONDS, 2.0), "Tibia-style two-second attacks")
 	_raid_checks()
-	check(ceili(Balance.mob_health(1) / float(Balance.base_attack(1))) == 8, "ungeared level 1 needs 8 hits")
+	var first_hits: int = ceili(Balance.mob_health(1) / float(Balance.base_attack(1)))
+	check(first_hits >= 8 and first_hits <= ceili(8 * Balance.MOB_HEALTH_SCALE), "ungeared level 1 needs 8-10 hits (%d)" % first_hits)
 	for level: int in range(1, Balance.MAX_LEVEL + 1):
 		var hits: int = ceili(Balance.mob_health(level) / float(Balance.geared_attack(level)))
-		check(hits >= 5 and hits <= 7, "geared players need about six hits at every level")
+		check(hits >= 5 and hits <= ceili(7 * Balance.MOB_HEALTH_SCALE), "geared players need about six hits (seven with tougher monsters) at every level")
 		check(Balance.gear_attack_budget(level) >= 0, "gear budget is never negative")
 		if level > 1:
 			for rank: String in Balance.RANKS:
@@ -2176,7 +2179,8 @@ func _gear_tier_checks() -> void:
 				var weapon: Dictionary = {"main_hand": by_key["main_hand/%s/%d" % [vocation, level]][0]}
 				for at: int in [level, mini(level + 4, Balance.MAX_LEVEL)]:
 					var hits: int = ceili(Balance.mob_health(at) / float(World.stats(at, weapon, vocation)["attack"]))
-					check(hits >= 5 and hits <= 7, "a tier-%d weapon needs about six hits at level %d" % [level, at])
+					check(hits >= 5 and hits <= ceili(7 * Balance.MOB_HEALTH_SCALE),
+						"a tier-%d weapon needs about seven hits at level %d" % [level, at])
 	check(Items.set_defense(1) == Items.SET_DEFENSE_LOW and is_equal_approx(Items.set_defense(45), Items.SET_DEFENSE_HIGH),
 		"set defense spans the tiers")
 	check(Items.tier_for(1) == 1 and Items.tier_for(4) == 1 and Items.tier_for(5) == 5 and Items.tier_for(50) == 45,

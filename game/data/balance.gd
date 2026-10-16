@@ -32,6 +32,9 @@ const CHASE_SECONDS_FAST: float = 0.13
 const CHASE_GAP_LEVELS: float = 10.0
 const EARLY_DAMAGE_LEVELS: float = 10.0
 const MOB_HEALTH_LEVEL_1: float = 30.0
+## Every monster but the final bosses (tuned against the raid) has this much more health than the
+## curve: parties had them dying too fast. Experience follows the curve, not this.
+const MOB_HEALTH_SCALE: float = 1.2
 const PLAYER_HEALTH_LEVEL_1: float = 150.0
 const PLAYER_MANA_LEVEL_1: float = 60.0
 const BASE_CRITICAL: int = 5
@@ -138,7 +141,7 @@ static func _scale(level: int) -> float:
 
 
 static func mob_health(level: int, rank: String = "normal") -> int:
-	var multiplier: float = boss_ratio() if rank == "boss" else RANKS[rank]["health"]
+	var multiplier: float = boss_ratio() if rank == "boss" else RANKS[rank]["health"] * MOB_HEALTH_SCALE
 	return roundi(MOB_HEALTH_LEVEL_1 * _scale(level) * multiplier)
 
 
