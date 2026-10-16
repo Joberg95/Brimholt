@@ -205,7 +205,7 @@ func _draw() -> void:
 		if game.ground_view.has(cell):
 			_draw_stack(cell, game.ground_view[cell])
 		if tile == "furniture":
-			SpriteArt.draw_furniture(self, cell, World.FURNITURE[cell])
+			SpriteArt.draw_furniture(self, cell, World.FURNITURE[cell], time)
 		elif tile == "herb" and not game.node_worked(cell):
 			SpriteArt.draw_herb(self, cell, Crafting.HERBS[cell])
 		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:

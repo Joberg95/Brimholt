@@ -4025,7 +4025,9 @@ FURNITURE_KINDS = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books
                    # Homes (World._furnish_homes): every house without a keeper is lived in.
                    "bed", "table", "chair", "plant", "chest",
                    # Streets (World._decorate_streets): lamp posts, a well on each square, benches, stalls.
-                   "lamp_post", "well", "bench", "stall"]
+                   "lamp_post", "well", "bench", "stall",
+                   # Seen from behind: a market row facing north, a bench facing the fountain.
+                   "stall_back", "bench_back"]
 OAK = (rgba("a07a4c"), rgba("82603a"), rgba("5f4429"), rgba("3f2c1b"))
 IRON = (rgba("8c8e8c"), rgba("5d605f"), rgba("3a3c3c"))
 
@@ -4309,6 +4311,13 @@ def title_painting():
 # in the band's herb colours. Order: HERB_KINDS (Professions.RESOURCES["herbalism"]).
 
 HERB_KINDS = ["sunflax", "mirereed", "silverthistle", "nightcotton", "starpetal"]
+
+
+def fountain(frame):
+    """A 96x112 frame of the town square's fountain (props.py), 3x3 tiles with its bottom row last."""
+    image = Image(*props.FOUNTAIN_SIZE)
+    image.pixels = props.fountain(frame)
+    return image
 
 
 def herb_patch(kind, variant):
@@ -4887,6 +4896,7 @@ def main():
                            + [cliff(mask) for mask in range(16)] + [cliff(mask, True) for mask in range(16)],
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
+        "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
         **{f"gear/{kind}.png": character_sheet(gear_builder(kind), compact=True, columns=POSE_COLUMNS)
            for kind, item in ITEMS.items() if item.get("slot") in VISIBLE_SLOTS},
         **{f"gear/{kind}_glow.png": None for kind, item in ITEMS.items()

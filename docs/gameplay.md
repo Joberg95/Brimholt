@@ -294,8 +294,12 @@ Ferrymen and waystones offer **Travel**, vendors **Trade**, bankers **Bank**, an
 ## Vendors, potions, and the bank
 
 Every house nobody keeps is a home with a bed, a chest, a table and chair, and in bigger rooms
-plants, shelves, and a barrel (they block like any furniture). Each town's main square has a
-well with benches and market stalls, and lamp posts stand against the walls along the streets, lit at night (never out in a lane, where they would block the way). Towns are paved inside their walls, as in Tibia, with a plank quay along the shore by their piers. Every town has a vendor (green on the maps) in a furnished shop, and an artisan (amber) in a
+plants, shelves, and a barrel (they block like any furniture). Each town's main square is a
+market round a three-tier fountain (3x3 tiles): benches face it from north and south, and two rows
+of stalls face each other across the square with their stock in crates and barrels behind. Shops
+are laid out as the trade would be: the merchant behind a counter three wide with potion shelves
+either side, the banker behind the counter with strongboxes and ledgers, and the workshop with its
+forge and anvil on one side and the workbench and loom on the other. Lamp posts stand against the walls along the streets, lit at night (never out in a lane, where they would block the way). Towns are paved inside their walls, as in Tibia, with a plank quay along the shore by their piers. Every town has a vendor (green on the maps) in a furnished shop, and an artisan (amber) in a
 workshop for crafting (see [Professions](#professions-gathering-and-crafting)). There is only **one bank**:
 Banker Orrin in **Reedmere** (pale blue on the maps), the lakeside hub with a waystone
 and the ferry to Blackreed Isle. Plan trips to deposit gold and store gear there. Reedmere is the

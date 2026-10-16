@@ -80,6 +80,10 @@ def _surface(material, u, n, p, axis):
         if planks and (across / planks) % 1.0 < 0.16:
             change -= 0.32
         return change, None
+    if material.pattern == "ripple":
+        # Rings spreading from the middle of the pool, broken up so they read as moving water.
+        ring = (math.hypot(p[0], p[1]) / 3.2 + _hash(round(p[0] / 4), round(p[1] / 4)) % 3 * 0.15) % 1.0
+        return (0.22 if ring < 0.12 else -0.08 if ring > 0.7 else 0.0), None
     if material.pattern == "leaf":
         return (0.12 if _hash(round(u[0] / 1.5), round(u[1] / 1.5), round(u[2] / 1.5)) % 5 == 0 else 0.0), None
     return _pattern(material, u, n, p)
@@ -310,8 +314,24 @@ def _sword(x, y, z, length, lean=0.0):
             box(at(6.8 + length / 2), (1.1, 0.5, length / 2), STEEL, tilt)]
 
 
+def _turned(parts, angle):
+    """The parts turned about the upright axis through the floor centre."""
+    c, s = math.cos(angle), math.sin(angle)
+    turn = lambda v: (v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2])
+    return [dict(part, c=turn(part["c"]), R=tuple(turn(axis) for axis in part["R"])) for part in parts]
+
+
 def furniture(kind):
-    """One 32x48 furniture frame (rows of RGBA or None), its tile the bottom 32 rows."""
+    """One 32x48 furniture frame (rows of RGBA or None), its tile the bottom 32 rows. A kind ending
+    in "_back" is the piece seen from behind (a market row facing north, a bench facing a
+    fountain from the south)."""
+    if kind.endswith("_back"):
+        front = kind[:-len("_back")]
+        return _render_piece(front, math.pi)
+    return _render_piece(kind, 0.0)
+
+
+def _render_piece(kind, angle):
     parts = []
     shadow = (13, 6)
     if kind == "counter_shop":
@@ -468,7 +488,58 @@ def furniture(kind):
         shadow = (15, 7)
     else:
         raise ValueError(kind)
-    return render(parts, 32, 48, FURNITURE_ORIGIN, shadow)
+    return render(_turned(parts, angle) if angle else parts, 32, 48, FURNITURE_ORIGIN, shadow)
+
+
+# ---------------------------------------------------------------- the fountain (96x112, 3x3 tiles)
+
+FOUNTAIN_SIZE = (96, 112)
+## The basin's centre in the frame: the middle of the 3x3 tiles, whose bottom row is frame rows 80-111.
+FOUNTAIN_ORIGIN = (48, 64)  # the frame keeps 48 rows above it for the tiers
+FOUNTAIN_FRAMES = 4
+SPRAY = Material("cfeaf4", gloss=1.0)
+FOUNTAIN_STONE = Material("a49a88", "stone")
+FOUNTAIN_DARK = Material("857c6c", "stone")
+POOL = ramp_material(["7aa6b8", "52809a", "3a6680", "2a5068", "1e3c52"], "ripple", gloss=0.9)
+
+
+def _ring(radius, thickness, height, material, segments=36, z=0.0):
+    """A round wall of stone blocks: a basin's rim."""
+    parts = []
+    arc = math.pi * radius / segments + 0.5
+    for index in range(segments):
+        angle = 2 * math.pi * index / segments
+        centre = (radius * math.cos(angle), radius * math.sin(angle), z + height / 2)
+        parts.append(box(centre, (thickness / 2, arc, height / 2), material, turn_z(angle), group=1, grain=1))
+    return parts
+
+
+def fountain(frame):
+    """A three-tier stone fountain in a round basin, its water falling from bowl to bowl; frame
+    0-3 moves the falling drops down a step at a time."""
+    parts = _ring(42, 5, 10, FOUNTAIN_STONE)
+    parts += _ring(44.6, 1.6, 2.0, FOUNTAIN_DARK, 40, 10.0)
+    parts += [cyl((0, 0, 0), 40, 7.5, POOL, group=2),
+              box((0, 0, 9), (9, 9, 2.2), FOUNTAIN_DARK, group=3), cyl((0, 0, 9), 6.5, 16, FOUNTAIN_STONE, group=3),
+              ell((0, 0, 25), (6.5, 6.5, 3), FOUNTAIN_DARK, group=3),
+              ell((0, 0, 30), (21, 21, 7), FOUNTAIN_STONE, group=4), ell((0, 0, 35.4), (16.5, 16.5, 1.6), POOL, group=5),
+              cyl((0, 0, 35), 3.6, 10, FOUNTAIN_STONE, group=6), ell((0, 0, 45), (4.5, 4.5, 2.2), FOUNTAIN_DARK, group=6),
+              ell((0, 0, 49), (11, 11, 4.6), FOUNTAIN_STONE, group=6),
+              ell((0, 0, 52.2), (8.4, 8.4, 1.2), POOL, group=7), ell((0, 0, 57), (3.2, 3.2, 5), FOUNTAIN_DARK, group=8),
+              ell((0, 0, 62.4), (1.4, 1.4, 1.6), FOUNTAIN_STONE, group=8), cyl((0, 0, 63), 0.6, 4, SPRAY, group=9)]
+    # Falling water: drops in rings round each bowl's lip, a step lower each frame.
+    for lip, top, bottom, count in ((11.5, 51.0, 36.0, 10), (21.5, 32.0, 7.5, 14)):
+        for index in range(count):
+            angle = 2 * math.pi * (index + 0.5 * (index % 2)) / count
+            for step in range(3):
+                fall = ((step + frame / FOUNTAIN_FRAMES) / 3.0) % 1.0
+                z = top - (top - bottom) * fall
+                out = lip + 2.5 * fall
+                parts.append(ell((out * math.cos(angle), out * math.sin(angle), z), (0.7, 0.7, 1.5), SPRAY, group=10))
+    for index in range(6):
+        angle = 2 * math.pi * index / 6 + frame
+        parts.append(ell((3 * math.cos(angle), 3 * math.sin(angle), 65 - 2 * ((index + frame) % 3)), (0.6, 0.6, 1.0), SPRAY))
+    return render(parts, FOUNTAIN_SIZE[0], FOUNTAIN_SIZE[1], FOUNTAIN_ORIGIN, (47, 30))
 
 
 # ---------------------------------------------------------------- hanging signs (32x32)

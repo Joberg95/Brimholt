@@ -33,7 +33,14 @@ const Buildings = preload("res://game/data/buildings.gd")
 const FURNITURE_SHEET: Texture2D = preload("res://assets/sprites/furniture.png")
 const FURNITURE: Array[String] = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel",
 	"crate", "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth", "bed", "table", "chair", "plant", "chest",
-	"lamp_post", "well", "bench", "stall"]
+	"lamp_post", "well", "bench", "stall", "stall_back", "bench_back"]
+## The town square's fountain (make_sprites.py fountain): FOUNTAIN_FRAMES 96x112 frames of water
+## falling bowl to bowl, drawn from the bottom-middle tile of the 3x3 it stands on ("fountain";
+## the other eight are "fountain_basin" and draw nothing).
+const FOUNTAIN_SHEET: Texture2D = preload("res://assets/sprites/fountain.png")
+const FOUNTAIN_FRAMES: int = 4
+const FOUNTAIN_KINDS: Array[String] = ["fountain", "fountain_basin"]
+const FOUNTAIN_FPS: float = 6.0
 ## Herb patches (Crafting.HERBS): two 32x32 variants per resource band (make_sprites.py herb_patch).
 const HERBS: Texture2D = preload("res://assets/sprites/herbs.png")
 ## House and town walls ("#") stand a full tile tall, as in Tibia: house_walls.png holds HOUSE_SIZE
@@ -526,7 +533,14 @@ static func draw_roof(canvas: CanvasItem, index: int, building: Dictionary, alph
 
 
 ## A piece of shop or bank furniture standing on its tile.
-static func draw_furniture(canvas: CanvasItem, cell: Vector2i, kind: String) -> void:
+static func draw_furniture(canvas: CanvasItem, cell: Vector2i, kind: String, time: float = 0.0) -> void:
+	if kind == "fountain_basin":
+		return
+	if kind == "fountain":
+		var frame: int = int(time * FOUNTAIN_FPS) % FOUNTAIN_FRAMES
+		canvas.draw_texture_rect_region(FOUNTAIN_SHEET, Rect2(Vector2(cell) * TILE - Vector2(TILE, 80), Vector2(96, 112)),
+			Rect2(frame * 96, 0, 96, 112))
+		return
 	var index: int = maxi(0, FURNITURE.find(kind))
 	canvas.draw_texture_rect_region(FURNITURE_SHEET, Rect2(Vector2(cell) * TILE - Vector2(0, 16), Vector2(32, 48)),
 		Rect2(index * TILE, 0, TILE, 48))

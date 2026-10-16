@@ -81,10 +81,24 @@ static var REGION_NAMES: Array[String] = []
 static var REGION_INFO: Dictionary = {}
 ## Furniture around a keeper, standing at the back of their building facing the door:
 ## [steps toward the door, steps across, kind]. Pieces that would block the room are skipped.
+## Laid out as the trade would be: a shopkeeper behind a counter three wide with the stock on
+## shelves either side and spare goods at the ends; a banker behind the counter with strongboxes
+## and ledgers at hand; a workshop with the forge and its anvil on one side, the workbench and loom
+## on the other, and the brewing cauldron and a water barrel behind the master. A "fallback" spot
+## is tried only when its kind found no place yet.
 const FURNISHINGS: Dictionary = {
-	"vendor": [[1, 0, "counter_shop"], [0, 1, "shelf_potions"], [0, -1, "weapon_rack"], [0, 2, "barrel"], [0, -2, "crate"]],
-	"banker": [[1, 0, "counter_bank"], [0, 1, "shelf_books"], [0, -1, "strongbox"], [0, 2, "shelf_books"], [0, -2, "strongbox"]],
-	"artisan": [[0, 1, "anvil"], [0, -1, "workbench"], [1, 1, "cauldron"], [1, -1, "loom"], [0, 2, "hearth"], [0, -2, "barrel"]],
+	"vendor": [[1, 0, "counter_shop"], [1, -1, "counter_shop"], [1, 1, "counter_shop"], [0, 1, "shelf_potions"],
+		[0, -1, "shelf_potions"], [0, 2, "weapon_rack"], [0, -2, "barrel"], [-1, 2, "crate"], [-1, -2, "crate"]],
+	"banker": [[1, 0, "counter_bank"], [1, -1, "counter_bank"], [1, 1, "counter_bank"], [0, 1, "strongbox"],
+		[0, -1, "strongbox"], [0, 2, "shelf_books"], [0, -2, "shelf_books"]],
+	"artisan": [[0, 2, "hearth"], [1, 2, "anvil"], [0, -2, "workbench"],
+		# Narrow workshops: the tools nearer the master, where the far spots are wall (the forge,
+		# anvil, and bench come before the rest).
+		[0, 1, "hearth", "fallback"], [1, 1, "anvil", "fallback"], [2, 1, "anvil", "fallback"], [0, -1, "workbench", "fallback"],
+		[1, -1, "anvil", "fallback"], [2, -2, "anvil", "fallback"], [2, -1, "anvil", "fallback"], [1, -2, "anvil", "fallback"],
+		[1, -1, "workbench", "fallback"],
+		[1, -2, "loom"], [-1, 1, "cauldron"], [-1, -1, "barrel"], [0, 3, "crate"],
+		[1, -1, "loom", "fallback"], [2, -1, "loom", "fallback"], [2, 1, "cauldron", "fallback"], [2, -1, "cauldron", "fallback"]],
 }
 ## A home's furniture, in the order it is placed: one piece per HOME_TILES tiles of floor (at
 ## least HOME_MIN), along the walls and in the corners, never beside the door, and never cutting
@@ -93,11 +107,19 @@ const HOME_PIECES: Array[String] = ["bed", "chest", "table", "chair", "plant", "
 const HOME_TILES: int = 4
 const HOME_MIN: int = 3
 ## Street furniture: a lamp post every LAMP_GAP tiles or more against the walls along the cobbled
-## streets (World._against_wall), and on each town's most open square a well with benches and market stalls around it. Nothing is placed
-## where it could split a street (World._splits) or beside a door.
+## streets (World._against_wall), and on each town's most open square a market round a fountain
+## (3x3; a well where it does not fit): benches facing it from north and south, and two rows of
+## stalls facing each other across the square with their stock in crates and barrels behind.
+## Nothing is placed where it could split a street (World._splits) or beside a door.
 const LAMP_GAP: int = 7
-const SQUARE_PIECES: Array = [[Vector2i(0, 0), "well"], [Vector2i(-2, 1), "bench"], [Vector2i(2, 1), "bench"],
-	[Vector2i(-3, -2), "stall"], [Vector2i(3, -2), "stall"], [Vector2i(0, -3), "stall"]]
+## How many open spots, nearest each town's centre first, are weighed for its market square.
+const SQUARE_TRIES: int = 40
+const SQUARE_PIECES: Array = [[Vector2i(0, 0), "fountain"],
+	[Vector2i(-1, -3), "bench"], [Vector2i(1, -3), "bench"], [Vector2i(-1, 3), "bench_back"], [Vector2i(1, 3), "bench_back"],
+	[Vector2i(-4, -5), "stall"], [Vector2i(-2, -5), "stall"], [Vector2i(2, -5), "stall"], [Vector2i(4, -5), "stall"],
+	[Vector2i(-3, -6), "crate"], [Vector2i(3, -6), "barrel"],
+	[Vector2i(-4, 5), "stall_back"], [Vector2i(-2, 5), "stall_back"], [Vector2i(2, 5), "stall_back"], [Vector2i(4, 5), "stall_back"],
+	[Vector2i(-3, 6), "barrel"], [Vector2i(3, 6), "crate"]]
 static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 ## A slowed creature's steps take this many times longer (Combat.restrain).
@@ -358,14 +380,19 @@ static func _furnish(building: Dictionary, keeper: Dictionary) -> void:
 		taken[spawn] = true
 	for entry: Array in GROUND_ITEMS:
 		taken[entry[0]] = true
+	var placed: Dictionary = {}
 	for piece: Array in FURNISHINGS.get(keeper["role"], []):
+		if piece.size() > 3 and placed.has(piece[2]):
+			continue
 		var cell: Vector2i = keeper["cell"] + toward * int(piece[0]) + across * int(piece[1])
 		if cell == entrance or taken.has(cell) or NPC_CELLS.has(cell) or FURNITURE.has(cell) \
-				or not building["interior"].has(cell) or terrain(cell) != "=":
+				or not building["interior"].has(cell) or terrain(cell) != "=" or _hidden_by_wall(cell):
 			continue
 		FURNITURE[cell] = piece[2]
 		if not _room_open(building, entrance, keeper["cell"]):
 			FURNITURE.erase(cell)
+		else:
+			placed[piece[2]] = true
 
 
 ## Furnishes every town building nobody keeps (no townsfolk, quest giver, spawn, or stairway in
@@ -385,7 +412,7 @@ static func _furnish_homes() -> void:
 			items[entry[0]] = true
 		var spots: Array[Vector2i] = []
 		for cell: Vector2i in interior:
-			if chebyshev(cell, entrance) > 1 and not items.has(cell) and _walls_beside(cell) > 0:
+			if chebyshev(cell, entrance) > 1 and not items.has(cell) and _walls_beside(cell) > 0 and not _hidden_by_wall(cell):
 				spots.append(cell)
 		# Corners (two walls beside) first, then the rest of the walls, in a fixed shuffled order.
 		spots.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
@@ -440,28 +467,57 @@ static func _decorate_streets() -> void:
 		if not zone["town"]:
 			continue
 		var rect: Rect2i = zone["rect"]
-		# The square: the cobbled tile with the most open cobble around it, the one nearest the
-		# town's centre among equals (paved towns are open almost everywhere).
+		# The square: of the open cobbled tiles (40 of the 49 round them open), the one where most
+		# of the market fits; the SQUARE_TRIES nearest the town's centre are tried, ring by ring.
+		var centre: Vector2i = rect.get_center()
+		var inner: Rect2i = rect.grow(-3)
+		var candidates: Array[Vector2i] = []
+		for ring: int in maxi(rect.size.x, rect.size.y) / 2:
+			if candidates.size() >= SQUARE_TRIES:
+				break
+			for dy: int in range(-ring, ring + 1):
+				for dx: int in range(-ring, ring + 1):
+					if maxi(absi(dx), absi(dy)) != ring:
+						continue
+					var cell: Vector2i = centre + Vector2i(dx, dy)
+					if not inner.has_point(cell) or terrain(cell) != "=" or ROOM_AT.has(cell):
+						continue
+					var open: int = 0
+					for oy: int in range(-3, 4):
+						for ox: int in range(-3, 4):
+							var near: Vector2i = cell + Vector2i(ox, oy)
+							open += 1 if terrain(near) == "=" and walkable(near) and not ROOM_AT.has(near) else 0
+					if open >= 40:
+						candidates.append(cell)
 		var best := Vector2i(-1, -1)
-		var best_open: int = 0
-		for y: int in range(rect.position.y + 3, rect.end.y - 3):
-			for x: int in range(rect.position.x + 3, rect.end.x - 3):
-				var cell := Vector2i(x, y)
-				if terrain(cell) != "=" or ROOM_AT.has(cell):
-					continue
-				var open: int = 0
-				for dy: int in range(-3, 4):
-					for dx: int in range(-3, 4):
-						var near: Vector2i = cell + Vector2i(dx, dy)
-						open += 1 if terrain(near) == "=" and walkable(near) and not ROOM_AT.has(near) else 0
-				var centre: Vector2 = Vector2(rect.get_center())
-				if open > best_open or open == best_open and Vector2(cell).distance_to(centre) < Vector2(best).distance_to(centre):
-					best = cell
-					best_open = open
-		if best_open >= 40:
+		var best_fit: int = -1
+		for cell: Vector2i in candidates.slice(0, SQUARE_TRIES):
+			var fit: int = 0
+			for piece: Array in SQUARE_PIECES:
+				fit += 1 if free.call(cell + piece[0]) else 0
+			for side: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
+				fit -= 0 if free.call(cell + side) else 4
+			if fit > best_fit:
+				best = cell
+				best_fit = fit
+			if best_fit == SQUARE_PIECES.size():
+				break
+		if best_fit >= 0:
 			for piece: Array in SQUARE_PIECES:
 				var cell: Vector2i = best + piece[0]
-				if free.call(cell):
+				if piece[1] == "fountain":
+					# The fountain takes all nine tiles or none, drawn from the bottom-middle one.
+					var basin: Array[Vector2i] = []
+					for dy: int in range(-1, 2):
+						for dx: int in range(-1, 2):
+							basin.append(cell + Vector2i(dx, dy))
+					if basin.all(func(spot: Vector2i) -> bool: return free.call(spot)):
+						for spot: Vector2i in basin:
+							FURNITURE[spot] = "fountain_basin"
+						FURNITURE[cell + Vector2i.DOWN] = "fountain"
+					elif free.call(cell):
+						FURNITURE[cell] = "well"
+				elif free.call(cell):
 					FURNITURE[cell] = piece[1]
 		# Lamps: against a house or town wall with at least two open tiles in front (never out in
 		# a lane, where they would block the way), LAMP_GAP apart, and a tile in from the town's
@@ -523,6 +579,12 @@ static func _against_wall(cell: Vector2i) -> bool:
 				and walkable(cell + along) and walkable(cell - along):
 			return true
 	return false
+
+
+## Whether a wall east of a cell hides it: house walls stand a full tile tall, drawn up and to the
+## left of their own tile (SpriteArt.HOUSE_RAISE), over the tile west of them.
+static func _hidden_by_wall(cell: Vector2i) -> bool:
+	return terrain(cell + Vector2i.RIGHT) == "#"
 
 
 ## How many of a cell's four sides are walls.

@@ -3919,8 +3919,22 @@ func _building_checks() -> void:
 	check(homes >= 30, "town houses are lived in (%d homes)" % homes)
 	# Streets: lamps, wells, benches, and stalls never split a town's ways (the same number of
 	# connected areas with them as without).
-	var street: Array[String] = ["lamp_post", "well", "bench", "stall"]
+	var street: Array[String] = ["lamp_post", "well", "bench", "stall", "fountain", "fountain_basin", "stall_back", "bench_back",
+		"crate", "barrel"]
 	check(World.LAMPS.size() >= 40, "town streets have lamp posts (%d)" % World.LAMPS.size())
+	# Every town's square is a market round a fountain: 3x3, drawn from its bottom-middle tile.
+	for zone: Dictionary in World.ZONES:
+		if zone["town"]:
+			var fountains: Array = World.FURNITURE.keys().filter(func(cell: Vector2i) -> bool:
+				return World.FURNITURE[cell] == "fountain" and zone["rect"].has_point(cell))
+			var basin: bool = fountains.size() == 1
+			if basin:
+				for dy: int in range(-2, 1):
+					for dx: int in range(-1, 2):
+						basin = basin and World.FURNITURE.get(fountains[0] + Vector2i(dx, dy), "") in SpriteArt.FOUNTAIN_KINDS
+			var stalls: int = World.FURNITURE.keys().filter(func(cell: Vector2i) -> bool:
+				return World.FURNITURE[cell] in ["stall", "stall_back"] and zone["rect"].has_point(cell)).size()
+			check(basin and stalls >= 4, "%s's square has a fountain and a market (%d stalls)" % [zone["name"], stalls])
 	for lamp: Vector2i in World.LAMPS:
 		check(World._against_wall(lamp), "the lamp at %s stands against a wall with room in front" % lamp)
 	for zone: Dictionary in World.ZONES:
@@ -3932,7 +3946,8 @@ func _building_checks() -> void:
 	for cell: Vector2i in World.FURNITURE:
 		check((World.ROOM_AT.has(cell) or not World.dungeon_at(cell).is_empty() or World.FURNITURE[cell] in street)
 			and not World.walkable(cell)
-			and SpriteArt.FURNITURE.has(World.FURNITURE[cell]), "furniture stands inside a building (or a dungeon) and blocks")
+			and (SpriteArt.FURNITURE.has(World.FURNITURE[cell]) or World.FURNITURE[cell] in SpriteArt.FOUNTAIN_KINDS),
+			"furniture stands inside a building (or a dungeon) and blocks")
 	for id: String in World.TOWNSFOLK:
 		var building: Dictionary = World.BUILDINGS[World.ROOM_AT[World.TOWNSFOLK[id]["cell"]]]
 		var door: Vector2i = building["doors"][0]
