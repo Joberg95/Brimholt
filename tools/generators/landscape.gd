@@ -8,7 +8,8 @@ extends SceneTree
 ## - the speckled forest becomes coherent woods with meadows between (low-frequency noise);
 ## - rock outcrops (cave rock "C") and boulders ("R") dot the meadows, and the loose wall bits of
 ##   the highlands become rock;
-## - each town gets dry-stone pastures on its outskirts;
+## - no dry-stone pastures any more (PASTURES_PER_TOWN 0: walls that belong to nothing,
+##   tools/generators/clear_walls.gd);
 ## - MERGES join neighbouring towns into one: the start town and its harbour become one walled
 ##   Cinder Crossing, with houses filling the ground between them and an open, cobbled plaza
 ##   kept for a future starter guide.
@@ -57,7 +58,7 @@ const BOULDERS_PER_THOUSAND: int = 7
 const BOULDERS_BY_ROCK: int = 10
 ## Loose wall pieces outside towns up to this size become rock.
 const LOOSE_WALL: int = 10
-const PASTURES_PER_TOWN: int = 2
+const PASTURES_PER_TOWN: int = 0
 const PASTURE_SIZE: Vector2i = Vector2i(9, 7)
 const MARKER_GROUPS: Array[String] = ["Spawns", "Items", "Ferrymen", "QuestGivers", "DungeonEntrances", "Townsfolk", "CaveMouths"]
 const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]

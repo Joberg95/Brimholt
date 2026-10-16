@@ -14,7 +14,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |
 | 21 | [Rare mini-bosses](21-mini-bosses.md) | L | Later, when the game is stable |
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
-| 31 | [Walls that serve no purpose](31-purposeless-walls.md) | S-M | - |
 | 32 | [Continents with one major and one smaller city](32-continents-and-cities.md) | XL | Which mainland towns stay |
 
 Build 18-19 together, and 24-25 together (the new monsters feed the new tasks) (the swamp is one of the

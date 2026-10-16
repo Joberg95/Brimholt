@@ -7,6 +7,12 @@ const Crafting = preload("res://game/core/crafting.gd")
 ## The druid client drops its spare armor for the late-joining paladin to pick up and wear.
 const DROPPED: String = "moss_coat"
 const DROPPED_INDEX: int = 1
+## Where the client stands for the collision and drop checks, and the pond tile north of it that
+## blocks both (the town's west pond).
+const STAND: Vector2i = Vector2i(5, 5)
+const BLOCKED: Vector2i = Vector2i(5, 4)
+## Where the client drops the item: in its reach, and in the late joiner's from its spawn.
+const DROP: Vector2i = Vector2i(6, 6)
 var game: Node2D
 var role: String = ""
 var stage: int = 0
@@ -171,7 +177,7 @@ func _host_tick(now: float) -> void:
 			saw_unequipped = true
 		if id != client_id and state(id)["cell"].y == 7 and state(id)["equipment"].has("armor"):
 			saw_late_move = true
-	_watch_ground(Vector2i(8, 6), DROPPED)
+	_watch_ground(DROP, DROPPED)
 	if not _others_hide_backpacks():
 		fail("Host view exposes another player's backpack")
 		return
@@ -228,18 +234,18 @@ func _client_tick(now: float) -> void:
 				advance()
 		5:
 			if state(own)["cell"] == Vector2i(6, 6) and now - stage_since > 0.25:
-				game.move_local(Vector2i.RIGHT)
+				game.move_local(Vector2i.LEFT)
 				stage_since = now
-			elif state(own)["cell"] == Vector2i(7, 6) and now - stage_since > 0.25:
-				game.move_local(Vector2i.RIGHT)
+			elif state(own)["cell"] == Vector2i(5, 6) and now - stage_since > 0.25:
+				game.move_local(Vector2i.UP)
 				advance()
 		6:
-			if state(own)["cell"] == Vector2i(8, 6) and now - stage_since > 0.25:
-				game.move_local(Vector2i.DOWN)
+			if state(own)["cell"] == STAND and now - stage_since > 0.25:
+				game.move_local(BLOCKED - STAND)
 				advance()
 		7:
 			if game.last_action_message == "Blocked tile":
-				if state(own)["cell"] != Vector2i(8, 6):
+				if state(own)["cell"] != STAND:
 					fail("Wall collision failed")
 					return
 				game.equip_local("helmet")
@@ -253,17 +259,17 @@ func _client_tick(now: float) -> void:
 				advance()
 		9:
 			if game.last_action_message == "Unknown item location" and now - stage_since > 0.2:
-				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": Vector2i(8, 7)})
+				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": BLOCKED})
 				advance()
 		10:
 			if game.last_action_message == "Items cannot be placed there" and now - stage_since > 0.2:
 				if state(own)["backpack"][DROPPED_INDEX] != DROPPED:
 					fail("Rejected drop changed the backpack")
 					return
-				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": Vector2i(8, 6)})
+				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": DROP})
 				advance()
 		11:
-			if game.ground_view.get(Vector2i(8, 6), []) == [DROPPED] and state(own)["backpack"][DROPPED_INDEX] == "":
+			if game.ground_view.get(DROP, []) == [DROPPED] and state(own)["backpack"][DROPPED_INDEX] == "":
 				print("BRIMHOLT_CLIENT_EQUIPPED")
 				advance()
 		12:
@@ -286,7 +292,7 @@ func _client_tick(now: float) -> void:
 					fail("The party did not disband when its other member disconnected")
 				elif not state(1)["equipment"].has("armor"):
 					fail("Host equipment missing on client")
-				elif game.ground_view.has(Vector2i(8, 6)):
+				elif game.ground_view.has(DROP):
 					fail("Client did not see the late joiner pick up the dropped item")
 				else:
 					finish()
@@ -301,7 +307,7 @@ func _late_tick(now: float) -> void:
 			for id: int in game.actors:
 				if id != 1 and id != game.self_id and state(id)["equipment"].has("helmet"):
 					client_id = id
-			if client_id == 0 or state(client_id)["cell"] != Vector2i(8, 6) or state(client_id)["vocation"] != "druid" \
+			if client_id == 0 or state(client_id)["cell"] != STAND or state(client_id)["vocation"] != "druid" \
 					or state(game.self_id)["vocation"] != "paladin":
 				fail("Late join did not receive current movement and equipment")
 				return
@@ -309,7 +315,7 @@ func _late_tick(now: float) -> void:
 			if late_spawn == state(1)["cell"] or late_spawn == state(client_id)["cell"]:
 				fail("Late join reused an occupied spawn")
 				return
-			if game.ground_view.get(Vector2i(8, 6), []) != [DROPPED] \
+			if game.ground_view.get(DROP, []) != [DROPPED] \
 					or game.ground_view.get(Vector2i(10, 1), []) != ["glowcap#2"]:
 				fail("Late join did not receive the ground snapshot")
 				return
@@ -327,10 +333,10 @@ func _late_tick(now: float) -> void:
 				fail("Late join did not receive only its nearby monsters")
 				return
 			print("BRIMHOLT_LATE_SNAPSHOT_OK")
-			game.move_item_local({"type": "ground", "cell": Vector2i(8, 6)}, {"type": "backpack"})
+			game.move_item_local({"type": "ground", "cell": DROP}, {"type": "backpack"})
 			advance()
 		1:
-			if not game.ground_view.has(Vector2i(8, 6)) \
+			if not game.ground_view.has(DROP) \
 					and state(game.self_id)["backpack"][World.start_kit("paladin").size()] == DROPPED and now - stage_since > 0.2:
 				game.equip_local("armor")
 				advance()

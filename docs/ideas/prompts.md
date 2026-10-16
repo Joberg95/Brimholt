@@ -12,8 +12,6 @@ we should rename the "everyone" on items to something that makes more sense, lik
 
 the lanterns flicker when you go near them, lets address this 
 
-lets look over the world design walls again, I feel like I can see a lot of building walls in the world that serve no purpose. (plan 31)
-
 we should redesign the map to have 1 major city per continent and 1 smaller one per continent. (plan 32)
 
 the text when entering a cave or dungeon can be removed, the area we are in is enough next to the minimap bottom right.

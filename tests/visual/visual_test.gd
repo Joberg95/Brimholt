@@ -197,12 +197,7 @@ func _run() -> void:
 			and _matches_texel(image, SpriteArt.ICONS["iron_coif"], Rect2(0, 0, SpriteArt.TILE, SpriteArt.TILE), icon_origin),
 			"Ground item sprite is not drawn on its tile"):
 		return
-	# Wall (8, 7) has open ground to its north/west; its raised top must reach over tile (7, 6).
-	var wall_origin: Vector2 = Vector2(8, 7) * World.TILE_SIZE - Vector2.ONE * SpriteArt.wall_raise(Vector2i(8, 7))
-	var wall_region: Rect2 = SpriteArt.wall_region(Vector2i(8, 7))
-	# Thin walls: the centre post's top (sprite 12..16) lies over tile (7, 6), up-left of the wall's own tile.
-	if not _expect(_matches_texel(image, SpriteArt.wall_sheet(Vector2i(8, 7)), Rect2(wall_region.position + Vector2(12, 12), Vector2(4, 4)),
-			wall_origin + Vector2(12, 12)), "Oblique wall top is not raised over the tile behind it"):
+	if not await _check_oblique_wall():
 		return
 	if unequipped.save_png("res://.tools/visual-unequipped.png") != OK:
 		push_error("Cannot save unequipped capture")
@@ -1046,6 +1041,43 @@ func _check_waystone() -> bool:
 	var named: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == "Waystone")
 	return _expect(World.FERRYMEN["cinder_coach"]["vehicle"] == "waystone" and named, "The Cinder Crossing waystone is not drawn")
 
+
+## A town's house-stone wall with open ground north, west, and north-west of it (no roof over
+## it): its raised top must reach over the tile up-left of its own, at noon.
+func _check_oblique_wall() -> bool:
+	var wall: Vector2i = Vector2i(-1, -1)
+	for y: int in range(2, World.OVERWORLD.end.y - 4):
+		for x: int in range(2, World.OVERWORLD.end.x - 2):
+			var cell := Vector2i(x, y)
+			if World.terrain(cell) == "#" and not World.ROOF_AT.has(cell) and World.walkable(cell + Vector2i(-1, -1)) \
+					and World.walkable(cell + Vector2i.UP) and World.walkable(cell + Vector2i.LEFT) \
+					and not World.ROOF_AT.has(cell + Vector2i(-1, -1)) and World.walkable(cell + Vector2i(0, 3)):
+				wall = cell
+				break
+		if wall.x >= 0:
+			break
+	if not _expect(wall.x >= 0, "No free-standing house-stone wall to check"):
+		return false
+	var player: Dictionary = game.world.players[1]
+	var saved: Vector2i = player["cell"]
+	player["cell"] = wall + Vector2i(0, 3)
+	player["from"] = player["cell"]
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var image: Image = screen.get_texture().get_image()
+	var wall_origin: Vector2 = Vector2(wall) * World.TILE_SIZE - Vector2.ONE * SpriteArt.wall_raise(wall)
+	var wall_region: Rect2 = SpriteArt.wall_region(wall)
+	# Thin walls: the centre post's top (sprite 12..16) lies over the tile up-left of the wall's own tile.
+	var raised: bool = _matches_texel(image, SpriteArt.wall_sheet(wall), Rect2(wall_region.position + Vector2(12, 12), Vector2(4, 4)),
+		wall_origin + Vector2(12, 12))
+	if not raised:
+		image.save_png("res://.tools/visual-wall.png")
+	player["cell"] = saved
+	player["from"] = saved
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	return _expect(raised, "Oblique wall top at %s is not raised over the tile behind it" % wall)
 
 ## Lamp posts: at night the street beside a lamp is lit well above the darkest ground on screen.
 func _check_town_lamps() -> bool:

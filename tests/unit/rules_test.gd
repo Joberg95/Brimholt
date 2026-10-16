@@ -20,6 +20,8 @@ const Instances = preload("res://game/core/instances.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const TownPaths = preload("res://tools/generators/town_paths.gd")
+const ClearWalls = preload("res://tools/generators/clear_walls.gd")
+const Landscape = preload("res://tools/generators/landscape.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Atlas = preload("res://game/data/atlas.gd")
 const Titles = preload("res://game/data/titles.gd")
@@ -85,6 +87,7 @@ func _run() -> void:
 	_title_checks()
 	_gap_checks()
 	_hollow_checks()
+	_stray_wall_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -158,10 +161,11 @@ func _run() -> void:
 	check(not world.players[2]["equipment"].has("helmet"), "unequip removes visual metadata")
 	var walls := World.new()
 	walls.add_player(1, 0.0)
-	walls.players[1]["cell"] = Vector2i(8, 6)
-	walls.players[1]["from"] = Vector2i(8, 6)
+	var wall: Vector2i = _test_wall()
+	walls.players[1]["cell"] = wall + Vector2i.UP
+	walls.players[1]["from"] = wall + Vector2i.UP
 	check(not walls.move(1, Vector2i.DOWN, 0.0)["ok"], "map collision during movement")
-	check(walls.players[1]["cell"] == Vector2i(8, 6), "blocked move preserves state")
+	check(walls.players[1]["cell"] == wall + Vector2i.UP, "blocked move preserves state")
 	var joining := World.new()
 	check(joining.add_player(1, 0.0), "late-join host spawn")
 	check(joining.add_player(2, 0.0), "late-join client spawn")
@@ -687,7 +691,13 @@ func _inventory_checks() -> void:
 	check(dropped["ok"] and dropped["ground"] == [here], "drop reports its changed tile")
 	check(bag.ground_stack(here) == ["copper_blade"] and backpack[2] == "", "drop places the item on the ground")
 	check(act(bag, slot1, {"type": "ground", "cell": here + Vector2i(2, 0)})["reason"] == "That is too far away", "drop reach enforced")
-	check(act(bag, slot1, {"type": "ground", "cell": Vector2i(8, 7)})["reason"] == "Items cannot be placed there", "no drops on walls")
+	var stood: Vector2i = bag.players[1]["cell"]
+	var wall: Vector2i = _test_wall()
+	bag.players[1]["cell"] = wall + Vector2i.UP
+	bag.players[1]["from"] = wall + Vector2i.UP
+	check(act(bag, slot1, {"type": "ground", "cell": wall}).get("reason", "") == "Items cannot be placed there", "no drops on walls")
+	bag.players[1]["cell"] = stood
+	bag.players[1]["from"] = stood
 	check(act(bag, {"type": "ground", "cell": Vector2i(14, 9)}, {"type": "backpack"})["reason"] == "That is too far away",
 		"distant pickup rejected")
 	check(bag.ground_stack(Vector2i(14, 9)) == ["iron_coif"], "distant item untouched")
@@ -790,8 +800,13 @@ func _stacking_checks() -> void:
 	var dropped: Dictionary = move.call({"type": "backpack", "index": 2}, tile)
 	check(dropped["ok"] and dropped["ground"] == [here] and bag.ground[here].size() == World.GROUND_STACK_MAX
 		and bag.ground[here][-1] == "wolf_pelt#6" and backpack[2] == "", "dropping merges onto a full tile's matching top stack")
-	check(move.call({"type": "backpack", "index": 0}, {"type": "ground", "cell": Vector2i(8, 7)})["reason"]
+	var wall: Vector2i = _test_wall()
+	player["cell"] = wall + Vector2i.UP
+	player["from"] = wall + Vector2i.UP
+	check(move.call({"type": "backpack", "index": 0}, {"type": "ground", "cell": wall}).get("reason", "")
 		== "Items cannot be placed there", "stack drops still respect walls")
+	player["cell"] = here
+	player["from"] = here
 	bag.ground[here] = ["gold_coins#7"]
 	var gold: int = player["gold"]
 	check(move.call(tile, auto)["ok"] and player["gold"] == gold + 7 * World.ITEMS["gold_coins"]["gold"]
@@ -3423,6 +3438,14 @@ func _hollow_checks() -> void:
 			rare += 1
 	check(rare >= 3 and rare <= 20, "a rare piece comes about one turn-in in four (%d of 40)" % rare)
 
+
+## Walls that belong to nothing are gone (plan 31, tools/generators/clear_walls.gd): every stone
+## wall left is part of a building or a town's own wall, and no pastures are fenced any more.
+func _stray_wall_checks() -> void:
+	var stray: Array[Vector2i] = ClearWalls.stray_walls()
+	check(stray.is_empty(), "no stray walls on the map (%d, first %s)" % [stray.size(), stray.slice(0, 3)])
+	check(Landscape.PASTURES_PER_TOWN == 0, "the landscape fences no pastures")
+
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
 	check(Dungeons.ORDER.size() == Dungeons.DUNGEONS.size() and World.ENTRANCE_OF.size() == Dungeons.DUNGEONS.size(),
@@ -4713,6 +4736,17 @@ func _town_areas(rect: Rect2i, kinds: Array[String], ignore: bool) -> int:
 	return areas
 
 
+
+## A building wall near the start, with open ground left of it, right of it, and above it: for
+## collision and line-of-sight checks (lone wall stubs are gone from the map).
+func _test_wall() -> Vector2i:
+	for y: int in range(2, 120):
+		for x: int in range(2, 120):
+			var cell := Vector2i(x, y)
+			if World.terrain(cell) == "#" and World.walkable(cell + Vector2i.LEFT) and World.walkable(cell + Vector2i.RIGHT) 					and World.walkable(cell + Vector2i.UP):
+				return cell
+	return Vector2i.ZERO
+
 func _place(world: World, id: int, cell: Vector2i) -> void:
 	world.players[id]["cell"] = cell
 	world.players[id]["from"] = cell
@@ -4741,12 +4775,13 @@ func _combat_checks() -> void:
 			check(Combat.level_from_total(Combat.total_experience(level, progress)) == [level, progress if level < Balance.MAX_LEVEL else 0],
 				"experience totals round-trip")
 	# Line of sight: walls and trees block, water does not; melee ignores it.
-	check(not Combat.line_of_sight(Vector2i(7, 8), Vector2i(9, 8)), "a wall blocks line of sight")
+	var wall: Vector2i = _test_wall()
+	check(not Combat.line_of_sight(wall + Vector2i.LEFT, wall + Vector2i.RIGHT), "a wall blocks line of sight")
 	check(Combat.line_of_sight(Vector2i(5, 6), Vector2i(10, 6)), "open ground gives line of sight")
 	check(Combat.line_of_sight(Vector2i(2, 3), Vector2i(6, 3)), "water does not block line of sight")
 	check(Combat.in_reach(Vector2i(5, 6), Vector2i(6, 7), 1) and not Combat.in_reach(Vector2i(5, 6), Vector2i(7, 6), 1),
 		"melee reaches the eight surrounding tiles only")
-	check(not Combat.in_reach(Vector2i(7, 8), Vector2i(9, 8), 6), "ranged attacks need line of sight")
+	check(not Combat.in_reach(wall + Vector2i.LEFT, wall + Vector2i.RIGHT, 6), "ranged attacks need line of sight")
 	# Populating the map.
 	var map_world := World.new()
 	var map_combat := Combat.new(map_world, 3)
@@ -4801,9 +4836,9 @@ func _combat_checks() -> void:
 	world.monsters[vole]["max_health"] = 1000
 	check(_hits_on(combat.tick(Balance.ATTACK_SECONDS - 0.15), vole) == 0, "no second attack before two seconds")
 	check(_hits_on(combat.tick(Balance.ATTACK_SECONDS), vole) == 1, "next attack exactly at two seconds")
-	_place(world, 1, Vector2i(7, 8))
-	world.monsters[vole]["cell"] = Vector2i(9, 8)
-	world.monsters[vole]["from"] = Vector2i(9, 8)
+	_place(world, 1, wall + Vector2i.LEFT)
+	world.monsters[vole]["cell"] = wall + Vector2i.RIGHT
+	world.monsters[vole]["from"] = wall + Vector2i.RIGHT
 	world.monsters[vole]["next_move"] = 100.0
 	check(_hits_on(combat.tick(10.0), vole) == 0, "walls stop ranged attacks")
 	world.monsters.erase(vole)

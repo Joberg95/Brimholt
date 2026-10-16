@@ -94,7 +94,8 @@ draft into settled countryside, once (the scene's `landscape` metadata stops a s
   (`C`, drawn on grass outside dungeons) and boulders (`R`, a blocking object like trees),
   more in the north-eastern highlands, and a few dry-stone pastures (`#`) outside towns. The
   boulders were cleared again later (`tools/generators/clear_boulders.gd`, `make clear-boulders`):
-  they only snagged walking; the rules check keeps the overworld free of them.
+  they only snagged walking; the rules check keeps the overworld free of them. The pastures went
+  too (`PASTURES_PER_TOWN` 0), with every other wall that belongs to nothing (below).
 - Monster camps in the way were moved just outside, in the same region, and the shortest way
   back to any marker cut off by trees or rock was cleared.
 Run `make towns` after it to move vendors into free buildings. Edit the constants and restore
@@ -154,6 +155,13 @@ them so, and the map window converts every cell with `Atlas.to_map`. After editi
 reachable spot of the countryside more than 10 tiles from any camp gets a camp (`Gap_<monster>_<n>`)
 copying the nearest normal camp of its region, monster and level, so the region's levels and tasks
 stay the same. Run it after adding land; existing camps are kept.
+
+**Clearing stray walls** (`tools/generators/clear_walls.gd`, `make clear-walls`): a stone wall
+(`#`) stays only as part of a building (a run touching a roof, `World.ROOF_AT`) or as a town's own
+wall (the cells within one tile of its zone's border, in a run of at least 8). Stubs inside towns,
+the arms a town wall pushes inward, dry-stone pens, and loose bits in the countryside are cleared
+to the ground most common round them. A re-run changes nothing; the rules check fails while any
+stray wall is left. Run it after painting walls, then `make town-paths world-map`.
 
 **Door paths** (`tools/generators/town_paths.gd`, `make town-paths`): every town door gets a
 cobbled path to the nearest street, the shortest walk over open ground (a tree is cut only if
