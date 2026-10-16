@@ -2045,6 +2045,7 @@ def wraith(direction, frame):
 import creatures  # noqa: E402
 import props  # noqa: E402
 import gear3d  # noqa: E402
+import pixel_axes  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2318,9 +2319,9 @@ HELM_WORN = {"fangmask": "greathelm", "dreadmask": "greathelm", "hornhelm": "hel
 # details their look names (furcuff, wings, blaze, bloom, glow, trim, spikes).
 BOOT_WORN = {"wingboots": "boots", "furboots": "boots", "flameboots": "sabatons", "frostboots": "slippers",
              "vialboots": "boots", "scaleboots": "sabatons", "bloomboots": "boots"}
-# Showpiece axes (gear3d.axe) are held as their icon rebuilt into a weapon (painted_held); their
-# generated fallback model is the plain axe.
-AXE_WORN = {style: "axe" for style in gear3d.AXE_STYLES}
+# Showpiece axes are hand-pixelled (pixel_axes.py) and held as their icon rebuilt into a weapon
+# (painted_held); their generated fallback model is the plain axe.
+AXE_WORN = {style: "axe" for style in pixel_axes.STYLES}
 SHOWPIECE_STYLES = tuple(HELM_WORN) + tuple(BOOT_WORN) + tuple(AXE_WORN)
 # Styles that move on their own: flames, a halo, glowing eyes, beating wings, glowing flowers and vials.
 SHOWPIECE_ALIVE = ("fangmask", "dreadmask", "lanternhelm", "nimbus", "cobra", "rootcrown", "wingboots", "flameboots",
@@ -2329,10 +2330,14 @@ ANIM_FRAMES = 12
 
 
 def helm_icon(kind, frame=0):
-    """A showpiece helmet's or boots' icon, modelled and rendered in 3D (gear3d.py); frame moves
-    its flames, halo, eyes, wings, flowers, or vials."""
+    """A showpiece icon: helmets and boots modelled and rendered in 3D (gear3d.py), axes
+    hand-pixelled (pixel_axes.py); frame moves flames, halos, eyes, wings, flowers, vials, gems."""
     image = Image(TILE, TILE)
-    image.pixels = gear3d.icon(kind, ITEMS[kind]["look"], ITEMS[kind]["colors"], frame)
+    shape, _ = look(kind)
+    if shape in AXE_WORN:
+        image.pixels = pixel_axes.icon(shape, ITEMS[kind]["colors"], frame)
+    else:
+        image.pixels = gear3d.icon(kind, ITEMS[kind]["look"], ITEMS[kind]["colors"], frame)
     return image
 
 
