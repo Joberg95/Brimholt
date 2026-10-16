@@ -16,6 +16,10 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
 | 31 | [Walls that serve no purpose](31-purposeless-walls.md) | S-M | - |
 | 32 | [Continents with one major and one smaller city](32-continents-and-cities.md) | XL | Which mainland towns stay |
+| 34 | [Monsters 20% tougher](34-monster-health.md) | S | - |
+| 35 | [More monsters in empty spots, slower respawns](35-more-camps.md) | M | - |
+| 36 | [Epic and legendary gear only from bosses and quests](36-rare-grades.md) | S-M | - |
+| 37 | [The Cyclops Hollow: a 75-kill hunt](37-cyclops-cave.md) | M | - |
 
 Build 18-19 together, and 24-25 together (the new monsters feed the new tasks) (the swamp is one of the
 biomes). 09 can ship with 10 if that is simpler, since both change warrior play.

@@ -16,11 +16,11 @@ lets look over the world design walls again, I feel like I can see a lot of buil
 
 we should redesign the map to have 1 major city per continent and 1 smaller one per continent. (plan 32)
 
-lets add more hunt quests, for example a quest where you enter a cyclops cave and have to kill 75 cyclops in there. this will give a lot of exp and potions and a chance for a rare item.
+lets add more hunt quests, for example a quest where you enter a cyclops cave and have to kill 75 cyclops in there. this will give a lot of exp and potions and a chance for a rare item. (plan 37)
 
-we should restrict epic items to bosses and endgame quests, same with legendary items. 
+we should restrict epic items to bosses and endgame quests, same with legendary items. (plan 36)
 
-lets increase overall mob health with 20% , in a party mobs die too fast
+lets increase overall mob health with 20% , in a party mobs die too fast (plan 34)
 
-lets add more monsters in empty spots of the map, and lower the spawn rate to balance this out. 
+lets add more monsters in empty spots of the map, and lower the spawn rate to balance this out. (plan 35)
 
