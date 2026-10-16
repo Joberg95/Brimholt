@@ -124,6 +124,8 @@ static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 ## A slowed creature's steps take this many times longer (Combat.restrain).
 const SLOWED_STEP: float = 2.0
+## A rider's steps take this share of a walker's (25% faster). Mounts carry you only above ground.
+const MOUNT_STEP: float = 0.8
 const MAX_PLAYERS: int = 24
 const PORT: int = 1234
 const PROTOCOL: int = 13
@@ -139,10 +141,11 @@ const TRAVEL_SECONDS: float = 1.0
 ## Equipment slots in paperdoll order. Each accepts items of one slot type; both rings take "ring".
 ## The bag slot holds a bound pack from a town task; packs are only ever replaced by a bigger one.
 const SLOTS: Array[String] = ["necklace", "helmet", "cape", "main_hand", "armor", "off_hand", "ring_1", "legs", "ring_2", "boots",
-	"charm", "bag"]
+	"charm", "bag", "mount"]
 const SLOT_TYPES: Dictionary = {
 	"necklace": "necklace", "helmet": "helmet", "cape": "cape", "charm": "charm", "main_hand": "main_hand",
 	"armor": "armor", "legs": "legs", "boots": "boots", "off_hand": "off_hand", "ring_1": "ring", "ring_2": "ring", "bag": "bag",
+	"mount": "mount",
 }
 ## Item catalog from game/data/items.json (see game/data/items.gd): stats add to
 ## Balance.base_stats(level) when the wearer meets the item's level and vocation.
@@ -753,6 +756,11 @@ static func dungeon_at(cell: Vector2i) -> Array:
 	return [zone["dungeon"], zone["copy"]] if zone.has("dungeon") else []
 
 
+## Whether a character wearing `equipment` rides at `cell`: a mount in the mount slot, above ground.
+static func riding(equipment: Dictionary, cell: Vector2i) -> bool:
+	return not String(equipment.get("mount", "")).is_empty() and not zone_at(cell).get("underground", false)
+
+
 static func zone_at(cell: Vector2i) -> Dictionary:
 	for zone: Dictionary in ZONES:
 		if zone["rect"].has_point(cell):
@@ -1105,7 +1113,7 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	player["from"] = player["cell"]
 	player["cell"] = destination
 	player["facing"] = direction
-	player["step"] = MOVE_SECONDS * (SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0)
+	player["step"] = MOVE_SECONDS * (SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0) 		* (MOUNT_STEP if riding(player["equipment"], destination) else 1.0)
 	player["next_move"] = now + player["step"]
 	player["gathering"] = {}
 	return {"ok": true, "state": export_player(id, now)}

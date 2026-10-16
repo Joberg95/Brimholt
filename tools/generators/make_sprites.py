@@ -2034,6 +2034,244 @@ def monster_sheet(builder, want_detail):
     return character_sheet(build)
 
 
+# ---------------------------------------------------------------- mounts
+# Mount sheets (mounts/<id>.png and mounts/<id>_front.png): 64x64 frames, three columns (stand,
+# step A, step B) by four rows (down, up, left, right), feet at y=53 like a character. The main
+# sheet is drawn under the rider; the front sheet over it (a steed's head and forelegs facing
+# you, its tail from behind), so the rider sits astride. The rider stands RIDER_LIFT pixels up.
+
+MOUNT_SHAPES = ("steed", "wolf", "spider", "lizard")
+RIDER_LIFT = {"steed": 10, "wolf": 6, "spider": 9, "lizard": 6}
+# Facing toward or away from you a rider shows only down to the thighs (frame rows above RIDER_CUT).
+RIDER_CUT = 45
+HOOF = (rgba("4a4038"), rgba("332c26"), rgba("221d19"))
+PINK = (rgba("e8b8b0"), rgba("c8908a"), rgba("9a6a66"))
+
+
+def mount_frames(kind, direction, frame):
+    """(back, front) layers of one mount frame, each outlined."""
+    palette, accent = tones(kind)
+    light, main, dark = palette
+    trim = (scale(accent, 1.15), accent, scale(accent, 0.7))
+    shape, extras = look(kind)
+    back, front = Image(FRAME, FRAME), Image(FRAME, FRAME)
+    rise = 0 if frame == 0 else 1
+    step = (0, 2, -2)[frame]
+
+    def paint(image, points, tones_=palette, dither=True):
+        shade(image, {(x, y - rise) for x, y in points}, tones_, dither)
+
+    def dot(image, x, y, color):
+        image.set(x, y - rise, color)
+
+    def saddle(image, x, y, width):
+        paint(image, box(x, y, width, 2), (scale(LEATHER, 1.2), LEATHER, scale(LEATHER, 0.7)), False)
+        paint(image, box(x + 1, y + 2, width - 2, 3), trim, False)
+
+    side = direction == "left"
+    if shape == "steed":
+        if side:
+            for x, shift in ((22, step), (26, -step), (38, -step), (42, step)):
+                paint(back, thick(line(x, 41, x + shift, 50), ((0, 0), (1, 0))), palette, False)
+                paint(back, box(x + shift - 1, 51, 3, 2), HOOF, False)
+            paint(back, ellipse(32, 36, 12, 5.5) | ellipse(23, 36, 4, 5))
+            paint(back, thick(line(22, 34, 18, 25), box(-2, -2, 5, 5)))
+            paint(back, ellipse(15, 25, 4, 3) | ellipse(11, 27, 3, 2.5))
+            paint(back, {(17, 19), (17, 20), (18, 20), (18, 21)}, palette, False)
+            paint(back, thick(line(19, 21, 25, 31), ((0, 0), (1, 0))), trim, False)
+            paint(back, thick(line(44, 33, 47, 38) | line(47, 38, 46, 46), ((0, 0), (1, 0), (0, 1))), trim, False)
+            saddle(back, 28, 30, 9)
+            dot(back, 14, 24, EYE_DARK)
+            dot(back, 9, 27, scale(dark, 0.8))
+            if "antlers" in extras:
+                tines = line(16, 20, 13, 12) | line(13, 15, 10, 13) | line(14, 13, 17, 10) | line(15, 17, 19, 15)
+                paint(back, thick(tines, ((0, 0), (1, 0))), BONE, False)
+        elif direction == "down":
+            for x, lift in ((24, step < 0), (39, step > 0)):
+                paint(back, box(x, 42 - lift, 2, 9), palette, False)
+                paint(back, box(x, 51 - lift, 2, 2), HOOF, False)
+            paint(back, ellipse(32, 37, 11, 6.5))
+            paint(back, box(20, 34, 3, 7) | box(42, 34, 3, 7), trim, False)
+            for x, lift in ((27, step > 0), (35, step < 0)):
+                paint(front, box(x, 45 - lift, 3, 6), palette, False)
+                paint(front, box(x, 51 - lift, 3, 2), HOOF, False)
+            paint(front, ellipse(32, 42, 7, 4))
+            paint(front, ellipse(32, 36, 4, 6) | ellipse(32, 42, 3.5, 2.5))
+            paint(front, box(28, 27, 2, 3) | box(35, 27, 2, 3), palette, False)
+            paint(front, box(31, 28, 3, 4), trim, False)
+            for x in (30, 34):
+                dot(front, x, 34, EYE_DARK)
+            dot(front, 31, 43, scale(dark, 0.8))
+            dot(front, 33, 43, scale(dark, 0.8))
+            if "antlers" in extras:
+                tines = line(29, 29, 25, 22) | line(27, 25, 24, 25) | line(26, 23, 27, 19)
+                paint(front, thick(tines | mirror_x(tines), ((0, 0), (1, 0))), BONE, False)
+        else:
+            paint(back, box(20, 33, 3, 7) | box(42, 33, 3, 7), trim, False)
+            paint(back, ellipse(32, 30, 3, 3), palette)
+            for x, lift in ((25, step > 0), (37, step < 0)):
+                paint(front, box(x, 44 - lift, 3, 7), palette, False)
+                paint(front, box(x, 51 - lift, 3, 2), HOOF, False)
+            paint(front, ellipse(32, 40, 10, 6.5))
+            if "antlers" in extras:
+                tines = line(29, 26, 25, 19) | line(27, 22, 24, 22)
+                paint(back, thick(tines | mirror_x(tines), ((0, 0), (1, 0))), BONE, False)
+            paint(front, thick(line(32, 38, 32, 47), ((-1, 0), (0, 0), (1, 0))), trim, False)
+    elif shape == "wolf":
+        boar, rat = "tusks" in extras, "tail" in extras
+        hide = PINK if rat else trim
+        if side:
+            for x, shift in ((22, step), (25, -step), (39, -step), (42, step)):
+                paint(back, thick(line(x, 43, x + shift, 51), ((0, 0), (1, 0))), palette, False)
+                paint(back, box(x + shift - (1 if not rat else 0), 52, 3, 1), (dark, dark, dark), False)
+            paint(back, ellipse(33, 40, 11, 4.5) | ellipse(24, 39, 4, 4.5))
+            if boar:
+                paint(back, ellipse(19, 37, 5, 4.5) | box(11, 36, 5, 4))
+                paint(back, {(14, 35), (13, 34), (13, 33)}, BONE, False)
+                paint(back, box(25, 34, 16, 1), trim, False)
+                paint(back, {(19, 32), (20, 32), (20, 31)}, palette, False)
+                paint(back, thick(line(44, 38, 46, 36), ((0, 0),)), palette, False)
+            else:
+                paint(back, ellipse(19, 35, 4.5, 4) | polygon([(16, 33), (9, 36), (10, 39), (17, 39)]))
+                if rat:
+                    paint(back, ellipse(20, 30, 2.2, 2.2), PINK, False)
+                    paint(back, line(44, 41, 52, 44) | line(52, 44, 58, 41), PINK, False)
+                else:
+                    paint(back, {(18, 29), (18, 30), (19, 30), (19, 31), (21, 29), (21, 30), (21, 31)}, palette, False)
+                    paint(back, thick(line(44, 38, 50, 33), box(0, 0, 2, 3)), (light, main, dark))
+                    paint(back, box(47, 32, 3, 2), trim, False)
+            saddle(back, 28, 34, 9)
+            dot(back, 17 if not boar else 16, 34 if not boar else 36, EYE_DARK)
+            dot(back, 10 if not boar else 11, 37, EYE_DARK)
+        elif direction == "down":
+            paint(back, ellipse(32, 41, 10, 5.5))
+            paint(back, box(21, 37, 3, 6) | box(41, 37, 3, 6), trim, False)
+            for x, lift in ((26, step > 0), (36, step < 0)):
+                paint(front, box(x, 46 - lift, 3, 7), palette, False)
+            paint(front, ellipse(32, 44, 7, 3))
+            head = ellipse(32, 41, 5.5 if boar else 5, 4.5)
+            paint(front, head)
+            paint(front, ellipse(32, 44, 2.5, 2), (light, light, main), False)
+            if rat:
+                paint(front, ellipse(27, 36, 2, 2) | ellipse(37, 36, 2, 2), PINK, False)
+            elif boar:
+                paint(front, {(28, 45), (28, 44), (36, 45), (36, 44)}, BONE, False)
+            else:
+                paint(front, box(28, 34, 2, 3) | box(35, 34, 2, 3), palette, False)
+            for x in (30, 34):
+                dot(front, x, 40, EYE_DARK)
+            dot(front, 32, 44, EYE_DARK)
+        else:
+            paint(back, box(21, 37, 3, 6) | box(41, 37, 3, 6), trim, False)
+            paint(back, box(28, 33, 2, 3) | box(35, 33, 2, 3), PINK if rat else palette, False)
+            for x, lift in ((26, step > 0), (36, step < 0)):
+                paint(front, box(x, 45 - lift, 3, 8), palette, False)
+            paint(front, ellipse(32, 42, 9.5, 5.5))
+            if rat:
+                paint(front, line(32, 44, 31, 52) | line(31, 52, 36, 53), PINK, False)
+            elif boar:
+                paint(front, {(32, 44), (33, 45), (32, 46)}, palette, False)
+            else:
+                paint(front, thick(line(32, 42, 32, 50), ((-1, 0), (0, 0), (1, 0))), (light, main, dark))
+            if boar:
+                paint(back, box(31, 34, 3, 3), trim, False)
+    elif shape == "spider":
+        knees = (12, 17, 47, 52)
+        if side:
+            for index, x in enumerate((18, 23, 37, 42)):
+                foot = x + (-6 if index < 2 else 6) + (step if index % 2 else -step)
+                knee = (x + (-3 if index < 2 else 3), 31)
+                paint(back, thick(line(x, 40, *knee) | line(*knee, foot, 52), ((0, 0), (1, 0))), (main, dark, dark), False)
+            paint(back, ellipse(38, 37, 9, 7))
+            for x in (35, 39, 43):
+                paint(back, thick(line(x, 31, x - 1, 43), ((0, 0),)), trim, False)
+            paint(back, ellipse(24, 40, 5.5, 4))
+            saddle(back, 28, 30, 8)
+            for x, y in ((20, 38), (21, 37), (19, 39)):
+                dot(back, x, y, scale(accent, 1.3))
+            paint(back, {(18, 43), (19, 44)}, BONE, False)
+        else:
+            for index, x in enumerate(knees):
+                outer = x < 32
+                base = 28 if outer else 36
+                for row, y in enumerate((36, 40, 44)):
+                    foot = (x + (-2 if outer else 2) + (step if row % 2 else -step), 52 - row)
+                    paint(back, thick(line(base, y, x, y - 6) | line(x, y - 6, *foot), ((0, 0),)), (main, dark, dark), False)
+            body = ellipse(32, 38, 8, 7)
+            if direction == "down":
+                paint(back, body)
+                paint(front, ellipse(32, 44, 5, 3.5))
+                for x, y in ((30, 43), (34, 43), (31, 42), (33, 42)):
+                    dot(front, x, y, scale(accent, 1.3))
+                paint(front, {(30, 47), (34, 47)}, BONE, False)
+            else:
+                paint(front, ellipse(32, 41, 8, 7))
+                for y in (37, 41, 45):
+                    paint(front, box(26, y, 13, 1), trim, False)
+            paint(back, box(23, 33, 3, 5) | box(38, 33, 3, 5), trim, False)
+    elif shape == "lizard":
+        if side:
+            for x, shift in ((21, step), (26, -step), (38, -step), (43, step)):
+                paint(back, thick(line(x, 43, x - 2 + shift, 51), ((0, 0), (1, 0))), palette, False)
+                paint(back, box(x - 3 + shift, 52, 4, 1), (dark, dark, dark), False)
+            paint(back, thick(line(44, 41, 58, 47), box(0, -1, 3, 3)) | thick(line(52, 44, 60, 50), ((0, 0), (0, 1))))
+            paint(back, ellipse(32, 40, 13, 5))
+            paint(back, ellipse(16, 39, 5, 3.5) | box(8, 39, 6, 3))
+            for x in range(20, 46, 3):
+                paint(back, {(x, 34 if 26 <= x <= 38 else 35), (x, 35 if 26 <= x <= 38 else 36)}, trim, False)
+            saddle(back, 27, 34, 10)
+            dot(back, 14, 38, scale(accent, 1.3))
+            dot(back, 9, 40, EYE_DARK)
+        else:
+            paint(back, box(20, 36, 3, 6) | box(42, 36, 3, 6), trim, False)
+            for x, outer in ((23, -1), (41, 1)):
+                for y, lift in ((45, step > 0), (39, step < 0)):
+                    paint(back, thick(line(x, y, x + outer * 5, y + 7 - lift), ((0, 0), (1, 0))), palette, False)
+            paint(back if direction == "down" else front, ellipse(32, 41, 11, 6))
+            if direction == "down":
+                paint(front, ellipse(32, 45, 4.5, 3.5))
+                for x in (29, 35):
+                    dot(front, x, 43, scale(accent, 1.3))
+                dot(front, 31, 47, EYE_DARK)
+                dot(front, 33, 47, EYE_DARK)
+            else:
+                paint(front, thick(line(32, 44, 32, 53), ((-1, 0), (0, 0), (1, 0))) - {(31, 53), (33, 53)})
+                for y in range(37, 46, 3):
+                    paint(front, {(32, y)}, trim, False)
+    for x, y in ellipse(32, 53.5, 13, 3):
+        if back.get(x, y) is None:
+            back.set(x, y, SHADOW)
+    return back.outlined(), front.outlined()
+
+
+def mount_sheet(kind, part):
+    def build(direction, frame):
+        return mount_frames(kind, "left" if direction == "right" else direction, frame)[part]
+    return character_sheet(build)
+
+
+def mount_icon(kind):
+    """The mount from the side (stand frame), shrunk into a 32x32 icon."""
+    image = mount_frames(kind, "left", 0)[0]
+    for y in range(FRAME):
+        for x in range(FRAME):
+            if not image.opaque(x, y):
+                image.clear(x, y)
+    solid = [(x, y) for y in range(FRAME) for x in range(FRAME) if image.opaque(x, y)]
+    left, right = min(x for x, _ in solid), max(x for x, _ in solid) + 1
+    top, bottom = min(y for _, y in solid), max(y for _, y in solid) + 1
+    factor = max(right - left, bottom - top) / 28
+    icon = Image(TILE, TILE)
+    ox, oy = (TILE - (right - left) / factor) / 2, TILE - 2 - (bottom - top) / factor
+    for y in range(TILE):
+        for x in range(TILE):
+            u, v = left + (x - ox) * factor, top + (y - oy) * factor
+            color, opaque = _coverage(image, u, u + factor, v, v + factor)
+            if color is not None and opaque >= 0.45:
+                icon.set(x, y, _crisp(color))
+    return icon.mirrored()
+
+
 # ---------------------------------------------------------------- items
 
 def material_icon(image, shape, palette, accent):
@@ -2169,6 +2407,8 @@ def item_icon(kind):
         return weapon_icon(kind)
     if shape == "runestone":
         return runestone_icon(kind)
+    if shape in MOUNT_SHAPES:
+        return mount_icon(kind)
     image = Image(TILE, TILE)
     gem = (scale(accent, 1.12), accent, scale(accent, 0.65))
     if shape == "cap":
@@ -4936,6 +5176,8 @@ def main():
         "items_glow.png": None,
         **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
         **{f"creatures/{kind}.png": creature_sheet(kind) for kind in creatures.SPECIES},
+        **{f"mounts/{kind}{suffix}.png": mount_sheet(kind, part) for kind, item in ITEMS.items()
+           if item.get("slot") == "mount" for part, suffix in ((0, ""), (1, "_front"))},
         **{f"creatures/{kind}_glow.png": None for kind in GLOWING_CREATURES},
         **{f"monsters/{name}.png": monster_sheet(builder, False)
            for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},

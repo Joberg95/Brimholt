@@ -95,6 +95,14 @@ const MONSTER_DETAILS: Dictionary = {
 ## Painted-style creature sheets (tools/generators/creatures.py), one per monster kind, drawn
 ## untinted; kinds without one fall back to the tinted generic sheets above.
 static var CREATURES: Dictionary = _creature_sheets()
+## Mount sheets by mount item (assets/sprites/mounts/<id>.png under the rider, <id>_front.png over
+## it): stand, step A, step B by down/up/left/right. The rider sits RIDER_LIFT pixels up by the
+## mount's shape and, facing toward or away from you, shows only frame rows above RIDER_CUT.
+## Both match tools/generators/make_sprites.py.
+static var MOUNTS: Dictionary = _mount_sheets()
+static var MOUNTS_FRONT: Dictionary = _mount_sheets("_front")
+const RIDER_LIFT: Dictionary = {"steed": 10, "wolf": 6, "spider": 9, "lizard": 6}
+const RIDER_CUT: float = 45.0
 static var CREATURE_GLOW: Dictionary = _creature_sheets("_glow")
 ## Characters' feet sit this far below the tile centre; monsters scale around that point.
 const FEET: Vector2 = Vector2(0, 13.5)
@@ -212,6 +220,24 @@ static func _creature_sheets(suffix: String = "") -> Dictionary:
 		if ResourceLoader.exists(path):
 			sheets[kind] = load(path)
 	return sheets
+
+
+static func _mount_sheets(suffix: String = "") -> Dictionary:
+	var sheets: Dictionary = {}
+	for kind: String in World.ITEMS:
+		var path: String = "res://assets/sprites/mounts/%s%s.png" % [kind, suffix]
+		if World.ITEMS[kind]["slot"] == "mount" and ResourceLoader.exists(path):
+			sheets[kind] = load(path)
+	return sheets
+
+
+## How far up the rider of `state` sits this frame (0 when walking): the mount's saddle height,
+## one more pixel on its step frames. Only above ground (World.riding) and with a mount sheet.
+static func rider_lift(state: Dictionary, stride: float) -> float:
+	var mount: String = String(state.get("equipment", {}).get("mount", ""))
+	if not state.has("cell") or not MOUNTS.has(mount) or not World.riding(state["equipment"], state["cell"]):
+		return 0.0
+	return RIDER_LIFT.get(String(World.ITEMS[mount]["look"]).get_slice("+", 0), 8) + (1.0 if stride > 0.0 else 0.0)
 
 
 static func _outfit_sheets() -> Dictionary:
@@ -627,6 +653,27 @@ static func draw_actor(canvas: CanvasItem, center: Vector2, state: Dictionary, l
 	var dest: Rect2 = Rect2(center - FRAME_ANCHOR, Vector2.ONE * FRAME)
 	if local:
 		canvas.draw_texture_rect_region(MARKER, dest, source)
+	var lift: float = rider_lift(state, stride)
+	if lift <= 0.0:
+		_draw_figure(canvas, dest, source, state, tint)
+		return
+	# Riding: the mount walks (attack frames show it standing), the rider sits still on top.
+	var mount: String = equipment["mount"]
+	var gait := Rect2(frame_region(facing, stride).position, Vector2.ONE * FRAME)
+	canvas.draw_texture_rect_region(MOUNTS[mount], dest, gait)
+	var seated: Rect2 = frame_region(facing, 0.0, state.get("attack", -1.0))
+	var raised := Rect2(dest.position - Vector2(0, lift), dest.size)
+	if facing.x == 0:
+		seated.size.y = RIDER_CUT
+		raised.size.y = RIDER_CUT
+	_draw_figure(canvas, raised, seated, state, tint)
+	canvas.draw_texture_rect_region(MOUNTS_FRONT[mount], dest, gait)
+
+
+## The character itself (no ground marker or mount) into dest from the sheets' source frame.
+static func _draw_figure(canvas: CanvasItem, dest: Rect2, source: Rect2, state: Dictionary, tint: Color) -> void:
+	var facing: Vector2i = state["facing"]
+	var equipment: Dictionary = state["equipment"]
 	var held: Texture2D = GEAR.get(equipment.get("main_hand", ""), null)
 	var shield: Texture2D = GEAR.get(equipment.get("off_hand", ""), null)
 	if held != null and facing == Vector2i.UP:
@@ -790,8 +837,12 @@ static func draw_skull(canvas: CanvasItem, at: Vector2, skull: String) -> void:
 
 ## Halos of worn relics; call on an additive canvas with the same centre as draw_actor.
 static func draw_actor_glow(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float, strength: float) -> bool:
-	var source: Rect2 = frame_region(state["facing"], stride, state.get("attack", -1.0))
-	var dest: Rect2 = Rect2(center - FRAME_ANCHOR, Vector2.ONE * FRAME)
+	var lift: float = rider_lift(state, stride)
+	var source: Rect2 = frame_region(state["facing"], 0.0 if lift > 0.0 else stride, state.get("attack", -1.0))
+	var dest: Rect2 = Rect2(center - FRAME_ANCHOR - Vector2(0, lift), Vector2.ONE * FRAME)
+	if lift > 0.0 and state["facing"].x == 0:
+		source.size.y = RIDER_CUT
+		dest.size.y = RIDER_CUT
 	var glowing: bool = false
 	for slot: String in VISIBLE_SLOTS:
 		var kind: String = String(state["equipment"].get(slot, ""))

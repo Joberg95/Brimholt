@@ -1203,6 +1203,8 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 	var definition: Dictionary = Monsters.MONSTERS[kind]
 	if level > HOMEWARD_LEVEL and rng.randf() < HOMEWARD_CHANCE:
 		loot.append("homeward_rune")
+	if Monsters.MOUNTS.has(kind) and rng.randf() < Monsters.MOUNT_CHANCE:
+		loot.append(Monsters.MOUNTS[kind])
 	if rng.randf() < float(definition.get("gear_chance", GEAR_DROP_CHANCE.get(definition["rank"], 0.0))):
 		loot.append(gear_drop(level))
 	var expected: float = Balance.coins_per_kill(level, definition["rank"])
@@ -1371,7 +1373,7 @@ func _kill_player(id: int, now: float, events: Array, killer: int = 0) -> void:
 
 
 ## Drops the backpack, purse gold, and unlucky (or, with a red skull, all) worn items around
-## the death tile; in a full-loot zone every worn item drops. Bound relics and packs, banked
+## the death tile; in a full-loot zone every worn item drops. Bound relics and packs, the ridden mount, banked
 ## gold, and the depot always stay. Returns ["backpack", worn item names...] or [] if nothing was carried.
 func _drop_belongings(id: int, events: Array) -> Array[String]:
 	var player: Dictionary = world.players[id]
@@ -1392,7 +1394,8 @@ func _drop_belongings(id: int, events: Array) -> Array[String]:
 		piles -= World.STACK_MAX
 	player["gold"] = 0
 	for slot: String in World.SLOTS:
-		if player["equipment"].has(slot) and not World.bound(player["equipment"][slot]) \
+		# The mount being ridden carries its rider off and is never lost.
+		if slot != "mount" and player["equipment"].has(slot) and not World.bound(player["equipment"][slot]) \
 				and (player["skull"] == "red" or full_loot or rng.randf() < EQUIPMENT_LOSS_CHANCE):
 			dropped.append(player["equipment"][slot])
 			lost_worn.append(World.ITEMS[player["equipment"][slot]]["name"])

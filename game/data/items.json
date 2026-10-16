@@ -11,6 +11,7 @@
       "Professions (game/data/professions.gd): gathered resources (looks ore, log, herb, fish) have a value like materials. Crafted potions have no price (never vendor stock) and may share a timer with another potion. Food: eat {regen: extra share of health and mana regeneration, seconds}.",
       "Vendor prices of equipment are derived in items.gd (gear_price); vendors buy unbound equipment for a quarter of it and materials for their value.",
       "loot_only items are source-specific monster drops (hunting weapons, and the frost isles' notable armor), excluded from vendor stock and the generic tier pool. Their stats still derive from tier and vocation.",
+      "Mounts: slot mount, stats {} (riding is the bonus: World.MOUNT_STEP), look (the mount's shape: steed, wolf, spider, lizard; '+antlers', '+tusks', '+tail' decorate it), colors (hide, light, mane or accent). Each boss drops its own at Monsters.MOUNT_CHANCE.",
       "Mythic gear: unbound level-50 pieces without a glow, dropped only by the level-50 elite farm monsters (Monsters.LOOT); stats derive at level 50 with a 1.05 bonus (relics 1.15). An optional template names the painted icon tools/generators/derive_icons.py recolours."
   ],
   "items": [
@@ -464,6 +465,19 @@
     {"id": "hollowforge_hammer", "name": "Hollowforge hammer", "slot": "main_hand", "level": 35, "look": "hammer", "colors": ["6a6058", "b0a898", "ff8a3a"], "vocations": ["knight"], "bound": true, "quest": "hundred_eyed_hollow"},
     {"id": "cyclops_hide_cloak", "name": "Cyclops-hide cloak", "slot": "cape", "level": 35, "look": "cape", "colors": ["6a5236", "9a7a52", "c8a070"], "bound": true, "quest": "hundred_eyed_hollow"},
     {"id": "homeward_rune", "name": "Homeward rune", "level": 30, "look": "runestone+othala", "colors": ["5c5a56", "7e7a72", "9ae0ff"], "value": 60, "rune": "home"},
-    {"id": "lightning_rune", "name": "Lightning rune", "level": 40, "look": "runestone+sowilo", "colors": ["56545e", "78767e", "ffe060"], "value": 120, "rune": "lightning"}
+    {"id": "lightning_rune", "name": "Lightning rune", "level": 40, "look": "runestone+sowilo", "colors": ["56545e", "78767e", "ffe060"], "value": 120, "rune": "lightning"},
+    {"id": "dire_wolf_mount", "name": "Dire wolf", "slot": "mount", "level": 1, "look": "wolf", "colors": ["6a6a66", "9a9890", "d8c8a0"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "war_boar_mount", "name": "War boar", "slot": "mount", "level": 1, "look": "wolf+tusks", "colors": ["5a4030", "8a6448", "e8dcc0"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "tidal_steed_mount", "name": "Tidal steed", "slot": "mount", "level": 1, "look": "steed", "colors": ["2e5a58", "4e8a84", "8ae0c8"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "frost_elk_mount", "name": "Frost elk", "slot": "mount", "level": 1, "look": "steed+antlers", "colors": ["a8bccc", "d8e4ec", "f0ead8"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "trench_crawler_mount", "name": "Trench crawler", "slot": "mount", "level": 1, "look": "spider", "colors": ["3a5468", "5a7a90", "a8d0e0"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "giant_rat_mount", "name": "Giant rat", "slot": "mount", "level": 1, "look": "wolf+tail", "colors": ["7a6a5e", "a89484", "d8a8a0"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "bone_steed_mount", "name": "Bone steed", "slot": "mount", "level": 1, "look": "steed", "colors": ["c8c0a8", "ece4d0", "3a3048"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "ember_salamander_mount", "name": "Ember salamander", "slot": "mount", "level": 1, "look": "lizard", "colors": ["8a3a20", "c86a30", "ffb04a"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "silk_crawler_mount", "name": "Silk crawler", "slot": "mount", "level": 1, "look": "spider", "colors": ["4a2a3a", "7a4a60", "e0d0e8"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "void_steed_mount", "name": "Void steed", "slot": "mount", "level": 1, "look": "steed", "colors": ["2a1e3a", "4a3a68", "9a5aff"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "drowned_kelpie_mount", "name": "Drowned kelpie", "slot": "mount", "level": 1, "look": "steed", "colors": ["2f4a4a", "4a706a", "6aa060"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "cinder_drake_mount", "name": "Cinder drake", "slot": "mount", "level": 1, "look": "lizard", "colors": ["4a2a24", "7a4434", "ff8a3a"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "bloom_stag_mount", "name": "Bloom stag", "slot": "mount", "level": 1, "look": "steed+antlers", "colors": ["7a5aa8", "a888d0", "f0b8e0"], "stats": {}, "value": 5000, "loot_only": true}
   ]
 }

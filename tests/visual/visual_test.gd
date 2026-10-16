@@ -263,7 +263,9 @@ func _run() -> void:
 		return
 	if not await _check_rune_bar():
 		return
-	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 16 hunting weapons in 192 worn poses, visible unequip, panel slots, ground items, oblique walls, "
+	if not await _check_mount():
+		return
+	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 16 hunting weapons in 192 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
 		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
@@ -1593,6 +1595,42 @@ func _brown(image: Image, area: Rect2) -> int:
 
 ## A storm at noon over Cinder Crossing (rain drawn, light dimmed), the same rain at night (the
 ## lantern lights up), and the desert in a storm: dry, with cacti on sand.
+## A rider on a mount above ground: the mount shows round the rider's feet and the rider sits higher.
+func _check_mount() -> bool:
+	game.world.monsters.clear()
+	game.monsters.clear()
+	Weather.override = "clear"
+	game._world_view.lighting.time_override = 0.5
+	var player: Dictionary = game.world.players[1]
+	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
+	player["from"] = player["cell"]
+	player["facing"] = Vector2i.LEFT
+	player["equipment"].erase("mount")
+	game._publish_actor(1)
+	await create_timer(0.8).timeout
+	await RenderingServer.frame_post_draw
+	var walking: Image = screen.get_texture().get_image()
+	player["equipment"]["mount"] = "frost_elk_mount"
+	game._publish_actor(1)
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var riding: Image = screen.get_texture().get_image()
+	riding.save_png("res://.tools/visual-mount.png")
+	var feet := Rect2i(Vector2i(game.map_to_screen((Vector2(player["cell"]) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
+		+ Vector2i(-28, 0), Vector2i(56, 28))
+	if not _expect(riding.get_region(feet).get_data() != walking.get_region(feet).get_data(),
+			"A ridden mount must be drawn under its rider"):
+		return false
+	player["facing"] = Vector2i.DOWN
+	game._publish_actor(1)
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	screen.get_texture().get_image().save_png("res://.tools/visual-mount-front.png")
+	player["equipment"].erase("mount")
+	game._publish_actor(1)
+	return true
+
+
 func _check_weather_and_desert() -> bool:
 	game.world.monsters.clear()
 	game.monsters.clear()

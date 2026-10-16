@@ -78,6 +78,15 @@ pixel thick. Rig rows 25, 31, 35, 41, 45 and 51 fall out in the squash; put deta
 This is baked into the PNGs, not a runtime stretch. It keeps grips, masks, capes and
 walk poses registered without altering the 64×64 frame or gameplay collision footprint.
 Monster bodies keep their own proportions; humanoid monsters use the compact character rig.
+Mounts have two sheets each, `mounts/<id>.png` drawn under the rider and `mounts/<id>_front.png`
+over it (a steed's head and forelegs facing you, its tail from behind), stand / step A / step B by
+four facings, feet at y=53 (`mount_frames` in `make_sprites.py`). Four shapes take the item's
+colours (hide, light, mane or saddle cloth): `steed`, `wolf`, `spider`, `lizard`, decorated by
+`+antlers`, `+tusks` (a boar) and `+tail` (a rat). The rider is drawn in its standing pose
+`RIDER_LIFT` pixels up by shape (steed 10, spider 9, wolf and lizard 6; one more on step
+frames) and, facing toward or away from you, only above frame row `RIDER_CUT` (45), so it sits
+astride. `SpriteArt` keeps both constants in step with the generator. The item icon is the side
+view shrunk to 32 pixels (`mount_icon`).
 Creatures have one sheet each, `creatures/<monster>.png` (untinted; stand, step A, step B by
 four facings), made by `tools/generators/creatures.py`: each species is built from simple 3D
 anatomy (ellipsoid body, head, jointed limbs, tails, horns, crowns ...) and rendered for every

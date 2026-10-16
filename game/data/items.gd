@@ -247,6 +247,9 @@ static func quality(item: Dictionary) -> int:
 	var slot: String = item.get("slot", "")
 	if item.is_empty() or item.has("gold"):
 		return -1
+	# Mounts are 1% boss drops: Legendary whatever their level.
+	if slot == "mount":
+		return RARITIES.size() - 2
 	if slot in ["bag", "container"]:
 		var slots: int = int(item.get("slots", 0))
 		return clampi((slots - 6) / 2, 0, 4) if slot == "container" else clampi(slots / 4, 0, 4)
@@ -288,6 +291,8 @@ static func boss_drops() -> Dictionary:
 				boss[entry[0]] = true
 			else:
 				common[entry[0]] = true
+	for kind: String in Monsters.MOUNTS:
+		boss[Monsters.MOUNTS[kind]] = true
 	for id: String in common:
 		boss.erase(id)
 	return boss

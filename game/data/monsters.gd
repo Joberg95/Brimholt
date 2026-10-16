@@ -192,6 +192,16 @@ const MONSTERS: Dictionary = {
 	"sylvaine": {"relics": ["bloomheart_rod", "verdant_codex", "hollowbloom_cape", "bloomsoul_ring"], "name": "Sylvaine the Hollow Bloom", "look": "wraith", "color": Color("#7a5aa8"), "size": 1.8,
 		"rank": "boss", "range": 4, "step": 0.5, "respawn": 1800.0, "glow": Color("#c890ff")},
 }
+## Mounts (items.json, slot "mount"): every champion and final boss has its own, dropped at
+## MOUNT_CHANCE per kill on top of its loot table.
+const MOUNT_CHANCE: float = 0.01
+const MOUNTS: Dictionary = {
+	"greymaw": "dire_wolf_mount", "gorvak": "war_boar_mount", "drowned_abbess": "tidal_steed_mount",
+	"hoarfrost_jarl": "frost_elk_mount", "grimclaw": "trench_crawler_mount", "rat_king": "giant_rat_mount",
+	"abbot_morrow": "bone_steed_mount", "forgemaw": "ember_salamander_mount", "silk_matron": "silk_crawler_mount",
+	"vaelith": "void_steed_mount", "morvain": "drowned_kelpie_mount", "kharzul": "cinder_drake_mount",
+	"sylvaine": "bloom_stag_mount",
+}
 ## Loot tables: each [item, chance] entry rolls independently when the monster dies. Gold piles
 ## and tiered equipment (Combat.GEAR_DROP_CHANCE, from the monster's level tier) are added on
 ## top by Combat. Named hunting weapons are additional rolls, gated by the monster's level,

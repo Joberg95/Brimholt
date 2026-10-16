@@ -186,6 +186,7 @@ func _run() -> void:
 	_inventory_checks()
 	_sprite_checks()
 	_slot_and_stat_checks()
+	_mount_checks()
 	_balance_checks()
 	_adventurer_checks()
 	_quest_hub_and_lexicon_checks()
@@ -1566,9 +1567,61 @@ func _sprite_checks() -> void:
 					and bounds.position.y > 0 and bounds.end.y < 64, "%s stays visible and unclipped in every compact pose" % kind)
 
 
+func _mount_checks() -> void:
+	var mounts: Array[String] = []
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind]["slot"] == "mount":
+			mounts.append(kind)
+	check(mounts.size() == Monsters.MOUNTS.size() and Monsters.MOUNT_CHANCE == 0.01, "one mount per boss, dropped 1% of kills")
+	for monster: String in Monsters.MONSTERS:
+		if Monsters.MONSTERS[monster]["rank"] in ["champion", "boss"]:
+			check(Monsters.MOUNTS.get(monster, "") in mounts, "%s drops its own mount" % monster)
+	for kind: String in mounts:
+		var item: Dictionary = World.ITEMS[kind]
+		check(item["stats"].is_empty() and item.get("loot_only", false) and not World.bound(kind) and item["level"] == 1
+			and item["vocations"].is_empty() and Items.rarity(item)[0] == "Legendary" and item.get("sell", 0) > 0,
+			"%s is an unbound, statless, Legendary mount anyone can ride" % kind)
+		check(Monsters.MOUNTS.values().count(kind) == 1, "%s comes from exactly one boss" % kind)
+		check(SpriteArt.RIDER_LIFT.has(String(item["look"]).get_slice("+", 0)) and SpriteArt.MOUNTS.has(kind)
+			and SpriteArt.MOUNTS[kind].get_size() == Vector2(192, 256) and SpriteArt.MOUNTS_FRONT.has(kind),
+			"%s has its mount sheets and a saddle height" % kind)
+		check(World.slot_for(kind, {}) == "mount", "%s goes in the mount slot" % kind)
+	var combat := Combat.new(World.new(), 5)
+	var dropped: int = 0
+	for roll: int in 4000:
+		if "dire_wolf_mount" in combat.roll_loot("greymaw", 20):
+			dropped += 1
+	check(dropped >= 20 and dropped <= 70, "a boss drops its mount about once in a hundred kills (%d/4000)" % dropped)
+	# Riding: 25% faster steps above ground, a walker's pace underground.
+	var world := World.new()
+	world.add_player(1, 0.0)
+	world.players[1]["equipment"]["mount"] = "void_steed_mount"
+	world.move(1, Vector2i.RIGHT, 0.0)
+	check(is_equal_approx(world.players[1]["next_move"], World.MOVE_SECONDS * World.MOUNT_STEP)
+		and is_equal_approx(world.export_player(1, 0.0)["duration"], World.MOVE_SECONDS * World.MOUNT_STEP),
+		"a rider steps 25% faster")
+	var below: Vector2i = Vector2i(-1, -1)
+	for zone: Dictionary in World.ZONES:
+		if zone.get("underground", false):
+			below = zone["rect"].get_center()
+			break
+	check(below != Vector2i(-1, -1) and not World.riding({"mount": "void_steed_mount"}, below)
+		and World.riding({"mount": "void_steed_mount"}, world.players[1]["cell"]) and not World.riding({}, world.players[1]["cell"]),
+		"mounts carry you only above ground")
+	# A ridden mount is never lost on death, even with a red skull.
+	world.ground.clear()
+	var killer := Combat.new(world, 9)
+	world.players[1]["level"] = Combat.PROTECTION_LEVEL
+	world.players[1]["skull"] = "red"
+	killer._damage(-1, 1, 999999, "damage", 5.0, [])
+	check(world.players[1]["equipment"].get("mount", "") == "void_steed_mount"
+		and not "void_steed_mount" in _ground_items(world), "a ridden mount stays with its rider on death")
+
+
 func _slot_and_stat_checks() -> void:
-	check(World.SLOTS.size() == 12 and World.SLOT_TYPES.size() == 12 and "cape" in World.SLOTS and "bag" in World.SLOTS
-		and "legs" in World.SLOTS and "boots" in World.SLOTS, "twelve equipment slots with legs, boots, a cape, and a pack")
+	check(World.SLOTS.size() == 13 and World.SLOT_TYPES.size() == 13 and "cape" in World.SLOTS and "bag" in World.SLOTS
+		and "legs" in World.SLOTS and "boots" in World.SLOTS and "mount" in World.SLOTS,
+		"thirteen equipment slots with legs, boots, a cape, a pack, and a mount")
 	for slot: String in World.SLOTS:
 		check(World.SLOT_TYPES.has(slot), "every slot has a type")
 		var fitting: bool = false
@@ -2163,6 +2216,8 @@ func _gear_tier_checks() -> void:
 		if item["slot"] == "container":
 			check(item["stats"].is_empty() and not World.bound(kind) and item["slots"] > 0 and item["slots"] <= World.BAG_MAX
 				and Crafting.RECIPES.has(kind) and Economy.sell_price(kind) > 0, "%s is an unbound, craftable bag" % kind)
+			continue
+		if item["slot"] == "mount":
 			continue
 		if item["look"] == "torch":
 			check(item["slot"] == "off_hand" and item["stats"].is_empty() and item["vocations"].is_empty()

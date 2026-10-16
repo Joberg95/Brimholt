@@ -152,6 +152,20 @@ monsters, 25% from elites; 30% of those come from the tier below). Loot spills o
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
 needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
 
+### Mounts
+
+Every champion and final boss has its own mount, dropped on **1% of kills**
+(`Monsters.MOUNTS`, `Monsters.MOUNT_CHANCE`): Greymaw a dire wolf, Gorvak a war boar, the
+Drowned Abbess a tidal steed, the Hoarfrost Jarl a frost elk, Old Grimclaw a trench crawler,
+the Rat King a giant rat, Abbot Morrow a bone steed, Forgemaw an ember salamander, the Silk
+Matron a silk crawler, Vaelith a void steed, Morvain a drowned kelpie, Kharzul a cinder drake,
+and Sylvaine a bloom stag. Mounts are Legendary, unbound (trade them, sell them for 5,000
+gold), and any class of any level can ride one: put it in the **mount slot** under the bag
+slots. A rider steps 25% faster (`World.MOUNT_STEP`, 0.8 of a walker's step) wherever there is
+sky; in caves and dungeons you walk, and the mount is not drawn. Fighting, casting and looting
+work the same mounted. A ridden mount is never lost when you die; one carried in the backpack
+drops with it.
+
 ### Hunting weapons
 
 Fifteen additional weapons are **source-specific drops**, not shop stock or additions to the
@@ -186,7 +200,7 @@ generic gear. A monster must be at least the weapon's required level for that ro
 Dying costs 10% of your total experience (which can lose levels) and returns you to Cinder
 Crossing at full health. **Below level 8 you keep your items and gold**, so an early death
 cannot strand you. From level 8, as in classic Tibia without blessings, you always lose your whole
-backpack and all purse gold, and each worn item has a 10% chance to drop. Everything lost
+backpack and all purse gold, and each worn item has a 10% chance to drop (never the mount you ride). Everything lost
 lands on the tile where you fell, spilling onto tiles within 3 steps (six items per tile),
 and anyone can pick it up, including you on a run back to your body. What drops is only what
 you **found or bought**: anything **bound** to you stays, wherever you die and whatever your
