@@ -2284,10 +2284,10 @@ def mount_icon(kind):
 # glow, and items with "shine": "sheen" in items.json catch a light that sweeps across them.
 
 HELM_WORN = {"fangmask": "greathelm", "dreadmask": "greathelm", "hornhelm": "helm", "crownhelm": "helm",
-             "lanternhelm": "kettle", "nimbus": "hat", "visor": "greathelm", "cobra": "cowl"}
+             "lanternhelm": "kettle", "nimbus": "hat", "visor": "greathelm", "cobra": "cowl", "rootcrown": "hood"}
 HELM_STYLES = tuple(HELM_WORN)
 # Styles that move on their own: flames, a halo, glowing eyes.
-HELM_ALIVE = ("fangmask", "dreadmask", "lanternhelm", "nimbus", "cobra")
+HELM_ALIVE = ("fangmask", "dreadmask", "lanternhelm", "nimbus", "cobra", "rootcrown")
 ANIM_FRAMES = 12
 
 

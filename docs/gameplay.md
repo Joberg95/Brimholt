@@ -154,16 +154,18 @@ needs a row in `game/data/items.json` and a loot row; `make sprites` draws its i
 
 ### Showpiece helmets
 
-Eight named helmets drop from overworld hunts (1.2% a kill, at or above their level). Each keeps
+Nine named helmets drop from hunts (1.2% a kill, at or above their level). Each keeps
 85% of its tier helmet's defenses and adds one bonus (`Items.HELMET_FOCUS`): half a rod's healing,
 half a spellbook's mana, a ring's 2% critical, an armor's regeneration, or half an amulet's
 health. The **Delver's lamp helm** (level 20 mail, critical; lizard warriors), the **Sunforged
 crown helm** (30 plate, health; sand raiders), the **Serpent hood** (30 leather, healing; wraith
 knights), the **Gilded hornhelm** (35 plate, regeneration; cave trolls), the **Fangmaw mask** (40
 leather, healing; bog hulks), the **Cinder visage** (40 cloth, mana; mire stalkers), the
-**Moonsteel visor** (45 mail, health; obsidian golems), and the **Starhalo hat** (45 cloth,
-critical; void wraiths). Their icons move in the backpack and on the ground: the lamp and the
-visage's spikes burn, the masks' and hood's eyes glow, the hat's halo sparkles, and light
+**Moonsteel visor** (45 mail, health; obsidian golems), the **Starhalo hat** (45 cloth,
+critical; void wraiths), and the **Rootbound crown** (45 leather, healing and **+9% frost damage**;
+rime titans). Frost damage is a gear-only stat (`Combat.ELEMENT_STATS`): it adds its percentage to
+the wearer's frost spells (Frost bolt, Hailstorm) and frost runes. Their icons move in the backpack and on the ground: the lamp and the
+visage's spikes burn, the crown's frost crystal pulses, the masks' and hood's eyes glow, the hat's halo sparkles, and light
 sweeps across the polished metal of the crown helm, hornhelm and visor.
 
 ### Focused rings

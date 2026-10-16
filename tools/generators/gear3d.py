@@ -240,6 +240,30 @@ def model(style, extras, main, light, accent, frame):
                   P.box((0, -1, 20), (1.8, 6.0, 4.5), Material(accent, gloss=0.8), group="fin"),
                   P.ell((0, -9.6, 12.2), (1.6, 0.8, 1.5), gem, group="gem")]
         parts += _mirror(lambda s: [P.ell((s * 11, -1, 12), (4.0, 1.2, 1.8), trim, P.turn_y(-s * 0.5), group="wing%d" % s)])
+    elif style == "rootcrown":
+        bark = Material(light, "wood")
+        old = Material(main, "wood")
+        leaf = Material("5a9a3a", "leaf")
+        parts.append(P.ell((0, 2, 8), (7, 6, 7.5), VOID, group="hollow"))
+        parts.append(P.ell((0, 0.5, 3.2), (10.2, 9.2, 3.0), old, group="band"))
+        for index, angle in enumerate(range(-180, 180, 45)):
+            a = math.radians(angle + 22)
+            cx, cy = math.cos(a), math.sin(a)
+            front = cy < -0.3
+            sway = 1.4 if index % 2 else -1.4
+            top = 19.5 - (2.5 if front else 0)
+            path = [(9 * cx, 9 * cy, 3), (9.4 * cx + sway * 0.3, 9.4 * cy, 8), (8.8 * cx - sway * 0.4, 8.8 * cy, 12.5),
+                    (10.2 * cx + sway, 10.2 * cy, top - 3), (11.6 * cx + sway * 0.4, 11.2 * cy, top),
+                    (10.4 * cx - sway * 0.8, 10.4 * cy, top + 2)]
+            parts += tube(path, 2.3 if not front else 1.9, 0.7, bark if index % 2 else old, group="root%d" % index)
+            for t, (x, y, z) in enumerate(path[1:5]):
+                if (index + t) % 2 == 0:
+                    parts.append(P.ell((x * 1.15, y * 1.15, z + 0.4), (2.2, 1.4, 1.3), leaf, group="leaf%d%d" % (index, t)))
+        glow = 0.5 + 0.5 * math.cos(frame * math.tau / ANIM_FRAMES)
+        ice = emissive(_hex(C._shift(C._hex(accent), -0.22 + 0.16 * glow, 0.0, 0.0)))
+        parts += spike((0, -9.6, 4.5), (0, -10.6, 11.5), 2.0, ice, group="crystal")
+        parts += spike((-2.0, -9.2, 5), (-3.8, -10.0, 9.5), 1.2, ice, group="crystal")
+        parts += spike((2.0, -9.2, 5), (3.8, -10.0, 9.5), 1.2, ice, group="crystal")
     elif style == "nimbus":
         cloth = Material(main, "cloth")
         parts.append(P.cyl((0, 0, 0.5), 13, 1.8, cloth, group="brim"))

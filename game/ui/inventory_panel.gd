@@ -30,7 +30,7 @@ const BACKPACK_COLUMNS: int = 5
 const LOCKED_TOOLTIP: String = "Locked: finish a town hunting task for a bigger pack"
 const STAT_LABELS: Dictionary = {
 	"health": "Health", "mana": "Mana", "attack": "Attack", "defense": "Defense", "magic_defense": "Magic def.", "critical": "Critical",
-	"regen": "Regen", "healing": "Healing",
+	"regen": "Regen", "healing": "Healing", "frost": "Frost damage",
 }
 
 var game: Node
@@ -324,7 +324,7 @@ func item_tooltip(kind: String) -> String:
 			lines.append("%s  ·  tier %d  ·  level %d+  ·  %s" % [
 				"%s %s" % [grade[0], slot_name] if not grade.is_empty() else slot_name.capitalize(), item["level"], item["level"], who])
 	for stat: String in item["stats"]:
-		lines.append("%+d %s%s" % [item["stats"][stat], STAT_LABELS[stat], "%" if stat == "critical" else ""])
+		lines.append("%+d%s %s" % [item["stats"][stat], "%" if stat in ["critical", "frost"] else "", STAT_LABELS[stat]])
 	if not item["slot"].is_empty() and not World.is_bag(kind):
 		var refused: String = requirement_for(kind)
 		if not refused.is_empty():

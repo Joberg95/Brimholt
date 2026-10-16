@@ -918,8 +918,9 @@ static func stats(level: int, equipment: Dictionary, vocation: String = Balance.
 		var kind: Variant = equipment.get(slot, "")
 		if typeof(kind) == TYPE_STRING and requirement_error(kind, level, vocation).is_empty():
 			var bonus: Dictionary = ITEMS[kind]["stats"]
+			# Gear-only stats (Combat.ELEMENT_STATS: frost damage) start from nothing.
 			for stat: String in bonus:
-				result[stat] += bonus[stat]
+				result[stat] = result.get(stat, 0) + bonus[stat]
 	return result
 
 

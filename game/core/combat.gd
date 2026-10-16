@@ -417,8 +417,8 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	player["mana"] -= cost
 	player["cooldowns"][spell] = now + definition["cooldown"]
 	player["groups"][definition["group"]] = now + Spells.GROUP_SECONDS[definition["group"]]
-	var power: float = Spells.ranked_power(spell, int(player["spell_ranks"].get(spell, 1)))
 	var element: String = Spells.element_of(spell)
+	var power: float = Spells.ranked_power(spell, int(player["spell_ranks"].get(spell, 1))) * element_bonus(limits, element)
 	match definition["kind"]:
 		"target":
 			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
@@ -462,6 +462,16 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 					_heal(friend, amount, events, id, now)
 	events.append({"kind": "player", "id": id})
 	return {"ok": true, "events": events}
+
+
+## Gear stats that raise one element's spell and rune damage by a percentage (the frost of a
+## druid's crown), by element (Spells.ELEMENTS, rune elements).
+const ELEMENT_STATS: Dictionary = {"frost": "frost"}
+
+
+## The damage factor gear gives spells and runes of `element`: 1.09 for +9% frost.
+static func element_bonus(stats: Dictionary, element: String) -> float:
+	return 1.0 + float(stats.get(ELEMENT_STATS.get(element, ""), 0)) / 100.0
 
 
 func _enemies_near(id: int, center: Vector2i, radius: int) -> Array[int]:
@@ -628,7 +638,7 @@ func use_rune(id: int, kind: Variant, now: float) -> Dictionary:
 	player["backpack"][slot] = World.make_entry(kind, left) if left > 0 else ""
 	player["groups"]["rune"] = now + Spells.GROUP_SECONDS["rune"]
 	var events: Array = [{"kind": "player", "id": id}]
-	var base: float = Balance.geared_attack(player["level"])
+	var base: float = Balance.geared_attack(player["level"]) * element_bonus(world.player_stats(id), String(item["rune"]))
 	var center: Vector2i = creature(target)["cell"]
 	_missile(player["cell"], center, rune["color"], events)
 	var struck: Array[int] = []

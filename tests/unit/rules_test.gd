@@ -1586,12 +1586,20 @@ func _showpiece_helmet_checks() -> void:
 			and item["stats"].get(focus, 0) > plain.get(focus, 0) and item["stats"]["defense"] < plain["defense"],
 			"%s trades some defense for %s and drops from one monster" % [kind, focus])
 		check(SpriteArt.GEAR.has(kind), "%s has a worn sheet" % kind)
-	check(count == 8, "eight showpiece helmets drop from monsters")
+	check(count == 9, "nine showpiece helmets drop from monsters")
+	# The Rootbound crown: a druid's healing crown that adds 9% to frost spells and runes.
+	var crown: Dictionary = World.ITEMS["rootbound_crown"]
+	check(crown["armor"] == "leather" and crown["stats"].get("frost", 0) == 9 and crown["stats"].get("healing", 0) > 0,
+		"the Rootbound crown gives healing and 9% frost damage")
+	var worn: Dictionary = World.stats(45, {"helmet": "rootbound_crown"}, "druid")
+	check(worn.get("frost", 0) == 9 and is_equal_approx(Combat.element_bonus(worn, "frost"), 1.09)
+		and Combat.element_bonus(worn, "nature") == 1.0 and Combat.element_bonus(World.stats(45, {}, "druid"), "frost") == 1.0,
+		"frost damage gear raises frost spells and runes only")
 	for kind: String in World.ITEMS:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 8, "the eight showpiece helmets move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 9, "the nine showpiece helmets move in the inventory")
 
 
 func _ring_checks() -> void:
@@ -1685,7 +1693,8 @@ func _slot_and_stat_checks() -> void:
 		var item: Dictionary = World.ITEMS[kind]
 		check(item["slot"] in ["", "container"] or item["slot"] in World.SLOT_TYPES.values(), "item slot type is known")
 		for stat: String in item["stats"]:
-			check(stat in Balance.STATS and typeof(item["stats"][stat]) == TYPE_INT, "item stat is known")
+			check((stat in Balance.STATS or stat in Combat.ELEMENT_STATS.values()) and typeof(item["stats"][stat]) == TYPE_INT,
+				"item stat is known")
 	check(World.fits("garnet_ring", "ring_1") and World.fits("garnet_ring", "ring_2"), "rings fit both ring slots")
 	check(not World.fits("garnet_ring", "necklace") and not World.fits("glowcap", "charm"), "wrong slot types rejected")
 	check(World.fits("silverleaf_cape", "cape") and not World.fits("silverleaf_cape", "armor"), "capes fit the cape slot")

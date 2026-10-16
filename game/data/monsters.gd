@@ -232,7 +232,7 @@ const LOOT: Dictionary = {
 		["drakefang_greatsword", 0.012], ["drakescale_bulwark", 0.015], ["emberwing_cape", 0.015]],
 	"rime_titan": [["rime_core", 0.5], ["health_potion", 0.25], ["mana_potion", 0.25], ["rune_shard", 0.05], ["frost_rune", 0.12],
 		["rimeguard_coif", 0.015], ["rimeguard_hauberk", 0.012], ["rimeguard_chausses", 0.015], ["rimeguard_striders", 0.015],
-		["rimestring_longbow", 0.012], ["rimeheart_ring", 0.015]],
+		["rimestring_longbow", 0.012], ["rimeheart_ring", 0.015], ["rootbound_crown", 0.012]],
 	"barrow_lich": [["lich_phylactery", 0.5], ["health_potion", 0.25], ["mana_potion", 0.25], ["rune_shard", 0.05], ["lightning_rune", 0.12],
 		["gravecall_cowl", 0.015], ["gravecall_robe", 0.012], ["gravecall_leggings", 0.015], ["gravecall_slippers", 0.015],
 		["gravecall_wand", 0.012], ["gravecall_grimoire", 0.015], ["gravecall_amulet", 0.015]],

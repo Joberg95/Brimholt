@@ -145,6 +145,9 @@ static func load_catalog() -> Dictionary:
 				var bonus: float = float(entry.get("bonus", RELIC_BONUS)) if item.has("glow") \
 					else QUEST_BONUS if item.has("quest") else MYTHIC_BONUS
 				stats = with_bonus(stats, bonus)
+		# "extra" stats add on top of the derived ones (a crown's frost damage).
+		for stat: String in entry.get("extra", {}):
+			stats[stat] = int(stats.get(stat, 0)) + int(entry["extra"][stat])
 		item["stats"] = stats
 		catalog[String(entry["id"])] = item
 	return catalog
