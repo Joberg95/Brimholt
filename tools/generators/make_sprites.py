@@ -1227,6 +1227,7 @@ WEAPON_GRIP = (32, 42)
 def weapon_model(kind):
     """Original weapon construction about a shared grip, reused for icons and worn poses."""
     shape, extras = look(kind)
+    shape = AXE_WORN.get(shape, shape)
     palette, accent = tones(kind)
     light, main, dark = palette
     steel = blend(rgba("929fa1"), main, 0.28)
@@ -2317,10 +2318,13 @@ HELM_WORN = {"fangmask": "greathelm", "dreadmask": "greathelm", "hornhelm": "hel
 # details their look names (furcuff, wings, blaze, bloom, glow, trim, spikes).
 BOOT_WORN = {"wingboots": "boots", "furboots": "boots", "flameboots": "sabatons", "frostboots": "slippers",
              "vialboots": "boots", "scaleboots": "sabatons", "bloomboots": "boots"}
-SHOWPIECE_STYLES = tuple(HELM_WORN) + tuple(BOOT_WORN)
+# Showpiece axes (gear3d.axe) are held as their icon rebuilt into a weapon (painted_held); their
+# generated fallback model is the plain axe.
+AXE_WORN = {style: "axe" for style in gear3d.AXE_STYLES}
+SHOWPIECE_STYLES = tuple(HELM_WORN) + tuple(BOOT_WORN) + tuple(AXE_WORN)
 # Styles that move on their own: flames, a halo, glowing eyes, beating wings, glowing flowers and vials.
 SHOWPIECE_ALIVE = ("fangmask", "dreadmask", "lanternhelm", "nimbus", "cobra", "rootcrown", "wingboots", "flameboots",
-                   "frostboots", "vialboots", "bloomboots")
+                   "frostboots", "vialboots", "bloomboots", "venomaxe", "sanguineaxe", "starsteelaxe")
 ANIM_FRAMES = 12
 
 

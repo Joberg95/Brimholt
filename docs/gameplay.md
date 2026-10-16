@@ -168,6 +168,24 @@ the wearer's frost spells (Frost bolt, Hailstorm) and frost runes. Their icons m
 visage's spikes burn, the crown's frost crystal pulses, the masks' and hood's eyes glow, the hat's halo sparkles, and light
 sweeps across the polished metal of the crown helm, hornhelm and visor.
 
+### Showpiece axes
+
+Six Warrior axes drop from hunts (1% a kill, at or above their level). They are hunting weapons on
+the shared budget: a focus (`Items.WEAPON_FOCUS`) keeps nine tenths of the tier's attack and adds
+one bonus.
+
+| Axe | Level | Focus | Dropped by |
+| --- | --- | --- | --- |
+| Barbarian's hewer | 25 | a cape's defense | barbarian raiders |
+| Amberglass axe | 30 | +3% critical | sand raiders |
+| Venomfang axe | 35 | +4% movement speed | marsh witches |
+| Seraphic waraxe | 40 | regeneration | mire stalkers |
+| Sanguine battleaxe | 45 | health | void wraiths |
+| Starsteel chopper | 45 | +3% critical | obsidian golems |
+
+The venomfang's serpent eyes and the sanguine axe's heart glow, starlight glints along the
+chopper, and light sweeps across the amberglass and seraphic blades.
+
 ### Showpiece boots
 
 Seven pairs of boots drop from hunts (about 1% a kill, at or above their level) with stats no

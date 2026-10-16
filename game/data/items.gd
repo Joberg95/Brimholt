@@ -47,6 +47,12 @@ const RING_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "reg
 ## or half an amulet's health.
 const HELMET_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "regen"]
 const HELMET_FOCUS_DEFENSE: float = 0.85
+## Focused weapons (showpiece axes) keep WEAPON_FOCUS_ATTACK of their attack and add one bonus:
+## a ring's critical plus one, half an amulet's health, an armor's regen, a cape's defense, or
+## WEAPON_FOCUS_SPEED percent movement speed.
+const WEAPON_FOCUS: Array[String] = ["critical", "health", "regen", "defense", "speed"]
+const WEAPON_FOCUS_ATTACK: float = 0.9
+const WEAPON_FOCUS_SPEED: int = 4
 ## Magic defense of capes, amulets, and books, as shares of their tier's set defense.
 const MAGIC_SHARE: Dictionary = {"cape": 0.15, "necklace": 0.10, "book": 0.10}
 ## Critical chance (percent) on Hunters' and Sorcerers' weapons: CRITICAL_WEAPON, plus one more
@@ -200,6 +206,19 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 				weapon["critical"] = CRITICAL_WEAPON + (tier + 1) / 2
 			elif vocation == "druid":
 				weapon["healing"] = maxi(1, roundi(reference_health(level) * ROD_HEALING))
+			if item.has("focus"):
+				weapon["attack"] = maxi(floor_attack, roundi(weapon["attack"] * WEAPON_FOCUS_ATTACK))
+				match String(item["focus"]):
+					"critical":
+						weapon["critical"] = weapon.get("critical", 0) + CRITICAL_RING + 1
+					"health":
+						weapon["health"] = roundi(reference_health(level) * AMULET_HEALTH * 0.5)
+					"regen":
+						weapon["regen"] = maxi(1, roundi(reference_health(level) * ARMOR_REGEN))
+					"defense":
+						weapon["defense"] = _defense(level, "cape")
+					"speed":
+						weapon["speed"] = WEAPON_FOCUS_SPEED
 			return weapon
 		"helmet", "armor", "legs", "boots":
 			var piece: Dictionary = _armor(level, item["slot"], item.get("armor", ""))

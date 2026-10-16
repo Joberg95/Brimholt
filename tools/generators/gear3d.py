@@ -12,7 +12,7 @@ import math
 
 import creatures as C
 import props as P
-from creatures import Material, emissive, add, sub, mul, dot, norm, basis
+from creatures import Material, emissive, add, sub, mul, dot, norm, basis, IDENT
 
 TILT = math.radians(22)
 UP = (0.0, math.sin(TILT), math.cos(TILT))
@@ -28,7 +28,7 @@ VOID = Material("1c1418")
 IVORY = C.IVORY
 GOLD = Material("d8aa3c", gloss=0.9)
 DARK_GOLD = Material("a8782a", gloss=0.7)
-STEEL = Material("aab4bc", gloss=1.0)
+STEEL = Material("9aa4ac", gloss=1.0)
 IRON = Material("5e6268", gloss=0.6)
 BRASS = Material("b88a3a", gloss=0.8)
 FLAME = emissive("ffa83a")
@@ -74,6 +74,58 @@ def _scaled(parts, k):
     return grown
 
 
+def slab(points, thickness, material, group=None, bevel=2.0):
+    """A flat plate in the x-z plane (y is its thickness) whose outline is `points` [(x, z)]:
+    blades and wings. Its face is bevelled within `bevel` of the outline, so edges catch the light."""
+    centre = (sum(x for x, _ in points) / len(points), sum(z for _, z in points) / len(points))
+    return {"kind": "slab", "c": (0.0, 0.0, 0.0), "R": IDENT, "m": material, "g": group, "grain": 2,
+            "poly": points, "t": thickness, "bevel": bevel, "centre": centre}
+
+
+def _inside(poly, x, z):
+    inside = False
+    for (ax, az), (bx, bz) in zip(poly, poly[1:] + poly[:1]):
+        if (az > z) != (bz > z) and x < (bx - ax) * (z - az) / (bz - az) + ax:
+            inside = not inside
+    return inside
+
+
+def _edge(poly, x, z):
+    """(distance, outward unit (dx, dz)) from (x, z) to the nearest outline edge."""
+    best = (1e9, (0.0, 0.0))
+    for (ax, az), (bx, bz) in zip(poly, poly[1:] + poly[:1]):
+        ex, ez = bx - ax, bz - az
+        length = ex * ex + ez * ez or 1e-9
+        t = max(0.0, min(1.0, ((x - ax) * ex + (z - az) * ez) / length))
+        px, pz = ax + ex * t, az + ez * t
+        d = math.hypot(x - px, z - pz)
+        if d < best[0]:
+            out = (px - x, pz - z)
+            norm_out = math.hypot(*out) or 1e-9
+            best = (d, (out[0] / norm_out, out[1] / norm_out))
+    return best
+
+
+def _hit(part, origin, direction):
+    if part["kind"] != "slab":
+        return P._hit(part, origin, direction)
+    rotation = part["R"]
+    o = P._local(rotation, sub(origin, part["c"]))
+    d = P._local(rotation, direction)
+    if abs(d[1]) < 1e-9:
+        return None
+    t = (-part["t"] - o[1]) / d[1]
+    q = add(o, mul(d, t))
+    if not _inside(part["poly"], q[0], q[2]) or any(_inside(hole, q[0], q[2]) for hole in part.get("holes", ())):
+        return None
+    distance, (ox, oz) = _edge(part["poly"], q[0], q[2])
+    # A bevel round the outline and a slight bulge, so light falls across the face.
+    tilt = max(0.0, 1.0 - distance / part["bevel"]) * 1.4
+    cx, cz = part["centre"]
+    n = norm((ox * tilt + (q[0] - cx) * 0.07, -1.0, oz * tilt + (q[2] - cz) * 0.07))
+    return t, norm(P._world(rotation, n)), q
+
+
 def render(parts):
     """Rows of RGBA or None: the parts seen by the icon camera."""
     gx, gy = ORIGIN
@@ -84,7 +136,7 @@ def render(parts):
             sx = px + 0.5 - gx
             start = (sx, su * UP[1] - 80 * VIEW[1], su * UP[2] - 80 * VIEW[2])
             for index, part in enumerate(parts):
-                found = P._hit(part, start, VIEW)
+                found = _hit(part, start, VIEW)
                 if found is not None and found[0] > 0 and (hits[py][px] is None or found[0] < hits[py][px][0]):
                     point = add(start, mul(VIEW, found[0]))
                     group = part["g"] if part["g"] is not None else index
@@ -381,10 +433,165 @@ def boots(style, main, light, accent, frame):
 BOOT_STYLES = ("wingboots", "furboots", "flameboots", "frostboots", "vialboots", "scaleboots", "bloomboots")
 
 
+# ---------------------------------------------------------------- axes
+# Built upright (haft along z, the blade towards +x), then laid on the diagonal of the icon: head
+# top-left, haft down to the bottom-right, the blade's edge facing up and out.
+
+AXE_STYLES = ("hewer", "amberaxe", "venomaxe", "seraphaxe", "sanguineaxe", "starsteelaxe")
+AXE_TILT = math.radians(42)
+AXE_SHIFT = (9.5, 0.0, 0.3)
+
+
+def _laid(parts):
+    """The upright parts turned into the icon's diagonal (about the y axis) and moved into frame."""
+    c, s = math.cos(AXE_TILT), math.sin(AXE_TILT)
+    turn = lambda v: (v[0] * c - v[2] * s, v[1], v[0] * s + v[2] * c)
+    laid = []
+    for part in parts:
+        moved = dict(part, c=add(turn(part["c"]), AXE_SHIFT), R=tuple(turn(axis) for axis in part["R"]))
+        laid.append(moved)
+    return laid
+
+
+# Blade outlines in the upright frame (socket at x 0, z about 20, the edge towards +x), small
+# like a classic axe icon: the head about a third of the length.
+CRESCENT = [(1.0, 22.6), (3.0, 24.4), (5.4, 26.0), (7.6, 26.4), (8.7, 24.2), (9.1, 20.6), (8.7, 17.0),
+            (7.6, 14.8), (5.4, 15.2), (3.0, 16.8), (1.0, 18.6)]
+CRESCENT_EDGE = slice(2, 9)
+BEARD = [(1.0, 22.6), (4.4, 23.9), (7.4, 24.5), (8.7, 22.4), (8.9, 18.4), (8.1, 14.6), (6.5, 11.5), (5.0, 10.9),
+         (4.4, 13.4), (4.0, 16.8), (2.8, 18.4), (1.0, 18.8)]
+BEARD_EDGE = slice(1, 8)
+FEATHER = [(0.0, 0.0), (3.0, 1.2), (6.5, 1.0), (8.5, 0.0), (6.5, -0.9), (3.0, -1.0)]
+BRIGHT = Material("d4dce2", gloss=1.0)
+DARK_STEEL = Material("6e767e", gloss=0.8)
+
+
+def _mirrored(points):
+    return [(-x, z) for x, z in reversed(points)]
+
+
+def _inset(points, k, toward=None):
+    cx = sum(x for x, _ in points) / len(points) if toward is None else toward[0]
+    cz = sum(z for _, z in points) / len(points) if toward is None else toward[1]
+    return [(cx + (x - cx) * k, cz + (z - cz) * k) for x, z in points]
+
+
+def _ring(cx, cz, r, sides=8):
+    return [(cx + r * math.cos(a * math.tau / sides), cz + r * math.sin(a * math.tau / sides)) for a in range(sides)]
+
+
+def _edge_strip(outline, part, width=0.9):
+    """A thin band along part of the outline (the cutting edge), pulled `width` towards the middle."""
+    arc = outline[part]
+    cx = sum(x for x, _ in outline) / len(outline)
+    cz = sum(z for _, z in outline) / len(outline)
+    inner = []
+    for x, z in arc:
+        d = math.hypot(x - cx, z - cz) or 1e-9
+        inner.append((x - (x - cx) / d * width, z - (z - cz) / d * width))
+    return arc + list(reversed(inner))
+
+
+def _feather(angle, length, origin):
+    c, s_ = math.cos(angle), math.sin(angle)
+    k = length / 8.5
+    return [(origin[0] + (x * c - z * s_) * k, origin[1] + (x * s_ + z * c) * k) for x, z in FEATHER]
+
+
+def _head(outline, edge_part, body, inlay=None, holes=(), side=1, rim=None):
+    """A blade: steel (or `body`) plate, a bright cutting edge, an optional coloured inlay and gold
+    rim; mirrored for side -1."""
+    if side < 0:
+        flip = lambda pts: _mirrored(pts)
+        holes = [flip(h) for h in holes]
+    else:
+        flip = lambda pts: pts
+    g = "head%d" % side
+    parts = []
+    if rim is not None:
+        parts.append(slab(flip(_inset(outline, 1.12, (0.5, 20.6))), 0.55, rim, group=g + "rim"))
+    blade = slab(flip(outline), 0.7, body, group=g)
+    blade["holes"] = list(holes)
+    parts.append(blade)
+    parts.append(slab(flip(_edge_strip(outline, edge_part)), 0.8, BRIGHT, group=g + "edge", bevel=0.8))
+    if inlay is not None:
+        shape = _inset(outline, 0.62, (2.2, 20.6))
+        parts.append(slab(flip(shape), 0.85, inlay, group=g + "inlay", bevel=1.0))
+    return parts
+
+
+def axe(style, main, light, accent, frame):
+    tint = Material(main, gloss=0.85)
+    gem = Material(accent, gloss=1.0)
+    wood = Material("5c3c24", "wood")
+    wrap = Material("3e2c20", "cloth")
+    gold = GOLD
+    glow = 0.5 + 0.5 * math.cos(frame * math.tau / ANIM_FRAMES)
+    parts = [P.cyl((0, 0, 0.5), 0.8, 22.5, wood, group="haft"),
+             P.cyl((0, 0, 1.0), 1.0, 4.5, wrap, group="grip"),
+             P.ell((0, 0, 0.4), (1.4, 1.4, 1.2), gem if style != "hewer" else DARK_STEEL, group="pommel"),
+             P.cyl((0, 0, 15.6), 1.05, 1.0, gold if style != "hewer" else DARK_STEEL, group="ferrule")]
+    if style == "hewer":
+        parts += [P.box((0, 0, 20.6), (1.5, 1.2, 2.6), DARK_STEEL, group="socket")]
+        parts += _head(BEARD, BEARD_EDGE, STEEL)
+        parts.append(slab([(-1.0, 22.0), (-4.0, 21.0), (-1.0, 19.4)], 0.7, DARK_STEEL, group="backspike"))
+        parts += spike((0, 0, 23.0), (0, 0, 26.5), 0.9, DARK_STEEL, group="spike")
+        parts.append(P.cyl((0, 0, 9.5), 0.95, 1.0, wrap, group="band"))
+    elif style == "amberaxe":
+        amber = Material(accent, gloss=1.0)
+        parts += [P.box((0, 0, 20.6), (1.7, 1.3, 2.9), gold, group="socket"),
+                  P.ell((0, -1.3, 20.6), (0.9, 0.6, 0.9), Material(light, gloss=1.0), group="stud")]
+        parts += _head(CRESCENT, CRESCENT_EDGE, STEEL, inlay=amber, rim=gold)
+        parts.append(slab([(-1.0, 22.6), (-3.6, 23.6), (-4.4, 20.6), (-3.6, 17.6), (-1.0, 18.6)], 0.7, amber, group="back"))
+    elif style == "venomaxe":
+        scales = Material(main, "scales", gloss=0.6)
+        parts += [P.box((0, 0, 20.4), (1.6, 1.3, 2.8), scales, group="socket")]
+        parts += _head(CRESCENT, CRESCENT_EDGE, DARK_STEEL, inlay=tint)
+        parts.append(slab([(7.4, 15.4), (9.6, 11.0), (8.2, 15.8)], 0.8, IVORY, group="fang"))
+        parts += tube([(-1.2, 0, 19.5), (-2.8, -0.4, 21.5), (-2.8, -0.8, 24.0), (-1.4, -0.8, 25.2)], 1.2, 1.1, scales, group="serpent")
+        parts.append(P.ell((-0.6, -1.0, 25.6), (1.6, 1.3, 1.1), scales, group="serpent"))
+        parts += _eyes(accent, frame, [(-0.9, -2.2, 25.9)], (0.5, 0.4, 0.5))
+        for z in (4.5, 7.5, 10.5, 13.5):
+            parts.append(P.ell((0, -0.7, z), (1.15, 0.5, 0.8), scales, group="coil"))
+    elif style == "seraphaxe":
+        silver = Material(main, gloss=1.0)
+        parts += [P.box((0, 0, 20.6), (1.6, 1.3, 3.0), gold, group="socket"),
+                  P.ell((0, -1.3, 20.6), (0.9, 0.6, 0.9), gem, group="stud")]
+        for side in (1, -1):
+            for k, (angle, length) in enumerate(((0.6, 8.5), (0.2, 9.5), (-0.2, 8.5), (-0.6, 6.5))):
+                feather = _feather(angle, length, (1.0, 20.6))
+                if side < 0:
+                    feather = _mirrored(feather)
+                parts.append(slab(feather, 0.6 + 0.1 * k, silver if k % 2 == 0 else BRIGHT, group="wing%d%d" % (side, k), bevel=0.9))
+    elif style == "sanguineaxe":
+        crimson = Material(main, gloss=0.8)
+        hook = [(-1.0, 22.6), (-3.2, 24.2), (-5.2, 26.6), (-4.0, 22.8), (-2.8, 20.0), (-1.0, 18.8)]
+        parts += [P.box((0, 0, 20.4), (1.7, 1.3, 3.1), gold, group="socket")]
+        parts += _head(CRESCENT, CRESCENT_EDGE, crimson, holes=[_ring(4.4, 20.6, 1.2)], rim=gold)
+        parts.append(slab(hook, 0.7, crimson, group="hook"))
+        pulse = emissive(_hex(C._shift(C._hex(accent), -0.2 + 0.2 * glow, 0, 0)))
+        parts.append(P.ell((0, -1.4, 20.4), (1.2, 0.7, 1.2), pulse, group="heart"))
+    elif style == "starsteelaxe":
+        teal = Material(main, gloss=1.0)
+        parts += [P.box((0, 0, 20.6), (1.7, 1.3, 2.9), gold, group="socket"),
+                  P.ell((0, -1.3, 20.6), (0.9, 0.6, 0.9), gem, group="stud")]
+        for side in (1, -1):
+            parts += _head(CRESCENT, CRESCENT_EDGE, STEEL, inlay=teal, rim=gold, side=side)
+        parts += spike((0, 0, 23.2), (0, 0, 27.0), 0.9, gold, group="tip")
+        sparkle = frame % ANIM_FRAMES
+        spots = ((6.8, -1.4, 24.5), (-6.0, -1.4, 16.5), (5.0, -1.4, 16.5), (-7.0, -1.4, 23.5))
+        if sparkle < 8:
+            x, y, z = spots[sparkle // 2]
+            parts.append(P.ell((x, y, z), (0.8, 0.5, 0.8), emissive("ffffff"), group="spark"))
+    return _laid(parts)
+
+
 def icon(kind, look, colors, frame=0):
-    """RGBA rows of a 32x32 icon for a showpiece helmet or pair of boots."""
+    """RGBA rows of a 32x32 icon for a showpiece helmet, pair of boots, or axe."""
     style, *extras = look.split("+")
     main, light, accent = colors
     if style in BOOT_STYLES:
         return render(_scaled(boots(style, main, light, accent, frame), BOOT_SCALE))
+    if style in AXE_STYLES:
+        return render(axe(style, main, light, accent, frame))
     return render(model(style, set(extras), main, light, accent, frame))

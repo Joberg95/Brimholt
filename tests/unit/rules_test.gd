@@ -1631,7 +1631,19 @@ func _showpiece_helmet_checks() -> void:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 15, "nine showpiece helmets and six pairs of boots move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 20, "showpiece helmets, six pairs of boots, and five axes move in the inventory")
+	var axes: int = 0
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] != "main_hand" or not item.get("loot_only", false) or not item["look"] in [
+				"hewer", "amberaxe", "venomaxe", "seraphaxe", "sanguineaxe", "starsteelaxe"]:
+			continue
+		axes += 1
+		var plain: Dictionary = Items.tier_stats({"slot": "main_hand", "level": item["level"], "vocations": ["knight"], "look": "axe"})
+		check(item["vocations"] == ["knight"] and item["focus"] in Items.WEAPON_FOCUS and item["stats"]["attack"] <= plain["attack"]
+			and item["stats"].size() == 2 and SpriteArt.GEAR.has(kind),
+			"%s is a Warrior's axe trading a tenth of its attack for its focus" % kind)
+	check(axes == 6, "six showpiece axes")
 	_showpiece_boot_checks()
 
 
@@ -2454,8 +2466,8 @@ func _hunting_weapon_checks() -> void:
 			{"type": "backpack", "index": 0}, 3.0)["ok"] and player["backpack"][0] == kind,
 			"%s unequips without loss" % kind)
 		check(CharacterStore.valid_entry(kind), "%s survives character save validation" % kind)
-	check(weapons.size() == 16 and vocations == {"knight": 9, "paladin": 3, "sorcerer": 2, "druid": 2},
-		"sixteen hunting weapons cover all four vocations")
+	check(weapons.size() == 22 and vocations == {"knight": 15, "paladin": 3, "sorcerer": 2, "druid": 2},
+		"twenty-two hunting weapons cover all four vocations")
 	check(tiers.size() == 10, "hunting weapons span every ordinary gear tier")
 	var combat := Combat.new(world, 906)
 	var spawns: Array = World.MONSTER_SPAWNS.duplicate()
