@@ -10,7 +10,7 @@
       "Bags: slot container, slots (how many it holds), price; worn in the three bag slots, their slots extend the backpack. sold: vendors stock it; the others are crafted (Tailoring).",
       "Professions (game/data/professions.gd): gathered resources (looks ore, log, herb, fish) have a value like materials. Crafted potions have no price (never vendor stock) and may share a timer with another potion. Food: eat {regen: extra share of health and mana regeneration, seconds}.",
       "Vendor prices of equipment are derived in items.gd (gear_price); vendors buy unbound equipment for a quarter of it and materials for their value.",
-      "loot_only weapons are source-specific monster drops, excluded from vendor stock and the generic tier pool. Their stats still derive from tier and vocation.",
+      "loot_only items are source-specific monster drops (hunting weapons, and the frost isles' notable armor), excluded from vendor stock and the generic tier pool. Their stats still derive from tier and vocation.",
       "Mythic gear: unbound level-50 pieces without a glow, dropped only by the level-50 elite farm monsters (Monsters.LOOT); stats derive at level 50 with a 1.05 bonus (relics 1.15). An optional template names the painted icon tools/generators/derive_icons.py recolours."
   ],
   "items": [
@@ -448,6 +448,18 @@
     {"id": "rime_pelt", "name": "Rime pelt", "look": "pelt", "colors": ["6a7a88", "a8c0d0", "e8f4fa"], "value": 150},
     {"id": "glacial_shard", "name": "Glacial shard", "look": "crystal", "colors": ["3a5a78", "6aa0c8", "c8f0ff"], "value": 165},
     {"id": "hoarfrost_horn", "name": "Hoarfrost horn", "look": "fang", "colors": ["6a8aa0", "c8e0f0", "ffffff"], "value": 900},
+    {"id": "snow_wolf_pelt", "name": "Snow wolf pelt", "look": "pelt", "colors": ["8a949c", "d0d8de", "f4f8fa"], "value": 80},
+    {"id": "walrus_tusk", "name": "Walrus tusk", "look": "fang", "colors": ["8a7a5a", "e0d4b4", "fff8e8"], "value": 95},
+    {"id": "raider_torc", "name": "Raider torc", "look": "coil", "colors": ["6a4a2a", "c89a4a", "f0d070"], "value": 100},
+    {"id": "crab_shell", "name": "Trench crab shell", "look": "scale", "colors": ["2a3a4a", "4a6a80", "a0c8e0"], "value": 110},
+    {"id": "icetide_scale", "name": "Icetide scale", "look": "scale", "colors": ["1e4a46", "3a7a74", "90e0d0"], "value": 120},
+    {"id": "shaman_pearl", "name": "Shaman's pearl", "look": "crystal", "colors": ["4a6a70", "a8d0d8", "f0fcff"], "value": 135},
+    {"id": "grimclaw_pincer", "name": "Grimclaw's pincer", "look": "fang", "colors": ["2a3a48", "5a7a90", "c8e0f0"], "value": 650},
+    {"id": "ice_shrimp", "name": "Ice shrimp", "look": "food", "colors": ["c86a4a", "f0a080", "f8e0d0"], "eat": {"regen": 0.4, "seconds": 900}},
+    {"id": "rimeskull_helm", "name": "Rimeskull helm", "slot": "helmet", "level": 35, "look": "greathelm+horns", "colors": ["d8d0bc", "f0ead8", "6a8aa0"], "armor": "plate", "loot_only": true},
+    {"id": "frostcrown_plate", "name": "Frostcrown plate", "slot": "armor", "level": 35, "look": "plate+trim", "colors": ["a83a2a", "e0b040", "f0e0a0"], "armor": "plate", "loot_only": true},
+    {"id": "rimerelic_blade", "name": "Rimerelic blade", "slot": "main_hand", "level": 35, "look": "greatsword+fuller", "colors": ["a8c0d0", "e8f4fc", "4a5a6a"], "vocations": ["knight"], "loot_only": true},
+    {"id": "glacier_robe", "name": "Glacier robe", "slot": "armor", "level": 35, "look": "robe+runes", "colors": ["3a6aa8", "8ac0f0", "e8f8ff"], "armor": "cloth", "loot_only": true},
     {"id": "lightning_rune", "name": "Lightning rune", "level": 40, "look": "runestone+sowilo", "colors": ["56545e", "78767e", "ffe060"], "value": 120, "rune": "lightning"}
   ]
 }

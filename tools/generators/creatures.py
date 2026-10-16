@@ -851,6 +851,20 @@ SPECIES = {
     "hoarfrost_jarl": (giant, dict(skin=M("a8c4d8"), cloth=M("5a6a80", "fur"), eye="a0f0ff", weapon="hammer",
                                    horn=M("e8f8ff", gloss=0.8), hands=M("7a98b0"), shards=M("c8f0ff", gloss=0.9),
                                    troll=True), (16, 5)),
+    "snow_wolf": (quadruped, dict(length=27, height=9.5, girth=6.6, head=4.8, snout=1.05, snout_width=0.42, leg=1.3,
+                                  ears="pointed", tail="bushy", body=M("d8e0e6", "fur"), belly=M("f4f8fa", "fur"),
+                                  ruff=M("eef2f6", "fur"), chest=1.12, neck=0.9, eye=emissive("8ad0ff"),
+                                  paw=M("8a96a0"), nose=M("2a3038")), (12, 3.5)),
+    "tusked_walrus": (quadruped, dict(length=28, height=4.5, girth=10, flat=0.8, head=6.4, snout=0.55, snout_width=0.75,
+                                      leg=1.2, spread=1.1, stride=1.6, ears="none", tail="short", body=M("7a5a44", "warts"),
+                                      belly=M("9a7a62", "warts"), nose=M("4a362a"), tusks=True, chest=1.2, neck=0.2,
+                                      eye=emissive("e8c060"), paw=M("4a3a2e")), (16, 5)),
+    "trench_crab": (spider, dict(body=M("4a6a80", "chitin", gloss=0.7), abdomen=M("3e5a6e", "chitin", gloss=0.6),
+                                 legs=M("34485a", "chitin"), eyes="e0f0ff", pincers=M("5a7a92", "chitin", gloss=0.7),
+                                 abdomen_size=0.55), (13, 4)),
+    "grimclaw": (spider, dict(body=M("3a5468", "chitin", gloss=0.8), abdomen=M("2e4658", "chitin", gloss=0.7),
+                              legs=M("243848", "chitin", gloss=0.5), eyes="ffb0a0", pincers=M("6a8aa0", "chitin", gloss=0.8),
+                              marking=M("c8e0f0", gloss=0.6), abdomen_size=0.6, scale=1.08), (15, 4.5)),
     "sylvaine": (wraith, dict(robe=M("5a3a80", "cloth"), hood=M("3a5a3a", "fur"), eyes="f0d0ff", claws=M("5a7a40"),
                               flowers=M("e888c0", gloss=0.3), antlers=M("8a6a48", "bone"), scale=1.05), (11, 3.5)),
 }
@@ -866,7 +880,8 @@ ZOOM = {"frostfang_wolf": 1.2, "greymaw": 1.0, "behemoth": 1.05, "cyclops": 1.25
         "thornscale_basilisk": 1.0, "rime_titan": 1.2, "barrow_lich": 1.4, "dire_bear": 1.05, "harpy": 1.15,
         "dune_scorpion": 1.4, "stone_troll": 1.25, "cave_troll": 1.2, "ogre_brute": 1.25, "ogre_smasher": 1.2,
         "gorvak": 1.1, "bog_troll": 1.2, "grotto_leech": 1.35, "drowned_abbess": 1.3, "magma_hound": 1.2,
-        "cinder_brute": 1.6, "frost_ogre": 1.2, "rime_stalker": 1.15, "glacial_golem": 1.6, "hoarfrost_jarl": 1.1}
+        "cinder_brute": 1.6, "frost_ogre": 1.2, "rime_stalker": 1.15, "glacial_golem": 1.6, "hoarfrost_jarl": 1.1,
+        "snow_wolf": 1.2, "tusked_walrus": 1.0, "trench_crab": 1.4, "grimclaw": 1.4}
 
 
 def frames(kind, direction, frame):

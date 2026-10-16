@@ -6,6 +6,8 @@ extends RefCounted
 
 const World = preload("res://game/core/world.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
+const Biomes = preload("res://game/data/biomes.gd")
+const Caves = preload("res://game/data/caves.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const FRAME: float = 64.0
 const FRAME_ANCHOR: Vector2 = Vector2(32, 40)
@@ -131,12 +133,22 @@ const CAVE_HOLE_TILE: int = 54
 const CELLAR_FLOOR_TILE: int = 55
 ## Kerb stones where a cobbled street meets grass, dirt, sand, or trees (north, east, south, west).
 const CURB_TILE: int = 59
-const CURBED: Array[String] = [".", ",", ":", "T", "K", "d", "m", "U"]
+const CURBED: Array[String] = [".", ",", ":", "T", "K", "d", "m", "U", "s", "P"]
 ## Bog mud of the swamp ("m"), four variants (make_sprites.py bog_tile).
 const BOG_TILE: int = 63
 ## Giant swamp mushrooms ("U"): 64x96 frames like the trees (make_sprites.py mushroom).
 const MUSHROOMS: Texture2D = preload("res://assets/sprites/mushrooms.png")
 const MUSHROOM_VARIANTS: int = 3
+## The frost isles (Biomes.ISLES): snow ground ("s", tiles 67-70), snowy streets (cobbles with snow
+## in the joints, 71-74), snow-laden firs ("P", 64x96 like the trees), and log walls: the house
+## wall shapes in timber under snow (log_walls.png). House floors there are planks.
+const SNOW_TILE: int = 67
+const SNOW_COBBLE_TILE: int = 71
+const FIRS: Texture2D = preload("res://assets/sprites/firs.png")
+const FIR_VARIANTS: int = 3
+const LOG_WALLS: Texture2D = preload("res://assets/sprites/log_walls.png")
+## The elite cave under the frost isles' sea ice, floored with snow (game/data/caves.gd).
+const ICE_CAVE: String = "rimewater_trench"
 ## Cellar walls: the house wall shapes (house_walls.png) in red-brown brick.
 const CELLAR_WALLS: Texture2D = preload("res://assets/sprites/cellar_walls.png")
 ## mountains.png: Tibia-style rock blocks for mountains ("L") and rock outcrops ("C" on the
@@ -277,7 +289,7 @@ static func _draw_wall_floor(canvas: CanvasItem, cell: Vector2i, dest: Rect2) ->
 	canvas.draw_texture_rect_region(TILES, dest, _tile_region(_floor_index(outside, cell, 0.0)))
 	if inside.is_empty():
 		inside = "="
-	var region: Rect2 = _tile_region(_floor_index(inside, cell, 0.0))
+	var region: Rect2 = _tile_region(_floor_index(inside, cell, 0.0, true))
 	for quarter: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
 		if World.ROOM_AT.has(cell + Vector2i(quarter.x, 0)) or World.ROOM_AT.has(cell + Vector2i(0, quarter.y)) \
 				or World.ROOM_AT.has(cell + quarter):
@@ -286,7 +298,8 @@ static func _draw_wall_floor(canvas: CanvasItem, cell: Vector2i, dest: Rect2) ->
 				Rect2(region.position + offset, Vector2(16, 16)))
 
 
-static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
+## The tile index of a floor; `indoors` marks a building's floor seen beside its wall.
+static func _floor_index(tile: String, cell: Vector2i, time: float, indoors: bool = false) -> int:
 	var index: int = GRASS_TILES[noise(cell, 1) % GRASS_TILES.size()]
 	if tile == ",":
 		index = DIRT_TILE + noise(cell, 2) % 4
@@ -296,6 +309,10 @@ static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
 		index = SAND_TILE + noise(cell, 4) % 4
 	elif tile == "=" and theme_at(cell) == "cellar":
 		index = CELLAR_FLOOR_TILE + noise(cell, 13) % 4
+	elif tile == "=" and Biomes.in_isles(cell):
+		index = PLANK_TILE + noise(cell, 6) % 2 if indoors or World.ROOM_AT.has(cell) else SNOW_COBBLE_TILE + noise(cell, 5) % 4
+	elif tile == "s" or tile == "P":
+		index = SNOW_TILE + noise(cell, 15) % 4
 	elif tile == "=" or tile == "W":
 		index = COBBLE_TILE + noise(cell, 5) % 4
 	elif tile == "d" or tile == "D" or tile == "O":
@@ -304,6 +321,9 @@ static func _floor_index(tile: String, cell: Vector2i, time: float) -> int:
 		index = obsidian_variant(cell)
 	elif tile == "L":
 		index = GRAVEL_TILE + noise(cell, 12) % 4
+	elif tile == "c" and Caves.at(cell) == ICE_CAVE:
+		# The Rimewater Trench lies under the sea ice: its floor is packed snow and ice.
+		index = SNOW_TILE + noise(cell, 15) % 4
 	elif tile == "c" or tile == "C" and not World.OVERWORLD.has_point(cell):
 		# Rock outcrops on the overworld stand on grass; cave rock in dungeons on cave floor.
 		index = CAVE_TILE + noise(cell, 11) % 4
@@ -339,6 +359,9 @@ static func draw_tree(canvas: CanvasItem, cell: Vector2i) -> void:
 	if tile_at(cell) == "U":
 		canvas.draw_texture_rect_region(MUSHROOMS, dest,
 			Rect2(Vector2(noise(cell, 7) % MUSHROOM_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
+		return
+	if tile_at(cell) == "P":
+		canvas.draw_texture_rect_region(FIRS, dest, Rect2(Vector2(noise(cell, 7) % FIR_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
 		return
 	var variant: int = noise(cell, 7) % TREE_VARIANTS
 	if tile_at(cell) == "D":
@@ -465,6 +488,8 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 static func wall_sheet(cell: Vector2i) -> Texture2D:
 	if tile_at(cell) != "#":
 		return WALLS
+	if Biomes.in_isles(cell):
+		return LOG_WALLS
 	return CELLAR_WALLS if theme_at(cell) == "cellar" else HOUSE_WALLS
 
 

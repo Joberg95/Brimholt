@@ -139,6 +139,17 @@ cave's region. Terrain is repainted the same way every run; existing camps and m
 places but take their monster, level, and size from the table, so edit the table and run it
 again, or move markers in Godot.
 
+**The frost isles** (`tools/generators/frost_isles.gd`, `make frost-isles`): three snowbound isles
+(`Biomes.ISLES`) in free grid space south of the mainland, behind 40 rows of open sea, so they
+are reached only by boat (Captain Torgrim in Hrimvik sails to Lastlight and Cinder Landing, and
+their boats sail back). They are painted in snow `s`, snow-laden firs `P`, and crags, joined by
+plank bridges; Hrimvik is built from the painter's `HOUSES`, `STREETS`, and `GATES` (walls never
+stand one tile apart, or Buildings reads the gap as a doorway). In the isles `#` draws as log
+walls, roofs are snowed over, house floors are planks, and streets snowy cobble. The world map
+shows the isles west of the mainland: `game/data/atlas.gd` lays out the sheets, the baker paints
+them so, and the map window converts every cell with `Atlas.to_map`. After editing the isles, run
+`make towns town-paths caves world-map`.
+
 **Door paths** (`tools/generators/town_paths.gd`, `make town-paths`): every town door gets a
 cobbled path to the nearest street, the shortest walk over open ground (a tree is cut only if
 there is no other way). After adding a house, run it; the rules check fails while a door opens

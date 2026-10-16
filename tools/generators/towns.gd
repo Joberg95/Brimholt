@@ -13,7 +13,7 @@ extends SceneTree
 const Buildings = preload("res://game/data/buildings.gd")
 ## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmU"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## The only town with a banker (and so the only bank and depot).
 const BANK_PLACE: String = "Reedmere"
@@ -30,6 +30,7 @@ const ARTISANS: Array = [
 	["artisan_emberfall", "Artisan Hild", "Emberfall"],
 	["artisan_dunmere", "Artisan Maelis", "Dunmere"],
 	["artisan_highmoor", "Artisan Torvald", "Highmoor"],
+	["artisan_hrimvik", "Ropewright Ingvar", "Hrimvik"],
 ]
 ## Quest givers this painter places (or moves): node name, display name, place, cell, facing.
 ## Relic keepers (one per final boss, game/data/quests.gd RELIC_KEEPERS) stand in the corners of
@@ -59,6 +60,9 @@ const QUEST_GIVERS: Array = [
 	["icewarden_sigrun", "Icewarden Sigrun", "Highmoor", Vector2i(334, 89), Vector2i.DOWN],
 	["tidewarden_neve", "Tidewarden Neve", "Emberfall", Vector2i(284, 192), Vector2i.DOWN],
 	["forgewarden_kel", "Forgewarden Kel", "Dunmere", Vector2i(196, 272), Vector2i.UP],
+	# The frost isles: Hrimvik's square (tools/generators/frost_isles.gd).
+	["huntswoman_eyra", "Huntswoman Eyra", "Hrimvik", Vector2i(75, 465), Vector2i.DOWN],
+	["trenchwarden_olav", "Trenchwarden Olav", "Hrimvik", Vector2i(79, 465), Vector2i.DOWN],
 	# Cinder Crossing's training hall (its old bank house): the trial master by the door, and
 	# one vocation trainer in each corner (Quests.TRAINERS).
 	["trial_master", "Master Hesk", "Cinder Crossing", Vector2i(21, 12), Vector2i.DOWN],

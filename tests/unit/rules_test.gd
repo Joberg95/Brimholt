@@ -21,6 +21,7 @@ const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const TownPaths = preload("res://tools/generators/town_paths.gd")
 const Caves = preload("res://game/data/caves.gd")
+const Atlas = preload("res://game/data/atlas.gd")
 const VoidThrone = preload("res://tools/generators/void_throne.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Regions = preload("res://game/data/regions.gd")
@@ -77,6 +78,7 @@ func _run() -> void:
 	_persistence_checks()
 	_dungeon_checks()
 	_cave_checks()
+	_isles_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -1518,7 +1520,7 @@ func _sprite_checks() -> void:
 					opaque += 1
 					colours[pixel] = true
 		check(opaque >= 40 and colours.size() >= 5, "%s retains readable material surfaces at native 32px size" % kind)
-		if World.ITEMS[kind].get("loot_only", false):
+		if World.ITEMS[kind].get("loot_only", false) and World.ITEMS[kind]["slot"] == "main_hand":
 			var key: String = mask.hex_encode()
 			check(not weapon_masks.has(key), "%s has a silhouette distinct from the other hunting weapons" % kind)
 			weapon_masks[key] = true
@@ -1899,9 +1901,9 @@ func _zone_checks() -> void:
 			central += 1
 	check(central >= 4, "coach towns ring the centre of the map")
 	var ferries: Array = World.FERRYMEN.keys().filter(func(id: String) -> bool:
-		return World.FERRYMEN[id]["vehicle"] == "ferry" and id not in ["reedmere", "blackreed_isle"])
-	check(ferries.size() == 2 and World.FERRYMEN["cinder_landing"]["routes"].keys() == ["lastlight"]
-		and World.FERRYMEN["lastlight"]["cell"].y > World.height() - 100, "one coastal ferry runs from the top to the bottom")
+		return World.FERRYMEN[id]["vehicle"] == "ferry" and id not in ["reedmere", "blackreed_isle", "hrimvik"])
+	check(ferries.size() == 2 and World.FERRYMEN["cinder_landing"]["routes"].has("lastlight")
+		and World.FERRYMEN["lastlight"]["cell"].y > Atlas.MAINLAND.end.y - 100, "one coastal ferry runs from the top to the bottom")
 	if World.FERRYMEN.has("blackreed_isle") and World.FERRYMEN.has("reedmere"):
 		var isle: Dictionary = World.zone_at(World.FERRYMEN["blackreed_isle"]["cell"])
 		check(isle.get("pvp", false) and isle["min_level"] == 40 and isle["max_level"] == 50, "Blackreed Isle is a level 40-50 PvP zone")
@@ -1915,10 +1917,11 @@ func _zone_checks() -> void:
 		for id: String in World.FERRYMEN:
 			if World.FERRYMEN[id]["vehicle"] == "waystone":
 				coaches.append(id)
-			elif id not in ["reedmere", "blackreed_isle"] and World.FERRYMEN[id]["vehicle"] == "ferry":
+			elif id not in ["reedmere", "blackreed_isle", "hrimvik"] and World.FERRYMEN[id]["vehicle"] == "ferry":
 				check(not World.FERRYMEN[id]["routes"].has("blackreed_isle") and World.FERRYMEN[id]["cell"].x < 64,
 					"coastal ports sail the western sea only")
-		check(World.OVERWORLD.size == Vector2i(384, 384), "the overworld is 384 by 384 tiles")
+		check(Atlas.MAINLAND == Rect2i(0, 0, 384, 384) and World.OVERWORLD.encloses(Atlas.MAINLAND)
+			and World.OVERWORLD.encloses(Biomes.ISLES), "the overworld is the 384 by 384 mainland and the frost isles")
 		check(coaches.size() >= 6, "coach stations link the inland towns")
 		for id: String in coaches:
 			var routes: Dictionary = World.FERRYMEN[id]["routes"]
@@ -2232,7 +2235,7 @@ func _hunting_weapon_checks() -> void:
 	var player: Dictionary = world.players[1]
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
-		if not item.get("loot_only", false):
+		if not item.get("loot_only", false) or item["slot"] != "main_hand":
 			continue
 		weapons.append(kind)
 		tiers[item["level"]] = true
@@ -2264,8 +2267,8 @@ func _hunting_weapon_checks() -> void:
 			{"type": "backpack", "index": 0}, 3.0)["ok"] and player["backpack"][0] == kind,
 			"%s unequips without loss" % kind)
 		check(CharacterStore.valid_entry(kind), "%s survives character save validation" % kind)
-	check(weapons.size() == 15 and vocations == {"knight": 8, "paladin": 3, "sorcerer": 2, "druid": 2},
-		"fifteen hunting weapons cover all four vocations")
+	check(weapons.size() == 16 and vocations == {"knight": 9, "paladin": 3, "sorcerer": 2, "druid": 2},
+		"sixteen hunting weapons cover all four vocations")
 	check(tiers.size() == 10, "hunting weapons span every ordinary gear tier")
 	var combat := Combat.new(world, 906)
 	var spawns: Array = World.MONSTER_SPAWNS.duplicate()
@@ -3084,8 +3087,8 @@ func _cave_checks() -> void:
 			if area.has_point(spawn["cell"]):
 				kinds[spawn["monster"]] = true
 				check(reached.has(spawn["cell"]) and spawn["level"] >= definition["min_level"] and spawn["level"] <= definition["max_level"]
-					and Monsters.MONSTERS[spawn["monster"]]["rank"] in ["elite", "champion"],
-					"%s's camps hold elites of its levels, reachable from the stairs" % cave)
+					and (Monsters.MONSTERS[spawn["monster"]]["rank"] in ["elite", "champion"] or not definition.get("elite", true)),
+					"%s's camps hold elites (or, in the trench, normal monsters) of its levels, reachable from the stairs" % cave)
 		for camp: Array in definition["camps"] + ([definition["champion"]] if definition.has("champion") else []):
 			check(kinds.has(camp[0]) and (SpriteArt.CREATURES.has(camp[0]) or Monsters.MONSTERS[camp[0]].has("gear")),
 				"%s holds %s, drawn" % [cave, camp[0]])
@@ -3115,6 +3118,73 @@ func _cave_checks() -> void:
 		var level: int = int(Quests.TASKS[task].get("level", 0))
 		thirties += 1 if level >= 30 and level <= 45 and Caves.of_monster(Quests.TASKS[task]["monster"]) != "" else 0
 	check(thirties >= 15, "the elite caves give levels 30-45 fifteen tasks (%d)" % thirties)
+
+
+## The frost isles (tools/generators/frost_isles.gd): reached only by boat, shown west of the
+## mainland on the world map, with Hrimvik's snowy streets and the trench under the sea ice.
+func _isles_checks() -> void:
+	var isles: Rect2i = Biomes.ISLES
+	check(not isles.intersects(Atlas.MAINLAND) and isles.position.y - Atlas.MAINLAND.end.y >= 32,
+		"open sea lies between the mainland and the frost isles")
+	# The world map: every sheet maps onto its own part of the atlas and back.
+	for sheet: Dictionary in Atlas.SHEETS:
+		for cell: Vector2i in [sheet["cells"].position, sheet["cells"].end - Vector2i.ONE, sheet["cells"].get_center()]:
+			var point: Vector2 = Atlas.to_map(Vector2(cell))
+			check(Rect2(Vector2.ZERO, Vector2(Atlas.SIZE)).has_point(point) and Vector2i(Atlas.from_map(point)) == cell,
+				"the world map places %s and finds it again" % cell)
+	check(not Rect2(Atlas.SHEETS[0]["at"], Atlas.SHEETS[0]["cells"].size).intersects(Rect2(Atlas.SHEETS[1]["at"],
+		Atlas.SHEETS[1]["cells"].size)) and Atlas.to_map(Vector2(isles.get_center())).x < Atlas.to_map(Vector2(0, 0)).x,
+		"the isles lie west of the mainland on the world map")
+	# Reached only by boat: walking from the mainland never reaches the isles, and every boat
+	# route has a route back.
+	var walk: Callable = func(start: Vector2i) -> Dictionary:
+		var reached: Dictionary = {start: true}
+		var queue: Array[Vector2i] = [start]
+		while not queue.is_empty():
+			var at: Vector2i = queue.pop_back()
+			for side: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				var next: Vector2i = at + side
+				if not reached.has(next) and World.OVERWORLD.has_point(next) and World.terrain(next) in World.WALKABLE:
+					reached[next] = true
+					queue.append(next)
+		return reached
+	var mainland: Dictionary = walk.call(World.SPAWNS[0])
+	check(not mainland.keys().any(func(cell: Vector2i) -> bool: return isles.has_point(cell)),
+		"no road leads from the mainland to the isles")
+	var boat: Vector2i = World.FERRYMEN["hrimvik"]["cell"]
+	var island: Dictionary = walk.call(boat + Vector2i.LEFT)
+	for port: String in World.FERRYMEN["hrimvik"]["routes"]:
+		check(World.FERRYMEN[port]["routes"].get("hrimvik", -1) == World.FERRYMEN["hrimvik"]["routes"][port]
+			and World.FERRYMEN[port]["vehicle"] == "ferry", "the boat to Hrimvik sails back from %s for the same fare" % port)
+	check(World.FERRYMEN["hrimvik"]["routes"].size() >= 2, "Hrimvik's boat reaches the mainland ports")
+	var mouth: Vector2i = World.MOUTH_OF["rimewater_trench"]
+	check([Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN].any(func(side: Vector2i) -> bool: return island.has(mouth + side)),
+		"the trench mouth is a walk from Hrimvik's harbour")
+	var camps: int = 0
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		if isles.has_point(spawn["cell"]):
+			camps += 1
+			check(island.has(spawn["cell"]), "%s's camp on the isles is a walk from the harbour" % spawn["monster"])
+	check(camps >= 6, "the isles have tundra camps")
+	var town: Dictionary = World.zone_at(boat + Vector2i(-14, 0))
+	check(town.get("name", "") == "Hrimvik" and town.get("town", false), "Hrimvik is a safe town by its harbour")
+	var homes: Array = World.BUILDINGS.filter(func(building: Dictionary) -> bool: return Biomes.in_isles(building["rect"].position))
+	check(homes.size() >= 12, "Hrimvik has its blockhouses and huts (%d)" % homes.size())
+	check(World.TOWNSFOLK.values().any(func(keeper: Dictionary) -> bool: return keeper["place"] == "Hrimvik" and keeper["role"] == "vendor"),
+		"Hrimvik has a vendor")
+	# Snow is land, firs are trees, and the isles draw in winter dress.
+	check("s" in World.WALKABLE and "s" in World.LAND and "P" in World.TREES and "P" not in World.WALKABLE,
+		"snow is walkable land and firs block")
+	var house: Dictionary = homes[0]
+	check(SpriteArt.wall_sheet(house["rect"].position) == SpriteArt.LOG_WALLS, "Hrimvik's houses have log walls")
+	check(SpriteArt._floor_index("=", house["interior"][0], 0.0) in [SpriteArt.PLANK_TILE, SpriteArt.PLANK_TILE + 1]
+		and SpriteArt._floor_index("=", town["rect"].position + Vector2i(1, 16), 0.0) >= SpriteArt.SNOW_COBBLE_TILE,
+		"Hrimvik's houses have plank floors and its streets are snowy")
+	var weather: Dictionary = Weather.local(0.0, boat)
+	check(weather.get("snow", false) and weather["rain"] > 0.0 and weather["flash"] == 0.0, "it snows over the isles")
+	var isle_regions: Array[String] = ["Hrimfold Tundra", "Wolfskerry", "Rimewater Floes"]
+	check(World.region_at(boat + Vector2i(-14, 0)) in isle_regions and World.region_at(Vector2i(60, 370)) not in isle_regions,
+		"the isles keep their own regions")
 
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
@@ -4335,7 +4405,7 @@ func _map_guidance_checks() -> void:
 	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://assets/sprites/world_map.json"))
 	var baked: Texture2D = load("res://assets/sprites/world_map.png")
 	check(typeof(meta) == TYPE_DICTIONARY and meta.get("terrain", "") == World.overworld_hash()
-		and baked.get_width() == World.OVERWORLD.size.x * int(meta["scale"]),
+		and baked.get_width() == Atlas.SIZE.x * int(meta["scale"]),
 		"the painted world map matches the map (re-bake with make world-map after editing it)")
 	for task: String in Quests.TASKS:
 		var definition: Dictionary = Quests.TASKS[task]

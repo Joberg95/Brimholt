@@ -1,6 +1,7 @@
 extends RefCounted
 ## Named overworld regions. Each tile belongs to the region whose anchor is nearest (the Dunmere
-## desert, game/data/biomes.gd, is always the Sunscar Dunes); towns, Blackreed Isle, and the
+## desert, game/data/biomes.gd, is always the Sunscar Dunes, and the frost isles only ever take
+## the isles' regions, the mainland only the mainland's); towns, Blackreed Isle, and the
 ## Hollow Reach keep their own zones on top. A region's level range is not set here: World
 ## derives it from the monster spawns inside it, so moving spawns in the editor updates it.
 
@@ -23,6 +24,10 @@ const REGIONS: Array = [
 	["Mirewood Fen", Vector2i(304, 232), "Drowned forest of stalkers and reedfangs"],
 	["Gloamwood", Vector2i(196, 344), "A dusk-dark wood on the southern edge"],
 	["Lastlight Downs", Vector2i(42, 346), "Windswept downs above the southern port"],
+	# The frost isles (Biomes.ISLES): their tiles only ever belong to these.
+	["Hrimfold Tundra", Vector2i(52, 476), "Snowfields and fir woods round the port of Hrimvik"],
+	["Wolfskerry", Vector2i(128, 452), "A wind-scoured skerry where wolves and walruses hunt"],
+	["Rimewater Floes", Vector2i(104, 528), "Broken sea ice over the Rimewater Trench"],
 ]
 ## Shown for desert tiles, whatever the nearest anchor.
 const DESERT: String = "Sunscar Dunes"
@@ -35,7 +40,10 @@ static func name_at(cell: Vector2i) -> String:
 		return DESERT
 	var best: String = ""
 	var nearest: int = 1 << 30
+	var isles: bool = Biomes.in_isles(cell)
 	for region: Array in REGIONS:
+		if Biomes.in_isles(region[1]) != isles:
+			continue
 		var offset: Vector2i = cell - region[1]
 		var distance: int = offset.x * offset.x + offset.y * offset.y
 		if distance < nearest:

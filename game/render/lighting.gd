@@ -9,6 +9,7 @@ extends Node2D
 const World = preload("res://game/core/world.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Weather = preload("res://game/render/weather.gd")
+const Biomes = preload("res://game/data/biomes.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const LIGHT_TEXTURE: Texture2D = preload("res://assets/third_party/kenney_particle_pack/light_01.png")
 ## A full day and night, in seconds of host time; a session starts in the morning.
@@ -77,6 +78,8 @@ func ambient() -> Color:
 	var zone: Dictionary = World.zone_at(focus)
 	if zone.has("ambient"):
 		light = light * zone["ambient"]
+	if Biomes.in_isles(focus):
+		light = light * Biomes.ISLES_LIGHT
 	dark_zone = zone.get("dark", false)
 	weather = Weather.local(game.world_clock(), focus)
 	clear_light = Color(light.r, light.g, light.b, 1.0)

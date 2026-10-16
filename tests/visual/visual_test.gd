@@ -10,6 +10,7 @@ const WorldOverlay = preload("res://game/render/world_overlay.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
+const Atlas = preload("res://game/data/atlas.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Spells = preload("res://game/data/spells.gd")
@@ -267,7 +268,7 @@ func _run() -> void:
 		return
 	if not await _check_rune_bar():
 		return
-	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 15 hunting weapons in 180 worn poses, visible unequip, panel slots, ground items, oblique walls, "
+	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 16 hunting weapons in 192 worn poses, visible unequip, panel slots, ground items, oblique walls, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
 		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
@@ -314,13 +315,13 @@ func _check_cape_layers() -> bool:
 
 func _check_weapon_study() -> bool:
 	var viewport := SubViewport.new()
-	viewport.size = WeaponStudy.CARD * Vector2i(3, 5)
+	viewport.size = WeaponStudy.CARD * Vector2i(3, 6)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	root.add_child(viewport)
 	var study := WeaponStudy.new()
 	for kind: String in World.ITEMS:
-		if World.ITEMS[kind].get("loot_only", false):
+		if World.ITEMS[kind].get("loot_only", false) and World.ITEMS[kind]["slot"] == "main_hand":
 			study.weapons.append(kind)
 	viewport.add_child(study)
 	await process_frame
@@ -332,7 +333,7 @@ func _check_weapon_study() -> bool:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var bare: Image = viewport.get_texture().get_image()
-	var visible: bool = study.weapons.size() == 15
+	var visible: bool = study.weapons.size() == 16
 	for index: int in study.weapons.size():
 		var origin: Vector2i = Vector2i(index % 3, index / 3) * WeaponStudy.CARD
 		for pose: int in 3:
@@ -709,9 +710,9 @@ func _check_ferry_and_maps() -> bool:
 	var maps: Node = game.maps
 	var here: Vector2i = game.world.players[1]["cell"]
 	var probe: Vector2i = here + Vector2i(3, 2)
-	var pixel: Vector2 = game.VIEW_ORIGIN + maps.map_point(Vector2(probe) + Vector2(0.5, 0.5))
+	var pixel: Vector2 = game.VIEW_ORIGIN + maps.map_point(Atlas.to_map(Vector2(probe) + Vector2(0.5, 0.5)))
 	# The painted map has several texels per tile and is filtered, so compare near the tile's middle.
-	var texel: Vector2i = Vector2i((Vector2(probe) + Vector2(0.5, 0.5)) * maps._texel)
+	var texel: Vector2i = Vector2i(Atlas.to_map(Vector2(probe) + Vector2(0.5, 0.5)) * maps._texel)
 	var expected: Color = maps._texture.get_image().get_pixelv(texel)
 	var shown: Color = world_map.get_pixelv(Vector2i(pixel))
 	if not _expect(game._world_map.visible and maps.zoom >= maps.OPEN_ZOOM and absf(shown.r - expected.r) + absf(shown.g - expected.g)

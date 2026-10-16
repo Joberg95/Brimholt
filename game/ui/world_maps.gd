@@ -10,6 +10,7 @@ extends Node
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
+const Atlas = preload("res://game/data/atlas.gd")
 const BAKED_PNG: String = "res://assets/sprites/world_map.png"
 const BAKED_META: String = "res://assets/sprites/world_map.json"
 const SELF_COLOR: Color = Color("#ffd04a")
@@ -36,6 +37,7 @@ const MAP_COLORS: Dictionary = {
 	"R": Color("#8a8478"),
 	"L": Color("#6a6250"),
 	"m": Color("#4a4632"), "U": Color("#4e7a6c"),
+	"s": Color("#e2e9f0"), "P": Color("#3e5e48"),
 }
 
 var game: Node
@@ -58,9 +60,9 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_flat_texture = ImageTexture.create_from_image(flat)
 	var image: Image = _baked_map()
 	if image == null:
-		image = flat.duplicate()
+		image = _atlas_layout(flat)
 	else:
-		_texel = image.get_width() / float(World.OVERWORLD.size.x)
+		_texel = image.get_width() / float(Atlas.SIZE.x)
 	var texel: int = int(_texel)
 	for zone: Dictionary in World.ZONES:
 		if not zone["pvp"]:
@@ -70,9 +72,10 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 			for x: int in range(area.position.x, area.end.x):
 				if World.terrain(Vector2i(x, y)) in ["~", " "]:
 					continue
+				var corner := Vector2i(Atlas.to_map(Vector2(x, y))) * texel
 				for py: int in texel:
 					for px: int in texel:
-						var at := Vector2i(x * texel + px, y * texel + py)
+						var at := corner + Vector2i(px, py)
 						image.set_pixelv(at, image.get_pixelv(at).lerp(PVP_TINT, 0.45))
 	_texture = ImageTexture.create_from_image(image)
 	_build_controls(layer)
@@ -90,6 +93,15 @@ func _baked_map() -> Image:
 	if image.is_compressed():
 		image.decompress()
 	image.convert(Image.FORMAT_RGB8)
+	return image
+
+
+## The flat map's sheets laid out like the painted map (game/data/atlas.gd), sea between them.
+static func _atlas_layout(flat: Image) -> Image:
+	var image := Image.create(Atlas.SIZE.x, Atlas.SIZE.y, false, Image.FORMAT_RGB8)
+	image.fill(MAP_COLORS["~"])
+	for sheet: Dictionary in Atlas.SHEETS:
+		image.blit_rect(flat, sheet["cells"], sheet["at"])
 	return image
 
 
@@ -140,7 +152,7 @@ func _build_controls(layer: CanvasLayer) -> void:
 			zoom = maxf(OPEN_ZOOM, _fit_zoom())
 			# Underground (dungeon copies lie outside the overworld) it opens on the whole map's centre.
 			var here: Vector2 = game.camera_focus() / World.TILE_SIZE
-			center = here if World.OVERWORLD.has_point(Vector2i(here)) else Vector2(World.OVERWORLD.size) / 2.0
+			center = Atlas.to_map(here) if World.OVERWORLD.has_point(Vector2i(here)) else Vector2(Atlas.SIZE) / 2.0
 			_clamp_view())
 	layer.add_child(world_map)
 	var buttons := HBoxContainer.new()
@@ -164,12 +176,18 @@ func _map_area() -> Rect2:
 ## The zoom at which the whole overworld fits the map area.
 func _fit_zoom() -> float:
 	var area: Vector2 = _map_area().size
-	return minf(area.x / World.OVERWORLD.size.x, area.y / World.OVERWORLD.size.y)
+	return minf(area.x / Atlas.SIZE.x, area.y / Atlas.SIZE.y)
 
 
-## Where a tile (fractional) appears on the world map window at the current zoom and pan.
+## Where a map tile (fractional, Atlas.to_map of a cell) appears on the world map window at the
+## current zoom and pan.
 func map_point(tile: Vector2) -> Vector2:
 	return _map_area().get_center() + (tile - center) * zoom
+
+
+## A cell's place on `canvas`'s own grid: map tiles on the world map, cells on the minimap.
+func _on(canvas: Control, tile: Vector2) -> Vector2:
+	return Atlas.to_map(tile) if canvas == world_map else tile
 
 
 ## Zooms by `factor`, keeping the tile under `at` (a world map position) where it is.
@@ -184,7 +202,7 @@ func zoom_by(factor: float, at: Vector2) -> void:
 ## Keeps the map on screen: centred when it is smaller than the window, else edge to edge.
 func _clamp_view() -> void:
 	var half: Vector2 = _map_area().size / 2.0 / zoom
-	var size := Vector2(World.OVERWORLD.size)
+	var size := Vector2(Atlas.SIZE)
 	for axis: int in 2:
 		if half[axis] * 2.0 >= size[axis]:
 			center[axis] = size[axis] / 2.0
@@ -236,29 +254,29 @@ func _draw_label(font: Font, at: Vector2, text: String, size: int, color: Color,
 
 func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2) -> void:
 	for id: String in World.FERRYMEN:
-		var at: Vector2 = origin + (Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + _on(canvas, Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#7fe0d0"))
 	for id: String in World.QUEST_GIVERS:
-		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + _on(canvas, Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#ffcf6a"))
 	for cell: Vector2i in World.DUNGEON_ENTRANCES.keys() + World.CAVE_MOUTHS.keys():
-		var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + _on(canvas, Vector2(cell) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#c9884a"))
 	for id: String in World.TOWNSFOLK:
-		var at: Vector2 = origin + (Vector2(World.TOWNSFOLK[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + _on(canvas, Vector2(World.TOWNSFOLK[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), TOWNSFOLK_COLORS[World.TOWNSFOLK[id]["role"]])
 	var actors: Dictionary = game.actors
 	for id: int in actors:
-		var at: Vector2 = origin + (actors[id]["visual"] + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + _on(canvas, actors[id]["visual"] + Vector2(0.5, 0.5)) * scale
 		if id != game.self_id and area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2.ONE * 1.5, Vector2.ONE * 3.0), Color.WHITE)
 	if actors.has(game.self_id):
 		var me: Dictionary = actors[game.self_id]
-		var at: Vector2 = origin + (me["visual"] + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + _on(canvas, me["visual"] + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			_draw_self(canvas, at, Vector2(me["state"].get("facing", Vector2i.DOWN)), 6.0 if canvas == world_map else 5.0)
 
@@ -288,7 +306,7 @@ func _draw_guidance(canvas: Control, origin: Vector2, scale: float, area: Rect2)
 	var first: Array[Vector2] = []
 	for index: int in tasks.size():
 		for cell: Vector2i in World.task_targets(tasks[index], state):
-			var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
+			var at: Vector2 = origin + _on(canvas, Vector2(cell) + Vector2(0.5, 0.5)) * scale
 			if index == 0:
 				first.append(at)
 			if area.grow(radius).has_point(at):
@@ -316,7 +334,10 @@ func _draw_minimap() -> void:
 	var tiles: Vector2 = minimap.size / MINIMAP_SCALE
 	var focus: Vector2 = game.camera_focus()
 	var region := Rect2(focus / World.TILE_SIZE - tiles / 2.0, tiles)
-	var shown := Rect2(World.OVERWORLD)
+	# The painted map's sheet you are on (the mainland or the frost isles), placed by its offset.
+	var sheet: Dictionary = Atlas.sheet_of(Vector2i(focus / World.TILE_SIZE))
+	var shown := Rect2(sheet["cells"])
+	var offset := Vector2(sheet["at"] - sheet["cells"].position)
 	var place: Array = World.dungeon_at(Vector2i(focus / World.TILE_SIZE))
 	var away: bool = not World.OVERWORLD.has_point(Vector2i(focus / World.TILE_SIZE))
 	if not place.is_empty():
@@ -331,7 +352,7 @@ func _draw_minimap() -> void:
 		var texel: float = _texel if not away else 1.0
 		minimap.draw_texture_rect_region(_texture if not away else _flat_texture,
 			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE),
-			Rect2(visible.position * texel, visible.size * texel))
+			Rect2((visible.position + (offset if not away else Vector2.ZERO)) * texel, visible.size * texel))
 	if not away:
 		_draw_guidance(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
 	_draw_markers(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
@@ -340,8 +361,8 @@ func _draw_minimap() -> void:
 
 func _draw_world_map() -> void:
 	var view_size: Vector2 = Layout.VIEW_SIZE
-	# The overworld only: dungeon copies right of it are reached by stairways.
-	var map_size := Vector2(World.OVERWORLD.size)
+	# The overworld only, as the atlas lays it out: dungeon copies are reached by stairways.
+	var map_size := Vector2(Atlas.SIZE)
 	var scale: float = zoom
 	var origin: Vector2 = map_point(Vector2.ZERO).round()
 	world_map.draw_rect(Rect2(Vector2.ZERO, view_size), Color(0.03, 0.04, 0.05))
@@ -381,11 +402,11 @@ func _draw_world_map() -> void:
 	var regions: Array = labels.filter(func(label: Array) -> bool: return label.size() > 3)
 	var fixed: Array = labels.filter(func(label: Array) -> bool: return label.size() <= 3)
 	for label: Array in fixed:
-		taken.append(_draw_label(font, origin + label[1] * scale, label[0], 13, label[2] if label.size() > 2 else Color("#f4ecd8"), Vector2.ZERO, true))
+		taken.append(_draw_label(font, origin + Atlas.to_map(label[1]) * scale, label[0], 13, label[2] if label.size() > 2 else Color("#f4ecd8"), Vector2.ZERO, true))
 	for index: int in range(0, regions.size(), 2):
 		var title: Array = regions[index]
 		var levels: Array = regions[index + 1]
-		var at: Vector2 = origin + title[1] * scale
+		var at: Vector2 = origin + Atlas.to_map(title[1]) * scale
 		var block := Rect2(at - Vector2(70, 12), Vector2(140, 28))
 		var shift := Vector2.ZERO
 		for step: Vector2 in [Vector2.ZERO, Vector2(0, -18), Vector2(0, 18), Vector2(0, -36), Vector2(0, 36), Vector2(-60, 0),
@@ -408,7 +429,7 @@ func _draw_quest_marks(origin: Vector2, scale: float, area: Rect2) -> void:
 	var font: Font = ThemeDB.fallback_font
 	for id: String in World.QUEST_GIVERS:
 		var mark: String = World.quest_mark(id, state)
-		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + Atlas.to_map(Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if mark.is_empty() or not area.has_point(at):
 			continue
 		var corner: Vector2 = at + Vector2(-4, -5)

@@ -16,7 +16,7 @@ extends "res://tools/generators/landscape.gd"
 const Caves = preload("res://game/data/caves.gd")
 const SPAWN_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 const MOUTH_SCRIPT: Script = preload("res://game/maps/markers/cave_mouth.gd")
-const WALKABLE: String = ".,:=bdocv^m"
+const WALKABLE: String = ".,:=bdocv^ms"
 ## Rock kept round the edge, the gap between hall centres, and the halls' half sizes.
 const MARGIN: int = 6
 const HALL_GAP: float = 11.0
@@ -42,8 +42,10 @@ func _initialize() -> void:
 		changed += 1
 	var reached: Dictionary = {}
 	var starts: Array[Vector2i] = []
-	for marker: Node2D in scene_root.get_node("Spawns").get_children():
-		starts.append(_cell_of(marker))
+	# From the player spawns, and from every port (the frost isles are reached by boat).
+	for group: String in ["Spawns", "Ferrymen"]:
+		for marker: Node2D in scene_root.get_node(group).get_children():
+			starts.append(_cell_of(marker))
 	_flood(starts, WALKABLE, reached)
 	var missing: PackedStringArray = []
 	for cave: String in Caves.ORDER:
@@ -203,7 +205,7 @@ func _place_camps(scene_root: Node, spawns: Node, cave: String, halls: Array) ->
 			added += 1
 		# An existing camp keeps its place but follows the cave's table.
 		var stats: Dictionary = {"monster": entry[1], "level": entry[2], "count": entry[3],
-			"radius": 1 if entry[3] == 1 else mini(hall["radius"].x, hall["radius"].y) - 1}
+			"radius": 1 if entry[3] == 1 else mini(mini(hall["radius"].x, hall["radius"].y) - 1, 3)}
 		for key: String in stats:
 			if marker.get(key) != stats[key]:
 				marker.set(key, stats[key])
@@ -216,13 +218,13 @@ func _mouth_spot(cave: String, reached: Dictionary) -> Vector2i:
 	var definition: Dictionary = Caves.CAVES[cave]
 	var best := Vector2i(-1, -1)
 	for cell: Vector2i in reached:
-		if not _countryside(cell) or _region(cell) != definition["region"] or _tile(cell) not in ".:m" \
+		if not _countryside(cell) or _region(cell) != definition["region"] or _tile(cell) not in ".:ms" \
 				or _near_camp(cell, MOUTH_CLEAR) or _near(cell, 2, ",=b~"):
 			continue
 		var open: bool = true
 		for dy: int in range(-1, 2):
 			for dx: int in range(-1, 2):
-				open = open and _tile(cell + Vector2i(dx, dy)) in ".:m"
+				open = open and _tile(cell + Vector2i(dx, dy)) in ".:ms"
 		if open and (best.x < 0 or Vector2(cell).distance_to(Vector2(definition["near"]))
 				< Vector2(best).distance_to(Vector2(definition["near"]))):
 			best = cell

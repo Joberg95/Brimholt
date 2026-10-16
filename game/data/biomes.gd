@@ -22,3 +22,16 @@ const SWAMP_REGION: String = "Mirewood Fen"
 
 static func in_desert(cell: Vector2i) -> bool:
 	return desert_distance(cell) < 1.0
+
+
+## The frost isles (tools/generators/frost_isles.gd): snow, firs, and the port of Hrimvik, in free
+## grid space south of the mainland behind ISLES_SEA rows of open sea, reached only by boat. The
+## world map shows them west of the mainland (game/data/atlas.gd). Houses there have log walls,
+## snowed roofs, and plank floors; it snows instead of raining, and the light is colder.
+const ISLES_SEA: int = 40
+const ISLES: Rect2i = Rect2i(0, 384 + ISLES_SEA, 160, 128)
+const ISLES_LIGHT: Color = Color(0.9, 0.95, 1.06)
+
+
+static func in_isles(cell: Vector2i) -> bool:
+	return ISLES.has_point(cell)

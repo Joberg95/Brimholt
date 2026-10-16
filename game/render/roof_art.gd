@@ -6,11 +6,16 @@ extends RefCounted
 ## of the shaded north slope, and the east gable show. The eave throws a soft shadow below.
 
 const World = preload("res://game/core/world.gd")
+const Biomes = preload("res://game/data/biomes.gd")
 const TILE: int = 32
 ## The castle town: its houses all wear slate (material 1), like its castle wall.
 const SLATE_TOWN: String = "Reedmere"
 const SWATCH: int = 32
-const MATERIALS: int = 3
+## Roof materials in roofs.png: clay, slate, and shingle are spread over the towns; the fourth,
+## snow over shingle, roofs every building in the frost isles (Biomes.ISLES).
+const MATERIALS: int = 4
+const TOWN_MATERIALS: int = 3
+const SNOW_MATERIAL: int = 3
 ## A house wall's band top face, relative to its cell corner: centre +-5, raised RAISE px up-left
 ## (SpriteArt.HOUSE_RAISE, a full tile). The band's centre is half a tile in, so the roof is drawn
 ## RAISE - TILE / 2 px up and left of the band's place on the ground.
@@ -33,9 +38,11 @@ static func build(building: Dictionary, sheet: Texture2D) -> Dictionary:
 	if _strips.is_empty():
 		_load_strips(sheet)
 	var rect: Rect2i = building["rect"]
-	var material: int = posmod(rect.position.x * 7 + rect.position.y * 13, MATERIALS)
+	var material: int = posmod(rect.position.x * 7 + rect.position.y * 13, TOWN_MATERIALS)
 	if World.zone_at(rect.position).get("name", "") == SLATE_TOWN:
 		material = 1
+	elif Biomes.in_isles(rect.position):
+		material = SNOW_MATERIAL
 	var far: Image = _strips[material][1]
 	var gable: Image = _strips[material][2]
 	var trim: Image = _strips[material][3]

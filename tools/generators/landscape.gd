@@ -18,12 +18,14 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/landscape.gd
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmU"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
 const Regions = preload("res://game/data/regions.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILE: int = 32
 ## The overworld; the dungeon band lies to its right.
 const WORLD: Rect2i = Rect2i(0, 0, 384, 384)
+## The frost isles (Biomes.ISLES), south of WORLD behind open sea; painted by frost_isles.gd.
+const ISLES: Rect2i = Rect2i(0, 424, 160, 128)
 const CAPITAL: String = "Reedmere"
 ## [town, absorbed town]: the absorbed zone is removed, its townsfolk and quest givers take the
 ## town's name (ferrymen keep their dock name), and the ground between is built up.
@@ -260,9 +262,9 @@ func _zone(cell: Vector2i) -> Array:
 	return []
 
 
-## Open country: overworld, outside every zone, not reserved.
+## Open country: the mainland or the frost isles, outside every zone, not reserved.
 func _countryside(cell: Vector2i) -> bool:
-	return WORLD.has_point(cell) and _zone(cell).is_empty() and not _reserved.has(cell)
+	return (WORLD.has_point(cell) or ISLES.has_point(cell)) and _zone(cell).is_empty() and not _reserved.has(cell)
 
 
 func _near(cell: Vector2i, distance: int, tiles: String) -> bool:

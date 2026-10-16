@@ -578,6 +578,32 @@ elites (half of what the kills gave, in experience and gold), or the champion (a
 the champion gave, and potions or rune shards). Elites drop materials that sell for 90–165
 gold, potions, rune shards, and from the Ember Deep and the Frostvault fire and frost runes.
 
+## The frost isles and Hrimvik
+
+West of the mainland, across open sea, lie the **frost isles**: Hrimfold, the largest, with the
+port of **Hrimvik**, the windswept skerry of Wolfskerry, and the broken sea ice of the Rimewater
+Floes, joined by plank bridges. There is no road: take **Captain Torgrim**'s boat from Hrimvik to
+Lastlight (45 gold) or Cinder Landing (60), and their ferrymen sail back. It snows there all the
+time, lightly under a clear sky and in blizzards when storms roll in, and the light is cold.
+
+Hrimvik is a safe town behind a log palisade, with gates west and south and its harbour to the
+east: long blockhouses for its wealthier folk in the north, a vendor, an artisan, and a square,
+and the huts of its fishers and furriers in a quarter to the south. Its houses have log walls,
+snowed-over roofs, and plank floors.
+
+| Hunt | Where | Levels | Tasks from |
+| --- | --- | --- | --- |
+| Snow wolves, tusked walruses, barbarian raiders | Hrimfold Tundra and Wolfskerry | 28–34 | Huntswoman Eyra, Hrimvik |
+| **Rimewater Trench**: trench crabs, icetide raiders, icetide shamans (magic), and Old Grimclaw (champion) | a hole in the Rimewater Floes | 34–37 | Trenchwarden Olav, Hrimvik |
+
+The **Rimewater Trench** is a shared cave under the sea ice, like the elite caves but with normal
+monsters in dense camps of five: a level-35 kill gives about 270 experience, so it is a fast place
+to level. Its fishfolk and crabs drop materials worth 110–135 gold, ice shrimp to eat, and rarely
+(about one kill in a hundred) a piece of notable level-35 gear found nowhere else: the
+**Rimeskull helm** and **Frostcrown plate** (plate), the **Glacier robe** (cloth), and the
+**Rimerelic blade** (a Warrior's greatsword). Old Grimclaw, in the deepest hall, drops each of
+them one time in seven.
+
 ## Inventory
 
 The right-hand panel shows a Tibia-style paperdoll with twelve slots (necklace, helmet, pack /

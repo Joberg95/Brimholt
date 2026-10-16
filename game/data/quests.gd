@@ -133,6 +133,29 @@ const TASKS: Dictionary = {
 	"hoarfrost_jarl": {"title": "The Hoarfrost Jarl", "giver": "icewarden_sigrun", "monster": "hoarfrost_jarl", "count": 1,
 		"level": 45, "reward": "experience", "share": 1.0, "items": [["rune_shard", 3]],
 		"intro": "The ogres' jarl sits in the deepest hall on a throne of ice. End his reign."},
+	# The frost isles (Hrimvik, by boat): tundra hunts from Huntswoman Eyra and the Rimewater
+	# Trench from Trenchwarden Olav, none chained.
+	"snow_wolves": {"title": "Wolves on the snow", "giver": "huntswoman_eyra", "monster": "snow_wolf", "count": 25,
+		"level": 29, "reward": "experience", "share": 0.5, "target": "snow wolves",
+		"intro": "Snow wolves follow the herds right up to our palisade. Twenty-five pelts, and the herders can sleep."},
+	"walrus_hunt": {"title": "Tusks for the carvers", "giver": "huntswoman_eyra", "monster": "tusked_walrus", "count": 20,
+		"level": 31, "reward": "experience", "share": 0.5, "target": "tusked walruses",
+		"intro": "The walruses on Wolfskerry gore anyone who lands a boat. My carvers want the tusks."},
+	"raider_bounty": {"title": "Raiders of the fjords", "giver": "huntswoman_eyra", "monster": "barbarian_raider", "count": 20,
+		"level": 33, "reward": "experience", "share": 0.5,
+		"intro": "Not every barbarian came to live in peace. The raiders burn our drying racks. Drive them off."},
+	"trench_crabs": {"title": "Crabs of the trench", "giver": "trenchwarden_olav", "monster": "trench_crab", "count": 30,
+		"level": 35, "reward": "experience", "share": 0.5,
+		"intro": "Under the Rimewater Floes the sea ice hollows into a trench, and crabs the size of sledges crawl it."},
+	"icetide_raiders": {"title": "The icetide raiders", "giver": "trenchwarden_olav", "monster": "icetide_raider", "count": 30,
+		"level": 36, "reward": "experience", "share": 0.5,
+		"intro": "Fishfolk come up through the trench to raid our nets. They carry old plate. Who wore it before them?"},
+	"icetide_shamans": {"title": "Silence the tide-callers", "giver": "trenchwarden_olav", "monster": "icetide_shaman", "count": 25,
+		"level": 37, "reward": "experience", "share": 0.5,
+		"intro": "Their shamans call the cold up out of the deep. Twenty-five of them, and the ice may hold this winter."},
+	"old_grimclaw": {"title": "Old Grimclaw", "giver": "trenchwarden_olav", "monster": "grimclaw", "count": 1,
+		"level": 37, "reward": "experience", "share": 1.0, "items": [["ice_shrimp", 5]],
+		"intro": "The oldest crab in the trench has taken three of my divers. Crack his shell."},
 	# The Hunters' Lodge (Lodgemaster Varga, Reedmere): one contract at a time, each against
 	# harder prey, paying potions, a class piece of the hunt's tier, and rune shards that a class
 	# trainer turns into spell ranks (Spells.RANK_COSTS). The prey are farms in their own right.

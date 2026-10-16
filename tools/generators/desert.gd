@@ -12,7 +12,7 @@ extends SceneTree
 const Biomes = preload("res://game/data/biomes.gd")
 ## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmU"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## A cell is desert when at least this share of the 7x7 cells around it is sand or plants.
 const SAND_SHARE: float = 0.5

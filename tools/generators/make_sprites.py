@@ -35,7 +35,7 @@ ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
 VISIBLE_SLOTS = ("helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
-TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W", "m", "U")
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W", "m", "U", "s", "P")
 
 
 def rgba(value, alpha=255):
@@ -2854,6 +2854,104 @@ def mushroom(variant):
     return image
 
 
+# ---------------------------------------------------------------- the frost isles
+
+# Snow: base, lit drift tops, blue shadow, deep shadow, sparkle.
+SNOW = (rgba("e4ebf2"), rgba("f6f9fc"), rgba("c4d0de"), rgba("a2b2c6"), rgba("ffffff"))
+
+
+def snow_tile(variant):
+    """Snow ("s", the frost isles' ground): soft drifts lit from the top-left with cool blue
+    shadows on their lower sides, a few wind ripples, and sparkles; seamless."""
+    rng = random.Random(6400 + variant)
+    image = Image(TILE, TILE)
+    image.rect(0, 0, TILE, TILE, SNOW[0])
+    for _ in range(7):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        rx, ry = rng.randrange(4, 9), rng.randrange(2, 4)
+        for px, py in ellipse(x, y, rx, ry):
+            image.set(px % TILE, py % TILE, SNOW[1] if py < y else SNOW[0])
+        for px in range(x - rx + 1, x + rx - 1):
+            image.set(px % TILE, (y + ry) % TILE, SNOW[2])
+            if rng.random() < 0.4:
+                image.set(px % TILE, (y + ry + 1) % TILE, SNOW[3] if rng.random() < 0.3 else SNOW[2])
+    for _ in range(3):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        for step in range(rng.randrange(5, 10)):
+            image.set((x + step) % TILE, (y + (step // 3)) % TILE, SNOW[2])
+    for _ in range(6):
+        image.set(rng.randrange(TILE), rng.randrange(TILE), SNOW[4])
+    return image
+
+
+def snow_cobble_tile(variant):
+    """A snowy street ("=" in the frost isles): the cobbles with snow packed into the joints and
+    drifted over the stones' edges, the stone tops scuffed clear by boots."""
+    rng = random.Random(6500 + variant)
+    image = cobble_tile(variant)
+    joint = COBBLE[3]
+    for y in range(TILE):
+        for x in range(TILE):
+            if image.get(x, y) == joint and rng.random() < 0.8:
+                image.set(x, y, SNOW[2] if rng.random() < 0.4 else SNOW[0])
+    for _ in range(4):
+        x, y = rng.randrange(TILE), rng.randrange(TILE)
+        for px, py in ellipse(x, y, rng.randrange(3, 7), rng.randrange(1, 3)):
+            image.set(px % TILE, py % TILE, SNOW[0] if py <= y else SNOW[2])
+    return image
+
+
+def snowy_fir(variant):
+    """A snow-laden fir ("P", the frost isles' tree): 64x96 like the trees, the trunk's foot on the
+    tile centre at (32, 80). Tiers of dark drooping boughs, each loaded with snow on its upper face
+    and lit from the top-left, the tip a narrow spire."""
+    rng = random.Random(6600 + variant)
+    needles = (rgba("3e5e48"), rgba("2c4636"), rgba("1e3226"), rgba("142218"))
+    bark = (rgba("6a4a32"), rgba("4a3222"))
+    image = Image(FRAME, 96)
+    for x, y in ellipse(32, 82, 14, 4):
+        image.set(x, y, SHADOW)
+    body = Image(FRAME, 96)
+    for y in range(70, 81):
+        for x in range(30, 35):
+            body.set(x, y, bark[0] if x < 32 else bark[1])
+    top = 6 + variant * 3
+    tiers = 5
+    height = 72 - top
+    for tier in range(tiers):
+        t0 = top + tier * height // (tiers + 1)
+        t1 = t0 + height // (tiers + 1) + 8
+        width = 7 + tier * 4 + variant
+        for y in range(t0, t1):
+            share = (y - t0) / max(1, t1 - t0)
+            half = int(2 + share * width)
+            droop = int(share * share * 3)
+            for x in range(32 - half, 32 + half + 1):
+                across = (x - 32) / max(1, half)
+                tone = 1 if across < -0.2 else 2 if across < 0.45 else 3
+                if share > 0.85:
+                    tone = 3
+                body.set(x, y + droop * (1 if abs(across) > 0.6 else 0), needles[tone])
+            # Snow on the upper face of the tier: thick on the lit left, thinning to the right.
+            if share < 0.5:
+                for x in range(32 - half, 32 + half + 1):
+                    across = (x - 32) / max(1, half)
+                    if across < 0.55 and (share < 0.3 or rng.random() < 0.7):
+                        body.set(x, y, SNOW[1] if across < -0.1 else SNOW[0] if across < 0.3 else SNOW[2])
+    for _ in range(6):
+        x, y = rng.randrange(20, 44), rng.randrange(top + 6, 70)
+        if body.get(x, y) in needles:
+            body.set(x, y, SNOW[0])
+    image.over(body.outlined(needles[3]))
+    return image
+
+
+# Log walls in the frost isles: the house-wall shapes in timber courses under a cap of snow.
+LOG_WOOD = ((SNOW[0], SNOW[1], SNOW[2], SNOW[3]),
+            (rgba("7a5636"), rgba("4a321e"), rgba("98704a")),
+            (rgba("664628"), rgba("3e2a18"), rgba("80603e")))
+
+
 def stone_surface(image, points, palette, seed):
     """Weathered stone with a shallow bevel, broad mottling and occasional worn flecks."""
     light, main, dark = palette
@@ -3190,6 +3288,10 @@ def terrain_palette():
     mushroom_tile = bog_tile(1)
     mushroom_tile.over(mushroom(0).crop(16, 52, TILE, TILE))
     tiles["U"] = mushroom_tile
+    tiles["s"] = snow_tile(0)
+    fir_tile = snow_tile(1)
+    fir_tile.over(snowy_fir(0).crop(16, 52, TILE, TILE))
+    tiles["P"] = fir_tile
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
@@ -4531,6 +4633,7 @@ ROOF_MATERIALS = [
     tuple(rgba(c) for c in ("a0573b", "86472f", "673424", "46231a")),
     tuple(rgba(c) for c in ("67707a", "525a64", "3e444d", "2a2f36")),
     tuple(rgba(c) for c in ("8a6a45", "715436", "573f27", "3c2b1b")),
+    tuple(rgba(c) for c in ("f4f8fc", "dde6ef", "b6c4d4", "5a4630")),
 ]
 
 
@@ -4567,6 +4670,18 @@ def roof_swatches(material):
                     elif level == 0 or along == 1:
                         color = light
                     color = scale(color, 1.0 + ((hash_cell((x + (4 if course % 2 else 0)) // 8, course) % 5) - 2) * 0.04)
+                elif material == 3:  # snow over shingles: soft drifts, a dark shingle edge peeking out
+                    offset = 3 if course % 2 else 0
+                    ragged = hash_cell((x + offset) // 8, course) % 5
+                    color = base
+                    if level == 7 and ragged == 0:
+                        color = deep
+                    elif level >= 6:
+                        color = dark
+                    elif level <= 2:
+                        color = light
+                    if (x * 7 + y * 3) % 23 == 0:
+                        color = light
                 else:  # wooden shingles: staggered, grain lines, ragged ends
                     offset = 3 if course % 2 else 0
                     along = (x + offset) % 8
@@ -4970,13 +5085,17 @@ def main():
                            + [cellar_floor_tile(v) for v in range(4)]
                            + [curb_overlay(), curb_overlay().rotated(), curb_overlay().rotated().rotated(),
                               curb_overlay().rotated().rotated().rotated()]
-                           + [bog_tile(v) for v in range(4)],
+                           + [bog_tile(v) for v in range(4)]
+                           + [snow_tile(v) for v in range(4)] + [snow_cobble_tile(v) for v in range(4)],
                            4, TILE),
         "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
                                  + [desert_plant(v) for v in range(3)] + [waystone()]
                                  + [boulder(v) for v in range(3)]),
         "mushrooms.png": sheet_row([mushroom(v) for v in range(3)]),
+        "firs.png": sheet_row([snowy_fir(v) for v in range(3)]),
+        "log_walls.png": sheet([thin_wall(mask, stone=LOG_WOOD, height=HOUSE_RAISE) for mask in range(16)], 16,
+                               TILE + HOUSE_RAISE),
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan")]),
         "title.png": title_painting(),

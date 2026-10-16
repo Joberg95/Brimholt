@@ -6,6 +6,8 @@ shader_type canvas_item;
 
 uniform float rain : hint_range(0.0, 1.0) = 0.0;
 uniform float storm : hint_range(0.0, 1.0) = 0.0;
+// 1 over the frost isles: the same weather falls as snow, slow drifting flakes and no splashes.
+uniform float snow : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 light = vec3(1.0);
 // Map pixel at the top-left corner of the game window, and the window size in game pixels.
 uniform vec2 camera = vec2(0.0);
@@ -53,15 +55,42 @@ float splashes(vec2 p) {
 	return (ring < 0.75 && d.y <= 0.5) ? (1.0 - t / 0.45) : 0.0;
 }
 
+// One layer of snowflakes: one- or two-pixel flakes drifting down and swaying side to side.
+float flakes(vec2 p, float speed, float parallax, float density, float cell, float big) {
+	vec2 q = p + camera * parallax;
+	q.y -= TIME * speed;
+	q.x += sin(TIME * 0.9 + q.y * 0.045) * 4.0;
+	vec2 id = floor(q / cell);
+	if (hash(id) > density) {
+		return 0.0;
+	}
+	vec2 local = q - id * cell;
+	vec2 at = floor(vec2(hash(id + 13.0), hash(id + 29.0)) * (cell - 2.0));
+	vec2 d = local - at;
+	float size = hash(id + 41.0) < big ? 2.0 : 1.0;
+	return (d.x >= 0.0 && d.y >= 0.0 && d.x < size && d.y < size) ? 1.0 : 0.0;
+}
+
 void fragment() {
 	vec2 p = floor(UV * view_pixels);
-	float d = drops(p, 200.0, 0.6, 0.55 * rain, vec2(7.0, 24.0), 0.18 + storm * 0.12) * 0.6;
-	d = max(d, drops(p + 37.0, 250.0, 0.8, 0.45 * rain, vec2(9.0, 30.0), 0.2 + storm * 0.14) * 0.8);
-	d = max(d, drops(p + 71.0, 310.0, 1.0, 0.35 * rain * (0.5 + storm), vec2(11.0, 36.0), 0.22 + storm * 0.16));
-	float s = splashes(p) * 0.6;
-	vec3 tint = vec3(0.78, 0.84, 0.92) * light;
-	float veil = 0.05 * rain + 0.06 * storm;
-	float alpha = max(max(d * 0.62, s * 0.6), veil) * step(0.01, rain);
-	vec3 colour = mix(vec3(0.42, 0.47, 0.55) * light, tint, step(veil + 0.001, alpha));
-	COLOR = vec4(colour, alpha);
+	if (snow > 0.5) {
+		float amount = max(rain, 0.0);
+		float f = flakes(p, 18.0, 0.5, 0.5 * amount, 9.0, 0.1) * 0.55;
+		f = max(f, flakes(p + 51.0, 28.0 + storm * 30.0, 0.8, 0.4 * amount, 12.0, 0.35) * 0.8);
+		f = max(f, flakes(p + 97.0, 40.0 + storm * 50.0, 1.0, 0.3 * amount * (0.5 + storm), 16.0, 0.6));
+		float haze = 0.05 * amount + 0.1 * storm;
+		float a = max(f * 0.85, haze) * step(0.01, amount);
+		vec3 white = vec3(0.96, 0.98, 1.0) * light;
+		COLOR = vec4(mix(vec3(0.8, 0.86, 0.94) * light, white, step(haze + 0.001, a)), a);
+	} else {
+		float d = drops(p, 200.0, 0.6, 0.55 * rain, vec2(7.0, 24.0), 0.18 + storm * 0.12) * 0.6;
+		d = max(d, drops(p + 37.0, 250.0, 0.8, 0.45 * rain, vec2(9.0, 30.0), 0.2 + storm * 0.14) * 0.8);
+		d = max(d, drops(p + 71.0, 310.0, 1.0, 0.35 * rain * (0.5 + storm), vec2(11.0, 36.0), 0.22 + storm * 0.16));
+		float s = splashes(p) * 0.6;
+		vec3 tint = vec3(0.78, 0.84, 0.92) * light;
+		float veil = 0.05 * rain + 0.06 * storm;
+		float alpha = max(max(d * 0.62, s * 0.6), veil) * step(0.01, rain);
+		vec3 colour = mix(vec3(0.42, 0.47, 0.55) * light, tint, step(veil + 0.001, alpha));
+		COLOR = vec4(colour, alpha);
+	}
 }

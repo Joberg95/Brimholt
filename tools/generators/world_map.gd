@@ -1,5 +1,6 @@
 extends SceneTree
-## Bakes the painted world map (assets/sprites/world_map.png, SCALE pixels per overworld tile)
+## Bakes the painted world map (assets/sprites/world_map.png, SCALE pixels per map tile, laid out
+## by game/data/atlas.gd: the frost isles west of the mainland)
 ## from the map scene, in the art direction's map look: deep blue sea with lighter shallows and a
 ## pale line of surf, green land with soft painted variation, forests as clumps of canopy lit from
 ## the top-left, grey ridges with a lit and a shaded side, sandy plains and desert, dusky purple
@@ -10,6 +11,8 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/world_map.gd
 
 const World = preload("res://game/core/world.gd")
+const Atlas = preload("res://game/data/atlas.gd")
+const Biomes = preload("res://game/data/biomes.gd")
 const SCALE: int = 4
 const PNG: String = "res://assets/sprites/world_map.png"
 const META: String = "res://assets/sprites/world_map.json"
@@ -34,14 +37,23 @@ const ROOF: Array[Color] = [Color("#c8724a"), Color("#a85a3a"), Color("#6e3424")
 const TOWN_GROUND: Color = Color("#a89a7a")
 const BRIDGE: Color = Color("#8a5a34")
 const STAIRS: Color = Color("#20180e")
+## The frost isles: snowfields, snow-laden fir woods, log walls, and snowed roofs.
+const SNOW: Color = Color("#e2e9f0")
+const FIRS: Array[Color] = [Color("#f2f6fa"), Color("#4a6a58"), Color("#2c4636"), Color("#1a2c22")]
+const LOG_WALL: Color = Color("#6a4a2c")
+const SNOW_ROOF: Array[Color] = [Color("#f4f8fc"), Color("#d4dee8"), Color("#8a9aaa")]
 
 
 func _initialize() -> void:
-	var size: Vector2i = World.OVERWORLD.size
-	var image := Image.create(size.x * SCALE, size.y * SCALE, false, Image.FORMAT_RGB8)
-	for y: int in size.y:
-		for x: int in size.x:
-			_paint_tile(image, Vector2i(x, y))
+	# The sheets of the atlas (game/data/atlas.gd): the isles west of the mainland, open sea between.
+	var image := Image.create(Atlas.SIZE.x * SCALE, Atlas.SIZE.y * SCALE, false, Image.FORMAT_RGB8)
+	image.fill(SEA_DEEP)
+	for sheet: Dictionary in Atlas.SHEETS:
+		var cells: Rect2i = sheet["cells"]
+		for y: int in range(cells.position.y, cells.end.y):
+			for x: int in range(cells.position.x, cells.end.x):
+				var cell := Vector2i(x, y)
+				_paint_tile(image, cell, (cell - cells.position + sheet["at"]) * SCALE)
 	var error: Error = image.save_png(ProjectSettings.globalize_path(PNG))
 	var meta := FileAccess.open(META, FileAccess.WRITE)
 	meta.store_string(JSON.stringify({"scale": SCALE, "terrain": World.overworld_hash()}, "  ") + "\n")
@@ -50,9 +62,8 @@ func _initialize() -> void:
 	quit(0 if error == OK else 1)
 
 
-func _paint_tile(image: Image, cell: Vector2i) -> void:
+func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
 	var tile: String = World.terrain(cell)
-	var corner: Vector2i = cell * SCALE
 	match tile:
 		"~":
 			var shore: int = _distance_to_land(cell, 3)
@@ -69,7 +80,12 @@ func _paint_tile(image: Image, cell: Vector2i) -> void:
 		"C", "L", "R":
 			_ridge(image, corner, cell)
 		"#", "W":
-			_fill(image, corner, WALL)
+			_fill(image, corner, LOG_WALL if Biomes.in_isles(cell) else WALL)
+		"s":
+			_fill(image, corner, _vary(SNOW, cell, 0.04))
+		"P":
+			_fill(image, corner, _vary(SNOW, cell, 0.04))
+			_canopy(image, corner, cell, FIRS)
 		"=":
 			_fill(image, corner, _vary(STREET, cell, 0.04))
 		",":
@@ -128,7 +144,7 @@ func _canopy(image: Image, corner: Vector2i, cell: Vector2i, tones: Array[Color]
 			elif dx + dy > 1.2:
 				tone = tones[2]
 			image.set_pixelv(corner + Vector2i(x, y), tone)
-	if World.terrain(cell + Vector2i.DOWN) not in ["T", "D"]:
+	if World.terrain(cell + Vector2i.DOWN) not in ["T", "D", "P"]:
 		image.set_pixelv(corner + Vector2i(2, SCALE - 1), tones[3])
 
 
@@ -149,12 +165,13 @@ func _ridge(image: Image, corner: Vector2i, cell: Vector2i) -> void:
 ## A roof: terracotta, with a lit ridge row and a dark edge where the building ends.
 func _roof(image: Image, corner: Vector2i, cell: Vector2i) -> void:
 	var index: int = World.ROOF_AT[cell]
+	var tones: Array[Color] = SNOW_ROOF if Biomes.in_isles(cell) else ROOF
 	for y: int in SCALE:
 		for x: int in SCALE:
-			image.set_pixelv(corner + Vector2i(x, y), ROOF[1] if (y + corner.y) % 3 else ROOF[0])
+			image.set_pixelv(corner + Vector2i(x, y), tones[1] if (y + corner.y) % 3 else tones[0])
 	for side: Vector2i in [Vector2i.RIGHT, Vector2i.DOWN]:
 		if World.ROOF_AT.get(cell + side, -1) != index:
-			_edge(image, corner, side, ROOF[2])
+			_edge(image, corner, side, tones[2])
 
 
 ## One pixel row or column along a tile's side.

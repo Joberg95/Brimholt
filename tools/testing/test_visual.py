@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 CAPTURES = (
-    ("visual-weapons.png", "15 hunting weapons: native and 2x icons, four facings, stand and both walk poses"),
+    ("visual-weapons.png", "16 hunting weapons: native and 2x icons, four facings, stand and both walk poses"),
     ("visual-wardrobe.png", "Cape-free base, armor only, cape only, armor + cape; four facings and three poses each"),
     ("visual.png", "Equipped: four facings, gear layers, ground item, oblique walls"),
     ("visual-unequipped.png", "Unequipped: gear layers removed, items back in the backpack"),

@@ -114,6 +114,26 @@ const MONSTERS: Dictionary = {
 		"rank": "elite", "range": 1, "step": 0.65},
 	"hoarfrost_jarl": {"name": "The Hoarfrost Jarl", "look": "golem", "color": Color("#c8dce8"), "size": 1.9,
 		"rank": "champion", "range": 1, "step": 0.55, "respawn": 600.0, "glow": Color("#90e0ff")},
+	# The frost isles (Biomes.ISLES, by boat from Lastlight or Cinder Landing): tundra hunts for
+	# levels 28-34 round Hrimvik, and the Rimewater Trench (game/data/caves.gd), a shared cave of
+	# dense camps for 34-37 whose fishfolk and crabs drop rare level-35 gear (loot only).
+	"snow_wolf": {"name": "Snow wolf", "look": "quadruped", "color": Color("#dce4ea"), "size": 1.05,
+		"rank": "normal", "range": 1, "step": 0.33},
+	"tusked_walrus": {"name": "Tusked walrus", "look": "quadruped", "color": Color("#7a5a44"), "size": 1.3,
+		"rank": "normal", "range": 1, "step": 0.6},
+	"barbarian_raider": {"name": "Barbarian raider", "look": "humanoid", "color": Color("#c89a7a"), "size": 1.05,
+		"rank": "normal", "range": 1, "step": 0.4,
+		"gear": {"helmet": "grizzly_coif", "armor": "grizzly_hauberk", "main_hand": "duskiron_cleaver"}},
+	"trench_crab": {"name": "Trench crab", "look": "spider", "color": Color("#4a6a80"), "size": 1.05,
+		"rank": "normal", "range": 1, "step": 0.45},
+	"icetide_raider": {"name": "Icetide raider", "look": "humanoid", "color": Color("#3a7a74"), "size": 1.05,
+		"rank": "normal", "range": 1, "step": 0.4,
+		"gear": {"helmet": "bearclaw_hood", "armor": "bearclaw_mail", "main_hand": "starforged_maul"}},
+	"icetide_shaman": {"name": "Icetide shaman", "look": "humanoid", "color": Color("#2e6a66"), "size": 1.0,
+		"rank": "normal", "range": 4, "step": 0.45,
+		"gear": {"helmet": "stag_crown", "armor": "warlock_s_robe", "main_hand": "duskbloom_rod"}},
+	"grimclaw": {"name": "Old Grimclaw", "look": "spider", "color": Color("#3a5468"), "size": 1.7,
+		"rank": "champion", "range": 1, "step": 0.5, "respawn": 600.0},
 	# Level-50 hunting grounds for endgame characters: elites in the high regions (elite gold
 	# and tier-gear rolls), each with a valuable trophy and its own mythic set (Items.mythic:
 	# unbound level-50 gear, between tier 45 and relics) at low chances.
@@ -239,6 +259,14 @@ const LOOT: Dictionary = {
 	"rime_stalker": [["rime_pelt", 0.35], ["frost_rune", 0.02]],
 	"glacial_golem": [["glacial_shard", 0.3], ["rune_shard", 0.04], ["frost_rune", 0.02]],
 	"hoarfrost_jarl": [["hoarfrost_horn", 1.0], ["rune_shard", 1.0], ["frost_rune", 0.5]],
+	"snow_wolf": [["snow_wolf_pelt", 0.35]],
+	"tusked_walrus": [["walrus_tusk", 0.3], ["ice_shrimp", 0.1]],
+	"barbarian_raider": [["raider_torc", 0.3], ["health_potion", 0.08]],
+	"trench_crab": [["crab_shell", 0.35], ["ice_shrimp", 0.15], ["rimerelic_blade", 0.006]],
+	"icetide_raider": [["icetide_scale", 0.3], ["rimeskull_helm", 0.01], ["frostcrown_plate", 0.008]],
+	"icetide_shaman": [["shaman_pearl", 0.3], ["mana_potion", 0.12], ["glacier_robe", 0.012], ["rune_shard", 0.02]],
+	"grimclaw": [["grimclaw_pincer", 1.0], ["rimerelic_blade", 0.15], ["rimeskull_helm", 0.15], ["frostcrown_plate", 0.15],
+		["glacier_robe", 0.15]],
 	"sewer_rat": [["rat_tail", 0.5]],
 	"giant_rat": [["rat_pelt", 0.4], ["quarry_handhammer", 0.02]],
 	"rat_king": [["rat_crown", 1.0], ["rat_pelt", 1.0], ["quarry_handhammer", 0.12], ["burrow_falchion", 0.18]],
@@ -263,4 +291,5 @@ const RESPAWN_SECONDS: float = 45.0
 ## Monsters whose attacks are magic (cut by magic defense, not defense): wraiths, the lich, and
 ## the Hollow Bloom. Every other monster hits physically (Balance.ARMOR_TYPES).
 const MAGIC_ATTACKERS: Array[String] = ["cinder_wraith", "void_wraith", "barrow_lich", "sylvaine", "lizard_shaman",
-	"marsh_witch", "ogre_shaman", "drowned_priest", "drowned_abbess", "ember_witch"]
+	"marsh_witch", "ogre_shaman", "drowned_priest", "drowned_abbess", "ember_witch",
+	"icetide_shaman"]

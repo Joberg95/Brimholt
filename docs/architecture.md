@@ -26,6 +26,7 @@ game/
     quests.gd            Town, hub, and dungeon tasks, their givers and rewards, relic keepers, trainers
     dungeons.gd          Instanced dungeon layouts, copies, levels, and monsters
     caves.gd             Shared elite caves: areas, levels, camps, and champions
+    atlas.gd             How the mainland and the frost isles sit on the world map
     bot_behavior.tres    The bots' LimboAI behavior tree (edit in the editor's LimboAI tab; `make bot-tree` rebuilds it)
     biomes.gd            Climate regions (the desert: no rain, cactus scrub)
     regions.gd           Named overworld regions (anchors and descriptions; levels derived)
@@ -83,7 +84,7 @@ tests/
   integration/           Real ENet peers and the two-bot playthrough
   visual/                Offscreen rendering checks
 tools/
-  generators/            make_sprites.py, import_outfits.gd, make_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
+  generators/            make_sprites.py, import_outfits.gd, make_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
   testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd, bench.gd
 docs/                    Gameplay, world editing, art, balance, testing, this file
 .tools/                  Ignored: test reports, captures, downloads

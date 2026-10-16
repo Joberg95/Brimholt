@@ -1,6 +1,6 @@
 extends ColorRect
-## Draws rain (rain.gdshader) over the game window, between the lit world and the unlit
-## names and bars. The weather comes from the world view's lighting (weather.gd), so rain,
+## Draws rain, or snow over the frost isles (rain.gdshader), over the game window, between the
+## lit world and the unlit names and bars. The weather comes from the world view's lighting (weather.gd), so rain,
 ## dimming, and lightning always agree; the layer hides itself when no rain falls here.
 
 const RAIN: Shader = preload("res://game/render/rain.gdshader")
@@ -25,5 +25,6 @@ func _process(_delta: float) -> void:
 	var light: Color = world_view.lighting.modulate_node.color
 	material.set_shader_parameter("rain", weather["rain"])
 	material.set_shader_parameter("storm", weather["storm"])
+	material.set_shader_parameter("snow", 1.0 if weather.get("snow", false) else 0.0)
 	material.set_shader_parameter("light", Vector3(light.r, light.g, light.b).clampf(0.25, 1.2))
 	material.set_shader_parameter("camera", -world_view.position / Layout.ZOOM)

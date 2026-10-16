@@ -11,7 +11,7 @@ extends RefCounted
 const BAND_X: int = 624
 ## Rows between caves, stacked top to bottom in ORDER.
 const GAP: int = 4
-const ORDER: Array[String] = ["ogre_warrens", "drowned_grotto", "ember_deep", "frostvault"]
+const ORDER: Array[String] = ["ogre_warrens", "drowned_grotto", "ember_deep", "frostvault", "rimewater_trench"]
 ## name, region (where the mouth opens), near (the mouth is placed as close to this as fits),
 ## size, levels, ambient light, hall count, and the camps: [monster, lowest level, highest level,
 ## monsters per camp (two: an elite takes a solo player the time of four or five normal kills, so
@@ -33,6 +33,13 @@ const CAVES: Dictionary = {
 		"size": Vector2i(58, 42), "min_level": 41, "max_level": 45, "ambient": Color(0.5, 0.58, 0.7), "halls": 11,
 		"camps": [["frost_ogre", 41, 43, 2], ["rime_stalker", 42, 44, 2], ["glacial_golem", 43, 45, 2]],
 		"champion": ["hoarfrost_jarl", 45]},
+	# Not an elite cave: the Rimewater Trench under the frost isles' sea ice holds normal monsters
+	# in dense camps of five, a fast level-35 farm (about 270 experience a kill) with rare
+	# level-35 gear among the fishfolk and crabs.
+	"rimewater_trench": {"name": "Rimewater Trench", "region": "Rimewater Floes", "near": Vector2i(112, 532), "elite": false,
+		"size": Vector2i(58, 42), "min_level": 34, "max_level": 37, "ambient": Color(0.5, 0.64, 0.78), "halls": 11,
+		"camps": [["trench_crab", 34, 35, 5], ["icetide_raider", 35, 36, 5], ["icetide_shaman", 36, 37, 5]],
+		"champion": ["grimclaw", 37]},
 }
 
 
