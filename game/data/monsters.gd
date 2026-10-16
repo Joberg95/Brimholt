@@ -296,3 +296,11 @@ const RESPAWN_SECONDS: float = 75.0
 const MAGIC_ATTACKERS: Array[String] = ["cinder_wraith", "void_wraith", "barrow_lich", "sylvaine", "lizard_shaman",
 	"marsh_witch", "ogre_shaman", "drowned_priest", "drowned_abbess", "ember_witch",
 	"icetide_shaman"]
+
+
+## A monster's nameplate and target-frame title: "Elite " before an elite's name, its level, and
+## "ENRAGED" while a boss rages.
+static func title(kind: String, level: int, enraged: bool = false) -> String:
+	var definition: Dictionary = MONSTERS.get(kind, {"name": "?", "rank": "normal"})
+	return "%s%s %d%s" % ["Elite " if definition.get("rank", "") == "elite" else "", definition["name"], level,
+		"  ENRAGED" if enraged else ""]

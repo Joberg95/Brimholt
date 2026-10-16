@@ -16,7 +16,7 @@ const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const ItemTip = preload("res://game/ui/item_tip.gd")
-const SLOT_STEP: float = 36.0
+const SLOT_STEP: float = 30.0
 ## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/legs/ring,
 ## and cape/boots/charm.
 const PAPERDOLL: Dictionary = {
@@ -55,7 +55,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_add_panel_label(layer, "Equipment", Layout.PANEL_ORIGIN + Vector2(0, 6))
 	for slot: String in World.SLOTS:
 		_add_slot(layer, {"type": "equipment", "slot": slot}, slot_position({"type": "equipment", "slot": slot}))
-	_backpack_label = _add_panel_label(layer, "Backpack", Layout.PANEL_ORIGIN + Vector2(0, 172))
+	_backpack_label = _add_panel_label(layer, "Backpack", Layout.PANEL_ORIGIN + Vector2(0, 154))
 	for index: int in World.BACKPACK_MAX:
 		_add_slot(layer, {"type": "backpack", "index": index}, slot_position({"type": "backpack", "index": index}))
 	for bag: int in World.BAG_SLOTS:
@@ -150,7 +150,7 @@ func slot_position(location: Dictionary) -> Vector2:
 	if location["type"] == "bag":
 		return Layout.PANEL_ORIGIN + Vector2(40, 28) + Vector2(3.2, location["bag"]) * SLOT_STEP
 	var index: int = location["index"]
-	return Layout.PANEL_ORIGIN + Vector2(4, 196) + Vector2(index % BACKPACK_COLUMNS, index / BACKPACK_COLUMNS) * SLOT_STEP
+	return Layout.PANEL_ORIGIN + Vector2(4, 176) + Vector2(index % BACKPACK_COLUMNS, index / BACKPACK_COLUMNS) * SLOT_STEP
 
 
 ## Main backpack slots you can use: 8, plus your pack's slots (bags have their own windows).
@@ -202,10 +202,10 @@ func redraw_slots() -> void:
 
 
 func _build_stat_sheet(layer: CanvasLayer) -> void:
-	_add_panel_label(layer, "Stats", Layout.PANEL_ORIGIN + Vector2(0, 340))
+	_add_panel_label(layer, "Stats", Layout.PANEL_ORIGIN + Vector2(0, 304))
 	var grid := GridContainer.new()
 	grid.columns = 2
-	grid.position = Layout.PANEL_ORIGIN + Vector2(0, 364)
+	grid.position = Layout.PANEL_ORIGIN + Vector2(0, 328)
 	grid.add_theme_constant_override("h_separation", 16)
 	# Twelve rows must end above the minimap: lines sit a little closer than a label's own height.
 	grid.add_theme_constant_override("v_separation", -2)
@@ -298,7 +298,7 @@ func item_tooltip(kind: String) -> String:
 		# Everything but gear and gold: the quality and what kind of thing it is.
 		lines.append("%s %s" % [grade[0], _category(kind)])
 	if not item["slot"].is_empty() and not item["slot"] in ["bag", "container"]:
-		var who: String = "everyone"
+		var who: String = "all classes"
 		if not item["vocations"].is_empty():
 			var names: PackedStringArray = []
 			for vocation: String in item["vocations"]:
@@ -412,7 +412,7 @@ func _add_slot(layer: CanvasLayer, location: Dictionary, at: Vector2) -> void:
 ## A drag-and-drop item slot for a location; freed slots are dropped from the redraw list.
 func make_slot(location: Dictionary) -> Control:
 	var slot := ItemSlot.new()
-	slot.size = Vector2.ONE * World.TILE_SIZE
+	slot.size = Vector2.ONE * Layout.SLOT_SIZE
 	slot.custom_minimum_size = slot.size
 	slot.set_meta("location", location)
 	slot.draw.connect(_draw_slot.bind(slot, location))
@@ -458,7 +458,7 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 		var now: float = game._now()
 		SpriteArt.draw_item_glow(slot, slot.size / 2.0, kind, 0.6 + 0.25 * sin(now * 2.6))
 		# Rarity is shown in the tooltip; an item you cannot use yet is tinted red.
-		SpriteArt.draw_item(slot, slot.size / 2.0, kind, Color.WHITE if usable else Color(1.0, 0.55, 0.55))
+		SpriteArt.draw_item(slot, slot.size / 2.0, kind, Color.WHITE if usable else Color(1.0, 0.55, 0.55), slot.size.x)
 		var cooling: float = potion_cooldown(kind)
 		if cooling > 0.0:
 			# Shade the part of the potion still cooling down, draining from the top.
@@ -467,9 +467,9 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 		if World.count_of(entry) > 1:
 			SpriteArt.draw_count(slot, slot.size - Vector2(3, 3), World.count_of(entry))
 	elif location["type"] == "equipment":
-		SpriteArt.draw_slot_hint(slot, slot.size / 2.0, location["slot"])
+		SpriteArt.draw_slot_hint(slot, slot.size / 2.0, location["slot"], slot.size.x)
 	elif location["type"] == "bag":
-		SpriteArt.draw_item(slot, slot.size / 2.0, "leather_satchel", Color(0, 0, 0, 0.35))
+		SpriteArt.draw_item(slot, slot.size / 2.0, "leather_satchel", Color(0, 0, 0, 0.35), slot.size.x)
 	if location["type"] == "bag" and bag_windows.size() > location["bag"] and bag_windows[location["bag"]].visible:
 		slot.draw_rect(Rect2(Vector2.ZERO, slot.size), Color("#ffcf6a"), false, 1.0)
 

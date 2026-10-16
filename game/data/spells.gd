@@ -7,7 +7,7 @@ extends RefCounted
 ## "taunt_target" (Provoke) turns one monster, your target, onto the caster from a few tiles away:
 ## pull it off a healer before it reaches them. Monsters keep a target until they lose it.
 ## "root" (Entangling roots) and "slow" (Crippling arrow) hit the target and then hold it in
-## place, or halve its pace, for the spell's "seconds" (Combat.restrain); bosses shrug them off,
+## place, or halve its pace, for the spell's "seconds" (Combat.restrain); bosses and champions shrug them off,
 ## and a player cannot be held again until RESTRAIN_IMMUNITY seconds after it ends.
 
 const Balance = preload("res://game/data/balance.gd")

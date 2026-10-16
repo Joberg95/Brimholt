@@ -89,6 +89,7 @@ func _run() -> void:
 	_gap_checks()
 	_hollow_checks()
 	_stray_wall_checks()
+	_monster_title_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -466,6 +467,15 @@ func _bot_checks() -> void:
 	var low: int = medic["health"]
 	_run_bots(calm_bots, calm_combat, 10.0, 1.0)
 	check(medic["health"] > low and World.count_of(medic["backpack"][0]) < Bots.POTIONS, "a wounded bot drinks a potion like the fight simulator")
+	# Mana: a bot low on mana, or too short for its strongest ready spell, drinks a mana potion,
+	# on its own cooldown beside the health potion.
+	medic["health"] = roundi(calm_world.player_stats(calm)["health"] * 0.2)
+	medic["mana"] = roundi(calm_world.player_stats(calm)["mana"] * 0.4)
+	var mana_before: int = World.count_of(medic["backpack"][1])
+	var health_before: int = World.count_of(medic["backpack"][0])
+	calm_bots.use_resources(calm, 40.0, [])
+	check(World.count_of(medic["backpack"][1]) == mana_before - 1 and World.count_of(medic["backpack"][0]) == health_before - 1,
+		"a hurt bot at 40% mana drinks a health and a mana potion in the same moment")
 	var foe: int = calm_combat.spawn_monster("thornback_boar", 5, medic["cell"] + Vector2i(1, 0), 20.0)
 	calm_world.monsters[foe]["next_move"] = INF
 	calm_world.monsters[foe]["next_attack"] = INF
@@ -3450,6 +3460,17 @@ func _stray_wall_checks() -> void:
 	var unpaved: Dictionary = CobbleTowns.paving()
 	check(unpaved.is_empty(), "every town is paved (%d tiles left, first %s)" % [unpaved.size(), unpaved.keys().slice(0, 3)])
 
+
+## Nameplates and the target frame (Monsters.title) mark elites, and roots and slows pass bosses
+## and champions by.
+func _monster_title_checks() -> void:
+	for kind: String in Monsters.MONSTERS:
+		var definition: Dictionary = Monsters.MONSTERS[kind]
+		var title: String = Monsters.title(kind, 30)
+		check(title.begins_with("Elite ") == (definition["rank"] == "elite") and title.ends_with("%s 30" % definition["name"]),
+			"%s's title is \"%s\"" % [kind, title])
+	check(Monsters.title("grimclaw", 37, true).ends_with("ENRAGED"), "a raging boss's title says so")
+
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")
 	check(Dungeons.ORDER.size() == Dungeons.DUNGEONS.size() and World.ENTRANCE_OF.size() == Dungeons.DUNGEONS.size(),
@@ -4590,6 +4611,10 @@ func _armor_and_control_checks() -> void:
 	var boss: int = combat.spawn_monster("morvain", 50, arena + Vector2i(3, 3), 0.0)
 	combat.restrain(boss, "root", 3.0, 50.0, [])
 	check(not world.monsters[boss].has("rooted_until"), "bosses cannot be rooted or slowed")
+	var champion: int = combat.spawn_monster("grimclaw", 37, arena + Vector2i(-3, 3), 0.0)
+	combat.restrain(champion, "slow", 3.0, 50.0, [])
+	check(Monsters.MONSTERS["grimclaw"]["rank"] == "champion" and not world.monsters[champion].has("slowed_until"),
+		"champions cannot be rooted or slowed either")
 
 
 ## Rune spells (Combat.use_rune): items that level 40+ hunts drop, cast by any class from the

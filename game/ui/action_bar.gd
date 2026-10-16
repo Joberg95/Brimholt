@@ -168,8 +168,8 @@ func _draw_slot(button: Control, slot: int) -> void:
 	elif entry.begins_with("item:") and World.ITEMS.has(entry.trim_prefix("item:")):
 		_draw_rune_slot(button, entry.trim_prefix("item:"))
 	var key: String = Keybinds.key_name(keybinds.keys["slot_%d" % (slot + 1)][0])
-	button.draw_string_outline(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color.BLACK)
-	button.draw_string(font, Vector2(3, 11), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#f2e6c4"))
+	button.draw_string_outline(font, Vector2(2, 10), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 3, Color.BLACK)
+	button.draw_string(font, Vector2(2, 10), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("#f2e6c4"))
 
 
 ## A rune item slot: its icon, how many you carry (dimmed at none or below its level), and the
@@ -182,7 +182,8 @@ func _draw_rune_slot(button: Control, kind: String) -> void:
 		if World.kind_of(entry) == kind:
 			count += World.count_of(entry)
 	var usable: bool = count > 0 and state.get("level", 1) >= World.ITEMS[kind]["level"]
-	SpriteArt.draw_item(button, button.size / 2.0 + Vector2(0, 2), kind, Color.WHITE if usable else Color(0.5, 0.5, 0.5, 0.7))
+	SpriteArt.draw_item(button, button.size / 2.0 + Vector2(0, 2), kind, Color.WHITE if usable else Color(0.5, 0.5, 0.5, 0.7),
+		button.size.x - 4)
 	var font: Font = ThemeDB.fallback_font
 	var label: String = str(count)
 	var at := Vector2(button.size.x - 4 - font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x, button.size.y - 4)
@@ -205,7 +206,7 @@ func _draw_spell_slot(button: Control, spell: String) -> void:
 	var center: Vector2 = button.size / 2.0
 	var state: Dictionary = actors[self_id]["state"] if actors.has(self_id) else {}
 	var usable: bool = not state.is_empty() and state.get("level", 1) >= definition["level"]
-	SpellRune.draw_rune(button, spell, center + Vector2(0, 2), usable)
+	SpellRune.draw_rune(button, spell, center + Vector2(0, 2), usable, button.size.x - 4)
 	if state.is_empty():
 		return
 	var now: float = game._now()

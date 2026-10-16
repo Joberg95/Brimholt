@@ -68,7 +68,7 @@ hit for a geared attack of your level, whatever your class, and all runes share 
 cooldown. Bots carry the runes they find and cast them at packs.
 
 **Roots and slows.** Entangling roots holds its target in place and Crippling arrow halves its
-pace; both also hit it. Bosses shrug them off, and a player who was just held cannot be held
+pace; both also hit it. Bosses and champions shrug them off (the caster is told), and a player who was just held cannot be held
 again until 6 seconds after it ended.
 
 **Armor and the two kinds of damage.** Warriors' and Hunters' attacks and spells, and most
@@ -196,7 +196,11 @@ On screen, creatures show a name and a health bar that turns yellow and red, dam
 in red (critical hits in orange), healing in green, and experience in white. Ranged attacks
 fly as projectiles and area spells flash their tiles. Your health and mana bars sit in the
 top-left of the game window; while you have a target, the **target frame** beside them shows its
-name and level (coloured by danger, like its nameplate) and its health in numbers and percent.
+name and level (coloured by danger, like its nameplate; elites read "Elite Ogre brute 33") and
+its health in numbers and percent. Caves and dungeons show no banner or "Entering" line: the
+location line under the minimap names them. Item tooltips say "all classes" for gear any class
+can wear. Item slots, the action bar, and the micro menu are drawn about a fifth smaller than
+their 32-pixel art.
 
 ## Playing solo: companions, rivals, and raids
 
@@ -252,7 +256,8 @@ health and 50 mana potions, and play through the server's own rules, so PvP zone
 death penalties, and loot drops all apply. Their nameplates read "Bot Warrior 40" and so on.
 They fight like the fight simulator's careful player: their strongest ready attack spell
 while above 30% health, healing spells below 55%, a health potion below 35%, and a mana potion
-below 25% mana; ranged bots step back from anything beside them.
+below half their mana or whenever their strongest ready spell costs more than they have left
+(one of each together, as the cooldowns allow); ranged bots step back from anything beside them.
 
 | Stance | Behaviour |
 | --- | --- |

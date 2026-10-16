@@ -6,7 +6,7 @@ const GOLD: Color = Color("#ffcf6a")
 const TEXT: Color = Color("#e8e4da")
 ## The text size of menus, dialogs, and windows that do not set their own (main.gd sets it on
 ## the default theme too).
-const FONT_SIZE: int = 13
+const FONT_SIZE: int = 12
 
 
 ## A menu's background: nearly opaque, so the world behind does not show through the text.

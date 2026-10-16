@@ -7,11 +7,13 @@ const ItemSlot = preload("res://game/ui/item_slot.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Layout = preload("res://game/ui/layout.gd")
 
-const SIZE: float = 32.0
+const SIZE: float = 26.0
 const GAP: float = 2.0
 ## Painted 32-pixel icons (tools/generators/make_sprites.py MENU_ICONS), one per entry in ICON_ORDER.
 const ICONS: Texture2D = preload("res://assets/sprites/menu_icons.png")
-const ICON: float = 32.0
+const ICON: float = 26.0
+## The icons' size in menu_icons.png.
+const ICON_ART: float = 32.0
 const ICON_ORDER: Array[String] = ["character", "spell_book", "professions", "quest_list", "lexicon", "world_map", "party",
 	"controls"]
 const ACCENT: Color = Color("#ffcf6a")
@@ -86,4 +88,4 @@ func _draw_button(button: Control, action: String) -> void:
 	if index >= 0:
 		var inset: float = (SIZE - ICON) / 2.0
 		button.draw_texture_rect_region(ICONS, Rect2(inset, inset, ICON, ICON),
-			Rect2(index * ICON, 0, ICON, ICON), Color.WHITE if open or hovered else Color(0.88, 0.88, 0.88))
+			Rect2(index * ICON_ART, 0, ICON_ART, ICON_ART), Color.WHITE if open or hovered else Color(0.88, 0.88, 0.88))

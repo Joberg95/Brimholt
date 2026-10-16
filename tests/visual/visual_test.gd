@@ -1016,7 +1016,8 @@ func _check_dungeons() -> bool:
 	var cellar: Image = screen.get_texture().get_image()
 	cellar.save_png("res://.tools/visual-cellar.png")
 	var king_seen: bool = game.monsters.values().any(func(monster: Dictionary) -> bool: return monster["state"]["kind"] == "rat_king")
-	if not _expect(king_seen and game._zone_label.text.contains("Cinder cellar"), "The Rat King's copy is not drawn"):
+	if not _expect(king_seen and game._zone_label.text.contains("Cinder cellar") and not game._zone_label.visible,
+			"The Rat King's copy is not drawn, or a dungeon shows the zone banner"):
 		return false
 	player["cell"] = Dungeons.origin("highmoor_mine", 0) + Dungeons.cells("highmoor_mine", "@")[0]
 	player["from"] = player["cell"]

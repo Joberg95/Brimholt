@@ -106,8 +106,7 @@ func target_info() -> Dictionary:
 	var own_level: int = game.actors[game.self_id]["state"].get("level", 1) if game.actors.has(game.self_id) else 1
 	var title: String
 	if state.has("kind"):
-		title = "%s %d%s" % [Monsters.MONSTERS.get(state["kind"], {"name": "?"})["name"], state.get("level", 1),
-			"  ENRAGED" if state.get("enraged", false) else ""]
+		title = Monsters.title(state["kind"], state.get("level", 1), state.get("enraged", false))
 	elif state.has("name"):
 		title = "%s %d" % [String(state["name"]).get_slice(" of ", 0), state.get("level", 1)]
 	else:
@@ -211,8 +210,10 @@ func _update_zone() -> void:
 	var zone: Dictionary = World.zone_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else {}
 	var zone_name: String = zone.get("name", "")
 	var message: String = game.last_action_message
+	# Caves and dungeons need no banner or announcement: the line under the minimap names them.
+	var below: bool = zone.has("cave") or zone.get("underground", false)
 	# Announce the zone unless a newer message (such as a death report) is still showing.
-	if zone_name != _zone_name and not zone_name.is_empty() and (message.is_empty() or game._now() - _message_since > 2.0):
+	if zone_name != _zone_name and not zone_name.is_empty() and not below 			and (message.is_empty() or game._now() - _message_since > 2.0):
 		game.last_action_message = "Entering %s." % zone_name
 	_zone_name = zone_name
 	var continent: String = World.continent_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else ""
@@ -220,7 +221,7 @@ func _update_zone() -> void:
 		if not _continent.is_empty():
 			game.last_action_message = "You arrive on %s." % continent
 		_continent = continent
-	zone_label.visible = not zone.is_empty()
+	zone_label.visible = not zone.is_empty() and not below
 	if not zone.is_empty():
 		var rule: String = "PvP zone: other players can attack you" if zone["pvp"] else "safe zone"
 		if zone.has("cave"):

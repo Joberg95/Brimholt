@@ -674,8 +674,8 @@ static func item_region(kind: String) -> Rect2:
 
 
 ## Draws an item icon centred on a 32-pixel slot or ground tile.
-static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: Color = Color.WHITE) -> void:
-	var dest := Rect2(center - Vector2.ONE * TILE / 2.0, Vector2.ONE * TILE)
+static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: Color = Color.WHITE, size: float = TILE) -> void:
+	var dest := Rect2(center - Vector2.ONE * size / 2.0, Vector2.ONE * size)
 	if ICONS.has(kind):
 		canvas.draw_texture_rect(ICONS[kind], dest, false, tint)
 		return
@@ -691,10 +691,10 @@ static func draw_count(canvas: CanvasItem, corner: Vector2, count: int) -> void:
 	canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("#f2e6c4"))
 
 
-static func draw_slot_hint(canvas: CanvasItem, center: Vector2, slot: String) -> void:
+static func draw_slot_hint(canvas: CanvasItem, center: Vector2, slot: String, size: float = TILE) -> void:
 	for kind: String in ITEM_ORDER:
 		if World.fits(kind, slot):
-			draw_item(canvas, center, kind, Color(0, 0, 0, 0.35))
+			draw_item(canvas, center, kind, Color(0, 0, 0, 0.35), size)
 			return
 
 
@@ -718,6 +718,10 @@ static func draw_monster(canvas: CanvasItem, center: Vector2, state: Dictionary,
 	canvas.draw_set_transform(Vector2.ZERO)
 
 
+## Nameplate text size in map pixels (twice that on screen).
+const NAME_SIZE: int = 7
+
+
 ## Tibia-style name and health bar above a creature; the bar turns yellow, then red.
 static func draw_nameplate(canvas: CanvasItem, center: Vector2, text: String, health: int, max_health: int,
 		height: float = 1.0, skull: String = "", name_color: Color = Color.TRANSPARENT, party: String = "",
@@ -726,10 +730,10 @@ static func draw_nameplate(canvas: CanvasItem, center: Vector2, text: String, he
 	var top: float = center.y - 30.0 - 12.0 * (height - 1.0) + (4.0 * height if compact else 0.0)
 	var fraction: float = clampf(float(health) / maxf(1.0, max_health), 0.0, 1.0)
 	var color: Color = Color("#5ad04a") if fraction > 0.6 else (Color("#e0c040") if fraction > 0.3 else Color("#e04a3a"))
-	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE).x
 	var at := Vector2(center.x - width / 2.0, top - 4.0)
-	canvas.draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, OUTLINE)
-	canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, name_color if name_color.a > 0.0 else color)
+	canvas.draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE, 3, OUTLINE)
+	canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE, name_color if name_color.a > 0.0 else color)
 	canvas.draw_rect(Rect2(center.x - 13, top - 1, 26, 4), OUTLINE)
 	canvas.draw_rect(Rect2(center.x - 12, top, 24.0 * fraction, 2), color)
 	if not skull.is_empty():

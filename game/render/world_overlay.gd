@@ -72,8 +72,8 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 		if shown.has_point(center) and not view.covered(Vector2i(monster["visual"].round())):
 			var definition: Dictionary = Monsters.MONSTERS.get(monster["state"]["kind"], {"name": "?", "size": 1.0})
 			var own_level: int = game.actors[game.self_id]["state"].get("level", 1) if game.actors.has(game.self_id) else 1
-			var title: String = "%s %d%s" % [definition["name"], monster["state"]["level"],
-				"  ENRAGED" if monster["state"].get("enraged", false) else ""]
+			var title: String = Monsters.title(monster["state"]["kind"], monster["state"]["level"],
+				monster["state"].get("enraged", false))
 			SpriteArt.draw_nameplate(self, center, title,
 				monster["state"]["health"], monster["state"]["max_health"], definition["size"], "",
 				SpriteArt.danger_color(monster["state"]["level"], own_level), "", definition.get("look", "") == "humanoid")

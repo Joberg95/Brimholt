@@ -60,10 +60,11 @@ const HOME_RADIUS: int = 10
 const LEVEL_MARGIN: int = 3
 const PVP_RADIUS: int = 7
 ## Fight simulator thresholds: heal below HEAL_SHARE health, drink a health potion below
-## POTION_SHARE, a mana potion below MANA_SHARE mana; attack spells only above ATTACK_SHARE.
+## POTION_SHARE, a mana potion below MANA_SHARE mana (or, in a fight, when the strongest ready
+## spell costs more than is left), each on its own cooldown; attack spells only above ATTACK_SHARE.
 const HEAL_SHARE: float = 0.55
 const POTION_SHARE: float = 0.35
-const MANA_SHARE: float = 0.25
+const MANA_SHARE: float = 0.5
 const ATTACK_SHARE: float = 0.3
 const POTIONS: int = 50
 ## Rivals carry fewer potions: what they drop is the reward for beating them.
@@ -393,18 +394,30 @@ func use_resources(id: int, now: float, events: Array) -> void:
 		var used: Dictionary = combat.use_rune(id, rune, now)
 		if used["ok"]:
 			events.append_array(used["events"])
-	var potion: String = ""
+	var potions: Array[String] = []
 	if share < POTION_SHARE:
-		potion = "health_potion"
-	elif float(player["mana"]) / maxf(1.0, stats["mana"]) < MANA_SHARE:
-		potion = "mana_potion"
-	if potion.is_empty():
-		return
-	var index: int = player["backpack"].find_custom(func(entry: String) -> bool: return World.kind_of(entry) == potion)
-	if index >= 0:
-		var drunk: Dictionary = combat.drink(id, index, now)
-		if drunk["ok"]:
-			events.append_array(drunk["events"])
+		potions.append("health_potion")
+	if float(player["mana"]) / maxf(1.0, stats["mana"]) < MANA_SHARE or (fighting and _short_of_mana(id, now)):
+		potions.append("mana_potion")
+	for potion: String in potions:
+		var index: int = player["backpack"].find_custom(func(entry: String) -> bool: return World.kind_of(entry) == potion)
+		if index >= 0:
+			var drunk: Dictionary = combat.drink(id, index, now)
+			if drunk["ok"]:
+				events.append_array(drunk["events"])
+
+
+## Whether the bot's strongest attack spell that is off cooldown costs more mana than it has, so
+## it would stand idle without a mana potion.
+func _short_of_mana(id: int, now: float) -> bool:
+	var player: Dictionary = world.players[id]
+	for spell: String in _spells(id):
+		var definition: Dictionary = Spells.SPELLS[spell]
+		if definition["kind"].begins_with("heal") or definition["kind"].begins_with("taunt"):
+			continue
+		if now >= player["cooldowns"].get(spell, -INF) and now >= player["groups"].get(definition["group"], -INF):
+			return player["mana"] < maxi(1, roundi(world.player_stats(id)["mana"] * definition["mana"]))
+	return false
 
 
 ## The bot's known spells, strongest first (like a player reaching for their best ready spell).

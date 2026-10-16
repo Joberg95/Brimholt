@@ -434,7 +434,10 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 		"root", "slow":
 			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
 			_hit(id, target, power, now, events)
-			if exists(target):
+			if exists(target) and unholdable(target):
+				events.append({"kind": "message", "id": id, "text": "%s is too mighty to be %s." % [
+					monster_def(target)["name"], "held by roots" if definition["kind"] == "root" else "slowed"]})
+			elif exists(target):
 				restrain(target, definition["kind"], definition["seconds"], now, events)
 		"taunt_target":
 			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
@@ -1694,10 +1697,11 @@ func _occupancy(now: float) -> Dictionary:
 
 
 ## Roots ("root": no steps) or slows ("slow": World.SLOWED_STEP times slower) a player or monster
-## for `seconds`. Bosses shrug it off; a player who was just held is immune for RESTRAIN_IMMUNITY.
+## for `seconds`. Bosses and champions shrug it off (unholdable); a player who was just held is
+## immune for RESTRAIN_IMMUNITY.
 func restrain(id: int, kind: String, seconds: float, now: float, events: Array) -> void:
 	var held: Dictionary = creature(id)
-	if id < 0 and monster_def(id)["rank"] == "boss":
+	if unholdable(id):
 		return
 	if id > 0 and now < held.get("restrain_immune_until", -INF):
 		events.append({"kind": "message", "id": id, "text": "You shake off the %s." % ("roots" if kind == "root" else "slowing")})
@@ -1708,6 +1712,11 @@ func restrain(id: int, kind: String, seconds: float, now: float, events: Array) 
 		events.append({"kind": "message", "id": id, "text": "You are %s for %s s." % [
 			"rooted in place" if kind == "root" else "slowed", Spells.number(seconds)]})
 	events.append({"kind": "player" if id > 0 else "monster", "id": id, "movement": false})
+
+
+## Whether roots and slows pass a creature by: bosses and champions are too mighty to be held.
+func unholdable(id: int) -> bool:
+	return id < 0 and monster_def(id)["rank"] in ["boss", "champion"]
 
 
 func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
