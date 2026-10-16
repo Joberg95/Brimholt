@@ -38,7 +38,6 @@ TEMPLATES = {
     "rod": ["template_pieces_staff", "tide_rod", "emberthorn_rod", "duskbloom_rod", "starbloom_rod"],
     "book": ["template_pieces_book"],
     "charm": ["template_verdant_spirit_offhand", "template_wildroot_offhand"],
-    "amulet": ["template_astral_veil_offhand", "template_arcane_eclipse_offhand"],
     "orb": ["template_astral_veil_offhand", "template_arcane_eclipse_offhand"],
     "crystal": ["template_wildroot_offhand"],
 }
@@ -171,7 +170,7 @@ def main():
         icon = recolour(painted(name), item, shape in WOODEN)
         if shape == "bow":
             icon = hollow(icon)
-        M.icon_finish(icon).save(DERIVED / f"{kind}.png")
+        M.icon_finish(M.icon_volume(icon)).save(DERIVED / f"{kind}.png")
         made += 1
     print(f"derived {made} icons into {DERIVED.relative_to(M.ROOT)}; {len(skipped)} keep generated icons")
     # The painted icons get the repeatable part of the shared finish (outline and contrast).

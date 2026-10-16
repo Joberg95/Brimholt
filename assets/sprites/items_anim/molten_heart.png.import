@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dmvdi5kiu4ffa"
-path="res://.godot/imported/cobalt_amulet.png-777bb9fcc764dc18295e9dc3297434fc.ctex"
+uid="uid://b3r056kf27gdk"
+path="res://.godot/imported/molten_heart.png-39a4965aa88d8ce552e82b0cbc4dbf3a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/cobalt_amulet.png"
-dest_files=["res://.godot/imported/cobalt_amulet.png-777bb9fcc764dc18295e9dc3297434fc.ctex"]
+source_file="res://assets/sprites/items_anim/molten_heart.png"
+dest_files=["res://.godot/imported/molten_heart.png-39a4965aa88d8ce552e82b0cbc4dbf3a.ctex"]
 
 [params]
 

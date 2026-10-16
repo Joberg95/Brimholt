@@ -1631,7 +1631,7 @@ func _showpiece_helmet_checks() -> void:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 22, "showpiece helmets, boots, axes, and two backpacks move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 24, "showpiece helmets, boots, axes, two backpacks, and two necklaces move in the inventory")
 	var themed: Array[String] = []
 	for kind: String in World.ITEMS:
 		if String(World.ITEMS[kind]["look"]).begins_with("backpack+"):
@@ -1660,6 +1660,12 @@ func _showpiece_helmet_checks() -> void:
 
 
 func _ring_checks() -> void:
+	var pendants: Array[String] = ["pendant", "disc", "flame", "crescent", "star", "fang", "heart", "skull", "beads", "eye"]
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind]["slot"] == "necklace":
+			check(String(World.ITEMS[kind]["look"]).get_slice("+", 0) == "necklace"
+				and String(World.ITEMS[kind]["look"]).get_slice("+", 1) in pendants,
+				"%s is drawn as a chain with a pendant" % kind)
 	var styles: Array[String] = ["gem", "signet", "plasma", "wreath", "serpent", "claw", "skull", "twin", "crystal", "star"]
 	var focused: int = 0
 	for kind: String in World.ITEMS:

@@ -2047,6 +2047,7 @@ import props  # noqa: E402
 import gear3d  # noqa: E402
 import pixel_axes  # noqa: E402
 import pixel_bags  # noqa: E402
+import pixel_necklaces  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2373,9 +2374,18 @@ def backpack_icon(kind, frame=0):
     return image
 
 
+def necklace_icon(kind, frame=0):
+    """A necklace (pixel_necklaces.py): a tilted chain, a clasp, and the style's pendant."""
+    _, extras = look(kind)
+    image = Image(TILE, TILE)
+    image.pixels = pixel_necklaces.icon(next(iter(extras)), ITEMS[kind]["colors"], frame)
+    return image
+
+
 def animated(kind):
     shape, extras = look(kind)
-    return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE)))
+    return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE))) \
+        or (shape == "necklace" and bool(extras & set(pixel_necklaces.GLOWING)))
 
 
 def icon_frames(kind):
@@ -2387,8 +2397,10 @@ def icon_frames(kind):
             icon = helm_icon(kind, frame)
         elif shape == "backpack":
             icon = backpack_icon(kind, frame)
+        elif shape == "necklace":
+            icon = necklace_icon(kind, frame)
         else:
-            icon = item_icon(kind)
+            icon = icon_volume(item_icon(kind)) if needs_volume(kind) else item_icon(kind)
         icon = icon_finish(icon)
         if ITEMS[kind].get("shine") == "sheen":
             icon = _sheen(icon, frame)
@@ -2651,7 +2663,8 @@ def material_icon(image, shape, palette, accent):
 
 # ---------------------------------------------------------------- icon finishing
 # Every icon goes through icon_finish on its way out (items.png, items_anim, the derived and
-# painted icons), so icons from different builders share one finish: a single dark outline,
+# painted icons), after icon_volume for the ones not already shaded with volume (needs_volume),
+# so icons from different builders share one finish: a single dark outline,
 # a lit inner rim on the top-left and a shaded one on the bottom-right (the bevelled pop of
 # classic item icons), and contrast stretched when an icon came out flat.
 
@@ -2667,6 +2680,64 @@ def _hls_shift(color, light=0.0, sat=1.0):
     l = max(0.0, min(1.0, l + light))
     s = max(0.0, min(1.0, s * sat))
     return tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, l, s)) + (color[3],)
+
+
+VOLUME_DEPTH = 4          # pixels from the edge at which an icon's dome is fully raised
+VOLUME_STEP = 0.075       # lightness of one shade step
+VOLUME_LIGHT = (-0.6, -0.7, 0.55)
+
+
+def icon_volume(icon):
+    """Round an icon's body like a solid lit from the top-left: each pixel's distance from the
+    silhouette makes a dome, and the light on it shifts the pixel's own colour by whole shade
+    steps (no gradients, so it stays pixel art). Outline-dark pixels are left alone."""
+    size, height = icon.width, icon.height
+    solid = {(x, y) for y in range(height) for x in range(size) if icon.opaque(x, y)}
+    if not solid:
+        return icon
+    distance = {}
+    frontier = [p for p in solid if any((p[0] + dx, p[1] + dy) not in solid
+                                        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+    for p in frontier:
+        distance[p] = 1
+    while frontier:
+        following = []
+        for x, y in frontier:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                q = (x + dx, y + dy)
+                if q in solid and q not in distance:
+                    distance[q] = distance[(x, y)] + 1
+                    following.append(q)
+        frontier = following
+    lift = lambda p: math.sqrt(min(distance.get(p, 0), VOLUME_DEPTH) / VOLUME_DEPTH)
+    result = Image(size, height)
+    result.over(icon)
+    lx, ly, lz = VOLUME_LIGHT
+    for x, y in solid:
+        color = icon.pixels[y][x]
+        if _luma(color) < OUTLINE_LUMA:
+            continue
+        gx = lift((x + 1, y)) - lift((x - 1, y))
+        gy = lift((x, y + 1)) - lift((x, y - 1))
+        nx, ny, nz = -gx, -gy, 0.9
+        length = math.sqrt(nx * nx + ny * ny + nz * nz)
+        light = (lx * nx + ly * ny + lz * nz) / length
+        steps = max(-2, min(2, round((light - 0.55) * 4.0)))
+        if steps:
+            result.pixels[y][x] = _hls_shift(color, steps * VOLUME_STEP)
+    return result
+
+
+def needs_volume(kind):
+    """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
+    (showpieces, axes, backpacks, necklaces) already have their volume."""
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace")
+
+
+def finished_icon(kind):
+    """An item's icon as it ships in items.png: volume where it needs it, then the shared finish."""
+    icon = item_icon(kind)
+    return icon_finish(icon_volume(icon) if needs_volume(kind) else icon)
 
 
 def icon_finish(icon, rim=True):
@@ -2732,6 +2803,8 @@ def item_icon(kind):
         return ring_icon(kind)
     if shape == "backpack":
         return backpack_icon(kind)
+    if shape == "necklace":
+        return necklace_icon(kind)
     if shape in SHOWPIECE_STYLES:
         return helm_icon(kind)
     image = Image(TILE, TILE)
@@ -3015,12 +3088,6 @@ def item_icon(kind):
         shade(image, band, (light, main, dark), False)
         shade(image, ellipse(16, 14, 2.5, 2), gem, False)
         image.set(15, 13, light)
-    elif shape == "amulet":
-        for chain in (line(6, 5, 15, 17), line(26, 5, 17, 17)):
-            for index, (x, y) in enumerate(sorted(chain)):
-                image.set(x, y, light if index % 2 else main)
-        shade(image, ellipse(16, 22, 4.5, 5.5) | {(16, 16)}, gem, False)
-        image.set(15, 20, (230, 245, 255, 255))
     elif shape == "charm":
         for y in range(3, 10):
             image.set(16, y, LEATHER)
@@ -5447,7 +5514,7 @@ def main():
         "body.png": character_sheet(split_body("body"), compact=True, columns=POSE_COLUMNS),
         "cloth.png": character_sheet(split_body("cloth"), compact=True, columns=POSE_COLUMNS),
         "marker.png": character_sheet(marker, columns=POSE_COLUMNS),
-        "items.png": sheet([icon_finish(item_icon(kind)) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
+        "items.png": sheet([finished_icon(kind) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
         "spells.png": sheet([spell_icon(spell, rune, color) for spell, rune, color in spell_catalog()], 8, TILE),
         "spell_missiles.png": sheet([spell_missile(element, frame) for element in MISSILE_ELEMENTS for frame in range(MISSILE_FRAMES)],
                                     MISSILE_FRAMES, MISSILE_SIZE),

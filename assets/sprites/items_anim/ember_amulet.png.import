@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bkecvet3kcw6e"
-path="res://.godot/imported/gravecall_amulet.png-aefc7dc5949c9cee01161cd7f63dca82.ctex"
+uid="uid://b6cjn70fw5w1k"
+path="res://.godot/imported/ember_amulet.png-279618b7fa83e28cc7ef93abaff5f965.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/gravecall_amulet.png"
-dest_files=["res://.godot/imported/gravecall_amulet.png-aefc7dc5949c9cee01161cd7f63dca82.ctex"]
+source_file="res://assets/sprites/items_anim/ember_amulet.png"
+dest_files=["res://.godot/imported/ember_amulet.png-279618b7fa83e28cc7ef93abaff5f965.ctex"]
 
 [params]
 
