@@ -35,3 +35,5 @@ you should not be able to entangle bosses
 lets reduce the ui size and icon size with around 20% 
 
 lets update the char models, https://tibia.fandom.com/wiki/Outfiter , the outfitter shows the perfect example of the direction of art we want. ![alt text](outfitter-tibia.png)
+
+check where we are missing the new art style compared to the old, there is a lot of mismatching around the world (plan 38)

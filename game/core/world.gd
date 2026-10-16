@@ -92,10 +92,12 @@ const FURNISHINGS: Dictionary = {
 const HOME_PIECES: Array[String] = ["bed", "chest", "table", "chair", "plant", "shelf_books", "barrel", "plant"]
 const HOME_TILES: int = 4
 const HOME_MIN: int = 3
-## Street furniture: a lamp post every LAMP_GAP tiles or more along the cobbled streets, and on
+## Street furniture: a lamp post every LAMP_GAP tiles or more beside the cobbled streets, and on
 ## each town's most open square a well with benches and market stalls around it. Nothing is placed
 ## where it could split a street (World._splits) or beside a door.
 const LAMP_GAP: int = 7
+## The ground a lamp post stands on: grass, sand, bog, or snow at a street's side.
+const LAMP_VERGE: String = ".:ms"
 const SQUARE_PIECES: Array = [[Vector2i(0, 0), "well"], [Vector2i(-2, 1), "bench"], [Vector2i(2, 1), "bench"],
 	[Vector2i(-3, -2), "stall"], [Vector2i(3, -2), "stall"], [Vector2i(0, -3), "stall"]]
 static var MAP_HASH: String = ""
@@ -424,8 +426,8 @@ static func _decorate_streets() -> void:
 		keep[cell] = true
 	for entry: Array in GROUND_ITEMS:
 		keep[entry[0]] = true
-	var free: Callable = func(cell: Vector2i) -> bool:
-		if terrain(cell) != "=" or ROOM_AT.has(cell) or not walkable(cell) or keep.has(cell):
+	var free: Callable = func(cell: Vector2i, floor_kinds: String = "=") -> bool:
+		if not terrain(cell) in floor_kinds or terrain(cell).is_empty() or ROOM_AT.has(cell) or not walkable(cell) or keep.has(cell):
 			return false
 		# Never in or beside a doorway or a gate (an opening in a wall line) or a person.
 		for side: Vector2i in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT, Vector2i(1, 1),
@@ -461,14 +463,16 @@ static func _decorate_streets() -> void:
 				var cell: Vector2i = best + piece[0]
 				if free.call(cell):
 					FURNITURE[cell] = piece[1]
-		# Lamps: street tiles beside a wall, a building, or the street's edge, LAMP_GAP apart.
-		for y: int in range(rect.position.y, rect.end.y):
-			for x: int in range(rect.position.x, rect.end.x):
+		# Lamps: on the verge beside a street (never on the cobbles, where they would block the
+		# way), LAMP_GAP apart, and a tile in from the town's edge so the split test sees all round.
+		for y: int in range(rect.position.y + 1, rect.end.y - 1):
+			for x: int in range(rect.position.x + 1, rect.end.x - 1):
 				var cell := Vector2i(x, y)
-				# Cheapest tests first: the street and lamp spacing, then the full free-tile check.
-				if terrain(cell) != "=" or not LAMPS.all(func(lamp: Vector2i) -> bool: return chebyshev(lamp, cell) >= LAMP_GAP):
+				# Cheapest tests first: the verge and lamp spacing, then the full free-tile check.
+				if terrain(cell).is_empty() or not terrain(cell) in LAMP_VERGE 						or not LAMPS.all(func(lamp: Vector2i) -> bool: return chebyshev(lamp, cell) >= LAMP_GAP):
 					continue
-				if _walls_beside(cell) == 0 and terrain(cell + Vector2i.UP) == "=" or not free.call(cell):
+				if not [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT].any(
+						func(side: Vector2i) -> bool: return terrain(cell + side) == "=") or not free.call(cell, LAMP_VERGE):
 					continue
 				FURNITURE[cell] = "lamp_post"
 				LAMPS.append(cell)

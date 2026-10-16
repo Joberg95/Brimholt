@@ -3917,6 +3917,9 @@ func _building_checks() -> void:
 	# connected areas with them as without).
 	var street: Array[String] = ["lamp_post", "well", "bench", "stall"]
 	check(World.LAMPS.size() >= 40, "town streets have lamp posts (%d)" % World.LAMPS.size())
+	for lamp: Vector2i in World.LAMPS:
+		check(World.terrain(lamp) in World.LAMP_VERGE and [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT].any(
+			func(side: Vector2i) -> bool: return World.terrain(lamp + side) == "="), "the lamp at %s stands beside a street, not on it" % lamp)
 	for zone: Dictionary in World.ZONES:
 		if zone["town"]:
 			var with_pieces: int = _town_areas(zone["rect"], street, false)
