@@ -13,6 +13,7 @@ const Instances = preload("res://game/core/instances.gd")
 const CharacterStore = preload("res://game/persistence/character_store.gd")
 const Identity = preload("res://game/persistence/identity.gd")
 const Balance = preload("res://game/data/balance.gd")
+const Titles = preload("res://game/data/titles.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const GameWindow = preload("res://game/ui/game_window.gd")
 const Hud = preload("res://game/ui/hud.gd")
@@ -1691,6 +1692,8 @@ func _apply_actor(state: Dictionary, movement: bool = false) -> void:
 		start = actors[id]["visual"]
 	if actors.has(id) and state.get("level", 1) > actors[id]["state"].get("level", 1) and _world_view != null:
 		_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color("#ffd86a"))
+	if actors.has(id) and state.get("title", 0) > actors[id]["state"].get("title", 0) and _world_view != null:
+		_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Titles.color_of(state["title"]))
 	var previous: Dictionary = actors.get(id, {})
 	actors[id] = {
 		"state": state.duplicate(true), "start": start, "visual": start,

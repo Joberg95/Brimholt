@@ -900,7 +900,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"level": 1, "experience": 0, "vocation": vocation, "gold": START_GOLD, "next_travel": now,
 				"target": 0, "next_attack": now, "next_regen": now, "town_rest": false, "town_rest_ready": -INF, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
-				"party": 0, "invited": {}, "active_at": -INF, "trophies": {},
+				"party": 0, "invited": {}, "active_at": -INF, "trophies": {}, "title": 0, "slain": {},
 				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
 				"skills": {}, "gathering": {}, "next_craft": now, "fed": {}, "bags": ["", "", ""],
 			}
@@ -947,7 +947,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		"remaining": remaining, "duration": player.get("step", MOVE_SECONDS), "facing": player["facing"],
 		"equipment": player["equipment"].duplicate(), "level": player["level"], "vocation": player["vocation"],
 		"health": player["health"], "max_health": player_stats(id)["health"], "skull": player["skull"],
-		"party": player["party"],
+		"party": player["party"], "title": player.get("title", 0),
 	}
 	if player.get("bot", false):
 		state["bot"] = true
@@ -963,6 +963,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["invites"] = invites
 		state["invited"] = player["invited"].keys()
 		state["trophies"] = player["trophies"].duplicate()
+		state["slain"] = player.get("slain", {}).keys()
 		state["unjustified"] = player["unjustified"].size()
 		state["mana"] = player["mana"]
 		state["town_rest"] = player["town_rest"]

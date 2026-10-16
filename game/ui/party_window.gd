@@ -6,6 +6,7 @@ extends PanelContainer
 ## main.raid_plan_local), and gathers or disbands that raid at level 50 (main.raid_local). Invite players by right-clicking them. Rebuilt only when the party,
 ## invitations, or raid change; health bars redraw while it is open.
 
+const Titles = preload("res://game/data/titles.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const UiTheme = preload("res://game/ui/ui_theme.gd")
@@ -121,7 +122,10 @@ func _rebuild() -> void:
 		named.custom_minimum_size = Vector2(150, 0)
 		named.autowrap_mode = TextServer.AUTOWRAP_OFF
 		grid.add_child(named)
-		var vocation: Label = _label("%s %d" % [Balance.profile_of(member.get("vocation", ""))["name"], member.get("level", 1)], 13, MUTED)
+		# An endgame title (game/data/titles.gd) stands in for the class name, in its colour.
+		var rank: String = Titles.name_of(member.get("vocation", ""), int(member.get("title", 0)))
+		var vocation: Label = _label("%s %d" % [Balance.profile_of(member.get("vocation", ""))["name"] if rank.is_empty() else rank,
+			member.get("level", 1)], 13, MUTED if rank.is_empty() else Titles.color_of(int(member["title"])))
 		vocation.autowrap_mode = TextServer.AUTOWRAP_OFF
 		vocation.custom_minimum_size = Vector2(90, 0)
 		grid.add_child(vocation)

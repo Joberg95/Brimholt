@@ -5,6 +5,7 @@ extends PanelContainer
 ## only their text changes, and only while it is open.
 
 const World = preload("res://game/core/world.gd")
+const Titles = preload("res://game/data/titles.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
@@ -108,6 +109,7 @@ func refresh() -> void:
 	var key: String = "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % [state.get("level"), state.get("experience"), state.get("vocation"),
 		state.get("equipment"), state.get("health"), state.get("mana"), state.get("gold"), state.get("bank"),
 		state.get("party"), state.get("skull"), state.get("town_rest"), maxi(rest_left, 0), maxi(meal_left, 0) / 60]
+	key += "|%s|%s|%s" % [state.get("title"), state.get("done_tasks"), state.get("slain")]
 	if key == _key:
 		return
 	_key = key
@@ -120,7 +122,8 @@ func _write(state: Dictionary, rest_left: int, meal_left: int) -> void:
 	var profile: Dictionary = Balance.profile_of(vocation)
 	var stats: Dictionary = World.stats(level, state.get("equipment", {}), vocation)
 	var base: Dictionary = Balance.base_stats(level, vocation)
-	_title.text = "%s · level %d" % [profile["name"], level]
+	var title: String = Titles.name_of(vocation, int(state.get("title", 0)))
+	_title.text = "%s · level %d" % [profile["name"] if title.is_empty() else "%s (%s)" % [title, profile["name"]], level]
 	_role.text = "Role: %s" % profile["role"]
 	var next: int = Balance.experience_to_next(level)
 	var experience: int = state.get("experience", 0)
@@ -159,6 +162,15 @@ func _write(state: Dictionary, rest_left: int, meal_left: int) -> void:
 func _status_lines(state: Dictionary, rest_left: int, meal_left: int) -> PackedStringArray:
 	var lines: PackedStringArray = []
 	lines.append("Gold %d carried · %d in the bank (%s)" % [state.get("gold", 0), state.get("bank", 0), World.bank_place()])
+	var done: Dictionary = {}
+	for task: String in state.get("done_tasks", []):
+		done[task] = true
+	var slain: Dictionary = {}
+	for boss: String in state.get("slain", []):
+		slain[boss] = true
+	var next: String = Titles.next_step(state.get("vocation", ""), int(state.get("title", 0)), done, slain)
+	if not next.is_empty():
+		lines.append(next)
 	var party: int = state.get("party", 0)
 	if party == 0:
 		lines.append("No party: right-click another player to invite them and share experience.")

@@ -16,6 +16,7 @@ const Monsters = preload("res://game/data/monsters.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Items = preload("res://game/data/items.gd")
 const Quests = preload("res://game/data/quests.gd")
+const Titles = preload("res://game/data/titles.gd")
 
 const TICK_SECONDS: float = 0.1
 const REGEN_SECONDS: float = 2.0
@@ -755,8 +756,10 @@ func _award_trophies(boss: String, fought: Dictionary, at: Vector2i, events: Arr
 			continue
 		var player: Dictionary = world.players[id]
 		player["trophies"][boss] = player["trophies"].get(boss, 0) + 1
+		player["slain"][boss] = true
 		events.append({"kind": "message", "id": id, "text": "You helped slay %s. Claim a relic from %s." % [name, relic_keeper_text(boss)]})
 		events.append({"kind": "player", "id": id})
+		check_title(id, events)
 
 
 ## Who trades `boss`'s trophies for relics, for messages ("Ysolde in Reedmere").
@@ -901,7 +904,23 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 	if action == "complete":
 		text += next_task_hint(player, npc)
 	events.append({"kind": "message", "id": id, "text": text})
+	if action == "complete":
+		check_title(id, events)
 	return {"ok": true, "events": events}
+
+
+## Raises a player's title (game/data/titles.gd) to the highest tier their record now earns; a
+## title once earned is kept. Called on task turn-ins, final boss kills, and level-ups.
+func check_title(id: int, events: Array) -> void:
+	var player: Dictionary = world.players[id]
+	var tier: int = Titles.tier_for(player["level"], player["done_tasks"], player["slain"])
+	if tier <= player["title"]:
+		return
+	player["title"] = tier
+	var name: String = Titles.name_of(player["vocation"], tier)
+	if not name.is_empty():
+		events.append({"kind": "message", "id": id, "text": "You have earned the title %s." % name})
+	events.append({"kind": "player", "id": id})
 
 
 ## " Next: ..." pointing to the task World.next_task suggests, when another giver offers it.
@@ -1245,6 +1264,7 @@ func grant_experience(id: int, amount: int, events: Array) -> void:
 	events.append({"kind": "hit", "target": id, "cell": player["cell"], "amount": amount, "style": "experience"})
 	if player["level"] > before:
 		events.append({"kind": "message", "id": id, "text": "You advanced to level %d." % player["level"]})
+		check_title(id, events)
 	events.append({"kind": "player", "id": id})
 
 

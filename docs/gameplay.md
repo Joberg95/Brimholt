@@ -765,6 +765,20 @@ another relic. Relics are level 50, beat the best tiered gear, glow in their bos
 with drifting sparks, and are **bound**: they cannot be dropped and are never lost on death,
 even with a red skull.
 
+## Endgame titles
+
+At the top of the game a character earns a title, shown in place of the class name in the
+character and party windows (in its colour) and to everyone who sees them. It is earned once and
+kept, even if a death costs levels; the character window says what the next one asks for.
+
+| Title | Asks for | Warrior | Hunter | Sorcerer | Druid |
+| --- | --- | --- | --- | --- | --- |
+| First | level 30 and three champion tasks done (any dungeon or cave champion) | Vanguard | Pathwarden | Magister | Wildwarden |
+| Second | level 40, the Hunters' Lodge chain finished, and six champion tasks | Warlord | Ranger Lord | Archmage | Archdruid |
+| Third | level 50 and every final boss slain at least once | Warlord of the Void | Ranger Lord of the Void | Archmage of the Void | Archdruid of the Void |
+
+Earning one flares like a level-up, in the title's colour.
+
 ## Stats and balance
 
 Every new character starts as an **Adventurer**: no class yet, middling health and

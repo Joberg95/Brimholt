@@ -22,6 +22,7 @@ const Biomes = preload("res://game/data/biomes.gd")
 const TownPaths = preload("res://tools/generators/town_paths.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Atlas = preload("res://game/data/atlas.gd")
+const Titles = preload("res://game/data/titles.gd")
 const VoidThrone = preload("res://tools/generators/void_throne.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Regions = preload("res://game/data/regions.gd")
@@ -81,6 +82,7 @@ func _run() -> void:
 	_isles_checks()
 	_scale_checks()
 	_spell_fx_checks()
+	_title_checks()
 	_climate_checks()
 	_building_checks()
 	_hardening_checks()
@@ -3283,6 +3285,63 @@ func _spell_fx_checks() -> void:
 	var mend: Dictionary = combat.cast(2, "mass_mend", 1.0)
 	check(mend["ok"] and mend["events"].any(func(event: Dictionary) -> bool:
 		return event["kind"] == "area" and event.get("element", "") == "heal"), "a mass mend lands as healing motes")
+
+
+## Endgame titles (game/data/titles.gd): the ladder's rules, earned once and kept, the final
+## bosses slain recorded, saved and restored, and exported for others to see.
+func _title_checks() -> void:
+	var champions: Array[String] = Titles.champion_tasks()
+	check(champions.size() >= Titles.CHAMPIONS_SECOND and Titles.final_bosses().size() >= 3,
+		"there are enough champion tasks and final bosses for the ladder (%d, %d)" % [champions.size(), Titles.final_bosses().size()])
+	for vocation: String in Balance.VOCATIONS:
+		if vocation != Balance.ADVENTURER:
+			check(Titles.NAMES.has(vocation) and Titles.NAMES[vocation].size() == 3, "%ss have three titles" % vocation)
+	check(Titles.name_of(Balance.ADVENTURER, 2).is_empty(), "Adventurers carry no title")
+	var three: Dictionary = {}
+	var six: Dictionary = {Titles.LODGE_TASK: true}
+	for index: int in champions.size():
+		if index < 3:
+			three[champions[index]] = true
+		if index < 6:
+			six[champions[index]] = true
+	var all_bosses: Dictionary = {}
+	for boss: String in Titles.final_bosses():
+		all_bosses[boss] = true
+	var one_short: Dictionary = all_bosses.duplicate()
+	one_short.erase(Titles.final_bosses()[0])
+	check(Titles.tier_for(29, three, {}) == 0 and Titles.tier_for(30, three, {}) == 1, "the first title asks for level 30 and three champions")
+	check(Titles.tier_for(40, six, {}) == 2 and Titles.tier_for(40, three.merged({Titles.LODGE_TASK: true}), {}) == 1
+		and Titles.tier_for(39, six, {}) == 1, "the second asks for level 40, the Lodge, and six champions")
+	check(Titles.tier_for(50, six, all_bosses) == 3 and Titles.tier_for(50, six, one_short) == 2,
+		"the third asks for level 50 and every final boss slain")
+	check(Titles.next_step("knight", 0, {}, {}).contains("Vanguard") and Titles.next_step("knight", 3, six, all_bosses).is_empty(),
+		"the character window names the next title, and nothing past the last")
+	var world := World.new()
+	var combat := Combat.new(world, 30)
+	world.monsters.clear()
+	check(world.add_player(1, 0.0, "sorcerer"), "title player")
+	var player: Dictionary = world.players[1]
+	check(player["title"] == 0 and player["slain"].is_empty(), "a new character has no title")
+	player["level"] = 30
+	player["done_tasks"] = three.duplicate()
+	var events: Array = []
+	combat.check_title(1, events)
+	check(player["title"] == 1 and events.any(func(event: Dictionary) -> bool:
+		return event["kind"] == "message" and event["text"].contains("Magister")), "earning a title says so")
+	events.clear()
+	combat.check_title(1, events)
+	check(events.is_empty(), "a title is announced once")
+	player["level"] = 20
+	combat.check_title(1, events)
+	check(player["title"] == 1 and world.export_player(1, 0.0)["title"] == 1, "a title is kept after a death costs levels, and others see it")
+	combat._award_trophies(Titles.final_bosses()[0], {1: true}, player["cell"], [])
+	check(player["slain"].has(Titles.final_bosses()[0]), "a final boss kill is recorded for the titles")
+	var saved: Dictionary = CharacterStore.capture(world, 1, 0.0)
+	var restored := World.new()
+	restored.add_player(1, 0.0, "sorcerer")
+	CharacterStore.restore(restored, 1, JSON.parse_string(JSON.stringify(saved)), 0.0)
+	check(restored.players[1]["title"] == 1 and restored.players[1]["slain"].has(Titles.final_bosses()[0]),
+		"titles and slain bosses are saved and restored")
 
 func _dungeon_checks() -> void:
 	check(load("res://tools/generators/dungeons.gd").TERRAINS == World.TERRAINS, "the dungeon painter uses the map terrains")

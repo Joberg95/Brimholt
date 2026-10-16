@@ -8,8 +8,9 @@ extends RefCounted
 ## machine no player controls is the only way to rule that out.
 ##
 ## Saved: vocation, level, experience, vitals, gold, bank, position, equipment, backpack,
-## depot, boss trophies, town tasks, and skulls (as time remaining). Loading sanitizes every
-## field against the current catalog, so old or hand-made data cannot create invalid items.
+## depot, boss trophies, town tasks, the endgame title and the final bosses slain, and skulls
+## (as time remaining). Loading sanitizes every field against the current catalog, so old or
+## hand-made data cannot create invalid items.
 
 const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -124,6 +125,7 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 		"cell": [player["cell"].x, player["cell"].y],
 		"equipment": player["equipment"].duplicate(), "bags": player["bags"].duplicate(), "backpack": player["backpack"].duplicate(),
 		"depot": player["depot"].duplicate(), "trophies": player["trophies"].duplicate(),
+		"title": player.get("title", 0), "slain": player.get("slain", {}).keys(),
 		"tasks": player["tasks"].duplicate(), "done_tasks": player["done_tasks"].keys(),
 		"spell_ranks": player["spell_ranks"].duplicate(),
 		"skills": player["skills"].duplicate(true),
@@ -193,6 +195,12 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 		for boss: Variant in trophies:
 			if typeof(boss) == TYPE_STRING and Monsters.MONSTERS.get(boss, {}).has("relics") and _int(trophies[boss], 0) > 0:
 				player["trophies"][boss] = _int(trophies[boss], 0)
+	player["title"] = clampi(_int(data.get("title"), 0), 0, 3)
+	var slain: Variant = data.get("slain")
+	if typeof(slain) == TYPE_ARRAY:
+		for boss: Variant in slain:
+			if typeof(boss) == TYPE_STRING and Monsters.MONSTERS.get(boss, {}).has("relics"):
+				player["slain"][boss] = true
 	var done: Variant = data.get("done_tasks")
 	if typeof(done) == TYPE_ARRAY:
 		for task: Variant in done:
