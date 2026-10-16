@@ -169,6 +169,16 @@ shields). Add the set to `manifest.json` with `"layout": "grid"` and run `make o
 
 ## Items and gear
 
+**Icon finishing.** Every icon goes through `icon_finish` in `make_sprites.py` on its way out:
+generated cells of `items.png`, every `items_anim` frame, the derived icons (`derive_icons.py`), and
+the painted icons. It gives all of them one dark outline (`ICON_OUTLINE`; an outline is added where
+an edge was bright, never doubled), stretches a flat icon's contrast towards `CONTRAST_SPAN`, and,
+except on painted icons (finished in place, so only the repeatable steps), adds a lit inner rim on
+the top-left and a shaded one on the bottom-right with a touch more saturation. Item slots show
+icons at their full 32 pixels (`Layout.SLOT_SIZE`): any smaller and nearest filtering drops rows
+and columns of pixels.
+
+
 The user-selected theme reference is the [Tibia item index](https://tibia.fandom.com/wiki/Items)
 ([alternative category index](https://www.tibiawiki.com.br/wiki/Itens)). Use it for broad
 equipment families, silhouettes, ornament, palettes, and names: items may imitate it closely

@@ -171,9 +171,12 @@ def main():
         icon = recolour(painted(name), item, shape in WOODEN)
         if shape == "bow":
             icon = hollow(icon)
-        icon.save(DERIVED / f"{kind}.png")
+        M.icon_finish(icon).save(DERIVED / f"{kind}.png")
         made += 1
     print(f"derived {made} icons into {DERIVED.relative_to(M.ROOT)}; {len(skipped)} keep generated icons")
+    # The painted icons get the repeatable part of the shared finish (outline and contrast).
+    for path in sorted(PAINTED.glob("*.png")):
+        M.icon_finish(M.Image.load(path), rim=False).save(path)
 
 
 if __name__ == "__main__":

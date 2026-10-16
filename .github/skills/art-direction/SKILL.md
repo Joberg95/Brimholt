@@ -112,7 +112,9 @@ or other proprietary sprite files. CC0 only for third-party files, with a licens
    outline, palette fit with neighbours, tiling seams.
 5. Fix everything you noted in one pass and look again. Two rounds should be enough; if not,
    compare against the reference builder again rather than nudging numbers.
-6. Update the sheet's row in `docs/art.md` (size, layout, anchor, builder name).
+6. Item icons: return them from the builder unfinished; `icon_finish` (outline, rim light, contrast)
+   is applied to every icon in `main()` and `derive_icons.py`. Icons are shown at 32 px, never smaller.
+7. Update the sheet's row in `docs/art.md` (size, layout, anchor, builder name).
 
 `make sprites` regenerates **every** sheet, and some (castle, mountains, objects, ores,
 terrain palette) come out different from the committed files. Write only your own sheet:

@@ -2370,7 +2370,7 @@ def icon_frames(kind):
     shape, _ = look(kind)
     frames = []
     for frame in range(ANIM_FRAMES):
-        icon = helm_icon(kind, frame) if shape in SHOWPIECE_STYLES else item_icon(kind)
+        icon = icon_finish(helm_icon(kind, frame) if shape in SHOWPIECE_STYLES else item_icon(kind))
         if ITEMS[kind].get("shine") == "sheen":
             icon = _sheen(icon, frame)
         frames.append(icon)
@@ -2628,6 +2628,75 @@ def material_icon(image, shape, palette, accent):
         shade(image, {p for p in ellipse(16, 15, 9, 11) if p[1] >= 6}, palette)
         for y in range(9, 24, 4):
             image.rect(11, y, 10, 1, dark)
+
+
+# ---------------------------------------------------------------- icon finishing
+# Every icon goes through icon_finish on its way out (items.png, items_anim, the derived and
+# painted icons), so icons from different builders share one finish: a single dark outline,
+# a lit inner rim on the top-left and a shaded one on the bottom-right (the bevelled pop of
+# classic item icons), and contrast stretched when an icon came out flat.
+
+ICON_OUTLINE = rgba("181214")
+OUTLINE_LUMA = 72        # edge pixels darker than this already are outline
+RIM = 0.16               # lighten / darken of the inner rim
+CONTRAST_SPAN = 150      # luma range an icon's body should cover
+SATURATION = 1.08
+
+
+def _hls_shift(color, light=0.0, sat=1.0):
+    h, l, s = colorsys.rgb_to_hls(*(c / 255 for c in color[:3]))
+    l = max(0.0, min(1.0, l + light))
+    s = max(0.0, min(1.0, s * sat))
+    return tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, l, s)) + (color[3],)
+
+
+def icon_finish(icon, rim=True):
+    """The shared finish for a 32x32 icon. rim=False leaves out the rim light and the saturation
+    (for painted icons, which are finished in place and must not be lit twice); the outline and the
+    contrast stretch are safe to repeat."""
+    size = icon.width
+    solid = {(x, y) for y in range(icon.height) for x in range(size) if icon.opaque(x, y)}
+    if not solid:
+        return icon
+    near = lambda x, y: [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    edge = {p for p in solid if any(q not in solid for q in near(*p))}
+    result = Image(size, icon.height)
+    result.over(icon)
+    # One outline: dark edges become the shared outline colour, bright edges get one outside.
+    for x, y in edge:
+        if _luma(icon.pixels[y][x]) < OUTLINE_LUMA:
+            result.pixels[y][x] = ICON_OUTLINE
+        else:
+            for qx, qy in near(x, y):
+                if (qx, qy) not in solid and 0 <= qx < size and 0 <= qy < icon.height:
+                    result.pixels[qy][qx] = ICON_OUTLINE
+    body = [p for p in solid if p not in edge or _luma(icon.pixels[p[1]][p[0]]) >= OUTLINE_LUMA]
+    # Contrast: stretch a flat icon's body luma towards CONTRAST_SPAN, a little more saturated.
+    lumas = sorted(_luma(icon.pixels[y][x]) for x, y in body)
+    if lumas:
+        low, high = lumas[len(lumas) // 20], lumas[-1 - len(lumas) // 20]
+        span = max(1.0, high - low)
+        gain = min(1.35, max(1.0, CONTRAST_SPAN / span))
+        middle = (low + high) / 2
+        for x, y in body:
+            color = result.pixels[y][x]
+            if color is None or color == ICON_OUTLINE:
+                continue
+            delta = (_luma(color) - middle) * (gain - 1.0) / 255
+            result.pixels[y][x] = _hls_shift(color, delta, SATURATION if rim else 1.0)
+    if rim:
+        # The inner rim: lit where the outside is above or to the left, shaded below and right.
+        for x, y in body:
+            color = result.pixels[y][x]
+            if color is None or color == ICON_OUTLINE or _luma(color) < OUTLINE_LUMA:
+                continue
+            outside = [(dx, dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                       if (x + dx, y + dy) not in solid or result.pixels[y + dy][x + dx] == ICON_OUTLINE]
+            if any(d in outside for d in ((-1, 0), (0, -1))):
+                result.pixels[y][x] = _hls_shift(color, RIM)
+            elif any(d in outside for d in ((1, 0), (0, 1))):
+                result.pixels[y][x] = _hls_shift(color, -RIM)
+    return result
 
 
 def item_icon(kind):
@@ -5357,7 +5426,7 @@ def main():
         "body.png": character_sheet(split_body("body"), compact=True, columns=POSE_COLUMNS),
         "cloth.png": character_sheet(split_body("cloth"), compact=True, columns=POSE_COLUMNS),
         "marker.png": character_sheet(marker, columns=POSE_COLUMNS),
-        "items.png": sheet([item_icon(kind) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
+        "items.png": sheet([icon_finish(item_icon(kind)) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
         "spells.png": sheet([spell_icon(spell, rune, color) for spell, rune, color in spell_catalog()], 8, TILE),
         "spell_missiles.png": sheet([spell_missile(element, frame) for element in MISSILE_ELEMENTS for frame in range(MISSILE_FRAMES)],
                                     MISSILE_FRAMES, MISSILE_SIZE),
