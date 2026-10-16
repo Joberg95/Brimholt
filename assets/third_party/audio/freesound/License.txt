@@ -1,0 +1,17 @@
+Freesound.org sounds, each released under Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The files are Freesound's high-quality previews of these sounds, renamed:
+
+rain_loop.ogg    "Slowly Raining Loop" by unfa             https://freesound.org/s/177479/
+thunder_1.ogg    "Thunder.ogg" by lennyboy                 https://freesound.org/s/244053/
+thunder_2.ogg    "sfx_thunder blast.wav" by bajko          https://freesound.org/s/399656/
+wind_plain.ogg   "Looping Gentle Wind Ambience on an Open Desert Plain" by dhallcomposer  https://freesound.org/s/697217/
+wind_arctic.ogg  "Wind__Artic__Cold.wav" by cobratronik    https://freesound.org/s/117136/
+birds.ogg        "Park ambience - mostly birds" by Mafon2  https://freesound.org/s/274175/
+crickets.ogg     "crickets_creek.wav" by rhapsodize        https://freesound.org/s/171823/
+town.ogg         "medieval_village_atmosphere.wav" by ramonmineiro  https://freesound.org/s/578072/
+swamp.ogg        "forest swamp" by Kostrava                https://freesound.org/s/548629/
+cave_drips.ogg   "Ambience INT water drip dropping cave grotto spooky" by corkob  https://freesound.org/s/392668/
+level_up.ogg     "Level Up / Mission Complete" by Beetlemuse  https://freesound.org/s/528958/
+zap.ogg          "ELECTRIC_ZAP_001.wav" by JoelAudio       https://freesound.org/s/136542/

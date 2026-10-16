@@ -11,7 +11,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |
 | 21 | [Rare mini-bosses](21-mini-bosses.md) | L | Later, when the game is stable |
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
 | 32 | [Continents with one major and one smaller city](32-continents-and-cities.md) | XL | Which mainland towns stay |

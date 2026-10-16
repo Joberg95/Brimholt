@@ -5,7 +5,8 @@ extends PanelContainer
 ## the old title row above the game window, so the window sits at the top of the screen.
 ##
 ## Settings are saved to SETTINGS_PATH (unless `persistent` is off, as in tests): weather effects
-## (rain and snow over the game window), floating damage numbers, and fullscreen.
+## (rain and snow over the game window), floating damage numbers, and fullscreen. The sound
+## sliders set the volume of each audio bus (game/audio/sound.gd, which saves them).
 
 const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -22,10 +23,14 @@ const SETTINGS: Dictionary = {
 	"damage_numbers": ["Damage numbers", "Floating numbers for damage, healing, and experience", true],
 	"fullscreen": ["Fullscreen", "Fill the screen (the game keeps its pixel size, centred)", false],
 }
+## Sound bus -> slider label (game/audio/sound.gd keeps and saves the volumes).
+const VOLUME_LABELS: Dictionary = {"Master": "Volume", "Effects": "Effects", "Ambience": "Ambience", "UI": "Interface"}
 
 var game: Node
 var persistent: bool = true
 var settings: Dictionary = {}
+## Bus -> its volume slider.
+var volume_sliders: Dictionary = {}
 var status: Label
 var controls_button: Button
 var leave_button: Button
@@ -69,6 +74,28 @@ func build(game_node: Node, open_controls: Callable) -> void:
 			toggle.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		toggle.toggled.connect(func(on: bool) -> void: set_setting(key, on))
 		column.add_child(toggle)
+	column.add_child(_heading("Sound"))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	column.add_child(grid)
+	for bus: String in VOLUME_LABELS:
+		var label := Label.new()
+		label.text = VOLUME_LABELS[bus]
+		label.custom_minimum_size = Vector2(110, 0)
+		grid.add_child(label)
+		var slider := HSlider.new()
+		slider.min_value = 0.0
+		slider.max_value = 1.0
+		slider.step = 0.05
+		slider.custom_minimum_size = Vector2(WIDTH - 150, 18)
+		slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		slider.focus_mode = Control.FOCUS_NONE
+		slider.value = game.sound.volumes[bus] if game.get("sound") != null else 0.0
+		slider.value_changed.connect(func(value: float) -> void:
+			if game.sound != null:
+				game.sound.set_volume(bus, value))
+		grid.add_child(slider)
+		volume_sliders[bus] = slider
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	column.add_child(row)
@@ -128,7 +155,9 @@ func set_setting(key: String, on: bool) -> void:
 	settings[key] = on
 	apply_settings()
 	if persistent:
+		# The sound volumes share the file in their own section (game/audio/sound.gd).
 		var file := ConfigFile.new()
+		file.load(SETTINGS_PATH)
 		for setting: String in settings:
 			file.set_value("game", setting, settings[setting])
 		file.save(SETTINGS_PATH)

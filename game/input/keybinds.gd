@@ -25,6 +25,7 @@ const DEFAULTS: Dictionary = {
 	"party": ["Party", KEY_O, KEY_NONE],
 	"health_potion": ["Health potion", KEY_Q, KEY_NONE],
 	"mana_potion": ["Mana potion", KEY_E, KEY_NONE],
+	"mute": ["Mute sound", KEY_N, KEY_NONE],
 	"slot_1": ["Action bar 1", KEY_1, KEY_NONE],
 	"slot_2": ["Action bar 2", KEY_2, KEY_NONE],
 	"slot_3": ["Action bar 3", KEY_3, KEY_NONE],
@@ -39,7 +40,7 @@ const DEFAULTS: Dictionary = {
 const RESERVED: Array[Key] = [KEY_ESCAPE]
 ## The action bar holds spells, stored as "spell:<id>", and rune items, stored as "item:<kind>"
 ## (cast from the backpack, Combat.use_rune); "" is an empty slot. Other
-## actions (target nearest, pick up, gather, world map, quest list, spell book, character, lexicon, professions, party, potions) have their own key bindings above.
+## actions (target nearest, pick up, gather, world map, quest list, spell book, character, lexicon, professions, party, potions, mute) have their own key bindings above.
 const DEFAULT_BAR: Array[String] = ["", "", "", "", "", "", "", "", ""]
 
 ## Action id -> [primary, secondary] physical keycodes.
