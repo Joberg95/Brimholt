@@ -10,9 +10,8 @@ edge on the left to the shaded lower edge on the right, so the 45-degree edges s
   w W grip wrap (leather)    s S bone                      . nothing
 
 Blades: `blade` is the list of cross-sections from the tip. Extras: `curve` (a sabre's bow),
-`wave` (a wavy blade), `teeth` (saw teeth on the lower edge every n rows), `jagged` (barbs on both
-edges), `spikes` (crystal barbs on the upper edge), `fangs` (long hooked teeth), `hook` (a fang
-near the tip).
+`wave` (a wavy blade), `teeth` (saw teeth on the lower edge every n rows), `fangs` (long hooked
+teeth), `hook` (a fang near the tip).
 Guards: cross, wing (arms swept toward the tip), crescent (swept toward the hilt), disc, lion
 (a gold mask with eyes), spiked (a cross with barbs), trident (a crescent with prongs).
 Pommels: ball, gem, ring, spike, skull.
@@ -60,13 +59,13 @@ STYLES = {
     "sanguine": {"tip": 5, "blade": _blade("12yA4", 13), "guard": ("crescent", 4), "pommel": "gem", "grip": 5,
                  "glow": True},
     "rime": {"tip": 3, "blade": _blade("125345", 16), "guard": ("cross", 5), "pommel": "gem", "grip": 5,
-             "spikes": 3},
+             "curve": 1.6},
     "drakefang": {"tip": 3, "blade": _blade("12345", 16), "guard": ("wing", 5), "pommel": "spike", "grip": 5,
                   "fangs": 3},
     "tide": {"tip": 3, "blade": _blade("12a45", 16), "guard": ("trident", 4), "pommel": "gem", "grip": 5,
              "wave": 1.0, "glow": True},
     "void": {"tip": 3, "blade": _blade("12aA45", 16), "guard": ("spiked", 5), "pommel": "skull", "grip": 5,
-             "jagged": 2},
+             "curve": 3.0},
     "grand": {"tip": 3, "blade": _blade("12yA45", 15), "guard": ("lion", 4), "pommel": "gem", "grip": 5,
               "glow": True},
 }
@@ -114,12 +113,6 @@ def icon(style, colors, frame=0):
         if 3 < index < length - 1:
             if spec.get("teeth") and index % spec["teeth"] == 0:
                 put(right + 1, y - 1, "4")
-            if spec.get("jagged") and index % spec["jagged"] == 0:
-                put(right + 1, y - 1, "4")
-                put(left - 1, y + 1, "2")
-            if spec.get("spikes") and index % spec["spikes"] == 0:
-                put(left - 1, y + 1, "1")
-                put(left - 2, y + 2, "2")
             if spec.get("fangs") and index % spec["fangs"] == 1:
                 put(right + 1, y, "3")
                 put(right + 2, y - 1, "4")
