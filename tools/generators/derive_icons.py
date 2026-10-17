@@ -296,9 +296,9 @@ def main():
     bases = banded_bases()
     for kind, item in M.ITEMS.items():
         # Showpiece helmets and boots draw their own icon (make_sprites.py helm_icon), and so do the
-        # hand-pixelled wands, rods, and bows (pixel_staves.py, pixel_bows.py).
+        # hand-pixelled wands, rods, bows, and shields (pixel_staves.py, pixel_bows.py, pixel_shields.py).
         if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.SHOWPIECE_STYLES \
-                or kind in M.STAFF_STYLES or kind in M.BOW_STYLES:
+                or kind in M.STAFF_STYLES or kind in M.BOW_STYLES or kind in M.SHIELD_STYLES:
             continue
         shape = M.look(kind)[0]
         if kind in bases:

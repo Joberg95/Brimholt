@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://chahv5w1fbpbe"
-path="res://.godot/imported/oak_buckler.png-c8fc498d1fd31f21d0704a9dfca7cb12.ctex"
+uid="uid://djodg08mq28ba"
+path="res://.godot/imported/bandit_roundshield.png-9200f00fea199af632f5774ffa4e4399.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/oak_buckler.png"
-dest_files=["res://.godot/imported/oak_buckler.png-c8fc498d1fd31f21d0704a9dfca7cb12.ctex"]
+source_file="res://assets/sprites/gear/bandit_roundshield.png"
+dest_files=["res://.godot/imported/bandit_roundshield.png-9200f00fea199af632f5774ffa4e4399.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bva4ttt12l8l0"
-path="res://.godot/imported/duskiron_bulwark.png-0dca403e377dfc31cf06d32ff3347302.ctex"
+uid="uid://bo50bkoeylheo"
+path="res://.godot/imported/gravewarden_tower.png-a0ea8c3ba8d8f98212db01f38738ec33.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/duskiron_bulwark.png"
-dest_files=["res://.godot/imported/duskiron_bulwark.png-0dca403e377dfc31cf06d32ff3347302.ctex"]
+source_file="res://assets/sprites/gear/gravewarden_tower.png"
+dest_files=["res://.godot/imported/gravewarden_tower.png-a0ea8c3ba8d8f98212db01f38738ec33.ctex"]
 
 [params]
 

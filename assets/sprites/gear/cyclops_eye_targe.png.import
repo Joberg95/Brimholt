@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dyqhxxmspf41p"
-path="res://.godot/imported/hide_targe.png-b0008dd762cfd08af1bd26f1dcebd837.ctex"
+uid="uid://me62hdjwd0r5"
+path="res://.godot/imported/cyclops_eye_targe.png-bba9cddc65d810b74876c4413a8fe9c3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/hide_targe.png"
-dest_files=["res://.godot/imported/hide_targe.png-b0008dd762cfd08af1bd26f1dcebd837.ctex"]
+source_file="res://assets/sprites/gear/cyclops_eye_targe.png"
+dest_files=["res://.godot/imported/cyclops_eye_targe.png-bba9cddc65d810b74876c4413a8fe9c3.ctex"]
 
 [params]
 

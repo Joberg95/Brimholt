@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://xv2f6dnbwdy6"
-path="res://.godot/imported/bronze_heater.png-5f7fc1c62a0a1c5c6ef610cafa445a2d.ctex"
+uid="uid://c4nmkkclc6f2y"
+path="res://.godot/imported/lizardscale_shield.png-b4a9d538e8eaa3e0c5b19d00dcf64ae2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/bronze_heater.png"
-dest_files=["res://.godot/imported/bronze_heater.png-5f7fc1c62a0a1c5c6ef610cafa445a2d.ctex"]
+source_file="res://assets/sprites/gear/lizardscale_shield.png"
+dest_files=["res://.godot/imported/lizardscale_shield.png-b4a9d538e8eaa3e0c5b19d00dcf64ae2.ctex"]
 
 [params]
 

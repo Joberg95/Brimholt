@@ -263,6 +263,23 @@ sky; in caves and dungeons you walk, and the mount is not drawn. Fighting, casti
 work the same mounted. A ridden mount is never lost when you die; one carried in the backpack
 drops with it.
 
+### Hunting shields
+
+Eight shields drop only from their hunts, for Warriors and Hunters. Each has its tier's defense
+plus a small bonus of its own, so it is a sidegrade to the shop shield of its tier, not an
+upgrade:
+
+| Shield | Level | Bonus | Source and chance |
+| --- | ---: | --- | --- |
+| Bandit's roundshield | 10 | +30 health | Road bandit 2% |
+| Lizardscale shield | 20 | +3 magic defense | Lizard warrior 1.5% |
+| Harpywing kite | 25 | +8 regeneration | Harpy 1.5% |
+| Cyclops-eye targe | 30 | +80 health | Cyclops 1.2% |
+| Gravewarden tower | 30 | +5 magic defense | Wraith knight 1.5% |
+| Tidebound ward | 35 | +12 regeneration | Drowned priest 1.2% |
+| Cinderforge bulwark | 40 | +140 health | Cinder brute 1% |
+| Rimeheart aegis | 45 | +8 magic defense | Rime titan 5% |
+
 ### Hunting weapons
 
 Fifteen additional weapons are **source-specific drops**, not shop stock or additions to the

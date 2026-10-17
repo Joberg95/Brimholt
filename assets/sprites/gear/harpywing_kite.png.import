@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cnh47puf6odje"
-path="res://.godot/imported/steel_kite_shield.png-2556aecb9584edcf2a64ef1bc7d979d7.ctex"
+uid="uid://iyvj78c86irk"
+path="res://.godot/imported/harpywing_kite.png-37c8c938f91b62b81697b105bc2f403e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/steel_kite_shield.png"
-dest_files=["res://.godot/imported/steel_kite_shield.png-2556aecb9584edcf2a64ef1bc7d979d7.ctex"]
+source_file="res://assets/sprites/gear/harpywing_kite.png"
+dest_files=["res://.godot/imported/harpywing_kite.png-37c8c938f91b62b81697b105bc2f403e.ctex"]
 
 [params]
 

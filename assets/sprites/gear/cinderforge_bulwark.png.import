@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cufowraggq0j2"
-path="res://.godot/imported/drakescale_bulwark.png-41753f4ffe38bcbb2942a2962290a982.ctex"
+uid="uid://d4t250ac2ekm"
+path="res://.godot/imported/cinderforge_bulwark.png-af3e8cee9782b0082e3d582ff2241d0b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/drakescale_bulwark.png"
-dest_files=["res://.godot/imported/drakescale_bulwark.png-41753f4ffe38bcbb2942a2962290a982.ctex"]
+source_file="res://assets/sprites/gear/cinderforge_bulwark.png"
+dest_files=["res://.godot/imported/cinderforge_bulwark.png-af3e8cee9782b0082e3d582ff2241d0b.ctex"]
 
 [params]
 

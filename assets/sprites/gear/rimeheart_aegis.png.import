@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ckt10ye6simyq"
-path="res://.godot/imported/cobalt_tower_shield.png-aff9632fa6b7b9e6d224c9f7008a1d3e.ctex"
+uid="uid://dkrla5nxrwaen"
+path="res://.godot/imported/rimeheart_aegis.png-3cc80ea5f562a4cb4a217dd5208847c9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/cobalt_tower_shield.png"
-dest_files=["res://.godot/imported/cobalt_tower_shield.png-aff9632fa6b7b9e6d224c9f7008a1d3e.ctex"]
+source_file="res://assets/sprites/gear/rimeheart_aegis.png"
+dest_files=["res://.godot/imported/rimeheart_aegis.png-3cc80ea5f562a4cb4a217dd5208847c9.ctex"]
 
 [params]
 

@@ -539,6 +539,14 @@
     {"id": "cinder_drake_mount", "name": "Cinder drake", "slot": "mount", "level": 1, "look": "lizard", "colors": ["4a2a24", "7a4434", "ff8a3a"], "stats": {}, "value": 5000, "loot_only": true},
     {"id": "bloom_stag_mount", "name": "Bloom stag", "slot": "mount", "level": 1, "look": "steed+antlers", "colors": ["7a5aa8", "a888d0", "f0b8e0"], "stats": {}, "value": 5000, "loot_only": true},
     {"id": "great_fireball_rune", "name": "Great fireball rune", "level": 45, "look": "runestone+cweorth", "colors": ["5e5248", "806e60", "ff5a1a"], "value": 200, "rune": "great_fire"},
+    {"id": "bandit_roundshield", "name": "Bandit's roundshield", "slot": "off_hand", "level": 10, "look": "buckler", "colors": ["5e5248", "948670", "c8b070"], "vocations": ["knight", "paladin"], "extra": {"health": 30}, "loot_only": true},
+    {"id": "lizardscale_shield", "name": "Lizardscale shield", "slot": "off_hand", "level": 20, "look": "heater", "colors": ["3e5e32", "86a462", "e0c050"], "vocations": ["knight", "paladin"], "extra": {"magic_defense": 3}, "loot_only": true},
+    {"id": "harpywing_kite", "name": "Harpywing kite", "slot": "off_hand", "level": 25, "look": "heater", "colors": ["6a5a7a", "c4b4d4", "f0d070"], "vocations": ["knight", "paladin"], "extra": {"regen": 8}, "loot_only": true},
+    {"id": "cyclops_eye_targe", "name": "Cyclops-eye targe", "slot": "off_hand", "level": 30, "look": "buckler", "colors": ["6a4a2a", "a07850", "ff6a3a"], "vocations": ["knight", "paladin"], "extra": {"health": 80}, "loot_only": true},
+    {"id": "gravewarden_tower", "name": "Gravewarden tower", "slot": "off_hand", "level": 30, "look": "tower", "colors": ["3a3a46", "7a7a8a", "9ae0c0"], "vocations": ["knight", "paladin"], "extra": {"magic_defense": 5}, "loot_only": true},
+    {"id": "tidebound_ward", "name": "Tidebound ward", "slot": "off_hand", "level": 35, "look": "tower", "colors": ["2a5a6a", "6ab0c0", "f0f0c0"], "vocations": ["knight", "paladin"], "extra": {"regen": 12}, "loot_only": true},
+    {"id": "cinderforge_bulwark", "name": "Cinderforge bulwark", "slot": "off_hand", "level": 40, "look": "tower", "colors": ["3a2a2a", "8a4a3a", "ff8a3a"], "vocations": ["knight", "paladin"], "extra": {"health": 140}, "loot_only": true},
+    {"id": "rimeheart_aegis", "name": "Rimeheart aegis", "slot": "off_hand", "level": 45, "look": "heater", "colors": ["5a7a9a", "c8e0f0", "8ae4ff"], "vocations": ["knight", "paladin"], "extra": {"magic_defense": 8}, "loot_only": true},
     {"id": "sudden_death_rune", "name": "Sudden death rune", "level": 50, "look": "runestone+ear", "colors": ["4a4452", "6a6274", "b07aff"], "value": 250, "rune": "death"}
   ]
 }

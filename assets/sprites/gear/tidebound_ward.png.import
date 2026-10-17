@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c7mxh4i4src6k"
-path="res://.godot/imported/lodge_targe.png-d596eeb461c2fbb5caccd1a52260a645.ctex"
+uid="uid://bbgeliwlnejt8"
+path="res://.godot/imported/tidebound_ward.png-84c1eacb909c90e318a25d30728b2f89.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/lodge_targe.png"
-dest_files=["res://.godot/imported/lodge_targe.png-d596eeb461c2fbb5caccd1a52260a645.ctex"]
+source_file="res://assets/sprites/gear/tidebound_ward.png"
+dest_files=["res://.godot/imported/tidebound_ward.png-84c1eacb909c90e318a25d30728b2f89.ctex"]
 
 [params]
 

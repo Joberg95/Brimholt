@@ -1854,6 +1854,8 @@ def gear_builder(kind):
         icon = staff_icon(kind)
     if icon is None and kind in BOW_STYLES:
         icon = bow_icon(kind)
+    if icon is None and kind in SHIELD_STYLES:
+        icon = shield_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
         return build
@@ -2060,6 +2062,7 @@ import pixel_materials  # noqa: E402
 import pixel_potions  # noqa: E402
 import pixel_staves  # noqa: E402
 import pixel_bows  # noqa: E402
+import pixel_shields  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2439,6 +2442,25 @@ def bow_icon(kind):
     return image
 
 
+# Shields without a painted icon are hand-pixelled (pixel_shields.py): each its own shape, rim,
+# field, and emblem; worn shields wear their icon (textured).
+SHIELD_STYLES = {
+    "oak_buckler": "oakbuckler", "hide_targe": "hidetarge", "bronze_heater": "bronzeheater",
+    "steel_kite_shield": "steelkite", "silverleaf_shield": "silverleaf", "lodge_targe": "lodgetarge",
+    "drakescale_bulwark": "drakescale", "cobalt_tower_shield": "cobalttower", "duskiron_bulwark": "duskiron",
+    "starforged_bulwark": "starforged", "abyssal_ward": "abyssal",
+    "bandit_roundshield": "bandit", "lizardscale_shield": "lizardscale", "harpywing_kite": "harpywing",
+    "cyclops_eye_targe": "cyclopseye", "gravewarden_tower": "gravewarden", "tidebound_ward": "tidebound",
+    "cinderforge_bulwark": "cinderforge", "rimeheart_aegis": "rimeheart",
+}
+
+
+def shield_icon(kind):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_shields.icon(SHIELD_STYLES[kind], ITEMS[kind]["colors"])
+    return image
+
+
 # Monster drops (look trophy+<shape>) and gathered resources (looks ore, log, herb, fish) are
 # hand-drawn shapes in pixel_materials.py.
 MATERIAL_SHAPES = ("ore", "log", "herb", "fish")
@@ -2807,7 +2829,8 @@ def icon_volume(icon):
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
-    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod", "bow") + SWORD_SHAPES         + MATERIAL_SHAPES
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod", "bow", "heater", "tower",
+                              "buckler") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
 # items.png is a grid of ITEM_COLUMNS icons per row in ITEM_ORDER (one long row would pass the
@@ -2891,6 +2914,8 @@ def item_icon(kind):
         return staff_icon(kind)
     if kind in BOW_STYLES and painted_icon(kind) is None:
         return bow_icon(kind)
+    if kind in SHIELD_STYLES and painted_icon(kind) is None:
+        return shield_icon(kind)
     if shape == "potion":
         # Round bottles on the diagonal, bigger for stronger potions (pixel_potions.py).
         image = Image(TILE, TILE)
