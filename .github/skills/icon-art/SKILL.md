@@ -6,7 +6,8 @@ description: Use when creating or changing any Brimholt item icon (weapons, armo
 # Item icon art
 
 Brimholt's icons follow Tibia's item icons closely (the owner's decision, 2026-10-16): the same
-kinds of items, silhouettes, colour schemes, ornament, even names. **Every pixel is drawn here**:
+kinds of items, silhouettes, colour schemes, and ornament. **Names stay our own**: never give an
+item Tibia's exact name. **Every pixel is drawn here**:
 never download, trace, recolour, or import Tibia's sprite files. The `art-direction` skill covers
 world art; this one covers icons.
 

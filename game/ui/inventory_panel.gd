@@ -33,7 +33,7 @@ const LOCKED_TOOLTIP: String = "Locked: finish a town hunting task for a bigger 
 const STAT_LABELS: Dictionary = {
 	"health": "Health", "mana": "Mana", "attack": "Attack", "defense": "Defense", "magic_defense": "Magic def.", "critical": "Critical",
 	"regen": "Regen", "healing": "Healing", "frost": "Frost damage",
-	"speed": "Movement speed", "mana_percent": "Max mana",
+	"speed": "Movement speed", "mana_percent": "Max mana", "leech": "Life leech",
 }
 
 var game: Node

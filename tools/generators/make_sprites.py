@@ -1848,6 +1848,8 @@ def gear_builder(kind):
     # as generated boots in their colours with their own details (boots_builder).
     if icon is None and look(kind)[0] in SHOWPIECE_STYLES and look(kind)[0] not in BOOT_WORN:
         icon = helm_icon(kind)
+    if icon is None and look(kind)[0] in SWORD_SHAPES:
+        icon = sword_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
         return build
@@ -2049,6 +2051,7 @@ import pixel_axes  # noqa: E402
 import pixel_bags  # noqa: E402
 import pixel_necklaces  # noqa: E402
 import pixel_coins  # noqa: E402
+import pixel_swords  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2375,6 +2378,25 @@ def backpack_icon(kind, frame=0):
     return image
 
 
+# Swords and greatswords without a painted icon are hand-pixelled (pixel_swords.py) and held as
+# their icon rebuilt into a weapon (painted_held). sword_style maps a look to a blade style.
+SWORD_SHAPES = ("sword", "greatsword")
+
+
+def sword_style(kind):
+    shape, extras = look(kind)
+    extra = next(iter(extras), "")
+    if shape == "greatsword":
+        return {"fuller": "greatfuller", "grand": "grand"}.get(extra, "great")
+    return extra if extra in pixel_swords.STYLES else "plain"
+
+
+def sword_icon(kind, frame=0):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_swords.icon(sword_style(kind), ITEMS[kind]["colors"], frame)
+    return image
+
+
 def coin_stage_icon(stage):
     """Gold coins at one stack-size stage (pixel_coins.STAGES)."""
     image = Image(TILE, TILE)
@@ -2393,7 +2415,8 @@ def necklace_icon(kind, frame=0):
 def animated(kind):
     shape, extras = look(kind)
     return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE))) \
-        or (shape == "necklace" and bool(extras & set(pixel_necklaces.GLOWING)))
+        or (shape == "necklace" and bool(extras & set(pixel_necklaces.GLOWING))) \
+        or (shape in SWORD_SHAPES and painted_icon(kind) is None and sword_style(kind) in pixel_swords.GLOWING)
 
 
 def icon_frames(kind):
@@ -2407,6 +2430,8 @@ def icon_frames(kind):
             icon = backpack_icon(kind, frame)
         elif shape == "necklace":
             icon = necklace_icon(kind, frame)
+        elif shape in SWORD_SHAPES and painted_icon(kind) is None:
+            icon = sword_icon(kind, frame)
         else:
             icon = icon_volume(item_icon(kind)) if needs_volume(kind) else item_icon(kind)
         icon = icon_finish(icon)
@@ -2739,7 +2764,7 @@ def icon_volume(icon):
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
-    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins")
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins") + SWORD_SHAPES
 
 
 def finished_icon(kind):
@@ -2801,6 +2826,8 @@ def item_icon(kind):
     palette, accent = tones(kind)
     light, main, dark = palette
     shape, extras = look(kind)
+    if shape in SWORD_SHAPES and painted_icon(kind) is None:
+        return sword_icon(kind)
     if shape in WEAPON_SHAPES:
         return weapon_icon(kind)
     if shape == "runestone":

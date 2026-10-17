@@ -26,8 +26,6 @@ DERIVED = M.ROOT / "assets" / "sprites" / "icons_derived"
 ARMOR_SLOTS = ("helmet", "armor", "legs", "boots")
 # Look -> painted templates, plain to ornate ("template_*" icons come from art/outfits/manifest.json).
 TEMPLATES = {
-    "sword": ["template_pieces_sword", "template_golden_lion_weapon", "template_crimson_aegis_weapon", "embersteel_blade"],
-    "greatsword": ["wyrmglass_greatsword"],
     "heater": ["template_pieces_shield", "template_crimson_aegis_offhand", "template_golden_lion_offhand",
                "embersteel_aegis", "wyrmglass_ward"],
     "tower": ["template_pieces_shield", "template_golden_lion_offhand", "embersteel_aegis", "wyrmglass_ward"],

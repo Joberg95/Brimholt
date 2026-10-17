@@ -50,9 +50,10 @@ const HELMET_FOCUS_DEFENSE: float = 0.85
 ## Focused weapons (showpiece axes) keep WEAPON_FOCUS_ATTACK of their attack and add one bonus:
 ## a ring's critical plus one, half an amulet's health, an armor's regen, a cape's defense, or
 ## WEAPON_FOCUS_SPEED percent movement speed.
-const WEAPON_FOCUS: Array[String] = ["critical", "health", "regen", "defense", "speed"]
+const WEAPON_FOCUS: Array[String] = ["critical", "health", "regen", "defense", "speed", "leech"]
 const WEAPON_FOCUS_ATTACK: float = 0.9
 const WEAPON_FOCUS_SPEED: int = 4
+const LEECH_LEVELS: int = 6
 ## Magic defense of capes, amulets, and books, as shares of their tier's set defense.
 const MAGIC_SHARE: Dictionary = {"cape": 0.15, "necklace": 0.10, "book": 0.10}
 ## Critical chance (percent) on Hunters' and Sorcerers' weapons: CRITICAL_WEAPON, plus one more
@@ -159,6 +160,12 @@ static func load_catalog() -> Dictionary:
 	return catalog
 
 
+## Life leech of a focused weapon (leech_for): 1% at level 20, one more every LEECH_LEVELS levels,
+## at most World.LEECH_MAX (5% from level 44).
+static func leech_for(level: int) -> int:
+	return clampi(1 + (level - 20) / LEECH_LEVELS, 1, 5)
+
+
 static func gear_price(level: int, slot: String) -> int:
 	var price: float = GEAR_PRICE * pow(level, PRICE_EXPONENT) * (WEAPON_PRICE if slot == "main_hand" else 1.0)
 	return maxi(5, 5 * roundi(price / 5.0))
@@ -219,6 +226,8 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 						weapon["defense"] = _defense(level, "cape")
 					"speed":
 						weapon["speed"] = WEAPON_FOCUS_SPEED
+					"leech":
+						weapon["leech"] = leech_for(level)
 			return weapon
 		"helmet", "armor", "legs", "boots":
 			var piece: Dictionary = _armor(level, item["slot"], item.get("armor", ""))

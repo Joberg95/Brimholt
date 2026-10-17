@@ -187,11 +187,27 @@ one bonus.
 | Amberglass axe | 30 | +3% critical | sand raiders |
 | Venomfang axe | 35 | +4% movement speed | marsh witches |
 | Seraphic waraxe | 40 | regeneration | mire stalkers |
-| Sanguine battleaxe | 45 | health | void wraiths |
+| Crimsonheart battleaxe | 45 | health | void wraiths |
 | Starsteel chopper | 45 | +3% critical | obsidian golems |
 
 The venomfang's serpent eyes and the sanguine axe's heart glow, starlight glints along the
 chopper, and light sweeps across the amberglass and seraphic blades.
+
+### Leeching swords
+
+**Life leech** is a gear-only stat: that share of the damage you deal, by weapon or spell, heals
+you (`Combat.leech`), never more than 5% in all (`World.LEECH_MAX`). Four Warrior swords carry it
+as their focus, trading a tenth of the tier's attack for 1% leech at level 20 rising one point every
+six levels to 5% (`Items.leech_for`), so a Warrior can sustain alone on a long hunt:
+
+| Sword | Level | Life leech | Dropped by |
+| --- | --- | --- | --- |
+| Bloodletter | 20 | 1% | lizard warriors (1%) |
+| Vampiric shortblade | 30 | 2% | cinder wraiths (1%) |
+| Bloodvein blade | 35 | 3% | cave trolls (1%) |
+| Bloodvein greatblade | 45 | 5% | obsidian golems (1%) |
+
+The gems in their guards glow.
 
 ### Showpiece boots
 
@@ -755,16 +771,16 @@ on death, but what they hold is carried like the backpack and follows its death 
 | Silkthistle pack | 10 | Tailoring 20 |
 | Nightcotton haversack | 12 | Tailoring 30 |
 | Starweave rucksack | 14 | Tailoring 40 |
-| Pillow backpack | 10 | sewer rats (0.5%) |
-| Adventurer backpack | 12 | road bandits (0.5%) |
-| Lilypad backpack | 12 | bog lurkers (0.5%) |
-| Sailor's backpack | 12 | trench crabs (0.5%) |
-| Winged backpack | 14 | harpies (0.4%) |
-| Ghost backpack | 14 | wraith knights (0.4%) |
-| Backpack of holding | 16 | the four final bosses (2%) |
+| Downy pack | 10 | sewer rats (0.5%) |
+| Trailblazer's pack | 12 | road bandits (0.5%) |
+| Marshbloom pack | 12 | bog lurkers (0.5%) |
+| Deckhand's pack | 12 | trench crabs (0.5%) |
+| Featherwing pack | 14 | harpies (0.4%) |
+| Spectral pack | 14 | wraith knights (0.4%) |
+| Bottomless pack | 16 | the four final bosses (2%) |
 
-The themed backpacks are rare drops, never crafted or sold by vendors; the ghost backpack's skull
-eyes and the rune on the Backpack of holding glow.
+The themed packs are rare drops, never crafted or sold by vendors; the ghost backpack's skull
+eyes and the rune on the Bottomless pack glow.
 
 Peer 1 validates every item move: location shape, reach, slot type, level and class,
 free space, stack limit, and a 150 ms item cooldown. Dragging onto an occupied slot swaps

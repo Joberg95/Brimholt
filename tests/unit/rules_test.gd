@@ -189,6 +189,7 @@ func _run() -> void:
 	_mount_checks()
 	_ring_checks()
 	_loot_display_checks()
+	_leech_checks()
 	_showpiece_helmet_checks()
 	_balance_checks()
 	_adventurer_checks()
@@ -1632,7 +1633,8 @@ func _showpiece_helmet_checks() -> void:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 24, "showpiece helmets, boots, axes, two backpacks, and two necklaces move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 27,
+		"showpiece helmets, boots, axes, two backpacks, two necklaces, and three gemmed swords move in the inventory")
 	var themed: Array[String] = []
 	for kind: String in World.ITEMS:
 		if String(World.ITEMS[kind]["look"]).begins_with("backpack+"):
@@ -1644,7 +1646,7 @@ func _showpiece_helmet_checks() -> void:
 			check(World.is_bag(kind) and World.ITEMS[kind].get("loot_only", false) and sources >= 1
 				and not Economy.stock().has(kind), "%s is a rare backpack that monsters drop" % kind)
 	check(themed.size() == 7 and World.ITEMS["holding_backpack"]["slots"] == World.BAG_MAX,
-		"seven themed backpacks; the Backpack of holding holds the most a bag can")
+		"seven themed backpacks; the Bottomless pack holds the most a bag can")
 	var axes: int = 0
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
@@ -1658,6 +1660,35 @@ func _showpiece_helmet_checks() -> void:
 			"%s is a Warrior's axe trading a tenth of its attack for its focus" % kind)
 	check(axes == 6, "six showpiece axes")
 	_showpiece_boot_checks()
+
+
+func _leech_checks() -> void:
+	# Life leech: 1% of a weapon focus at level 20 up to 5% at 44, never more than 5% in all.
+	check(Items.leech_for(20) == 1 and Items.leech_for(30) == 2 and Items.leech_for(35) == 3 and Items.leech_for(44) == 5
+		and Items.leech_for(50) == 5, "focused weapons leech 1% at level 20 rising to 5%")
+	var leeching: Array[String] = []
+	for kind: String in World.ITEMS:
+		if World.ITEMS[kind]["stats"].has("leech"):
+			leeching.append(kind)
+			check(World.ITEMS[kind]["vocations"] == ["knight"] and World.ITEMS[kind].get("focus", "") == "leech",
+				"%s is a Warrior's leeching blade" % kind)
+	check(leeching.size() == 4 and World.ITEMS["grand_sanguine_blade"]["stats"]["leech"] == World.LEECH_MAX,
+		"four leeching swords, the Bloodvein greatblade at the most")
+	check(World.stats(45, {"main_hand": "grand_sanguine_blade", "ring_1": "garnet_ring"}, "knight")["leech"] <= World.LEECH_MAX
+		and Combat.leech({"leech": 5}, 200) == 10 and Combat.leech({}, 200) == 0, "leech heals its share of a hit, at most 5%")
+	# A leeching hit heals the attacker.
+	var world := World.new()
+	var combat := Combat.new(world, 3)
+	world.add_player(1, 0.0, "knight")
+	var player: Dictionary = world.players[1]
+	player["level"] = 45
+	player["equipment"]["main_hand"] = "grand_sanguine_blade"
+	world.clamp_vitals(1)
+	player["health"] = 100
+	var monster: int = combat.spawn_monster("void_wraith", 45, player["cell"] + Vector2i(1, 0), 0.0)
+	var events: Array = []
+	combat._hit(1, monster, 1.0, 1.0, events)
+	check(player["health"] > 100, "a leeching hit heals the Warrior who struck it")
 
 
 func _loot_display_checks() -> void:
@@ -2504,8 +2535,8 @@ func _hunting_weapon_checks() -> void:
 			{"type": "backpack", "index": 0}, 3.0)["ok"] and player["backpack"][0] == kind,
 			"%s unequips without loss" % kind)
 		check(CharacterStore.valid_entry(kind), "%s survives character save validation" % kind)
-	check(weapons.size() == 22 and vocations == {"knight": 15, "paladin": 3, "sorcerer": 2, "druid": 2},
-		"twenty-two hunting weapons cover all four vocations")
+	check(weapons.size() == 26 and vocations == {"knight": 19, "paladin": 3, "sorcerer": 2, "druid": 2},
+		"twenty-six hunting weapons cover all four vocations")
 	check(tiers.size() == 10, "hunting weapons span every ordinary gear tier")
 	var combat := Combat.new(world, 906)
 	var spawns: Array = World.MONSTER_SPAWNS.duplicate()

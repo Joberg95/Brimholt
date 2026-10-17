@@ -16,7 +16,7 @@ the contract below. Consult the gameplay and validation skills for wider rules.
 	"rank": "normal", "range": 1, "step": 0.4},
 ```
 
-- **id**: snake_case and unique. **name**: original, or Tibia's name when imitating a Tibia monster closely.
+- **id**: snake_case and unique. **name**: original, never a Tibia name, even when the monster imitates a Tibia one closely.
 - **rank**: a `Balance.RANKS` key.
   - `normal` for field monsters.
   - `elite` for tough overworld guards (×4 health, ×1.5 hits, ×5 experience).

@@ -466,6 +466,12 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	return {"ok": true, "events": events}
 
 
+## Health a hit of `amount` damage gives back to a player with life leech (stats["leech"] percent,
+## already capped at World.LEECH_MAX).
+static func leech(stats: Dictionary, amount: int) -> int:
+	return roundi(amount * float(stats.get("leech", 0)) / 100.0)
+
+
 ## Gear stats that raise one element's spell and rune damage by a percentage (the frost of a
 ## druid's crown), by element (Spells.ELEMENTS, rune elements).
 const ELEMENT_STATS: Dictionary = {"frost": "frost"}
@@ -522,6 +528,10 @@ func _hit(attacker: int, target: int, power: float, now: float, events: Array, r
 		raw *= CRITICAL_MULTIPLIER
 	var amount: int = maxi(1, Balance.damage_taken(roundi(raw), defense_of(target, rune_base > 0.0 or magic_attacker(attacker))))
 	_damage(attacker, target, amount, "critical" if critical else "damage", now, events)
+	if attacker > 0 and world.players.has(attacker) and world.players[attacker]["health"] > 0:
+		var leeched: int = leech(world.player_stats(attacker), amount)
+		if leeched > 0:
+			_heal(attacker, leeched, events, attacker, now)
 
 
 func _damage(attacker: int, target: int, amount: int, style: String, now: float, events: Array) -> void:

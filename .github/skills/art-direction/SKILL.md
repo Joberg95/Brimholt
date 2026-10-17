@@ -95,8 +95,8 @@ contrast (`_grain`).
 **Tiling.** Anything repeated over many tiles needs variants or a seamless field (see
 `ROCK_SPAN`) so no grid shows. Edges that meet neighbours must match at the tile border.
 
-**Originality.** Tibia is the reference: matching its item concepts, silhouettes, colour schemes, and
-names closely is allowed (the owner's decision, 2026-10-16). Never trace, recolour, or import Tibia's
+**Originality.** Tibia is the reference: matching its item concepts, silhouettes, and colour schemes
+closely is allowed (the owner's decision, 2026-10-16); names stay our own, never Tibia's exact names. Never trace, recolour, or import Tibia's
 or other proprietary sprite files. CC0 only for third-party files, with a license and a
 `CREDITS.md` row.
 

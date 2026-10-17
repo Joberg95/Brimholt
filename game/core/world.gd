@@ -127,8 +127,11 @@ const SLOWED_STEP: float = 2.0
 ## A rider's steps take this share of a walker's (25% faster). Mounts carry you only above ground.
 const MOUNT_STEP: float = 0.8
 ## Stats only gear gives (none of them in Balance.STATS): movement speed and maximum mana in percent
-## (speed_factor, stats), and frost spell and rune damage in percent (Combat.ELEMENT_STATS).
-const GEAR_STATS: Array[String] = ["speed", "mana_percent", "frost"]
+## (speed_factor, stats), frost spell and rune damage in percent (Combat.ELEMENT_STATS), and life
+## leech in percent (Combat.leech, at most LEECH_MAX).
+const GEAR_STATS: Array[String] = ["speed", "mana_percent", "frost", "leech"]
+## Life leech (percent of the damage you deal that heals you) never adds up past this.
+const LEECH_MAX: int = 5
 const MAX_PLAYERS: int = 24
 const PORT: int = 1234
 const PROTOCOL: int = 13
@@ -926,6 +929,8 @@ static func stats(level: int, equipment: Dictionary, vocation: String = Balance.
 				result[stat] = result.get(stat, 0) + bonus[stat]
 	if result.has("mana_percent"):
 		result["mana"] = roundi(result["mana"] * (1.0 + result["mana_percent"] / 100.0))
+	if result.has("leech"):
+		result["leech"] = mini(result["leech"], LEECH_MAX)
 	return result
 
 
