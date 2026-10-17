@@ -41,12 +41,24 @@ var weather: Dictionary = {"kind": "clear", "cloud": 0.0, "rain": 0.0, "storm": 
 const MAX_LIGHTS: int = 64
 const WAYSTONE_GLOW: Color = Color("#7fe8f0")
 const TORCH_GLOW: Color = Color(1.0, 0.66, 0.32)
-## Town lamp posts burn once the darkness passes this (dusk onward).
+## Town lamp posts light up from this darkness (dusk onward), reaching full strength LAMP_FADE
+## later, so they fade in rather than switch on in one frame.
 const LAMP_DARKNESS: float = 0.12
+const LAMP_FADE: float = 0.2
+## How fast darkness may change, per second: weather and lightning flashes ease the lights
+## instead of blinking them.
+const DARKNESS_RATE: float = 4.0
+## A light that comes into range (a lamp, a torch, an NPC) fades in over this many seconds.
+const FADE_IN_SECONDS: float = 0.3
 ## How dark the world is this frame, 0 by day to about 1 at night or in a dark zone.
 var darkness: float = 0.0
 var _pool: Array[PointLight2D] = []
 var _in_use: int = 0
+## This frame's light requests, placed into the pool nearest-first at the end of the frame.
+var _requests: Array[Dictionary] = []
+## When each keyed light (a lamp, an NPC, a torch bearer) came into range, for its fade-in.
+var _since: Dictionary = {}
+var _seen: Dictionary = {}
 
 
 func _ready() -> void:
@@ -87,15 +99,16 @@ func ambient() -> Color:
 	return Color(light.r, light.g, light.b, 1.0)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var light: Color = ambient()
 	modulate_node.color = light
 	# Lamps follow nightfall and dark zones; clouds only add a little, so a rainy noon stays unlit.
 	var night: float = 1.0 - (clear_light.r + clear_light.g + clear_light.b) / 3.0
 	var gloom: float = (clear_light.r + clear_light.g + clear_light.b - light.r - light.g - light.b) / 3.0
-	darkness = clampf(night + gloom * 0.25, 0.0, 1.0) / 0.55
+	darkness = move_toward(darkness, clampf(night + gloom * 0.25, 0.0, 1.0) / 0.55, DARKNESS_RATE * delta)
 	var game: Node = view.game
-	_in_use = 0
+	_requests.clear()
+	_seen.clear()
 	var area: Rect2i = view.visible_cells().grow(4)
 	var time: float = Time.get_ticks_msec() / 1000.0
 	if darkness > 0.01:
@@ -104,14 +117,15 @@ func _process(_delta: float) -> void:
 			var actor: Dictionary = game.actors[id]
 			if area.has_point(Vector2i(actor["visual"])) and holds_torch(actor["state"]["equipment"]):
 				var flicker: float = 0.92 + 0.08 * sin(time * 8.0 + id) * sin(time * 4.7)
-				_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness)
+				_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness, "torch%d" % id)
 		for cell: Vector2i in World.NPC_CELLS:
 			if area.has_point(cell) and not World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
-				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness)
-	if darkness > LAMP_DARKNESS:
+				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness, "npc%s" % cell)
+	var lamps: float = lamp_strength(darkness)
+	if lamps > 0.0:
 		for cell: Vector2i in World.LAMPS:
 			if area.has_point(cell):
-				_light(_centre(Vector2(cell)) - Vector2(0, 30), LANTERN, 3.6, 1.0 * darkness)
+				_light(_centre(Vector2(cell)) - Vector2(0, 30), LANTERN, 3.6, lamps * darkness, "lamp%s" % cell)
 	# Coloured light from relics, glowing bosses, and waystone runes, faint even by day.
 	var tint: float = maxf(darkness, 0.18)
 	for id: String in World.FERRYMEN:
@@ -147,13 +161,50 @@ func _process(_delta: float) -> void:
 				centre += Vector2(cell)
 			centre = centre / maxf(1.0, cells.size())
 			_light(_centre(centre), effect["color"], SPELL_TILES, 1.4 * (1.0 - age / 0.6) * maxf(darkness, 0.35))
+	_place_lights(time)
+
+
+## How strongly town lamps burn at a darkness: off by day, fading in over LAMP_FADE from
+## LAMP_DARKNESS, full at night.
+static func lamp_strength(dark: float) -> float:
+	return smoothstep(LAMP_DARKNESS, LAMP_DARKNESS + LAMP_FADE, dark)
+
+
+## A light for this frame. `key` names a light that persists (a lamp, an NPC, a torch bearer) so
+## it fades in when it comes into range; spell flashes have none.
+func _light(at: Vector2, color: Color, tiles: float, energy: float, key: String = "") -> void:
+	_requests.append({"at": at, "color": color, "tiles": tiles, "energy": energy, "key": key})
+
+
+## Fills the pool with this frame's lights, nearest the camera first and at most MAX_LIGHTS, so
+## the same lights win every frame when there are too many; newly arrived ones fade in.
+func _place_lights(time: float) -> void:
+	_in_use = 0
+	for request: Dictionary in nearest(_requests, view.game.camera_focus(), MAX_LIGHTS):
+		var energy: float = request["energy"]
+		if not request["key"].is_empty():
+			_seen[request["key"]] = true
+			var since: float = _since.get(request["key"], time)
+			_since[request["key"]] = since
+			energy *= clampf((time - since) / FADE_IN_SECONDS, 0.0, 1.0)
+		_place(request["at"], request["color"], request["tiles"], energy)
+	for key: String in _since.keys():
+		if not _seen.has(key):
+			_since.erase(key)
 	for index: int in range(_in_use, _pool.size()):
 		_pool[index].visible = false
 
 
-func _light(at: Vector2, color: Color, tiles: float, energy: float) -> void:
-	if _in_use >= MAX_LIGHTS:
-		return
+## The requests to light, nearest to `focus` first, at most `limit`. Godot lets only 16 lights
+## reach one canvas item (a floor chunk), so nearest-first also decides which ones win there.
+static func nearest(requests: Array[Dictionary], focus: Vector2, limit: int) -> Array[Dictionary]:
+	var sorted: Array[Dictionary] = requests.duplicate()
+	sorted.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return a["at"].distance_squared_to(focus) < b["at"].distance_squared_to(focus))
+	return sorted.slice(0, limit)
+
+
+func _place(at: Vector2, color: Color, tiles: float, energy: float) -> void:
 	if _in_use == _pool.size():
 		var created := PointLight2D.new()
 		created.texture = LIGHT_TEXTURE

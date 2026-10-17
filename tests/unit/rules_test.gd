@@ -18,6 +18,7 @@ const Identity = preload("res://game/persistence/identity.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Instances = preload("res://game/core/instances.gd")
 const Weather = preload("res://game/render/weather.gd")
+const Lighting = preload("res://game/render/lighting.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const TownPaths = preload("res://tools/generators/town_paths.gd")
 const ClearWalls = preload("res://tools/generators/clear_walls.gd")
@@ -3943,6 +3944,21 @@ func _climate_checks() -> void:
 	Weather.override = "storm"
 	check(Weather.tint(Weather.at(0.0)).v < 0.95 or Weather.at(0.0)["flash"] > 0.0, "storms darken the light")
 	Weather.override = ""
+	# Lamps fade in through dusk instead of switching on in one frame.
+	var ramp_smooth: bool = true
+	for step: int in 100:
+		ramp_smooth = ramp_smooth and absf(Lighting.lamp_strength((step + 1) * 0.01) - Lighting.lamp_strength(step * 0.01)) < 0.1
+	check(Lighting.lamp_strength(0.0) == 0.0 and Lighting.lamp_strength(1.0) == 1.0 and ramp_smooth,
+		"town lamps are off by day, full at night, and fade in between")
+	# Over the light limit, the lights nearest the camera win, whatever order they were asked in.
+	var requests: Array[Dictionary] = []
+	for index: int in 10:
+		requests.append({"at": Vector2((index * 7) % 10, 0) * 32.0})
+	var kept: Array[Dictionary] = Lighting.nearest(requests, Vector2.ZERO, 4)
+	var nearest_x: Array = kept.map(func(r: Dictionary) -> float: return r["at"].x)
+	nearest_x.sort()
+	check(nearest_x == [0.0, 32.0, 64.0, 96.0] and Lighting.nearest(requests, Vector2.ZERO, 20).size() == 10,
+		"over the light limit, the lights nearest the camera are kept")
 
 
 

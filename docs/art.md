@@ -267,9 +267,11 @@ The world renders into its own `SubViewport` (`game/ui/game_window.gd`), so ligh
 host's clock (a 40-minute day; sessions start in the morning; clients sync the clock in the
 welcome snapshot), multiplied by a zone's `ambient` colour (the Hollow Reach is a permanent
 violet dusk). Pooled `PointLight2D`s follow players who hold a torch (a wide flickering light; without one a
-player carries no light, so a `dark` dungeon such as Silkhollow is pitch black), NPCs, town lamp posts (lit from dusk), relic wearers, glowing
+player carries no light, so a `dark` dungeon such as Silkhollow is pitch black), NPCs, town lamp posts (fading in through dusk), relic wearers, glowing
 bosses and ground relics (coloured), missiles, and spell areas; lights fade in as the light
-fades. `game/render/fx.gd` emits one-shot `CPUParticles2D` bursts for hits, critical hits,
+fades. Darkness eases rather than jumps (weather, lightning), a lamp, NPC lantern, or torch coming
+into range fades in over 0.3 s, and lights are placed nearest the camera first, since Godot lets
+only 16 lights reach one canvas item: the lights beside you always win. `game/render/fx.gd` emits one-shot `CPUParticles2D` bursts for hits, critical hits,
 heals, level-ups, monster deaths, spell areas, and missile impacts (sparks and magic blend
 additively). `game/render/world_overlay.gd` draws nameplates, NPC names, the target square,
 missiles, and floating numbers above the lit world, so text stays readable at night, and

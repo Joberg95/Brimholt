@@ -35,5 +35,14 @@ Likely causes, in order:
   lamp's lit pixels may not drop by more than a few percent.
 - Unit check: light priority puts lamps within N tiles of the player ahead of distant glows.
 
+## Status (2026-10-17)
+Not reproduced: walking past the lamp by the spawn and the busiest lamp cluster at midnight, with
+and without a torch, gave smooth brightness and 9-14 of 64 lights. Godot hard-codes 16 lights per
+canvas item in 2D (no project setting), so cause 1 stays possible near crowded spots. Fixed anyway:
+lamps fade in through dusk (`lamp_strength`), darkness eases (`DARKNESS_RATE`), keyed lights fade
+in over `FADE_IN_SECONDS` when they come into range, and lights are placed nearest the camera first
+(`nearest`). Chunk splitting (step 3) not done. Unit checks and a visual walk-past step added.
+Waiting on an in-game check before this plan is closed.
+
 ## Done when
 Walking past lamps at night, with and without a torch, shows steady lamp light.

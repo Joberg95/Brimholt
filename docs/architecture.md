@@ -193,7 +193,7 @@ Per-frame and per-tick code must still never scan every monster or ground stack:
   invalidate it (`_taken_at = NAN`) when monsters are created or removed.
 - Static per-cell drawing is cached (tall objects per view area, floors per chunk, roofs per
   building); rebuild caches on area change, never per frame.
-- Pools are bounded: point lights are reused in request order (`Lighting.MAX_LIGHTS`),
+- Pools are bounded: point lights are reused nearest the camera first (`Lighting.MAX_LIGHTS`),
   particle bursts are capped (`Fx.MAX_BURSTS`) and free themselves, effects expire after a
   second.
 - Long-lived dictionaries keyed by players, peers, monsters, or cells must have a removal

@@ -11,7 +11,7 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
-| 23 | [Lanterns flicker when you go near them](23-lantern-flicker.md) | S | |
+| 23 | [Lanterns flicker when you go near them](23-lantern-flicker.md) | S | Fixes in; confirm in game |
 | 24 | [A Verdana-like game font](24-game-font.md) | S | Allow a non-CC0 free font (DejaVu Sans recommended) |
 | 26 | [Balance pass for the new gear stats](26-gear-stat-balance.md) | M | |
 | 25 | [More spells for every ten levels](25-spell-brackets.md) | L | Spells, runes, or both; approve the list |

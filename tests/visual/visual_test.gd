@@ -269,7 +269,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 26 hunting weapons in 312 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, gold heaps and green loot text, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night and steady while walking past, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1105,7 +1105,29 @@ func _check_town_lamps() -> bool:
 	await RenderingServer.frame_post_draw
 	var night: Image = screen.get_texture().get_image()
 	night.save_png("res://.tools/visual-lamps.png")
+	# Walking past the lamp keeps its light steady: no frame where the street beside it jumps.
+	var steady: bool = true
+	var before: float = -1.0
+	var jump: String = ""
+	for frame: int in 36:
+		if frame % 12 == 0:
+			game._handle_move(1, Vector2i.LEFT)
+		await RenderingServer.frame_post_draw
+		var at: Vector2 = game.map_to_screen((Vector2(lamp) + Vector2(0.5, -0.5)) * World.TILE_SIZE)
+		var frame_image: Image = screen.get_texture().get_image()
+		if Rect2(Vector2.ZERO, Vector2(frame_image.get_size())).has_point(at):
+			var now: float = frame_image.get_pixelv(Vector2i(at)).get_luminance()
+			if before >= 0.0 and absf(now - before) > 0.12:
+				steady = false
+				jump = "%.2f -> %.2f at frame %d" % [before, now, frame]
+			before = now
+	player["cell"] = stand
+	player["from"] = stand
+	game._publish_actor(1)
+	await create_timer(0.3).timeout
 	lighting.time_override = 0.5
+	if not _expect(steady, "The town lamp light jumps while walking past it (%s)" % jump):
+		return false
 	# The ground on screen farthest from every light: lamps, lantern-carrying NPCs, and characters
 	# (held torches and glowing gear light the ground around them too).
 	var lights: Array = World.LAMPS + World.NPC_CELLS.keys()
