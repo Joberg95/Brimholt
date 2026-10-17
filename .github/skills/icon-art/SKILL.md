@@ -36,7 +36,7 @@ world art; this one covers icons.
 | Necklaces | Chain loop plus a hand-drawn pendant | `tools/generators/pixel_necklaces.py` |
 | Rings | Tilted band plus a centrepiece | `ring_icon` in `make_sprites.py` |
 | Showpiece helmets and boots | Solids rendered in 3D | `tools/generators/gear3d.py` |
-| Painted sets | Painted art imported by `make outfits` | `art/outfits/`, `derive_icons.py` |
+| Painted sets, tier armour | Painted art imported by `make outfits`; armour without its own painting takes a unique painted base or two spliced (`armor_bases`), never a code-drawn body | `art/outfits/`, `derive_icons.py` |
 
 Prefer the first two for new families. `item_icon`'s older generated shapes are the fallback
 being replaced; do not add new ones there.

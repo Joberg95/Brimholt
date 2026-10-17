@@ -1680,6 +1680,19 @@ func _leech_checks() -> void:
 				"%s is a Warrior's leeching blade" % kind)
 	check(leeching.size() == 4 and World.ITEMS["grand_sanguine_blade"]["stats"]["leech"] == World.LEECH_MAX,
 		"four leeching swords, the Bloodvein greatblade at the most")
+	# Plan 39: every tier helmet, armour, legs, and boots piece has its own icon design; no two
+	# pieces of one slot and armor type share a picture (derive_icons.py armor_bases).
+	var pictures: Dictionary = {}
+	var shared: Array[String] = []
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] in ["helmet", "armor", "legs", "boots"] and SpriteArt.ICONS.has(kind):
+			var key: String = "%s/%s/%s" % [item["slot"], item.get("armor", "plate"),
+				SpriteArt.ICONS[kind].get_image().get_data().hex_encode().sha256_text()]
+			if pictures.has(key):
+				shared.append("%s = %s" % [kind, pictures[key]])
+			pictures[key] = kind
+	check(shared.is_empty(), "every tier armour piece has its own icon (%s)" % ", ".join(shared))
 	check(World.stats(45, {"main_hand": "grand_sanguine_blade", "ring_1": "garnet_ring"}, "knight")["leech"] <= World.LEECH_MAX
 		and Combat.leech({"leech": 5}, 200) == 10 and Combat.leech({}, 200) == 0, "leech heals its share of a hit, at most 5%")
 	# Plan 26: at its 5% cap leech is a small help, so leeching blades keep a plain sword's attack.

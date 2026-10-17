@@ -129,11 +129,15 @@ and no region splits the whole image into cells, one item per cell in reading or
 `icons_<group>_<n>.png` sheets (4×4) cover every other item and are skipped until their PNG
 exists, so painted icons can arrive a sheet at a time. Items without a painted icon get one derived
 from the painted art (`tools/generators/derive_icons.py`, run by `make outfits`): a painted
-template of the same kind (`TEMPLATES`, plain to ornate by level; for helmets, armor, legs, and
-boots the nearest-tier painted piece of the same slot and armor type; a catalog `template`
-names a specific painted icon instead, as the mythic sets do), recoloured to the item's
+template of the same kind (`TEMPLATES`, plain to ornate by level; a catalog `template` names a
+specific painted icon instead, as the mythic sets do), recoloured to the item's
 catalog colours: outlines and wood stay, gold trim takes the accent colour, and everything else
-follows its brightness on a ramp from the main to the light colour. They are written to `assets/sprites/icons_derived/` every run. The extra templates
+follows its brightness on a ramp from the main to the light colour. Tier helmets, armour, legs,
+and boots never share a design (`armor_bases`): each takes its own painted piece of the same slot
+and armor type, nearest in level and used once, or, where two pieces meet cleanly at the cut
+(`SPLIT`: the brow, below the chest, the knee, the ankle), the top of one on the bottom of the
+other, a new design in the same painted style. Drawing armour from code (part maps or 3D solids)
+was tried and fell short of the painted look, so armour stays painted-derived. They are written to `assets/sprites/icons_derived/` every run. The extra templates
 (`template_*` icons) come from the unused weapon and off-hand cells of `class_sets.png` and the
 single pieces of `class_pieces.png`. Rings, axes, maces, hammers, crossbows, torches, capes, packs,
 potions, food, gathered resources (looks `ore`, `log`, `herb`, `fish`, `food`), and most materials have no template yet and keep their generated `items.png` cell.

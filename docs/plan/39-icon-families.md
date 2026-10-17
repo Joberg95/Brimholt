@@ -8,7 +8,9 @@ look that rings, necklaces, axes, swords, backpacks, coins, and monster drops no
 family is left on the old generated shapes or recoloured templates.
 
 ## Today
-Drawn the new way (the `icon-art` skill): potions, rings, necklaces, axes, swords, backpacks, coins, the 100
+Done: tier helmets, armour, legs, and boots stay painted, and the pieces without a painting each take
+their own painted base or two spliced (`derive_icons.py armor_bases`; code-drawn armour fell short
+of the painted look). Drawn the new way (the `icon-art` skill): potions, rings, necklaces, axes, swords, backpacks, coins, the 100
 monster drops and gathered resources, the showpiece helmets and boots. Still old:
 
 | Family | Today | Builder to use |
@@ -20,11 +22,10 @@ monster drops and gathered resources, the showpiece helmets and boots. Still old
 | Maces and hammers | generated `weapon_model` | Hand-pixelled heads on a haft like axes |
 | Shields and spellbooks | painted templates, recoloured | Part maps, front view |
 | Capes | generated | Part map, folded cloth |
-| Tier helmets, armour, legs, boots | recoloured painted templates (`derive_icons.py`) | Part maps per armour type (plate, mail, leather, cloth), each tier its own trim |
 | Torches, packs (quest), bags (crafted) | generated or older bag art | `pixel_bags` styles |
 
 ## Steps
-Work family by family, in this order (most seen first): tier armour and helmets, bows and
+Work family by family, in this order (most seen first): bows and
 wands, shields, maces and hammers, capes, food, runes, the rest. For each:
 1. Gather references and design one distinct look per item (no recolours of one blueprint).
 2. Draw in the builder named above; route its looks in `item_icon` and `needs_volume`; held or
@@ -36,4 +37,5 @@ Per family: a look check in `rules_test.gd` (every item of the family uses the n
 weapon silhouette and padding checks, and a visual capture of the family worn or held.
 
 ## Done when
-`derive_icons.py` derives nothing for icons and `item_icon`'s old shape branches are gone.
+`derive_icons.py` derives only tier armour (from unique or spliced painted bases) and `item_icon`'s
+old shape branches are gone.

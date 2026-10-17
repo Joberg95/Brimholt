@@ -3,8 +3,8 @@
 
 Each item without a painted icon (assets/sprites/icons/<id>.png, imported by
 tools/generators/import_outfits.gd) takes a painted template of the same kind (TEMPLATES, or
-for helmets, armor, legs, and boots the nearest-tier painted piece of the same slot and armor
-type), recoloured to its catalog colours: outlines stay, wood stays wood, gold trim takes the
+for helmets, armor, legs, and boots its own painted base of the same slot and armor type, or two
+spliced into a new design: armor_bases), recoloured to its catalog colours: outlines stay, wood stays wood, gold trim takes the
 item's accent colour, and every other pixel is mapped by its brightness onto a ramp from the
 item's main colour to its light colour. Templates are ordered plain to ornate and picked by the
 item's level. Results go to assets/sprites/icons_derived/<id>.png (rewritten every run); the
@@ -126,24 +126,84 @@ def painted(kind):
     return M.Image.load(path) if path.exists() else None
 
 
-def armor_template(kind, item):
-    """The nearest-level painted piece of the same slot and armor type (relics: plate)."""
-    wanted = item.get("armor", "plate")
-    best = None
-    for other, entry in M.ITEMS.items():
-        if entry.get("slot") == item["slot"] and entry.get("armor") == wanted and (PAINTED / f"{other}.png").exists():
-            distance = abs(entry["level"] - item["level"])
-            if best is None or distance < best[0]:
-                best = (distance, other)
-    return best[1] if best else None
+# Where a spliced piece changes from its top base to its bottom base, as a share of its height
+# (helmets at the brow, body armour below the chest, legs at the knee, boots at the ankle).
+SPLIT = {"helmet": 0.5, "armor": 0.58, "legs": 0.5, "boots": 0.55}
+
+
+def _span(image, y):
+    xs = [x for x in range(image.width) if image.pixels[y][x] is not None]
+    return (xs[0], xs[-1]) if xs else None
+
+
+def _cut(image, share):
+    rows = [y for y in range(image.height) if any(image.pixels[y])]
+    return rows[0] + round((rows[-1] - rows[0]) * share)
+
+
+def fits(top, bottom, share):
+    """Whether two painted pieces meet cleanly at the cut: about the same edges there."""
+    a, b = painted(top), painted(bottom)
+    cut = _cut(a, share)
+    for y in (cut - 1, cut):
+        sa, sb = _span(a, y), _span(b, y)
+        if sa is None or sb is None or abs(sa[0] - sb[0]) > 1 or abs(sa[1] - sb[1]) > 1:
+            return False
+    return True
+
+
+def armor_bases():
+    """{item: (top base, bottom base or None)} for every unpainted tier helmet, armour, legs, and
+    boots: painted pieces of the same slot and armor type (relics: plate), nearest in level and
+    each used by one item only, so no two pieces in a row share a design. Where a second piece
+    meets the first cleanly at SPLIT, the item takes the first's top on the second's bottom, a
+    new design in the same painted style; without one it skips the nearest piece, so it does not
+    copy its painted neighbour."""
+    bases = {}
+    groups = {}
+    for kind, item in M.ITEMS.items():
+        if item.get("slot") in ARMOR_SLOTS:
+            groups.setdefault((item["slot"], item.get("armor", "plate")), []).append(kind)
+    for (slot, armor), kinds in groups.items():
+        pool = [k for k in kinds if (PAINTED / f"{k}.png").exists()]
+        if not pool:
+            continue
+        used = set()
+        todo = sorted((k for k in kinds if k not in pool and M.look(k)[0] not in M.SHOWPIECE_STYLES
+                       and not M.ITEMS[k].get("template")), key=lambda k: (M.ITEMS[k]["level"], k))
+        for kind in todo:
+            level = M.ITEMS[kind]["level"]
+            ranked = sorted(pool, key=lambda b: (b in used, abs(M.ITEMS[b]["level"] - level), b))
+            first, second = ranked[0], None
+            for other in ranked[1:]:
+                if fits(first, other, SPLIT[slot]):
+                    second = other
+                    break
+            if second is None and len(ranked) > 1 and ranked[1] not in used:
+                first = ranked[1]
+            used.add(first)
+            bases[kind] = (first, second)
+    return bases
+
+
+def armor_base(kind, bases):
+    """The painted art an armour piece is recoloured from: one base, or two spliced at SPLIT."""
+    top, bottom = bases[kind]
+    image = painted(top)
+    if bottom is None:
+        return image
+    lower = painted(bottom)
+    cut = _cut(image, SPLIT[M.ITEMS[kind]["slot"]])
+    out = M.Image(image.width, image.height)
+    for y in range(image.height):
+        out.pixels[y] = list((image if y < cut else lower).pixels[y])
+    return out
 
 
 def template_for(kind, item):
     if item.get("template") and (PAINTED / f"{item['template']}.png").exists():
         return item["template"]
     shape = M.look(kind)[0]
-    if item.get("slot") in ARMOR_SLOTS:
-        return armor_template(kind, item)
     choices = [name for name in TEMPLATES.get(shape, []) if (PAINTED / f"{name}.png").exists()]
     if not choices:
         return None
@@ -156,16 +216,20 @@ def main():
     for old in DERIVED.glob("*.png"):
         old.unlink()
     made, skipped = 0, []
+    bases = armor_bases()
     for kind, item in M.ITEMS.items():
         # Showpiece helmets and boots draw their own icon (make_sprites.py helm_icon).
         if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.SHOWPIECE_STYLES:
             continue
-        name = template_for(kind, item)
-        if name is None:
-            skipped.append(kind)
-            continue
         shape = M.look(kind)[0]
-        icon = recolour(painted(name), item, shape in WOODEN)
+        if kind in bases:
+            icon = recolour(armor_base(kind, bases), item, False)
+        else:
+            name = template_for(kind, item)
+            if name is None:
+                skipped.append(kind)
+                continue
+            icon = recolour(painted(name), item, shape in WOODEN)
         if shape == "bow":
             icon = hollow(icon)
         M.icon_finish(M.icon_volume(icon)).save(DERIVED / f"{kind}.png")
