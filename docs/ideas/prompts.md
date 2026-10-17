@@ -8,7 +8,6 @@ lets add some smaller mini bosses as rare creatures from levels 10-50 anywhere i
 
 Outfits from quests, later thing (plan 22)
 
-the lanterns flicker when you go near them, lets address this (plan 23)
 
 we should redesign the map to have 1 major city per continent and 1 smaller one per continent. (plan 32)
 
