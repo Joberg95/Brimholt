@@ -130,8 +130,7 @@ func _use_resources(world: World, combat: Combat, spells: Array[String], now: fl
 	var stats: Dictionary = world.player_stats(1)
 	var share: float = float(player["health"]) / stats["health"]
 	for spell: String in spells:
-		var style: String = Spells.SPELLS[spell]["kind"]
-		if (style.begins_with("heal") and share < 0.55) or (not style.begins_with("heal") and style != "taunt" and share >= 0.3):
+		if (Spells.rescue_spell(spell) and share < 0.55) or (Spells.fight_spell(spell) and share >= 0.3):
 			combat.cast(1, spell, now)
 	var potion: String = ""
 	if share < 0.35:

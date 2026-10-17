@@ -409,12 +409,17 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 	if player["mana"] < cost:
 		return {"ok": false, "reason": "Not enough mana (%d needed)" % cost, "events": []}
 	var target: int = player["target"]
-	var needs_target: bool = definition["kind"] in ["target", "area_target", "taunt_target", "root", "slow"]
+	var needs_target: bool = definition["kind"] in ["target", "area_target", "taunt_target", "root", "slow", "mark", "execute"]
 	if needs_target and (target == 0 or not hostile(id, target)
 			or not in_reach(player["cell"], creature(target)["cell"], definition.get("range", 1))):
 		return {"ok": false, "reason": "You need a target in range", "events": []}
 	if definition["kind"] == "taunt_target" and target > 0:
 		return {"ok": false, "reason": "%s works on monsters" % definition["name"], "events": []}
+	var walled: Array[Vector2i] = []
+	if definition["kind"] == "wall":
+		walled = wall_cells(id, definition["radius"])
+		if walled.is_empty():
+			return {"ok": false, "reason": "There is no room for a wall there", "events": []}
 	var events: Array = []
 	player["mana"] -= cost
 	player["cooldowns"][spell] = now + definition["cooldown"]
@@ -455,6 +460,35 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 		"heal_self":
 			_heal(id, roundi(limits["health"] * power * rng.randf_range(0.9, 1.1)), events, id, now)
 			_area(player["cell"], 0, definition["color"], events, element)
+		"buff_self":
+			add_effect(id, spell, power, definition["seconds"], now)
+			_area(player["cell"], 0, definition["color"], events, element)
+			events.append({"kind": "message", "id": id, "text": "%s: %s" % [definition["name"], BUFF_TEXT[definition["buff"]]]})
+		"buff_area":
+			_area(player["cell"], definition["radius"], definition["color"], events, element)
+			for friend: int in world.players:
+				if distance(world.players[friend]["cell"], player["cell"]) <= definition["radius"] and not hostile(id, friend):
+					add_effect(friend, spell, power, definition["seconds"], now)
+					events.append({"kind": "player", "id": friend})
+					events.append({"kind": "message", "id": friend, "text": "%s: %s" % [definition["name"], BUFF_TEXT[definition["buff"]]]})
+		"mark":
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
+			_area(creature(target)["cell"], 0, definition["color"], events, element)
+			add_effect(target, spell, power, definition["seconds"], now)
+			events.append({"kind": "player" if target > 0 else "monster", "id": target, "movement": false})
+			events.append({"kind": "message", "id": id, "text": "Marked: it takes %d%% more damage from players for %s s." % [
+				roundi(power * 100.0), Spells.number(definition["seconds"])]})
+		"execute":
+			_missile(player["cell"], creature(target)["cell"], definition["color"], events, element)
+			_area(creature(target)["cell"], 0, definition["color"], events, element)
+			var victim: Dictionary = creature(target)
+			var top: int = world.player_stats(target)["health"] if target > 0 else victim["max_health"]
+			var low: bool = float(victim["health"]) < top * definition["execute_below"]
+			_hit(id, target, power * (definition["execute_bonus"] if low else 1.0), now, events)
+		"wall":
+			world.raise_walls(walled, now + definition["seconds"], now)
+			events.append({"kind": "area", "cells": walled, "color": definition["color"], "element": element,
+				"life": definition["seconds"]})
 		"heal_area":
 			var amount: int = maxi(1, roundi(limits["healing"] * power))
 			_area(player["cell"], definition["radius"], definition["color"], events, element)
@@ -464,6 +498,42 @@ func cast(id: int, spell: Variant, now: float) -> Dictionary:
 					_heal(friend, amount, events, id, now)
 	events.append({"kind": "player", "id": id})
 	return {"ok": true, "events": events}
+
+
+## What each buff does, for the message when it lands.
+const BUFF_TEXT: Dictionary = {
+	"bulwark": "you take less damage for a while.", "haste": "you move faster for a while.",
+	"ward": "damage drains your mana before your health for a while.",
+}
+
+
+## Puts a timed spell effect (a buff or a mark) on a player or monster: kept by spell id as
+## [until, power] under "effects", so casting again refreshes it; World.effect_power reads it.
+func add_effect(id: int, spell: String, power: float, seconds: float, now: float) -> void:
+	var body: Dictionary = creature(id)
+	if not body.has("effects"):
+		body["effects"] = {}
+	for old: String in body["effects"].keys():
+		if body["effects"][old][0] <= now:
+			body["effects"].erase(old)
+	body["effects"][spell] = [now + seconds, power]
+
+
+## The tiles a glacier wall cast now would cover: 2 * radius + 1 walkable tiles across the way,
+## two steps ahead of the caster toward their target (or the way they face).
+func wall_cells(id: int, radius: int) -> Array[Vector2i]:
+	var player: Dictionary = world.players[id]
+	var ahead: Vector2i = player["facing"]
+	if player["target"] != 0 and exists(player["target"]):
+		ahead = facing_toward(player["cell"], creature(player["target"])["cell"])
+	var middle: Vector2i = player["cell"] + ahead * 2
+	var across := Vector2i(ahead.y, ahead.x)
+	var cells: Array[Vector2i] = []
+	for step: int in range(-radius, radius + 1):
+		var cell: Vector2i = middle + across * step
+		if World.walkable(cell) and line_of_sight(player["cell"], cell):
+			cells.append(cell)
+	return cells
 
 
 ## Health a hit of `amount` damage gives back to a player with life leech (stats["leech"] percent,
@@ -523,6 +593,12 @@ func _hit(attacker: int, target: int, power: float, now: float, events: Array, r
 		wounds[target] = [wound_stacks(attacker, target, now) + 1, now + WOUND_SECONDS]
 	if attacker > 0 and target > 0:
 		raw *= Balance.PVP_DAMAGE
+	# Hunter's mark: players hit a marked creature harder; Iron bulwark: the bearer takes less.
+	var victim: Dictionary = creature(target)
+	if attacker > 0:
+		raw *= 1.0 + maxf(0.0, World.effect_power(victim, "mark", now))
+	if target > 0:
+		raw *= 1.0 - clampf(World.effect_power(victim, "bulwark", now), 0.0, 0.9)
 	var critical: bool = attacker > 0 and rng.randi_range(1, 100) <= world.player_stats(attacker)["critical"]
 	if critical:
 		raw *= CRITICAL_MULTIPLIER
@@ -550,6 +626,16 @@ func _damage(attacker: int, target: int, amount: int, style: String, now: float,
 				if now >= world.players[id]["pvp_until"]:
 					world.players[id]["pvp_since"] = now
 				world.players[id]["pvp_until"] = now + Balance.PVP_COMBAT_SECONDS
+	# Mana ward: part of each hit drains the bearer's mana instead of their health.
+	if target > 0 and World.effect_power(victim, "ward", now) >= 0.0 and victim["mana"] > 0:
+		var rate: float = Spells.SPELLS["mana_ward"]["mana_per_damage"]
+		var absorbed: int = mini(roundi(amount * Spells.SPELLS["mana_ward"]["ward_share"]), floori(victim["mana"] / rate))
+		victim["mana"] -= ceili(absorbed * rate)
+		amount -= absorbed
+		events.append({"kind": "hit", "target": target, "cell": victim["cell"], "amount": absorbed, "style": "ward", "source": attacker})
+		if amount <= 0:
+			events.append({"kind": "player", "id": target})
+			return
 	victim["health"] -= amount
 	events.append({"kind": "hit", "target": target, "cell": victim["cell"], "amount": amount, "style": style, "source": attacker})
 	if attacker < 0 and target > 0 and world.monsters.has(attacker):
@@ -650,13 +736,18 @@ func use_rune(id: int, kind: Variant, now: float) -> Dictionary:
 	player["backpack"][slot] = World.make_entry(kind, left) if left > 0 else ""
 	player["groups"]["rune"] = now + Spells.GROUP_SECONDS["rune"]
 	var events: Array = [{"kind": "player", "id": id}]
-	var base: float = Balance.geared_attack(player["level"]) * element_bonus(world.player_stats(id), String(item["rune"]))
+	var element: String = rune.get("element", item["rune"])
+	var base: float = Balance.geared_attack(player["level"]) * element_bonus(world.player_stats(id), element)
 	var center: Vector2i = creature(target)["cell"]
 	_missile(player["cell"], center, rune["color"], events)
 	var struck: Array[int] = []
-	if rune["shape"] == "circle":
+	if rune["shape"] == "single":
+		struck.append(target)
+		events.append({"kind": "area", "cells": [center], "color": rune["color"], "element": element})
+		_hit(id, target, rune["power"], now, events, base)
+	elif rune["shape"] == "circle":
 		var cells: Array[Vector2i] = circle(center, rune["radius"])
-		events.append({"kind": "area", "cells": cells, "color": rune["color"], "element": item["rune"]})
+		events.append({"kind": "area", "cells": cells, "color": rune["color"], "element": element})
 		for victim: int in _enemies_near(id, center, rune["radius"]):
 			if creature(victim)["cell"] in cells:
 				struck.append(victim)
@@ -1817,7 +1908,7 @@ func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 		own[monster["from"]] = own.get(monster["from"], 0) + 1
 	var home_zoned: bool = not World.zone_at(home).is_empty()
 	var step: Vector2i = path_step(monster["cell"], goal, func(cell: Vector2i) -> bool:
-		return taken.get(cell, 0) > own.get(cell, 0) or distance(cell, home) > Monsters.LEASH \
+		return taken.get(cell, 0) > own.get(cell, 0) or distance(cell, home) > Monsters.LEASH or world.walled(cell, now) \
 			or World.zone_at(cell).is_empty() == home_zoned)
 	# Chasing is quicker than a player's step (Balance.chase_seconds); idling and going home use the monster's own pace.
 	var hunted: int = monster["target"]

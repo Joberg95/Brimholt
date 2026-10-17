@@ -374,8 +374,8 @@ func use_resources(id: int, now: float, events: Array) -> void:
 	for spell: String in _spells(id):
 		var definition: Dictionary = Spells.SPELLS[spell]
 		var style: String = definition["kind"]
-		var wanted: bool = (style.begins_with("heal") and share < HEAL_SHARE) or (fighting and not style.begins_with("heal")
-			and style != "taunt" and share >= ATTACK_SHARE)
+		var wanted: bool = (Spells.rescue_spell(spell) and share < HEAL_SHARE) or (fighting and (Spells.fight_spell(spell)
+			or style == "taunt_target") and share >= ATTACK_SHARE)
 		if style == "heal_area" and not wanted:
 			wanted = _hurt_ally(id, definition["radius"], HEAL_ALLY_SHARE)
 		if style == "taunt":
@@ -413,7 +413,7 @@ func _short_of_mana(id: int, now: float) -> bool:
 	var player: Dictionary = world.players[id]
 	for spell: String in _spells(id):
 		var definition: Dictionary = Spells.SPELLS[spell]
-		if definition["kind"].begins_with("heal") or definition["kind"].begins_with("taunt"):
+		if not Spells.fight_spell(spell) or definition["kind"] == "buff_self":
 			continue
 		if now >= player["cooldowns"].get(spell, -INF) and now >= player["groups"].get(definition["group"], -INF):
 			return player["mana"] < maxi(1, roundi(world.player_stats(id)["mana"] * definition["mana"]))
@@ -515,12 +515,19 @@ func _rune_to_use(id: int) -> String:
 	if target == 0 or not combat.exists(target):
 		return ""
 	var crowd: int = combat._enemies_near(id, combat.creature(target)["cell"], 2).size() - 1
+	# A single-target rune (Sudden death) is for a boss, a champion, or a player; area runes for a crowd.
+	var big: bool = target > 0 or combat.monster_def(target)["rank"] in ["boss", "champion"]
+	for entry: String in player["backpack"]:
+		var kind: String = World.kind_of(entry)
+		if big and World.ITEMS.get(kind, {}).has("rune") and player["level"] >= World.ITEMS[kind]["level"] \
+				and Spells.rune_of(World.ITEMS[kind])["shape"] == "single":
+			return kind
 	if target < 0 and crowd < RUNE_CROWD:
 		return ""
 	for entry: String in player["backpack"]:
 		var kind: String = World.kind_of(entry)
 		if World.ITEMS.get(kind, {}).has("rune") and player["level"] >= World.ITEMS[kind]["level"] \
-				and Spells.rune_of(World.ITEMS[kind])["shape"] != "recall":
+				and Spells.rune_of(World.ITEMS[kind])["shape"] in ["circle", "chain"]:
 			return kind
 	return ""
 

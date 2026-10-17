@@ -141,6 +141,15 @@ duels with spells and potions (levels 20, 30, 45; duelists start adjacent):
 | Hunter mirror | 55–61 s |
 | Sorcerer mirror | 6 s: glass cannons |
 
+The level 40-50 spells (plan 25, checked at levels 40, 45, 48, and 50) keep the triangle. Mana
+ward was first a full mana shield (1 mana a point) and turned Hunter vs Sorcerer around and
+tripled the Sorcerer mirror; it now takes 30% of each hit at 2 mana a point, and bots and sims
+cast it when hurt, like a heal, since in a hunt it spends the mana heals need. With it the
+Hunter wins in 13-15 s, and the Sorcerer mirror stays 6-9 s. Iron bulwark at 50 gives the Warrior
+back the Hunter matchup (70 s; the Hunter had edged it at 50). Hunter's mark and Soulfire make
+level 50 hunts a little quicker (a bog hulk pair 8.4 -> 6.4 s for a Hunter) without changing who
+survives them.
+
 **Class counters.** Damage is physical (Warriors, Hunters, most monsters) or magic (Sorcerers,
 Druids, rune spells, wraiths, the lich, the Hollow Bloom), cut by defense and magic defense
 respectively (`Balance.ARMOR_TYPES`). Plate makes Warriors hard to wear down for Hunters and

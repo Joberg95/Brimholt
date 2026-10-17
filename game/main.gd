@@ -1524,7 +1524,7 @@ func _show_effect(event: Dictionary) -> void:
 			var styles: Dictionary = {
 				"damage": [str(event["amount"]), Color("#ff4a3a")], "critical": ["%d!" % event["amount"], Color("#ffa030")],
 				"heal": ["+%d" % event["amount"], Color("#6ae07a")], "experience": ["%d xp" % event["amount"], Color("#f4f4f4")],
-				"mana": ["+%d" % event["amount"], Color("#6aa8ff")],
+				"mana": ["+%d" % event["amount"], Color("#6aa8ff")], "ward": ["-%d" % event["amount"], Color("#6aa8ff")],
 			}
 			var style: Array = styles.get(event["style"], styles["damage"])
 			var at: Vector2 = (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
@@ -1569,7 +1569,7 @@ func _show_effect(event: Dictionary) -> void:
 				get_tree().create_timer(lands).timeout.connect(impact)
 		"area":
 			effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born,
-				"element": event.get("element", "")})
+				"element": event.get("element", ""), "life": maxf(1.1, float(event.get("life", 0.0)))})
 			_world_view.fx.area(event["cells"], event["color"])
 
 

@@ -102,6 +102,7 @@ func _run() -> void:
 	_spawn_and_rest_checks()
 	_armor_and_control_checks()
 	_rune_checks()
+	_bracket_spell_checks()
 	_map_guidance_checks()
 	_trophy_steal_checks()
 	for spawn: Vector2i in World.SPAWNS:
@@ -2211,7 +2212,7 @@ func _zone_checks() -> void:
 func _keybind_checks() -> void:
 	var path: String = "user://keybinds_test.cfg"
 	var binds := Keybinds.new(path)
-	check(binds.action_for(KEY_1) == "slot_1" and binds.action_for(KEY_9) == "slot_9", "action bar defaults to 1-9")
+	check(binds.action_for(KEY_1) == "slot_1" and binds.action_for(KEY_9) == "slot_9" and binds.action_for(KEY_0) == "slot_10", "action bar defaults to 1-9 and 0")
 	check(binds.action_for(KEY_W) == "move_up" and binds.action_for(KEY_UP) == "move_up", "movement has two default keys")
 	check(binds.action_for(KEY_NONE) == "" and binds.action_for(KEY_F12) == "", "unbound keys do nothing")
 	check(binds.bar == Keybinds.DEFAULT_BAR and binds.bar.count("") == Keybinds.SLOTS, "the bar starts empty (spells fill it)")
@@ -2222,7 +2223,7 @@ func _keybind_checks() -> void:
 	check(not binds.bind("slot_3", 0, KEY_ESCAPE) and binds.action_for(KEY_3) == "slot_3", "Escape cannot be bound")
 	check(not binds.bind("no_such_action", 0, KEY_P) and not binds.bind("slot_3", 2, KEY_P), "invalid bindings rejected")
 	check(binds.bind("slot_3", 0, KEY_NONE) and binds.action_for(KEY_3) == "", "a binding can be cleared")
-	check(binds.set_bar(4, "spell:" + Spells.SPELLS.keys()[0]) and not binds.set_bar(9, "")
+	check(binds.set_bar(4, "spell:" + Spells.SPELLS.keys()[0]) and not binds.set_bar(Keybinds.SLOTS, "")
 		and not binds.set_bar(0, "fireball") and not binds.set_bar(0, "spell:fireball"),
 		"bar slots accept known spells only")
 	for item_entry: String in ["pick_up", "target_nearest", "world_map", "toggle_helmet", "item:ember_cap", "ember_cap"]:
@@ -4907,6 +4908,155 @@ func _armor_and_control_checks() -> void:
 	combat.restrain(champion, "slow", 3.0, 50.0, [])
 	check(Monsters.MONSTERS["grimclaw"]["rank"] == "champion" and not world.monsters[champion].has("slowed_until"),
 		"champions cannot be rooted or slowed either")
+
+
+## A level-50 party in an open field beside a grey wolf, all with endless mana; the same seed
+## gives the same rolls, so two arenas can compare a hit with and without an effect.
+func _spell_arena(seed_value: int) -> Array:
+	var world := World.new()
+	var combat := Combat.new(world, seed_value)
+	world.monsters.clear()
+	var arena: Vector2i = _wild_cell()
+	for spec: Array in [[1, "knight"], [2, "paladin"], [3, "sorcerer"], [4, "druid"]]:
+		world.add_player(spec[0], 0.0, spec[1])
+		world.players[spec[0]]["level"] = 50
+		world.players[spec[0]]["mana"] = 999999
+		_place(world, spec[0], arena + Vector2i(spec[0] - 1, 0))
+	var wolf: int = combat.spawn_monster("grey_wolf", 50, arena + Vector2i(0, 3), 0.0)
+	world.monsters[wolf]["max_health"] = 1000000
+	world.monsters[wolf]["health"] = 1000000
+	for id: int in world.players:
+		world.players[id]["target"] = wolf
+	return [world, combat, wolf, arena]
+
+
+## An open cell in the wilds (no zone: not a town, not PvP) with walkable ground 4 tiles around.
+func _wild_cell() -> Vector2i:
+	var start: Vector2i = World.SPAWNS[0]
+	for reach: int in range(10, 200, 3):
+		for dy: int in range(-reach, reach + 1, 3):
+			for dx: int in [-reach, reach]:
+				var cell: Vector2i = start + Vector2i(dx, dy)
+				var clear: bool = true
+				for oy: int in range(-4, 5):
+					for ox: int in range(-4, 5):
+						clear = clear and World.walkable(cell + Vector2i(ox, oy)) and World.zone_at(cell + Vector2i(ox, oy)).is_empty()
+				if clear:
+					return cell
+	return Vector2i(-1, -1)
+
+
+## The damage of the first hit on `target` among `events`.
+func _hit_amount(events: Array, target: int) -> int:
+	for event: Dictionary in events:
+		if event["kind"] == "hit" and event["target"] == target and event["style"] in ["damage", "critical"]:
+			return event["amount"]
+	return -1
+
+
+## Plan 25: a spell in every ten-level bracket, the new kinds, and the endgame runes.
+func _bracket_spell_checks() -> void:
+	var filled: bool = true
+	for vocation: String in Balance.VOCATIONS:
+		if vocation == Balance.ADVENTURER:
+			continue
+		for bracket: int in [20, 30, 40, 50]:
+			filled = filled and Spells.for_vocation(vocation).any(func(id: String) -> bool:
+				return Spells.SPELLS[id]["level"] >= bracket and Spells.SPELLS[id]["level"] < bracket + 10)
+	check(filled, "every class has a spell in each bracket: 20, 30, 40, and 50")
+	check(not Spells.fight_spell("glacier_wall") and not Spells.fight_spell("fleetfoot") and not Spells.fight_spell("swift_growth")
+		and Spells.fight_spell("iron_bulwark") and Spells.fight_spell("hunters_mark") and Spells.fight_spell("soulfire"),
+		"bots and sims cast the bulwark, mark, and finisher in fights, but not haste or walls")
+	# Iron bulwark: a monster's hit lands about 30% lighter.
+	var plain: Array = _spell_arena(7)
+	var guarded: Array = _spell_arena(7)
+	check(guarded[1].cast(1, "iron_bulwark", 1.0)["ok"], "a level 50 Warrior casts Iron bulwark")
+	var events: Array = []
+	plain[1]._hit(plain[2], 1, 1.0, 2.0, events)
+	var bare: int = _hit_amount(events, 1)
+	events = []
+	guarded[1]._hit(guarded[2], 1, 1.0, 2.0, events)
+	var shielded: int = _hit_amount(events, 1)
+	check(shielded < bare * 0.8 and shielded > bare * 0.6, "Iron bulwark takes about 30%% off a hit (%d -> %d)" % [bare, shielded])
+	# Mana ward: damage drains mana first.
+	var world: World = guarded[0]
+	var combat: Combat = guarded[1]
+	check(combat.cast(3, "mana_ward", 1.0)["ok"], "a level 40+ Sorcerer casts Mana ward")
+	var health: int = world.players[3]["health"]
+	var mana: int = world.players[3]["mana"]
+	events = []
+	combat._hit(guarded[2], 3, 0.2, 2.0, events)
+	var warded: Array = events.filter(func(event: Dictionary) -> bool: return event["kind"] == "hit" and event["target"] == 3)
+	var share: float = Spells.SPELLS["mana_ward"]["ward_share"]
+	var drained: int = warded[0]["amount"] if warded.size() == 2 and warded[0]["style"] == "ward" else -1
+	var lost: int = health - world.players[3]["health"]
+	check(drained > 0 and absf(drained - (drained + lost) * share) <= 1.0
+		and mana - world.players[3]["mana"] == ceili(drained * Spells.SPELLS["mana_ward"]["mana_per_damage"]),
+		"under Mana ward 30%% of a hit drains twice that in mana instead of health (%d mana, %d health)" % [drained, lost])
+	# Fleetfoot and Swift growth: faster steps for 8 s, Swift growth for friends around the Druid too.
+	check(combat.cast(2, "fleetfoot", 3.0)["ok"], "a level 20+ Hunter casts Fleetfoot")
+	world.players[2]["next_move"] = 0.0
+	var hasted: bool = world.move(2, Vector2i.UP, 3.5)["ok"] or world.move(2, Vector2i.DOWN, 3.5)["ok"]
+	check(hasted and is_equal_approx(world.players[2]["step"], World.MOVE_SECONDS / 1.3), "Fleetfoot makes steps 30% faster")
+	_place(world, 1, world.players[4]["cell"] + Vector2i(-3, 0))
+	var growth: Dictionary = combat.cast(4, "swift_growth", 3.0)
+	check(growth["ok"] and is_equal_approx(World.effect_power(world.players[1], "haste", 4.0), 0.3)
+		and World.effect_power(world.players[1], "haste", 12.0) < 0.0, "Swift growth hastes friends within 3 tiles for 8 s")
+	check(world.export_player(1, 4.0, true)["effects"].has("swift_growth"), "a buff shows on the bearer's buff bar")
+	# Hunter's mark: players hit the marked creature 15% harder.
+	plain = _spell_arena(9)
+	var marked: Array = _spell_arena(9)
+	var marking: Dictionary = marked[1].cast(2, "hunters_mark", 1.0)
+	check(marking["ok"], "a level 50 Hunter marks a target (%s)" % marking.get("reason", ""))
+	events = []
+	plain[1]._hit(1, plain[2], 1.0, 2.0, events)
+	bare = _hit_amount(events, plain[2])
+	events = []
+	marked[1]._hit(1, marked[2], 1.0, 2.0, events)
+	check(_hit_amount(events, marked[2]) > bare * 1.1, "a marked target takes more damage from players")
+	# Soulfire: twice the damage below 30% health.
+	plain = _spell_arena(11)
+	var low: Array = _spell_arena(11)
+	low[0].monsters[low[2]]["health"] = 200000
+	bare = _hit_amount(plain[1].cast(3, "soulfire", 1.0)["events"], plain[2])
+	var finished: int = _hit_amount(low[1].cast(3, "soulfire", 1.0)["events"], low[2])
+	check(finished > bare * 1.7, "Soulfire hits twice as hard below 30%% health (%d -> %d)" % [bare, finished])
+	# Glacier wall: three tiles across the way to the target block players for 5 s.
+	var walled: Array = _spell_arena(13)
+	world = walled[0]
+	combat = walled[1]
+	var arena: Vector2i = walled[3]
+	_place(world, 4, arena)
+	_place(world, 1, arena + Vector2i(-3, 0))
+	world.monsters[walled[2]]["cell"] = arena + Vector2i(0, 4)
+	var raised: Dictionary = combat.cast(4, "glacier_wall", 1.0)
+	var wall: Vector2i = arena + Vector2i(0, 2)
+	check(raised["ok"] and world.walled(wall, 2.0) and not world.walled(wall, 6.5)
+		and raised["events"].any(func(event: Dictionary) -> bool: return event.get("element", "") == "ice_wall" and event["life"] == 5.0),
+		"Glacier wall raises ice two tiles toward the target for 5 s (%s %s)" % [raised.get("reason", ""), world.glacier_walls.keys()])
+	_place(world, 1, wall + Vector2i.UP)
+	world.players[1]["next_move"] = 0.0
+	check(world.move(1, Vector2i.DOWN, 2.0)["reason"] == "Blocked tile" and world.move(1, Vector2i.DOWN, 6.5)["ok"],
+		"nobody walks through the wall until it melts")
+	# The endgame runes: Great fireball (level 45, a radius-4 circle) and Sudden death (50, one target).
+	check(World.ITEMS["great_fireball_rune"]["level"] == 45 and World.ITEMS["sudden_death_rune"]["level"] == 50,
+		"the great fireball rune is for level 45, sudden death for 50")
+	var runes: Array = _spell_arena(15)
+	world = runes[0]
+	combat = runes[1]
+	world.players[2]["backpack"][0] = "great_fireball_rune#2"
+	world.players[2]["backpack"][1] = "sudden_death_rune#2"
+	var ball: Dictionary = combat.use_rune(2, "great_fireball_rune", 1.0)
+	var blast: Array = ball["events"].filter(func(event: Dictionary) -> bool: return event["kind"] == "area")
+	check(ball["ok"] and blast.size() == 1 and blast[0]["cells"] == Combat.circle(world.monsters[runes[2]]["cell"], 4)
+		and blast[0]["element"] == "fire", "a great fireball burns a radius-4 circle (%s %s %s)" % [ball.get("reason", ""), blast.size(),
+			blast.map(func(event: Dictionary) -> String: return "%d %s" % [event["cells"].size(), event["element"]])])
+	var death: Dictionary = combat.use_rune(2, "sudden_death_rune", 5.0)
+	check(death["ok"] and _hit_amount(death["events"], runes[2]) > _hit_amount(ball["events"], runes[2]) * 2
+		and death["events"].any(func(event: Dictionary) -> bool: return event.get("element", "") == "death"),
+		"sudden death strikes one target far harder than a fireball")
+	world.players[2]["level"] = 49
+	check(not combat.use_rune(2, "sudden_death_rune", 10.0)["ok"], "sudden death needs level 50")
 
 
 ## Rune spells (Combat.use_rune): items that level 40+ hunts drop, cast by any class from the

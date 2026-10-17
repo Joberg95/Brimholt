@@ -44,7 +44,7 @@ Warriors fight in melee (any of the 8 surrounding tiles); Hunters (6 tiles), Sor
 Druids (5 tiles) attack at range, which needs a clear line of sight: walls and trees block
 it, water does not. If your target is out of reach and you are not steering, you walk
 toward it. Spells sit on the action bar; each costs mana, has its own cooldown, and starts
-a shared cooldown for its group (attack 2 s, healing 1 s). Every class has Light heal, and each
+a shared cooldown for its group (attack 2 s, healing 1 s, support 1 s). Every class has Light heal, and each
 unlocks stronger spells as it levels, so its damage keeps growing (spell damage is your attack
 times the spell's power). Every spell shows its element: bolts and shots fly as an ember, an ice
 shard, a spark, a holy orb, a thorn, or an arrow and burst on their target; melee strikes cut a
@@ -52,10 +52,10 @@ sword arc; area spells flare on every tile they hit; heals raise green motes:
 
 | Class | Spells (unlock level) |
 | --- | --- |
-| Warrior | Brutal blow (1), Provoke (8, turns your target monster onto you from up to 4 tiles), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you) |
-| Hunter | Piercing shot (1), Holy mend (8), Crippling arrow (12, halves your target's pace for 4 s), Arrow volley (15, area), Radiant arrow (30), Sunlance barrage (40, area) |
-| Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Starfall (45, area) |
-| Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Entangling roots (12, roots your target in place for 3 s), Thorn lash (15), Hailstorm (30, area), Wild growth (40, a strong group heal) |
+| Warrior | Brutal blow (1), Provoke (8, turns your target monster onto you from up to 4 tiles), Whirling strike (10, around you), Challenge (20, taunt), Rending cut (20), Sundering blow (30), Earthshaker (40, 2 tiles around you), Iron bulwark (50, take 30% less damage for 6 s) |
+| Hunter | Piercing shot (1), Holy mend (8), Crippling arrow (12, halves your target's pace for 4 s), Arrow volley (15, area), Fleetfoot (20, move 30% faster for 8 s), Radiant arrow (30), Sunlance barrage (40, area), Hunter's mark (50, your target takes 15% more damage from players for 10 s) |
+| Sorcerer | Ember bolt (1), Flame wave (10, area), Arc lightning (20), Firestorm (30, area), Mana ward (40, for 8 s 30% of each hit drains your mana, 2 per point, instead of your health), Starfall (45, area), Soulfire (50, twice the damage on a target below 30% health) |
+| Druid | Frost bolt (1), Mend (1), Mass mend (1, heals you, your party, and anyone you cannot attack within 3 tiles), Entangling roots (12, roots your target in place for 3 s), Thorn lash (15), Swift growth (20, you and friends within 3 tiles move 30% faster for 8 s), Hailstorm (30, area), Wild growth (40, a strong group heal), Glacier wall (50, three tiles of ice across the way to your target for 5 s; nothing walks through) |
 
 **Homeward rune.** Any monster above level 30 may drop a Homeward rune (the rune of Othala, the
 homeland; 1.5% a kill). From level 30, use it from the action bar to be carried home to Cinder
@@ -63,8 +63,8 @@ Crossing, where the fallen wake; it needs no target but will not work while a mo
 and it shares the runes' cooldown. Bots never spend it.
 
 **Buff bar.** Above the minimap a small icon stands for each effect on you, with the time it has
-left and a tooltip: the meal you ate (green frame, its regeneration bonus) and roots or slows
-(red frame).
+left and a tooltip: the meal you ate and spell buffs such as Iron bulwark or Swift growth (green
+frame), and roots, slows, or a Hunter's mark on you (red frame).
 
 **Rune spells.** Level 40+ hunting grounds drop runes: small carved stones of fire, frost, or
 lightning (behemoths and obsidian golems fire, bog hulks and mire stalkers frost, reedfangs and
@@ -74,7 +74,11 @@ slot), and each cast uses one up. A fire rune burns every enemy within 3 tiles o
 round area of 37 tiles, as in Tibia), a frost rune freezes 2 tiles around and slows what it hits,
 and a lightning rune strikes the target and leaps to two more enemies nearby. Runes are magic and
 hit for a geared attack of your level, whatever your class, and all runes share a 2-second
-cooldown. Bots carry the runes they find and cast them at packs.
+cooldown. The heaviest hits are runes, so endgame damage costs supplies: a **Great fireball
+rune** (level 45; ashmaw drakes, obsidian golems, behemoths, ember witches) burns every enemy
+within 4 tiles of the target, and a **Sudden death rune** (level 50; barrow liches, void wraiths,
+Blackreed wardens, bog hulks) strikes one target for 5 times a geared attack. Bots carry the runes
+they find and cast area runes at packs and Sudden death at bosses, champions, and players.
 
 **Roots and slows.** Entangling roots holds its target in place and Crippling arrow halves its
 pace; both also hit it. Bosses and champions shrug them off (the caster is told), and a player who was just held cannot be held

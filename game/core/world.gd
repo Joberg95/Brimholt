@@ -9,6 +9,7 @@ const Atlas = preload("res://game/data/atlas.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const Spells = preload("res://game/data/spells.gd")
 
 const TILE_SIZE: int = 32
 const WORLD_NAME: String = "Cinder Crossing"
@@ -193,6 +194,8 @@ var players: Dictionary = {}
 ## Live monsters by negative id; game/core/combat.gd owns their behaviour.
 var monsters: Dictionary = {}
 var ground: Dictionary = {}
+## Glacier walls (Spells "wall"): cell -> when it melts. Nothing walks onto a walled tile.
+var glacier_walls: Dictionary = {}
 ## Per ground cell: [when its stack last changed (as seen by a sweep), the stack it had then].
 var _ground_seen: Dictionary = {}
 var _next_ground_sweep: float = 0.0
@@ -936,6 +939,32 @@ static func stats(level: int, equipment: Dictionary, vocation: String = Balance.
 
 ## How much faster than walking a character's steps are, from movement speed gear (percent):
 ## the step lasts 1 / (1 + speed / 100) of a plain step.
+## The strongest active spell effect of a kind on a player or monster (Combat.add_effect): a buff
+## ("bulwark", "haste", "ward") or "mark". Its power, or -1 when none is active.
+static func effect_power(body: Dictionary, effect: String, now: float) -> float:
+	var best: float = -1.0
+	var effects: Dictionary = body.get("effects", {})
+	for spell: String in effects:
+		var definition: Dictionary = Spells.SPELLS[spell]
+		if effects[spell][0] > now and definition.get("buff", definition["kind"]) == effect:
+			best = maxf(best, effects[spell][1])
+	return best
+
+
+## Whether a glacier wall stands on the tile now.
+func walled(cell: Vector2i, now: float) -> bool:
+	return glacier_walls.get(cell, -INF) > now
+
+
+## Raises glacier wall on `cells` until `until`, melting any that have run out.
+func raise_walls(cells: Array[Vector2i], until: float, now: float) -> void:
+	for cell: Vector2i in glacier_walls.keys():
+		if glacier_walls[cell] <= now:
+			glacier_walls.erase(cell)
+	for cell: Vector2i in cells:
+		glacier_walls[cell] = maxf(glacier_walls.get(cell, -INF), until)
+
+
 static func speed_factor(stats_now: Dictionary) -> float:
 	return 1.0 / (1.0 + float(stats_now.get("speed", 0)) / 100.0)
 
@@ -1089,6 +1118,12 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["skills"] = player["skills"].duplicate(true)
 		if not player["fed"].is_empty() and player["fed"]["until"] > now:
 			state["fed"] = [player["fed"]["kind"], player["fed"]["until"] - now]
+		# Spell effects on you (buffs, a mark) by spell id: seconds left, for the buff bar.
+		var effects: Dictionary = {}
+		for spell: String in player.get("effects", {}):
+			if player["effects"][spell][0] > now:
+				effects[spell] = player["effects"][spell][0] - now
+		state["effects"] = effects
 		# Seconds left rooted or slowed, for the buff bar (Combat.restrain).
 		for held: String in ["rooted", "slowed"]:
 			if player.get(held + "_until", -INF) > now:
@@ -1124,13 +1159,16 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	if now < player.get("rooted_until", -INF):
 		return {"ok": false, "reason": "You are rooted in place", "retry": player["rooted_until"] - now}
 	var destination: Vector2i = player["cell"] + direction
-	# Only the land blocks a player: players and monsters are walked through.
-	if not walkable(destination):
+	# Only the land and glacier walls block a player: players and monsters are walked through.
+	if not walkable(destination) or walled(destination, now):
 		return {"ok": false, "reason": "Blocked tile", "retry": MOVE_SECONDS}
 	player["from"] = player["cell"]
 	player["cell"] = destination
 	player["facing"] = direction
-	player["step"] = MOVE_SECONDS * (SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0) 		* (MOUNT_STEP if riding(player["equipment"], destination) else 1.0) * speed_factor(player_stats(id))
+	var pace: float = SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0
+	pace *= MOUNT_STEP if riding(player["equipment"], destination) else 1.0
+	pace *= speed_factor(player_stats(id)) / (1.0 + maxf(0.0, effect_power(player, "haste", now)))
+	player["step"] = MOVE_SECONDS * pace
 	player["next_move"] = now + player["step"]
 	player["gathering"] = {}
 	return {"ok": true, "state": export_player(id, now)}

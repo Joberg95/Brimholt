@@ -57,7 +57,9 @@ const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan"]
 ## Spells and runes landing (Combat.cast, Combat.use_rune; Spells.ELEMENTS): per element a row of
 ## RUNE_FX_FRAMES 32x32 frames, played once over RUNE_FX_SECONDS on every tile hit.
 const RUNE_FX: Texture2D = preload("res://assets/sprites/rune_fx.png")
-const RUNE_FX_ELEMENTS: Array[String] = ["fire", "frost", "lightning", "holy", "nature", "slash", "pierce", "heal"]
+const RUNE_FX_ELEMENTS: Array[String] = ["fire", "frost", "lightning", "holy", "nature", "slash", "pierce", "heal", "death", "ice_wall"]
+## Effects that stand for their whole `life` (Glacier wall): rise, hold on frames 1-2, crack and melt.
+const HELD_FX: Array[String] = ["ice_wall"]
 ## Spell projectiles (make_sprites.py spell_missile): a row of MISSILE_FRAMES frames per element,
 ## pointing right; drawn turned toward the target.
 const SPELL_MISSILES: Texture2D = preload("res://assets/sprites/spell_missiles.png")
@@ -629,12 +631,16 @@ static func draw_missile(canvas: CanvasItem, at: Vector2, direction: Vector2, el
 	return true
 
 
-## One tile of a rune spell `age` seconds after it landed; false once it has played out.
-static func draw_rune_fx(canvas: CanvasItem, cell: Vector2i, element: String, age: float) -> bool:
+## One tile of a rune spell `age` seconds after it landed; false once it has played out. A held
+## effect (HELD_FX) plays over its `life` instead.
+static func draw_rune_fx(canvas: CanvasItem, cell: Vector2i, element: String, age: float, life: float = 0.0) -> bool:
 	var row: int = RUNE_FX_ELEMENTS.find(element)
-	if row < 0 or age >= RUNE_FX_SECONDS:
+	var held: bool = element in HELD_FX and life > 0.0
+	if row < 0 or age >= (life if held else RUNE_FX_SECONDS):
 		return false
 	var frame: int = mini(RUNE_FX_FRAMES - 1, floori(age / RUNE_FX_SECONDS * RUNE_FX_FRAMES))
+	if held:
+		frame = 0 if age < 0.15 else 3 if age > life - 0.4 else 1 + int(age / 0.5) % 2
 	canvas.draw_texture_rect_region(RUNE_FX, Rect2(Vector2(cell) * TILE - Vector2(0, 6), Vector2.ONE * TILE),
 		Rect2(frame * TILE, row * TILE, TILE, TILE))
 	return true

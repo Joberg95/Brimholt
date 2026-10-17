@@ -9,6 +9,13 @@ extends RefCounted
 ## "root" (Entangling roots) and "slow" (Crippling arrow) hit the target and then hold it in
 ## place, or halve its pace, for the spell's "seconds" (Combat.restrain); bosses and champions shrug them off,
 ## and a player cannot be held again until RESTRAIN_IMMUNITY seconds after it ends.
+## Timed effects (Combat.add_effect, kept per creature under "effects" by spell id, not saved):
+## "buff_self" puts the spell's "buff" on the caster, "buff_area" on the caster and every friendly
+## player within "radius". Buffs: "bulwark" (takes `power` less damage), "haste" (steps `power`
+## faster), "ward" ("ward_share" of each hit drains "mana_per_damage" mana per point instead of health). "mark" (Hunter's mark) makes the target take
+## `power` more damage from players. "execute" (Soulfire) deals "execute_bonus" times more to a
+## target below "execute_below" of its health. "wall" (Glacier wall) raises three blocking tiles
+## across the way ahead of the caster for "seconds" (World.glacier_walls).
 
 const Balance = preload("res://game/data/balance.gd")
 ## Each spell is carved as one Elder Futhark rune (its icon in assets/sprites/spells.png, drawn by
@@ -23,9 +30,11 @@ const RUNES: Dictionary = {
 	"mannaz": ["Mannaz", "kinship"], "laguz": ["Laguz", "water"], "ingwaz": ["Ingwaz", "the hearth"],
 	"dagaz": ["Dagaz", "the dawn"], "othala": ["Othala", "the homeland"],
 	# From the Anglo-Saxon row, for spells past the Elder Futhark's twenty-four.
-	"ear": ["Ear", "the earth"], "yr": ["Yr", "the yew bow"],
+	"ear": ["Ear", "the earth"], "yr": ["Yr", "the yew bow"], "stan": ["Stan", "the stone"], "ior": ["Ior", "the eel"],
+	"gar": ["Gar", "the spear"], "calc": ["Calc", "the chalice"], "cweorth": ["Cweorth", "the fire-whirl"],
+	"ac": ["Ac", "the oak"], "aesc": ["Aesc", "the ash"],
 }
-const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0, "rune": 2.0}
+const GROUP_SECONDS: Dictionary = {"attack": 2.0, "healing": 1.0, "rune": 2.0, "support": 1.0}
 ## Rune spells: items (items.json "rune") that level 40+ hunting grounds drop. Any class casts one
 ## from the action bar at its target within RUNE_RANGE, using it up; all runes share the "rune"
 ## cooldown group. They are magic, and their damage follows the caster's level, not class
@@ -41,6 +50,10 @@ const RUNES_BY_ELEMENT: Dictionary = {
 	# Othala, the homeland: no target; carries you home to the start town (where the dead wake),
 	# but not while monsters hunt you. Monsters above level 30 drop it (Combat.HOMEWARD_CHANCE).
 	"home": {"name": "Homeward rune", "shape": "recall", "color": Color("#9ae0ff")},
+	# The endgame runes carry the heaviest hits, so big damage costs supplies (level 45 and 50).
+	"great_fire": {"name": "Great fireball rune", "shape": "circle", "radius": 4, "power": 1.5, "element": "fire",
+		"color": Color("#ff5a1a")},
+	"death": {"name": "Sudden death rune", "shape": "single", "power": 5.0, "element": "death", "color": Color("#b07aff")},
 }
 ## Spell ranks: a class trainer raises a known spell one rank for rune shards (rank 2 costs
 ## RANK_COSTS[0], rank 3 RANK_COSTS[1]); each rank above 1 adds RANK_POWER to its power
@@ -104,7 +117,38 @@ const SPELLS: Dictionary = {
 		"power": 1.0, "seconds": 4.0, "mana": 0.1, "cooldown": 10.0, "group": "attack", "color": Color("#c8b070")},
 	"provoke": {"rune": "ansuz", "name": "Provoke", "vocations": ["knight"], "level": 8, "kind": "taunt_target", "range": 4,
 		"power": 0.0, "mana": 0.05, "cooldown": 6.0, "group": "attack", "color": Color("#f08a50")},
+	# One spell for every empty ten-level bracket, each a kind of play the class lacked.
+	"iron_bulwark": {"rune": "stan", "name": "Iron bulwark", "vocations": ["knight"], "level": 50, "kind": "buff_self",
+		"buff": "bulwark", "power": 0.3, "seconds": 6.0, "mana": 0.15, "cooldown": 30.0, "group": "support", "color": Color("#b8c0c8")},
+	"fleetfoot": {"rune": "ior", "name": "Fleetfoot", "vocations": ["paladin"], "level": 20, "kind": "buff_self",
+		"buff": "haste", "power": 0.3, "seconds": 8.0, "mana": 0.1, "cooldown": 20.0, "group": "support", "color": Color("#c8f0a0")},
+	"hunters_mark": {"rune": "gar", "name": "Hunter's mark", "vocations": ["paladin"], "level": 50, "kind": "mark", "range": 6,
+		"power": 0.15, "seconds": 10.0, "mana": 0.1, "cooldown": 20.0, "group": "support", "color": Color("#ff6a5a")},
+	"mana_ward": {"rune": "calc", "name": "Mana ward", "vocations": ["sorcerer"], "level": 40, "kind": "buff_self",
+		"buff": "ward", "power": 0.0, "ward_share": 0.3, "mana_per_damage": 2.0, "seconds": 8.0, "mana": 0.1, "cooldown": 30.0, "group": "support", "color": Color("#6aa8ff")},
+	"soulfire": {"rune": "cweorth", "name": "Soulfire", "vocations": ["sorcerer"], "level": 50, "kind": "execute", "range": 5,
+		"power": 2.6, "execute_below": 0.3, "execute_bonus": 2.0, "mana": 0.15, "cooldown": 8.0, "group": "attack",
+		"color": Color("#c060ff")},
+	"swift_growth": {"rune": "ac", "name": "Swift growth", "vocations": ["druid"], "level": 20, "kind": "buff_area", "radius": 3,
+		"buff": "haste", "power": 0.3, "seconds": 8.0, "mana": 0.15, "cooldown": 20.0, "group": "support", "color": Color("#9ae070")},
+	"glacier_wall": {"rune": "aesc", "name": "Glacier wall", "vocations": ["druid"], "level": 50, "kind": "wall", "radius": 1,
+		"power": 0.0, "seconds": 5.0, "mana": 0.15, "cooldown": 20.0, "group": "support", "color": Color("#bfeaff")},
 }
+
+
+## Whether a careful player (bots, the fight and duel sims) casts this spell whenever it fights:
+## strikes, holds, the mark, and the bulwark. Heals, taunts, haste, and walls wait for a reason.
+static func fight_spell(id: String) -> bool:
+	var spell: Dictionary = SPELLS[id]
+	if spell["kind"] == "buff_self":
+		return spell["buff"] == "bulwark"
+	return spell["kind"] in ["target", "area_self", "area_target", "root", "slow", "mark", "execute"]
+
+
+## Whether a careful player casts this when hurt: the heals, and Mana ward (it spends mana the
+## heals need, so it is for a bad moment, not every fight).
+static func rescue_spell(id: String) -> bool:
+	return SPELLS[id]["kind"].begins_with("heal") or SPELLS[id].get("buff", "") == "ward"
 
 
 ## Whether `vocation` may cast `id`: its own spells, or for Adventurers the spells every
@@ -128,6 +172,7 @@ const ELEMENTS: Dictionary = {
 	"radiant_arrow": "holy", "sunlance_barrage": "holy",
 	"ember_bolt": "fire", "flame_wave": "fire", "firestorm": "fire", "arc_lightning": "lightning", "starfall": "holy",
 	"frost_bolt": "frost", "hailstorm": "frost", "thorn_lash": "nature", "entangling_roots": "nature",
+	"iron_bulwark": "holy", "fleetfoot": "nature", "mana_ward": "frost", "hunters_mark": "pierce", "soulfire": "death", "swift_growth": "nature", "glacier_wall": "ice_wall",
 }
 
 
@@ -205,6 +250,26 @@ static func info(id: String, stats: Dictionary, level: int, rank: int = 1) -> Di
 		"heal_area":
 			effect = "Heals every player within %s of you, you included, for %s× your healing." % [area, number(power)]
 			amount = "Heals %d each" % maxi(1, roundi(float(stats.get("healing", 0)) * power))
+		"buff_self", "buff_area":
+			var whom: String = "You" if spell["kind"] == "buff_self" else "You and every friendly player within %s" % area
+			match spell["buff"]:
+				"bulwark":
+					effect = "%s take %d%% less damage for %s s." % [whom, roundi(power * 100.0), number(spell["seconds"])]
+				"haste":
+					effect = "%s move %d%% faster for %s s." % [whom, roundi(power * 100.0), number(spell["seconds"])]
+				"ward":
+					effect = "For %s s, %d%% of each hit drains your mana (%s per point) instead of your health." % [
+						number(spell["seconds"]), roundi(spell["ward_share"] * 100.0), number(spell["mana_per_damage"])]
+		"mark":
+			effect = "Marks your target (up to %d tiles away): it takes %d%% more damage from players for %s s." % [
+				reach, roundi(power * 100.0), number(spell["seconds"])]
+		"execute":
+			effect = "Strikes your target (up to %d tiles away) for %s× your attack, %s× that below %d%% health." % [
+				reach, number(power), number(spell["execute_bonus"]), roundi(spell["execute_below"] * 100.0)]
+			amount = hit
+		"wall":
+			effect = "Raises a wall of ice %d tiles wide across the way ahead of you (toward your target) for %s s: nothing walks through." % [
+				radius * 2 + 1, number(spell["seconds"])]
 	if stats.is_empty():
 		amount = ""
 	var cost: String = "Mana %d%%" % roundi(spell["mana"] * 100.0)
@@ -247,7 +312,9 @@ static func rune_text(item: Dictionary) -> String:
 			"Any class from level %d. Drag it to the action bar; each use spends one." % item["level"],
 			"Cooldown %s s for all runes." % number(GROUP_SECONDS["rune"])]))
 	var effect: String
-	if rune["shape"] == "circle":
+	if rune["shape"] == "single":
+		effect = "Rune spell: strikes your target for %s× a geared attack of your level." % number(rune["power"])
+	elif rune["shape"] == "circle":
 		effect = "Rune spell: hits every enemy within %d tiles of your target for %s× a geared attack of your level." % [
 			rune["radius"], number(rune["power"])]
 	else:

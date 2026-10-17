@@ -74,7 +74,7 @@ spawn/item/ferryman markers, routes, and reachability of every ferryman and item
 or by boat), ferry travel (range, routes, malformed requests, standing still, fares,
 cooldown, crowded docks), gold pickup, zones and monster spawns (levels within 1–50 and
 their zone, Blackreed Isle as a level 40–50 PvP zone reached only from Reedmere), and key
-bindings (defaults 1–9, rebinding moves conflicting keys, Escape is reserved, save/load,
+bindings (defaults 1–9 and 0, rebinding moves conflicting keys, Escape is reserved, save/load,
 and malformed or duplicate saved values), and combat: catalogs and spawns, line of sight
 and reach, target validation (malformed, unknown, self, too far, PvP only in PvP zones),
 the two-second attack boundary and damage range, monster aggro, chasing onto free tiles

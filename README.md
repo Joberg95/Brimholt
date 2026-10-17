@@ -110,7 +110,7 @@ These are the default keys; every key can be changed (see below).
 | WASD / arrows | Move one cardinal tile; hold to repeat |
 | Left-click a creature | Lock it as your target (click again to release) |
 | Space | Target the nearest monster |
-| 1–9 | Cast the spell in action bar slot 1–9 (filled with your class's spells); hover a slot to see what it does |
+| 1–9, 0 | Cast the spell in action bar slot 1–10 (filled with your class's spells); hover a slot to see what it does |
 | B | Open or close the spell book (every spell of your class; drag one onto the action bar) |
 | C | Open or close the character window (stats explained, experience, party, skull, town rest) |
 | Drag an item | Move it between backpack slots, equipment slots, and nearby tiles |

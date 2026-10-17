@@ -11,7 +11,6 @@ Outfits from quests, later thing (plan 22)
 
 we should redesign the map to have 1 major city per continent and 1 smaller one per continent. (plan 32)
 
-we need more spells variety for each 10th level bracket, lets brainstorm on this of what spells could be added, or if we should just make endgame spells rune based so the really high damage spells comes from runes (plan 25)
 
 check where we are missing the new art style compared to the old, there is a lot of mismatching around the world; a lot of the areas are missing the updated art (plan 38)
 

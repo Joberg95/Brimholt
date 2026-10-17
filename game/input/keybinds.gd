@@ -6,7 +6,7 @@ extends RefCounted
 const Spells = preload("res://game/data/spells.gd")
 const World = preload("res://game/core/world.gd")
 const PATH: String = "user://keybinds.cfg"
-const SLOTS: int = 9
+const SLOTS: int = 10
 ## Action id -> [label, primary default, secondary default]; KEY_NONE means unbound.
 const DEFAULTS: Dictionary = {
 	"move_up": ["Move up", KEY_W, KEY_UP],
@@ -34,13 +34,14 @@ const DEFAULTS: Dictionary = {
 	"slot_7": ["Action bar 7", KEY_7, KEY_NONE],
 	"slot_8": ["Action bar 8", KEY_8, KEY_NONE],
 	"slot_9": ["Action bar 9", KEY_9, KEY_NONE],
+	"slot_10": ["Action bar 10", KEY_0, KEY_NONE],
 }
 ## Escape always closes menus and cannot be bound.
 const RESERVED: Array[Key] = [KEY_ESCAPE]
 ## The action bar holds spells, stored as "spell:<id>", and rune items, stored as "item:<kind>"
 ## (cast from the backpack, Combat.use_rune); "" is an empty slot. Other
 ## actions (target nearest, pick up, gather, world map, quest list, spell book, character, lexicon, professions, party, potions) have their own key bindings above.
-const DEFAULT_BAR: Array[String] = ["", "", "", "", "", "", "", "", ""]
+const DEFAULT_BAR: Array[String] = ["", "", "", "", "", "", "", "", "", ""]
 
 ## Action id -> [primary, secondary] physical keycodes.
 var keys: Dictionary = {}
@@ -151,8 +152,9 @@ func load_saved() -> void:
 				if typeof(saved[index]) == TYPE_INT and saved[index] not in RESERVED:
 					keys[action][index] = saved[index]
 	var saved_bar: Variant = config.get_value("bar", "slots") if config.has_section_key("bar", "slots") else null
-	if typeof(saved_bar) == TYPE_ARRAY and saved_bar.size() == SLOTS:
-		for slot: int in SLOTS:
+	# A bar saved before it grew (nine slots) loads into the first slots.
+	if typeof(saved_bar) == TYPE_ARRAY and saved_bar.size() <= SLOTS:
+		for slot: int in saved_bar.size():
 			if typeof(saved_bar[slot]) == TYPE_STRING and valid_bar_entry(saved_bar[slot]):
 				bar[slot] = saved_bar[slot]
 	# A hand-edited file could bind one key twice; keep the first binding only.

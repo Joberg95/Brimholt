@@ -269,7 +269,7 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 26 hunting weapons in 312 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, gold heaps and green loot text, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
-		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night and steady while walking past, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
+		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night and steady while walking past, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, a Glacier wall and a sudden death rune, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
 	await game.leave_game()
 	quit()
@@ -1195,8 +1195,33 @@ func _check_rune_bar() -> bool:
 	screen.get_texture().get_image().save_png("res://.tools/visual-rune.png")
 	var burned: int = pack.filter(func(id: int) -> bool: return game.world.monsters[id]["health"] < 100000).size()
 	var shown: bool = game.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "fire")
-	return _expect(player["backpack"][0] == "fire_rune#2" and burned == pack.size() and shown,
-		"The action bar's fire rune did not burn the pack (%s, %d burned)" % [player["backpack"][0], burned])
+	if not _expect(player["backpack"][0] == "fire_rune#2" and burned == pack.size() and shown,
+			"The action bar's fire rune did not burn the pack (%s, %d burned)" % [player["backpack"][0], burned]):
+		return false
+	# A level 50 Druid raises a Glacier wall toward the pack, then a sudden death rune strikes:
+	# the wall stands as ice for its 5 s and blocks the way.
+	var vocation: String = player["vocation"]
+	player["vocation"] = "druid"
+	player["mana"] = 999999
+	player["groups"] = {}
+	player["backpack"][1] = World.make_entry("sudden_death_rune", 1)
+	game._handle_spell(1, "glacier_wall")
+	await create_timer(1.0).timeout
+	var used: Dictionary = game.combat.use_rune(1, "sudden_death_rune", game._now())
+	game._handle_events(used.get("events", []))
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	var walled: Image = screen.get_texture().get_image()
+	walled.save_png("res://.tools/visual-glacier-wall.png")
+	player["vocation"] = vocation
+	var ice: Vector2i = player["cell"] + Vector2i(2, 0)
+	var at: Vector2 = game.map_to_screen((Vector2(ice) + Vector2(0.5, 0.3)) * World.TILE_SIZE)
+	var pixel: Color = walled.get_pixelv(Vector2i(at))
+	var standing: bool = game.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "ice_wall")
+	var dark: bool = game.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "death")
+	return _expect(game.world.walled(ice, game._now()) and standing and dark and pixel.b > pixel.r + 0.15,
+		"Glacier wall or sudden death did not show (walled %s, ice %s, death %s, pixel %s)" % [
+			game.world.walled(ice, game._now()), standing, dark, pixel])
 
 
 func _check_dark_cave() -> bool:

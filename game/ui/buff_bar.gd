@@ -1,12 +1,13 @@
 extends Node
 ## The buff bar above the minimap: one small icon per effect on you, with the time it has left
 ## and a tooltip. A meal's regeneration shows the food it came from; being rooted or slowed shows
-## the spell's rune stone. New effects (party buff spells) add an entry in effects().
+## the spell's rune stone, and so do spell buffs and marks (state "effects").
 
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const SpellRune = preload("res://game/ui/spell_rune.gd")
+const Spells = preload("res://game/data/spells.gd")
 const ICON: float = 22.0
 const GAP: float = 4.0
 const MAX_ICONS: int = 6
@@ -60,6 +61,14 @@ func effects() -> Array[Dictionary]:
 		if left > 0.0 and not meal.is_empty():
 			shown.append({"title": "Well fed: %s" % meal["name"], "left": left, "item": state["fed"][0], "harmful": false,
 				"text": "+%d%% health and mana regeneration" % roundi(meal["eat"]["regen"] * 100.0)})
+	var spell_effects: Dictionary = state.get("effects", {})
+	for spell: String in spell_effects:
+		var left: float = float(spell_effects[spell]) - since
+		var definition: Dictionary = Spells.SPELLS.get(spell, {})
+		if left > 0.0 and not definition.is_empty():
+			var text: String = "Players hit you harder" if definition["kind"] == "mark" else Spells.info(spell, {}, 0)["effect"]
+			shown.append({"title": definition["name"], "left": left, "spell": spell, "harmful": definition["kind"] == "mark",
+				"text": text})
 	for held: Array in [["rooted", "entangling_roots", "Rooted", "You cannot step"],
 			["slowed", "crippling_arrow", "Slowed", "Your steps take twice as long"]]:
 		var left: float = float(state.get(held[0], 0.0)) - since

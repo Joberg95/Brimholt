@@ -12,7 +12,6 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
 | 26 | [Balance pass for the new gear stats](26-gear-stat-balance.md) | M | |
-| 25 | [More spells for every ten levels](25-spell-brackets.md) | L | Spells, runes, or both; approve the list |
 | 39 | [Classic-style icons for the remaining item families](39-icon-families.md) | L | |
 | 38 | [Bring the old tiles up to the new art style](38-art-style-pass.md) | L | |
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |

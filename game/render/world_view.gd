@@ -233,7 +233,7 @@ func _draw() -> void:
 	for effect: Dictionary in game.effects:
 		if effect["kind"] == "area" and not effect.get("element", "").is_empty():
 			for cell: Vector2i in effect["cells"]:
-				SpriteArt.draw_rune_fx(self, cell, effect["element"], time - effect["born"])
+				SpriteArt.draw_rune_fx(self, cell, effect["element"], time - effect["born"], effect.get("life", 0.0))
 	game._profiled("world draw", started)
 
 

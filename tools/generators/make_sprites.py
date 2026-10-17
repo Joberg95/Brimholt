@@ -5215,6 +5215,15 @@ RUNE_STROKES = {
     # Two runes of the Anglo-Saxon row, for spells past the Elder Futhark's twenty-four.
     "ear": [[(0.35, 1), (0.35, 0)], [(0.35, 0), (0, 0.32)], [(0.35, 0), (0.7, 0.32)], [(0.1, 0.55), (0.6, 0.55)]],
     "yr": [[(0, 1), (0, 0), (0.6, 0.3), (0.6, 1)], [(0.3, 0.15), (0.3, 1)]],
+    # More of the Anglo-Saxon row, for the spells of the empty level brackets.
+    "stan": [[(0.35, 0), (0.35, 1)], [(0, 0.25), (0.7, 0.25), (0.7, 0.75), (0, 0.75), (0, 0.25)]],
+    "ior": [[(0.35, 0), (0.35, 1)], [(0, 0.2), (0.7, 0.6)], [(0.7, 0.2), (0, 0.6)]],
+    "gar": [[(0.35, 0), (0.35, 1)], [(0.35, 0.2), (0.7, 0.5), (0.35, 0.8), (0, 0.5), (0.35, 0.2)]],
+    "calc": [[(0.35, 0), (0.35, 1)], [(0.35, 0.55), (0, 0.94)], [(0.35, 0.55), (0.7, 0.94)]],
+    "cweorth": [[(0.35, 0), (0.35, 1)], [(0.35, 0.02), (0, 0.32)], [(0.35, 0.02), (0.7, 0.32)],
+                [(0.35, 0.98), (0, 0.68)], [(0.35, 0.98), (0.7, 0.68)]],
+    "ac": [[(0, 1), (0, 0)], [(0, 0.02), (0.5, 0.3), (0.5, 0.45)], [(0, 0.32), (0.5, 0.6)]],
+    "aesc": [[(0.2, 1), (0.2, 0)], [(0.2, 0.02), (0.7, 0.3)], [(0.2, 0.32), (0.7, 0.6)], [(0.2, 0.1), (0, 0.25)]],
 }
 RUNE_HEIGHT = 18
 
@@ -5258,7 +5267,7 @@ def runestone_icon(kind):
     return image.outlined(rgba("17140f"))
 
 
-RUNE_FX_ELEMENTS = ("fire", "frost", "lightning", "holy", "nature", "slash", "pierce", "heal")
+RUNE_FX_ELEMENTS = ("fire", "frost", "lightning", "holy", "nature", "slash", "pierce", "heal", "death", "ice_wall")
 RUNE_FX_FRAMES = 4
 
 
@@ -5394,6 +5403,68 @@ def rune_fx(element, frame):
             if mote % 3 == 0:
                 for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                     image.set(x + dx, y + dy, ramp[2])
+    elif element == "death":
+        # Sudden death: a pale violet skull rises out of a burst of black smoke and fades to wisps.
+        ramp = (rgba("f4e8ff"), rgba("d0b0ff"), rgba("9a6ae0"), rgba("4a2a7a"), rgba("1a0e2a"))
+        if frame < 3:
+            for x, y in ellipse(16, 22, 10 * grow, 4 * grow) | ellipse(10, 19, 4 * grow, 3 * grow) | ellipse(22, 19, 4 * grow, 3 * grow):
+                image.set(x, y, (26, 14, 42, 200))
+            lift = (4, 1, 0)[frame]
+            top = 8 + lift
+            skull = ellipse(16, top + 5, 6, 5.5) | box(12, top + 9, 9, 4)
+            for x, y in skull:
+                lit = x < 16 and y < top + 6
+                image.set(x, y, ramp[0] if lit and frame > 0 else ramp[1] if not (x > 19 or y > top + 10) else ramp[2])
+            for x, y in ellipse(13.5, top + 6, 1.6, 1.6) | ellipse(18.5, top + 6, 1.6, 1.6):
+                image.set(x, y, ramp[4])
+            image.set(16, top + 9, ramp[3])
+            for x in range(13, 21, 2):
+                image.set(x, top + 12, ramp[3])
+            if frame == 1:
+                for x, y in ellipse(13.5, top + 6, 0.6, 0.6) | ellipse(18.5, top + 6, 0.6, 0.6):
+                    image.set(x, y, ramp[2])
+        else:
+            for _ in range(10):
+                x, y = rng.randrange(7, 25), rng.randrange(6, 24)
+                image.set(x, y, rng.choice(ramp[2:4]))
+                image.set(x, y - 1, (60, 40, 90, 140))
+    elif element == "ice_wall":
+        # Glacier wall: a block of blue ice filling the tile, rising (0), standing with a shimmer
+        # that moves (1, 2), then cracked and sunk (3). Lit from the top-left like the props.
+        ramp = (rgba("ffffff"), rgba("d8f4ff"), rgba("9ad8f8"), rgba("5aa0d8"), rgba("2a5a8a"))
+        height = (12, 26, 26, 18)[frame]
+        bottom = 29
+        block = set()
+        for x in range(5, 27):
+            # Crystal points along the top: tall spires between lower shoulders.
+            spire = (0, 3, 6, 4, 1, 5, 2)[(x * 3) % 7]
+            peak = height - spire - abs(x - 16) // 4
+            for y in range(bottom - peak, bottom + 1):
+                block.add((x, y))
+        for x, y in block:
+            face = (x + 1, y) not in block or (x, y + 1) not in block
+            rim = (x - 1, y) not in block or (x, y - 1) not in block
+            depth = (y - (bottom - height)) / max(1, height)
+            # Facets: alternate columns catch the light, the far side and the base sit in shadow.
+            facet = (x // 4) % 2 == 0
+            tone = ramp[1] if rim else ramp[4] if face else ramp[2] if depth < (0.6 if facet else 0.35) else ramp[3]
+            image.set(x, y, tone)
+        shine = (0, 9, 15, 0)[frame]
+        if shine:
+            for step in range(7):
+                image.set(shine + step // 2, bottom - height + 4 + step, ramp[0])
+                image.set(shine + 1 + step // 2, bottom - height + 4 + step, ramp[1])
+        for x, y in ((11, bottom - 6), (20, bottom - 9), (15, bottom - 14)):
+            if (x, y) in block:
+                image.set(x, y, ramp[1])
+        if frame == 3:
+            crack = [(10, bottom - 16), (13, bottom - 11), (12, bottom - 6), (16, bottom - 2)]
+            for (ax, ay), (bx, by) in zip(crack, crack[1:]):
+                for px, py in line(ax, ay, bx, by):
+                    if (px, py) in block:
+                        image.set(px, py, ramp[4])
+            for _ in range(6):
+                image.set(rng.randrange(4, 28), rng.randrange(bottom - 2, bottom + 2), ramp[1])
     else:
         ramp = (rgba("ffffff"), rgba("fff6b0"), rgba("ffe060"), rgba("e0a020"), rgba("6a4a10"))
         if frame < 2:
@@ -5423,7 +5494,7 @@ def rune_fx(element, frame):
             image.set(x, y, ramp[1])
             image.set(x + 1, y, ramp[2])
     outline = {"fire": "26140a", "frost": "0e1c30", "holy": "3a2a08", "nature": "142a0e", "slash": "1e2228",
-               "pierce": "2a1e10", "heal": "0e2a14"}.get(element, "2a2008")
+               "pierce": "2a1e10", "heal": "0e2a14", "death": "120a1e", "ice_wall": "16304a"}.get(element, "2a2008")
     return image.outlined(rgba(outline))
 
 

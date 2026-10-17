@@ -537,6 +537,8 @@
     {"id": "void_steed_mount", "name": "Void steed", "slot": "mount", "level": 1, "look": "steed", "colors": ["2a1e3a", "4a3a68", "9a5aff"], "stats": {}, "value": 5000, "loot_only": true},
     {"id": "drowned_kelpie_mount", "name": "Drowned kelpie", "slot": "mount", "level": 1, "look": "steed", "colors": ["2f4a4a", "4a706a", "6aa060"], "stats": {}, "value": 5000, "loot_only": true},
     {"id": "cinder_drake_mount", "name": "Cinder drake", "slot": "mount", "level": 1, "look": "lizard", "colors": ["4a2a24", "7a4434", "ff8a3a"], "stats": {}, "value": 5000, "loot_only": true},
-    {"id": "bloom_stag_mount", "name": "Bloom stag", "slot": "mount", "level": 1, "look": "steed+antlers", "colors": ["7a5aa8", "a888d0", "f0b8e0"], "stats": {}, "value": 5000, "loot_only": true}
+    {"id": "bloom_stag_mount", "name": "Bloom stag", "slot": "mount", "level": 1, "look": "steed+antlers", "colors": ["7a5aa8", "a888d0", "f0b8e0"], "stats": {}, "value": 5000, "loot_only": true},
+    {"id": "great_fireball_rune", "name": "Great fireball rune", "level": 45, "look": "runestone+cweorth", "colors": ["5e5248", "806e60", "ff5a1a"], "value": 200, "rune": "great_fire"},
+    {"id": "sudden_death_rune", "name": "Sudden death rune", "level": 50, "look": "runestone+ear", "colors": ["4a4452", "6a6274", "b07aff"], "value": 250, "rune": "death"}
   ]
 }

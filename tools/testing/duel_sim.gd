@@ -98,8 +98,7 @@ func _act(world: World, combat: Combat, id: int, now: float, events: Array) -> i
 		return Spells.SPELLS[spell]["level"] <= player["level"])
 	known.sort_custom(func(a: String, b: String) -> bool: return Spells.SPELLS[a]["power"] > Spells.SPELLS[b]["power"])
 	for spell: String in known:
-		var style: String = Spells.SPELLS[spell]["kind"]
-		if (style.begins_with("heal") and share < 0.55) or (not style.begins_with("heal") and style != "taunt" and share >= 0.3):
+		if (Spells.rescue_spell(spell) and share < 0.55) or (Spells.fight_spell(spell) and share >= 0.3):
 			events.append_array(combat.cast(id, spell, now).get("events", []))
 	var potion: String = "health_potion" if share < 0.35 else ("mana_potion" if float(player["mana"]) / stats["mana"] < 0.25 else "")
 	if potion.is_empty():
