@@ -84,6 +84,8 @@ export-windows: import ## Build build/windows/Brimholt.exe (needs Godot 4.7.2 ex
 	$(GODOT) --headless --path . --export-release "Windows Desktop" build/windows/Brimholt.exe
 	@cp docs/windows.md build/windows/README.txt
 	@cp addons/limboai/LICENSE.md build/windows/LimboAI-LICENSE.txt
+	@cp assets/third_party/fonts/dejavu/LICENSE build/windows/DejaVu-LICENSE.txt
+	@cp assets/third_party/CREDITS.md build/windows/CREDITS.txt
 	@ls -lh build/windows
 
 # --------------------------------------------------------------------- content
