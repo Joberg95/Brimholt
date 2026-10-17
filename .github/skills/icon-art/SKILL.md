@@ -34,6 +34,7 @@ world art; this one covers icons.
 | Rounded objects with parts (containers, chests, pouches) | Hand-drawn part map shaded by code | `tools/generators/pixel_bags.py` |
 | Weapons and other thin, ornate items | Hand-pixelled letter rows on a shared haft | `tools/generators/pixel_axes.py` |
 | Necklaces | Chain loop plus a hand-drawn pendant | `tools/generators/pixel_necklaces.py` |
+| Spellbooks | A closed tome (cover, spine, page block, frame, corner fittings, clasp, ribbon) or an open book (fanned lined pages), with an embossed emblem and ornaments | `tools/generators/pixel_books.py` |
 | Shields | A shape mask with a bevelled rim, a divided or textured field (planks, scales, plates, rays, hammered), an embossed emblem with a drop shadow, studs, straps, corner fittings | `tools/generators/pixel_shields.py` |
 | Bows | A shaded limb rasterised along an arch (round, recurve, deflex), a straight string, grip, tips, and ornaments | `tools/generators/pixel_bows.py` |
 | Wands and rods | A big hand-drawn head on a thin near-upright shaft, rim-lit, faceted gems, dark seams between parts | `tools/generators/pixel_staves.py` |

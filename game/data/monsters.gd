@@ -246,7 +246,7 @@ const LOOT: Dictionary = {
 	"void_wraith": [["void_shard", 0.3], ["lightning_rune", 0.05], ["starhalo_hat", 0.012], ["phialbound_boots", 0.01], ["sanguine_battleaxe", 0.01], ["sudden_death_rune", 0.03]],
 	"dire_bear": [["bear_claw", 0.35], ["health_potion", 0.08], ["bloodstone_signet", 0.015], ["brockhide_boots", 0.01], ["dire_bear_pelt", 0.1]],
 	"lizard_warrior": [["lizard_scale", 0.3], ["delvers_lamp_helm", 0.012], ["bloodletter", 0.01], ["scaled_lizard_tail", 0.1], ["lizardscale_shield", 0.015]],
-	"lizard_shaman": [["shaman_fetish", 0.3], ["mana_potion", 0.1], ["briarwreath_ring", 0.015]],
+	"lizard_shaman": [["shaman_fetish", 0.3], ["mana_potion", 0.1], ["briarwreath_ring", 0.015], ["serpentcoil_grimoire", 0.015]],
 	"harpy": [["harpy_feather", 0.35], ["stormglass_ring", 0.015], ["winged_backpack", 0.004], ["harpy_talon", 0.1], ["harpywing_kite", 0.015]],
 	"stone_troll": [["troll_tusk", 0.3], ["warding_coil", 0.015]],
 	"dune_scorpion": [["scorpion_stinger", 0.3], ["hastewind_boots", 0.008], ["scorpion_carapace", 0.1]],

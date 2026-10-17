@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ds6im2b2t6mpx"
-path="res://.godot/imported/silverleaf_folio.png-da8cd2bbb8838687b368d12bd6c31326.ctex"
+uid="uid://b4koi0qlemta5"
+path="res://.godot/imported/serpentcoil_grimoire.png-4952170ba6ca514b9a094dff5fb3c433.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/icons_derived/silverleaf_folio.png"
-dest_files=["res://.godot/imported/silverleaf_folio.png-da8cd2bbb8838687b368d12bd6c31326.ctex"]
+source_file="res://assets/sprites/gear/serpentcoil_grimoire.png"
+dest_files=["res://.godot/imported/serpentcoil_grimoire.png-4952170ba6ca514b9a094dff5fb3c433.ctex"]
 
 [params]
 

@@ -547,6 +547,7 @@
     {"id": "tidebound_ward", "name": "Tidebound ward", "slot": "off_hand", "level": 35, "look": "tower", "colors": ["2a5a6a", "6ab0c0", "f0f0c0"], "vocations": ["knight", "paladin"], "extra": {"regen": 12}, "loot_only": true},
     {"id": "cinderforge_bulwark", "name": "Cinderforge bulwark", "slot": "off_hand", "level": 40, "look": "tower", "colors": ["3a2a2a", "8a4a3a", "ff8a3a"], "vocations": ["knight", "paladin"], "extra": {"health": 140}, "loot_only": true},
     {"id": "rimeheart_aegis", "name": "Rimeheart aegis", "slot": "off_hand", "level": 45, "look": "heater", "colors": ["5a7a9a", "c8e0f0", "8ae4ff"], "vocations": ["knight", "paladin"], "extra": {"magic_defense": 8}, "loot_only": true},
+    {"id": "serpentcoil_grimoire", "name": "Serpentcoil grimoire", "slot": "off_hand", "level": 25, "look": "book", "colors": ["4a2a3e", "8a5a74", "e0d060"], "vocations": ["sorcerer", "druid"], "extra": {"mana": 40}, "loot_only": true},
     {"id": "sudden_death_rune", "name": "Sudden death rune", "level": 50, "look": "runestone+ear", "colors": ["4a4452", "6a6274", "b07aff"], "value": 250, "rune": "death"}
   ]
 }

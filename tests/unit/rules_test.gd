@@ -1693,14 +1693,14 @@ func _leech_checks() -> void:
 				shared.append("%s = %s" % [kind, pictures[key]])
 			pictures[key] = kind
 	check(shared.is_empty(), "every tier armour piece has its own icon (%s)" % ", ".join(shared))
-	# Wands, rods, bows, and shields without a painting are hand-pixelled into items.png
-	# (pixel_staves.py, pixel_bows.py, pixel_shields.py), never a recoloured copy of another one.
+	# Wands, rods, bows, shields, and spellbooks without a painting are hand-pixelled into items.png
+	# (pixel_staves.py, pixel_bows.py, pixel_shields.py, pixel_books.py), never a recoloured copy.
 	var recoloured: Array[String] = []
 	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["look"].get_slice("+", 0) in ["wand", "rod", "bow", "heater", "tower", "buckler"] \
+		if World.ITEMS[kind]["look"].get_slice("+", 0) in ["wand", "rod", "bow", "heater", "tower", "buckler", "book"] \
 				and ResourceLoader.exists("res://assets/sprites/icons_derived/%s.png" % kind):
 			recoloured.append(kind)
-	check(recoloured.is_empty(), "wands, rods, bows, and shields are drawn, not recoloured (%s)" % ", ".join(recoloured))
+	check(recoloured.is_empty(), "wands, rods, bows, shields, and spellbooks are drawn, not recoloured (%s)" % ", ".join(recoloured))
 	check(World.stats(45, {"main_hand": "grand_sanguine_blade", "ring_1": "garnet_ring"}, "knight")["leech"] <= World.LEECH_MAX
 		and Combat.leech({"leech": 5}, 200) == 10 and Combat.leech({}, 200) == 0, "leech heals its share of a hit, at most 5%")
 	# Plan 26: at its 5% cap leech is a small help, so leeching blades keep a plain sword's attack.

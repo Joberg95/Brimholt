@@ -1856,6 +1856,8 @@ def gear_builder(kind):
         icon = bow_icon(kind)
     if icon is None and kind in SHIELD_STYLES:
         icon = shield_icon(kind)
+    if icon is None and kind in BOOK_STYLES:
+        icon = book_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
         return build
@@ -2063,6 +2065,7 @@ import pixel_potions  # noqa: E402
 import pixel_staves  # noqa: E402
 import pixel_bows  # noqa: E402
 import pixel_shields  # noqa: E402
+import pixel_books  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2461,6 +2464,22 @@ def shield_icon(kind):
     return image
 
 
+# Spellbooks without a painted icon are hand-pixelled (pixel_books.py): closed tomes and open books,
+# each its own cover, fittings, and ornaments.
+BOOK_STYLES = {
+    "tattered_primer": "primer", "apprentice_grimoire": "apprentice", "bound_codex": "codex", "runed_tome": "runed",
+    "silverleaf_folio": "folio", "cobalt_codex": "cobalt", "ember_tome": "ember", "dusk_grimoire": "dusk",
+    "star_atlas": "atlas", "lodge_bestiary": "bestiary", "wyrmglass_codex": "wyrmglass", "verdant_codex": "verdant",
+    "gravecall_grimoire": "gravecall", "serpentcoil_grimoire": "serpentcoil",
+}
+
+
+def book_icon(kind):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_books.icon(BOOK_STYLES[kind], ITEMS[kind]["colors"])
+    return image
+
+
 # Monster drops (look trophy+<shape>) and gathered resources (looks ore, log, herb, fish) are
 # hand-drawn shapes in pixel_materials.py.
 MATERIAL_SHAPES = ("ore", "log", "herb", "fish")
@@ -2830,7 +2849,7 @@ def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
     return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod", "bow", "heater", "tower",
-                              "buckler") + SWORD_SHAPES         + MATERIAL_SHAPES
+                              "buckler", "book") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
 # items.png is a grid of ITEM_COLUMNS icons per row in ITEM_ORDER (one long row would pass the
@@ -2916,6 +2935,8 @@ def item_icon(kind):
         return bow_icon(kind)
     if kind in SHIELD_STYLES and painted_icon(kind) is None:
         return shield_icon(kind)
+    if kind in BOOK_STYLES and painted_icon(kind) is None:
+        return book_icon(kind)
     if shape == "potion":
         # Round bottles on the diagonal, bigger for stronger potions (pixel_potions.py).
         image = Image(TILE, TILE)

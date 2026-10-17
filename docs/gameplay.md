@@ -280,6 +280,9 @@ upgrade:
 | Cinderforge bulwark | 40 | +140 health | Cinder brute 1% |
 | Rimeheart aegis | 45 | +8 magic defense | Rime titan 5% |
 
+One spellbook drops the same way, for Sorcerers and Druids: the **Serpentcoil grimoire** (level 25,
++40 mana on top of its tier's book), a snake coiled round its cover, from lizard shamans (1.5%).
+
 ### Hunting weapons
 
 Fifteen additional weapons are **source-specific drops**, not shop stock or additions to the
