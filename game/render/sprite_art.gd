@@ -103,6 +103,10 @@ static var MOUNTS: Dictionary = _mount_sheets()
 ## Items whose icon moves (assets/sprites/items_anim/<id>.png, ANIM_FRAMES 32x32 frames in a row,
 ## from make_sprites.py icon_frames): flames flicker, halos and eyes glow, sheen sweeps across.
 static var ANIMATED: Dictionary = _anim_sheets()
+## Gold coin stacks by size: frame i of coins.png from COIN_STAGES[i] coins up (one, two, three,
+## a small heap, a heap, a big heap); must match tools/generators/pixel_coins.py STAGES.
+const COINS: Texture2D = preload("res://assets/sprites/coins.png")
+const COIN_STAGES: Array[int] = [1, 2, 3, 4, 10, 30]
 const ANIM_FRAMES: int = 12
 const ANIM_SECONDS: float = 0.1
 static var MOUNTS_FRONT: Dictionary = _mount_sheets("_front")
@@ -225,6 +229,15 @@ static func _creature_sheets(suffix: String = "") -> Dictionary:
 		if ResourceLoader.exists(path):
 			sheets[kind] = load(path)
 	return sheets
+
+
+## The coins.png frame for a stack of `count` coins.
+static func coin_stage(count: int) -> int:
+	var stage: int = 0
+	for index: int in COIN_STAGES.size():
+		if count >= COIN_STAGES[index]:
+			stage = index
+	return stage
 
 
 static func _anim_sheets() -> Dictionary:
@@ -734,9 +747,14 @@ static func item_region(kind: String) -> Rect2:
 	return Rect2(maxi(0, ITEM_ORDER.find(kind)) * TILE, 0, TILE, TILE)
 
 
-## Draws an item icon centred on a 32-pixel slot or ground tile.
-static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: Color = Color.WHITE, size: float = TILE) -> void:
+## Draws an item icon centred on a 32-pixel slot or ground tile. Gold coins with a `count` show a
+## stack that grows with it (coins.png, COIN_STAGES).
+static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: Color = Color.WHITE, size: float = TILE,
+		count: int = 0) -> void:
 	var dest := Rect2(center - Vector2.ONE * size / 2.0, Vector2.ONE * size)
+	if kind == "gold_coins" and count > 0:
+		canvas.draw_texture_rect_region(COINS, dest, Rect2(coin_stage(count) * TILE, 0, TILE, TILE), tint)
+		return
 	if ANIMATED.has(kind):
 		var frame: int = int(Time.get_ticks_msec() / 1000.0 / ANIM_SECONDS) % ANIM_FRAMES
 		canvas.draw_texture_rect_region(ANIMATED[kind], dest, Rect2(frame * TILE, 0, TILE, TILE), tint)

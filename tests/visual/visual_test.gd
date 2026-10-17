@@ -265,7 +265,9 @@ func _run() -> void:
 		return
 	if not await _check_mount():
 		return
-	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 22 hunting weapons in 264 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, "
+	if not await _check_loot_display():
+		return
+	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 22 hunting weapons in 264 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, gold heaps and green loot text, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
 		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
@@ -1595,6 +1597,41 @@ func _brown(image: Image, area: Rect2) -> int:
 
 ## A storm at noon over Cinder Crossing (rain drawn, light dimmed), the same rain at night (the
 ## lantern lights up), and the desert in a storm: dry, with cacti on sand.
+## Gold heaps that grow with the stack, and a kill's green loot text over them.
+func _check_loot_display() -> bool:
+	var player: Dictionary = game.world.players[1]
+	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
+	player["from"] = player["cell"]
+	player["equipment"].erase("mount")
+	game._publish_actor(1)
+	var cells: Array = []
+	for index: int in 6:
+		var cell: Vector2i = player["cell"] + Vector2i(index - 3, 2)
+		game.world.ground[cell] = [World.make_entry("gold_coins", [1, 2, 3, 6, 15, 60][index])]
+		cells.append(cell)
+	game._publish_ground(cells)
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var bare: Image = screen.get_texture().get_image()
+	game._show_effect({"kind": "loot", "cell": cells[2], "ids": [1],
+		"text": "Loot of a crypt skeleton: 250 gold coins, a bone, a flint hatchet.", "label": ["Epic!", Color("#b47cff")]})
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	var shown: Image = screen.get_texture().get_image()
+	shown.save_png("res://.tools/visual-loot.png")
+	var over := Rect2i(Vector2i(game.map_to_screen((Vector2(cells[2]) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
+		+ Vector2i(-120, -90), Vector2i(240, 80))
+	var green: bool = false
+	for y: int in range(over.position.y, over.end.y):
+		for x: int in range(over.position.x, over.end.x):
+			var pixel: Color = shown.get_pixel(x, y)
+			green = green or (pixel.g > 0.8 and pixel.r < 0.5 and pixel.b < 0.5 and bare.get_pixel(x, y) != pixel)
+	for cell: Vector2i in cells:
+		game.world.ground.erase(cell)
+	game._publish_ground(cells)
+	return _expect(green, "A kill's green loot text must show over the body")
+
+
 ## A rider on a mount above ground: the mount shows round the rider's feet and the rider sits higher.
 func _check_mount() -> bool:
 	game.world.monsters.clear()

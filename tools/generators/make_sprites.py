@@ -2048,6 +2048,7 @@ import gear3d  # noqa: E402
 import pixel_axes  # noqa: E402
 import pixel_bags  # noqa: E402
 import pixel_necklaces  # noqa: E402
+import pixel_coins  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2371,6 +2372,13 @@ def backpack_icon(kind, frame=0):
     _, extras = look(kind)
     image = Image(TILE, TILE)
     image.pixels = pixel_bags.icon(next(iter(extras)), ITEMS[kind]["colors"], frame)
+    return image
+
+
+def coin_stage_icon(stage):
+    """Gold coins at one stack-size stage (pixel_coins.STAGES)."""
+    image = Image(TILE, TILE)
+    image.pixels = pixel_coins.icon(stage)
     return image
 
 
@@ -2731,7 +2739,7 @@ def icon_volume(icon):
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
-    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace")
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins")
 
 
 def finished_icon(kind):
@@ -2805,6 +2813,11 @@ def item_icon(kind):
         return backpack_icon(kind)
     if shape == "necklace":
         return necklace_icon(kind)
+    if shape == "coins":
+        # The catalog icon is the three-coin stage; stacks show their own stage (coins.png).
+        image = Image(TILE, TILE)
+        image.pixels = pixel_coins.icon(2)
+        return image
     if shape in SHOWPIECE_STYLES:
         return helm_icon(kind)
     image = Image(TILE, TILE)
@@ -3095,15 +3108,6 @@ def item_icon(kind):
         flame = box(15, 13, 2, 9) | box(13, 17, 6, 4) | box(14, 15, 4, 2) | {(16, 12)}
         for x, y in flame:
             image.set(x, y, accent if y < 19 else scale(accent, 1.3))
-    elif shape == "coins":
-        for cx, cy in ((11, 22), (20, 23), (15, 18), (9, 15), (21, 16), (16, 12)):
-            coin = ellipse(cx, cy, 4.5, 3)
-            for x, y in coin:
-                image.set(x, y, light if y < cy - 1 else main)
-            for x, y in coin:
-                if (x, y + 1) not in coin:
-                    image.set(x, y, dark)
-        image.set(14, 10, (255, 248, 210, 255))
     elif shape == "glowcap":
         bevel(image, box(13, 15, 6, 10), accent, scale(accent, 1.1), scale(accent, 0.8))
         bevel(image, {p for p in ellipse(16, 15, 10, 8) if p[1] <= 15}, main, light, scale(main, 0.75))
@@ -5561,6 +5565,7 @@ def main():
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
+        "coins.png": sheet_row([icon_finish(coin_stage_icon(stage)) for stage in range(len(pixel_coins.STAGES))]),
         **{f"gear/{kind}.png": character_sheet(gear_builder(kind), compact=True, columns=POSE_COLUMNS)
            for kind, item in ITEMS.items() if item.get("slot") in VISIBLE_SLOTS},
         **{f"gear/{kind}_glow.png": None for kind, item in ITEMS.items()

@@ -152,6 +152,13 @@ monsters, 25% from elites; 30% of those come from the tier below). Loot spills o
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
 needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
 
+When a monster dies, the players its loot is credited to see green text over the body for four
+seconds, "Loot of a crypt skeleton: 250 gold coins, a bone, a flint hatchet." (`Combat.loot_event`),
+and a "Rare!", "Epic!" or "Legendary!" label in the rarity's colour when the best drop is Rare or
+better. Gold shows its amount as a heap that grows with the stack: one coin, two, three, a small
+heap from 4 piles, a heap from 10, a big heap from 30 (`SpriteArt.COIN_STAGES`); on the ground the
+heap stands in for the number.
+
 ### Showpiece helmets
 
 Nine named helmets drop from hunts (1.2% a kill, at or above their level). Each keeps

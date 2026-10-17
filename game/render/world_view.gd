@@ -268,8 +268,11 @@ func _cache_tall(area: Rect2i) -> void:
 func _draw_stack(cell: Vector2i, stack: Array) -> void:
 	var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
 	var top: String = stack.back()
-	SpriteArt.draw_item(self, center, World.kind_of(top))
+	SpriteArt.draw_item(self, center, World.kind_of(top), Color.WHITE, SpriteArt.TILE, World.count_of(top))
 	var shown: int = World.count_of(top) if World.count_of(top) > 1 else stack.size()
+	# Gold on the ground shows its amount as the size of the heap, not a number.
+	if World.kind_of(top) == "gold_coins" and stack.size() == 1:
+		shown = 1
 	if shown > 1:
 		SpriteArt.draw_count(self, center + Vector2(15, 14), shown)
 

@@ -9,6 +9,9 @@ const Balance = preload("res://game/data/balance.gd")
 const Professions = preload("res://game/data/professions.gd")
 const TARGET_COLOR: Color = Color("#ff3a2a")
 const GATHER_COLOR: Color = Color("#ffcf6a")
+## Loot text over a body: Tibia's green, wrapped to this many map pixels.
+const LOOT_GREEN: Color = Color("#5ef05e")
+const LOOT_TEXT_WIDTH: float = 150.0
 
 var game: Node
 var view: Node2D
@@ -107,6 +110,18 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 			if not SpriteArt.draw_missile(self, at, direction, effect.get("element", ""), age):
 				draw_line(at - direction * 6.0, at, effect["color"], 2.0)
 				draw_circle(at, 2.0, effect["color"])
+		elif effect["kind"] == "loot":
+			# Green loot text over the body, wrapped and centred, fading out at the end.
+			var fade: float = clampf((effect["life"] - age) / 0.6, 0.0, 1.0)
+			var width: float = LOOT_TEXT_WIDTH
+			var top: Vector2 = effect["pos"] + Vector2(-width / 2.0, -30.0)
+			draw_multiline_string_outline(font, top, effect["text"], HORIZONTAL_ALIGNMENT_CENTER, width, 8, -1, 3,
+				Color(SpriteArt.OUTLINE, fade))
+			draw_multiline_string(font, top, effect["text"], HORIZONTAL_ALIGNMENT_CENTER, width, 8, -1, Color(LOOT_GREEN, fade))
+		elif effect["kind"] == "label":
+			var at: Vector2 = effect["pos"] + Vector2(-12, -42.0 - age * 6.0)
+			draw_string_outline(font, at, effect["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 3, SpriteArt.OUTLINE)
+			draw_string(font, at, effect["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, effect["color"])
 		elif effect["kind"] == "text":
 			var at: Vector2 = effect["pos"] + Vector2(-8, -20.0 - age * 22.0)
 			var size: int = 11 if effect.get("big", false) else 9

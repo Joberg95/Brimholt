@@ -484,7 +484,8 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 		var now: float = game._now()
 		SpriteArt.draw_item_glow(slot, slot.size / 2.0, kind, 0.6 + 0.25 * sin(now * 2.6))
 		# An item you cannot use yet is tinted red.
-		SpriteArt.draw_item(slot, slot.size / 2.0, kind, Color.WHITE if usable else Color(1.0, 0.55, 0.55), slot.size.x)
+		SpriteArt.draw_item(slot, slot.size / 2.0, kind, Color.WHITE if usable else Color(1.0, 0.55, 0.55), slot.size.x,
+			World.count_of(entry))
 		_draw_rarity_notch(slot, item)
 		var cooling: float = potion_cooldown(kind)
 		if cooling > 0.0:

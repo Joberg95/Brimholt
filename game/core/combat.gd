@@ -22,6 +22,8 @@ const Titles = preload("res://game/data/titles.gd")
 ## Any monster above HOMEWARD_LEVEL may drop a Homeward rune (Spells.RUNES_BY_ELEMENT "home").
 const HOMEWARD_LEVEL: int = 30
 const HOMEWARD_CHANCE: float = 0.015
+## Loot of this rarity (Items.RARITIES index: Rare) or better gets a "Rare!" label over the body.
+const LOOT_LABEL_GRADE: int = 2
 const TICK_SECONDS: float = 0.1
 const REGEN_SECONDS: float = 2.0
 ## Mana restored per 10 seconds, as a fraction of max mana.
@@ -1242,6 +1244,8 @@ func gear_drop(level: int) -> String:
 
 func _drop_loot(monster: Dictionary, credited: Array[int], now: float, events: Array) -> void:
 	var loot: Array[String] = roll_loot(monster["kind"], monster["level"])
+	if not credited.is_empty():
+		events.append(loot_event(monster, loot, credited))
 	loot.reverse()  # spill() places from the back: items before gold, nearest tiles first
 	var changed: Array[Vector2i] = spill(monster["cell"], loot)
 	if changed.is_empty():
@@ -1253,6 +1257,32 @@ func _drop_loot(monster: Dictionary, credited: Array[int], now: float, events: A
 	if not owners.is_empty():
 		for cell: Vector2i in changed:
 			loot_claims[cell] = {"owners": owners, "until": now + LOOT_CLAIM_SECONDS}
+
+
+## What a kill dropped, for the players it is credited to: "Loot of a crypt skeleton: 250 gold coins,
+## a bone, a hatchet." over the body, and the best rarity among the drops (Rare and up) as a label.
+static func loot_event(monster: Dictionary, loot: Array[String], owners: Array[int]) -> Dictionary:
+	var definition: Dictionary = Monsters.MONSTERS[monster["kind"]]
+	var name: String = definition["name"]
+	if definition["rank"] not in ["champion", "boss"]:
+		name = ("an " if name.to_lower()[0] in "aeiou" else "a ") + name.to_lower()
+	var parts: PackedStringArray = []
+	var best: int = -1
+	for entry: String in loot:
+		var kind: String = World.kind_of(entry)
+		var item: Dictionary = World.ITEMS[kind]
+		var count: int = World.count_of(entry)
+		if item.has("gold"):
+			parts.append("%d gold coins" % (count * item["gold"]))
+			continue
+		var noun: String = item["name"].to_lower()
+		parts.append("%d %s" % [count, noun] if count > 1 else ("an " if noun[0] in "aeiou" else "a ") + noun)
+		best = maxi(best, Items.quality(item))
+	var event: Dictionary = {"kind": "loot", "cell": monster["cell"], "ids": owners,
+		"text": "Loot of %s: %s." % [name, ", ".join(parts) if not parts.is_empty() else "nothing"]}
+	if best >= LOOT_LABEL_GRADE:
+		event["label"] = [Items.RARITIES[best][1] + "!", Items.RARITIES[best][2]]
+	return event
 
 
 ## Drops lapsed loot claims and claims on tiles that have since been cleared.

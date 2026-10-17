@@ -188,6 +188,7 @@ func _run() -> void:
 	_slot_and_stat_checks()
 	_mount_checks()
 	_ring_checks()
+	_loot_display_checks()
 	_showpiece_helmet_checks()
 	_balance_checks()
 	_adventurer_checks()
@@ -1657,6 +1658,24 @@ func _showpiece_helmet_checks() -> void:
 			"%s is a Warrior's axe trading a tenth of its attack for its focus" % kind)
 	check(axes == 6, "six showpiece axes")
 	_showpiece_boot_checks()
+
+
+func _loot_display_checks() -> void:
+	# Gold grows from one coin to a big heap with the stack.
+	check(SpriteArt.coin_stage(1) == 0 and SpriteArt.coin_stage(2) == 1 and SpriteArt.coin_stage(3) == 2
+		and SpriteArt.coin_stage(9) == 3 and SpriteArt.coin_stage(10) == 4 and SpriteArt.coin_stage(100) == 5
+		and SpriteArt.COINS.get_width() == SpriteArt.COIN_STAGES.size() * 32, "gold coin stacks grow by stage")
+	# A kill's loot reads like a classic loot message, for its owners only, with a rarity label.
+	var drops: Array[String] = [World.make_entry("gold_coins", 2), "flint_hatchet", "bear_claw"]
+	var event: Dictionary = Combat.loot_event({"kind": "crypt_skeleton", "cell": Vector2i(3, 4)}, drops, [7])
+	check(event["kind"] == "loot" and event["ids"] == [7] and event["cell"] == Vector2i(3, 4)
+		and event["text"] == "Loot of a crypt skeleton: 50 gold coins, a flint hatchet, a bear claw." and not event.has("label"),
+		"loot text names the monster and every drop (%s)" % event["text"])
+	var rare: Dictionary = Combat.loot_event({"kind": "rat_king", "cell": Vector2i.ZERO}, ["dire_wolf_mount"], [1])
+	check(rare["text"] == "Loot of The Rat King: a dire wolf." and rare.get("label", [""])[0] == "Legendary!",
+		"a boss keeps its name and a rare drop gets a rarity label (%s)" % rare["text"])
+	var empty: Dictionary = Combat.loot_event({"kind": "sewer_rat", "cell": Vector2i.ZERO}, [], [1])
+	check(empty["text"] == "Loot of a sewer rat: nothing.", "an empty kill says nothing")
 
 
 func _ring_checks() -> void:

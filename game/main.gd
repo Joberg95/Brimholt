@@ -78,6 +78,8 @@ var ground_view: Dictionary = {}:
 var _monster_index := CellIndex.new()
 var _ground_index := CellIndex.new()
 var self_id: int = 0
+## How long a kill's green loot text stays over the body.
+const LOOT_TEXT_SECONDS: float = 4.0
 var connected: bool = false
 var hosting: bool = false
 ## Playing solo: a private world (bound to this computer only) with companions and rival bands.
@@ -278,7 +280,7 @@ func _process(delta: float) -> void:
 		if not monsters.has(id) or _slide(monsters[id], delta):
 			_moving_monsters.erase(id)
 	var clock: float = Time.get_ticks_msec() / 1000.0
-	effects = effects.filter(func(effect: Dictionary) -> bool: return clock - effect["born"] < 1.1)
+	effects = effects.filter(func(effect: Dictionary) -> bool: return clock - effect["born"] < effect.get("life", 1.1))
 	if connected and self_id != 0 and not typing() and not _controls.visible \
 			and _move_pending_since < 0.0 and now >= _next_move_attempt:
 		var direction: Vector2i = _input_direction()
@@ -1373,6 +1375,13 @@ func _handle_events(events: Array) -> void:
 				_publish_ground(event["cells"])
 			"message":
 				messages.append(event)
+			"loot":
+				# Loot text is only for the players the kill is credited to.
+				for looter: int in event["ids"]:
+					if looter == self_id:
+						_show_effect(event)
+					elif looter in _remote_players():
+						combat_event.rpc_id(looter, event)
 			"bot_left":
 				actors.erase(event["id"])
 				actor_left.rpc(event["id"])
@@ -1531,6 +1540,12 @@ func _show_effect(event: Dictionary) -> void:
 				_world_view.fx.burst("critical" if event["style"] == "critical" else "hit", at + Vector2(0, -8), style[1])
 			elif event["style"] in ["heal", "mana"]:
 				_world_view.fx.burst("heal", at, style[1])
+		"loot":
+			var over: Vector2 = _map_point(event["cell"])
+			effects.append({"kind": "loot", "pos": over, "text": event["text"], "born": born, "life": LOOT_TEXT_SECONDS})
+			if event.has("label"):
+				effects.append({"kind": "label", "pos": over, "text": event["label"][0], "color": event["label"][1],
+					"born": born, "life": 2.5})
 		"missile":
 			var element: String = event.get("element", "")
 			effects.append({"kind": "missile", "from": _map_point(event["from"]), "to": _map_point(event["to"]),
