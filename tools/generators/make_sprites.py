@@ -1850,14 +1850,8 @@ def gear_builder(kind):
         icon = helm_icon(kind)
     if icon is None and look(kind)[0] in SWORD_SHAPES:
         icon = sword_icon(kind)
-    if icon is None and kind in STAFF_STYLES:
-        icon = staff_icon(kind)
-    if icon is None and kind in BOW_STYLES:
-        icon = bow_icon(kind)
-    if icon is None and kind in SHIELD_STYLES:
-        icon = shield_icon(kind)
-    if icon is None and kind in BOOK_STYLES:
-        icon = book_icon(kind)
+    if icon is None:
+        icon = hand_pixelled_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
         return build
@@ -2066,6 +2060,7 @@ import pixel_staves  # noqa: E402
 import pixel_bows  # noqa: E402
 import pixel_shields  # noqa: E402
 import pixel_books  # noqa: E402
+import pixel_crossbows  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2480,6 +2475,29 @@ def book_icon(kind):
     return image
 
 
+# Crossbows are hand-pixelled (pixel_crossbows.py): stock, prod, string, a loaded bolt, fittings.
+CROSSBOW_STYLES = {"cobalt_crossbow": "cobalt", "starforged_crossbow": "starforged", "forgemaw_arbalest": "arbalest"}
+
+
+def crossbow_icon(kind):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_crossbows.icon(CROSSBOW_STYLES[kind], ITEMS[kind]["colors"])
+    return image
+
+
+# The hand-pixelled families by item, before any generated shape (weapon_icon) is tried.
+HAND_PIXELLED = ((STAFF_STYLES, staff_icon), (BOW_STYLES, bow_icon), (SHIELD_STYLES, shield_icon),
+                 (BOOK_STYLES, book_icon), (CROSSBOW_STYLES, crossbow_icon))
+
+
+def hand_pixelled_icon(kind):
+    """The item's hand-pixelled icon, or None when its family is not drawn that way."""
+    for styles, draw in HAND_PIXELLED:
+        if kind in styles:
+            return draw(kind)
+    return None
+
+
 # Monster drops (look trophy+<shape>) and gathered resources (looks ore, log, herb, fish) are
 # hand-drawn shapes in pixel_materials.py.
 MATERIAL_SHAPES = ("ore", "log", "herb", "fish")
@@ -2849,7 +2867,7 @@ def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
     return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod", "bow", "heater", "tower",
-                              "buckler", "book") + SWORD_SHAPES         + MATERIAL_SHAPES
+                              "buckler", "book", "crossbow") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
 # items.png is a grid of ITEM_COLUMNS icons per row in ITEM_ORDER (one long row would pass the
@@ -2923,20 +2941,15 @@ def item_icon(kind):
     shape, extras = look(kind)
     if shape in SWORD_SHAPES and painted_icon(kind) is None:
         return sword_icon(kind)
+    drawn = hand_pixelled_icon(kind) if painted_icon(kind) is None else None
+    if drawn is not None:
+        return drawn
     if not ITEMS[kind].get("slot") and (shape == "trophy" or shape in MATERIAL_SHAPES):
         return material_shape_icon(kind)
     if shape in WEAPON_SHAPES:
         return weapon_icon(kind)
     if shape == "runestone":
         return runestone_icon(kind)
-    if kind in STAFF_STYLES and painted_icon(kind) is None:
-        return staff_icon(kind)
-    if kind in BOW_STYLES and painted_icon(kind) is None:
-        return bow_icon(kind)
-    if kind in SHIELD_STYLES and painted_icon(kind) is None:
-        return shield_icon(kind)
-    if kind in BOOK_STYLES and painted_icon(kind) is None:
-        return book_icon(kind)
     if shape == "potion":
         # Round bottles on the diagonal, bigger for stronger potions (pixel_potions.py).
         image = Image(TILE, TILE)

@@ -299,7 +299,7 @@ def main():
         # hand-pixelled wands, rods, bows, shields, and spellbooks (pixel_staves.py, pixel_bows.py,
         # pixel_shields.py, pixel_books.py).
         if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.SHOWPIECE_STYLES \
-                or kind in M.STAFF_STYLES or kind in M.BOW_STYLES or kind in M.SHIELD_STYLES or kind in M.BOOK_STYLES:
+                or M.hand_pixelled_icon(kind) is not None:
             continue
         shape = M.look(kind)[0]
         if kind in bases:

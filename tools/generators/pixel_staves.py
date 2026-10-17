@@ -23,7 +23,7 @@ FIXED = {"t": (138, 96, 58), "T": (92, 62, 38), "y": (216, 168, 58), "s": (176, 
 # Glossy materials (gems, metal, glass) get a bright glint where the light strikes each part.
 GLOSSY = "agsylm"
 # Where each head map's top-left corner sits; the shaft slants one pixel right every SLANT rows.
-HEAD_AT = (4, 1)
+HEAD_AT = (4, 2)
 SLANT = 4
 # Heads are grown by GROW (rows and columns repeat in a steady rhythm) before shading, so their
 # outlines, seams, and glints stay one pixel crisp.
@@ -488,7 +488,7 @@ def _layout(style):
     x, y = start
     length = 0
     shaft = set()
-    while y < SIZE - 4:
+    while y < SIZE - 5:
         ferrule = length < 2 or y >= SIZE - 6
         letter = "y" if length in spec["bands"] or ferrule else spec["shaft"]
         if not ferrule:

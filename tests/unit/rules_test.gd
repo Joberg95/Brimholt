@@ -1697,7 +1697,7 @@ func _leech_checks() -> void:
 	# (pixel_staves.py, pixel_bows.py, pixel_shields.py, pixel_books.py), never a recoloured copy.
 	var recoloured: Array[String] = []
 	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["look"].get_slice("+", 0) in ["wand", "rod", "bow", "heater", "tower", "buckler", "book"] \
+		if World.ITEMS[kind]["look"].get_slice("+", 0) in ["wand", "rod", "bow", "crossbow", "heater", "tower", "buckler", "book"] \
 				and ResourceLoader.exists("res://assets/sprites/icons_derived/%s.png" % kind):
 			recoloured.append(kind)
 	check(recoloured.is_empty(), "wands, rods, bows, shields, and spellbooks are drawn, not recoloured (%s)" % ", ".join(recoloured))

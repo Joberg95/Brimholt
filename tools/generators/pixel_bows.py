@@ -78,11 +78,11 @@ class Bow:
     """The bow's geometry: from the top-right tip to the bottom-left tip, the limb standing off the
     string toward the top-left by `arch` times a full, rounded sine."""
 
-    def __init__(self, spec):
-        r = spec["reach"]
+    def __init__(self, spec, shrink=0):
+        r = max(4, spec["reach"]) + shrink
         self.a = (SIZE - 1 - r - 0.5, r + 0.5)
         self.b = (r + 0.5, SIZE - 1 - r - 0.5)
-        self.arch = spec["arch"]
+        self.arch = spec["arch"] * 0.85
         self.width = spec["width"]
         self.shape = spec["shape"]
 
@@ -301,10 +301,11 @@ def _domes(cells, skip):
     return domes
 
 
-def icon(style, colors):
-    """RGBA rows of a 32x32 bow icon."""
+def icon(style, colors, shrink=0):
+    """RGBA rows of a 32x32 bow icon. A bow whose tips or ornaments would reach the icon's edge is
+    drawn again a pixel shorter, until it keeps two pixels clear for the outline and the finish."""
     spec = STYLES[style]
-    bow = Bow(spec)
+    bow = Bow(spec, shrink)
     cells, across, along = {}, {}, {}
     _limb(bow, spec["limb"], cells, across, along)
     limb = set(cells)
@@ -356,4 +357,9 @@ def icon(style, colors):
             q = (x + dx, y + dy)
             if q not in cells and q not in string and 0 <= q[0] < SIZE and 0 <= q[1] < SIZE:
                 pixels[q[1]][q[0]] = OUTLINE + (255,)
+    solid = [(x, y) for y in range(SIZE) for x in range(SIZE) if pixels[y][x] is not None]
+    if shrink < 6 and (min(x for x, _ in solid) < 1 or min(y for _, y in solid) < 1
+                       or max(x for x, _ in solid) > SIZE - 2 or max(y for _, y in solid) > SIZE - 2
+                       or any(c[0] < 1 or c[1] < 1 or c[0] > SIZE - 2 or c[1] > SIZE - 2 for c in cells)):
+        return icon(style, colors, shrink + 1)
     return pixels
