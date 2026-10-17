@@ -1516,7 +1516,8 @@ func _sprite_checks() -> void:
 	check(SpriteArt.posed(view, 10.1)["facing"] == Vector2i.RIGHT and SpriteArt.posed(view, 10.1)["attack"] > 0.0
 		and SpriteArt.posed(view, 11.0) == view["state"] and view["state"]["facing"] == Vector2i.DOWN,
 		"an attack turns only the drawn pose toward the target")
-	check(SpriteArt.ITEM_ICONS.get_width() == SpriteArt.ITEM_ORDER.size() * SpriteArt.TILE, "one icon per item")
+	check(int(SpriteArt.ITEM_ICONS.get_width() / SpriteArt.TILE) * int(SpriteArt.ITEM_ICONS.get_height() / SpriteArt.TILE)
+		>= SpriteArt.ITEM_ORDER.size(), "one icon cell per item")
 	check(SpriteArt.WALLS.get_width() == 16 * SpriteArt.WALL_SIZE, "one wall sprite per open-side mask")
 	for kind: String in World.ITEMS:
 		check(kind in SpriteArt.ITEM_ORDER, "catalog item has an icon")
@@ -1539,6 +1540,9 @@ func _sprite_checks() -> void:
 				"compact character height is 35-39 pixels in every pose")
 			check(bounds.end.y >= 53 and bounds.end.y <= 55 and bounds.size.x <= 26,
 				"compact characters keep their foot anchor without a baked-in cape silhouette")
+	check(SpriteArt.ITEM_ICONS.get_width() == SpriteArt.ITEM_COLUMNS * 32 and SpriteArt.ITEM_ICONS.get_width() <= 16384
+		and SpriteArt.ITEM_ICONS.get_height() == ceili(SpriteArt.ITEM_ORDER.size() / float(SpriteArt.ITEM_COLUMNS)) * 32,
+		"items.png is a grid inside the texture size limit")
 	var weapon_masks: Dictionary = {}
 	for kind: String in World.ITEMS:
 		if World.ITEMS[kind]["slot"] != "main_hand":

@@ -2778,6 +2778,16 @@ def needs_volume(kind):
     return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
+# items.png is a grid of ITEM_COLUMNS icons per row in ITEM_ORDER (one long row would pass the
+# 16384-pixel texture limit); SpriteArt.ITEM_COLUMNS must match.
+ITEM_COLUMNS = 64
+
+
+def item_cell(index):
+    """The top-left pixel of icon `index` in items.png."""
+    return (index % ITEM_COLUMNS) * TILE, (index // ITEM_COLUMNS) * TILE
+
+
 def finished_icon(kind):
     """An item's icon as it ships in items.png: volume where it needs it, then the shared finish."""
     icon = item_icon(kind)
@@ -5558,7 +5568,7 @@ def main():
         "body.png": character_sheet(split_body("body"), compact=True, columns=POSE_COLUMNS),
         "cloth.png": character_sheet(split_body("cloth"), compact=True, columns=POSE_COLUMNS),
         "marker.png": character_sheet(marker, columns=POSE_COLUMNS),
-        "items.png": sheet([finished_icon(kind) for kind in ITEM_ORDER], len(ITEM_ORDER), TILE),
+        "items.png": sheet([finished_icon(kind) for kind in ITEM_ORDER], ITEM_COLUMNS, TILE),
         "spells.png": sheet([spell_icon(spell, rune, color) for spell, rune, color in spell_catalog()], 8, TILE),
         "spell_missiles.png": sheet([spell_missile(element, frame) for element in MISSILE_ELEMENTS for frame in range(MISSILE_FRAMES)],
                                     MISSILE_FRAMES, MISSILE_SIZE),
@@ -5628,7 +5638,8 @@ def main():
             glowing = Image(icons.width, icons.height)
             for index, kind in enumerate(ITEM_ORDER):
                 if ITEMS[kind].get("glow"):
-                    glowing.over(halo(icons.crop(index * TILE, 0, TILE, TILE)), index * TILE, 0)
+                    x, y = item_cell(index)
+                    glowing.over(halo(icons.crop(x, y, TILE, TILE)), x, y)
             outputs[name] = glowing
         else:
             base = outputs[name.replace("_glow.png", ".png")]
@@ -5713,7 +5724,7 @@ def write_preview(outputs, path):
                     equipment[slot] = kind
             preview.over(dressed(outputs, equipment, direction, 0, tint).scaled(2), column * 2 * FRAME, row * 2 * FRAME)
     for index in range(len(ITEM_ORDER)):
-        icon = outputs["items.png"].crop(index * TILE, 0, TILE, TILE)
+        icon = outputs["items.png"].crop(*item_cell(index), TILE, TILE)
         preview.over(icon.scaled(2), (index % icons_per_row) * 2 * TILE,
                      len(tiers) * 2 * FRAME + 8 + (index // icons_per_row) * 2 * TILE)
     preview.save(path)

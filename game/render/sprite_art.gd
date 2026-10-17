@@ -117,7 +117,9 @@ static var CREATURE_GLOW: Dictionary = _creature_sheets("_glow")
 const FEET: Vector2 = Vector2(0, 13.5)
 ## Source rectangles of tiles.png by tile index (4 per row), computed once.
 static var TILE_REGIONS: Array[Rect2] = _tile_regions()
-## Icon order in items.png: the catalog order of game/data/items.json.
+## Icon order in items.png: the catalog order of game/data/items.json, ITEM_COLUMNS icons per row
+## (make_sprites.py ITEM_COLUMNS; one long row would pass the 16384-pixel texture limit).
+const ITEM_COLUMNS: int = 64
 static var ITEM_ORDER: Array[String] = _item_order()
 ## Slots drawn on the character (no cape is drawn when its slot is empty). Rings, necklaces, and charms
 ## are too small to show when worn.
@@ -744,7 +746,8 @@ static func _draw_hands(canvas: CanvasItem, dest: Rect2, source: Rect2, facing: 
 
 
 static func item_region(kind: String) -> Rect2:
-	return Rect2(maxi(0, ITEM_ORDER.find(kind)) * TILE, 0, TILE, TILE)
+	var index: int = maxi(0, ITEM_ORDER.find(kind))
+	return Rect2((index % ITEM_COLUMNS) * TILE, (index / ITEM_COLUMNS) * TILE, TILE, TILE)
 
 
 ## Draws an item icon centred on a 32-pixel slot or ground tile. Gold coins with a `count` show a
