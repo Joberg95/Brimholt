@@ -1852,6 +1852,8 @@ def gear_builder(kind):
         icon = sword_icon(kind)
     if icon is None and kind in STAFF_STYLES:
         icon = staff_icon(kind)
+    if icon is None and kind in BOW_STYLES:
+        icon = bow_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
         return build
@@ -2057,6 +2059,7 @@ import pixel_swords  # noqa: E402
 import pixel_materials  # noqa: E402
 import pixel_potions  # noqa: E402
 import pixel_staves  # noqa: E402
+import pixel_bows  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2417,6 +2420,22 @@ STAFF_STYLES = {
 def staff_icon(kind):
     image = Image(TILE, TILE)
     image.pixels = pixel_staves.icon(STAFF_STYLES[kind], ITEMS[kind]["colors"])
+    return image
+
+
+# Bows without a painted icon are hand-pixelled too (pixel_bows.py): each its own limb shape,
+# grip, tips, and ornaments.
+BOW_STYLES = {
+    "willow_shortbow": "willow", "yew_hunting_bow": "yew", "bronze_recurve": "bronze", "poachers_flatbow": "flat",
+    "steel_longbow": "steel", "silverleaf_bow": "silverleaf", "ridgewind_recurve": "ridgewind",
+    "lodgeranger_bow": "hornbow", "wyrmglass_bow": "wyrmglass", "cinderheart_bow": "cinderheart",
+    "eclipse_bow": "eclipse", "rimestring_longbow": "rimestring",
+}
+
+
+def bow_icon(kind):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_bows.icon(BOW_STYLES[kind], ITEMS[kind]["colors"])
     return image
 
 
@@ -2788,7 +2807,7 @@ def icon_volume(icon):
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
-    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod") + SWORD_SHAPES         + MATERIAL_SHAPES
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod", "bow") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
 # items.png is a grid of ITEM_COLUMNS icons per row in ITEM_ORDER (one long row would pass the
@@ -2870,6 +2889,8 @@ def item_icon(kind):
         return runestone_icon(kind)
     if kind in STAFF_STYLES and painted_icon(kind) is None:
         return staff_icon(kind)
+    if kind in BOW_STYLES and painted_icon(kind) is None:
+        return bow_icon(kind)
     if shape == "potion":
         # Round bottles on the diagonal, bigger for stronger potions (pixel_potions.py).
         image = Image(TILE, TILE)

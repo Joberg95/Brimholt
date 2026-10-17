@@ -190,9 +190,9 @@ def _combos(first, pool, shares, axis="rows"):
     return found
 
 
-# Weapons lie on the diagonal (handle bottom left, head top right) and are cut across it: a bow's
-# upper limb over another's grip and lower limb, a wand's or rod's head over another's shaft and handle.
-WEAPON_BANDS = {"bow": [(0.5,), (0.36, 0.64)]}
+# Weapons that lie on the diagonal (handle bottom left, head top right) can be banded the same way,
+# cut across it. None are now: wands, rods, and bows are hand-pixelled in make_sprites.py.
+WEAPON_BANDS = {}
 
 
 def _level(kind):
@@ -296,9 +296,9 @@ def main():
     bases = banded_bases()
     for kind, item in M.ITEMS.items():
         # Showpiece helmets and boots draw their own icon (make_sprites.py helm_icon), and so do the
-        # hand-pixelled wands and rods (pixel_staves.py).
+        # hand-pixelled wands, rods, and bows (pixel_staves.py, pixel_bows.py).
         if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.SHOWPIECE_STYLES \
-                or kind in M.STAFF_STYLES:
+                or kind in M.STAFF_STYLES or kind in M.BOW_STYLES:
             continue
         shape = M.look(kind)[0]
         if kind in bases:
