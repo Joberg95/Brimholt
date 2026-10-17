@@ -8,12 +8,16 @@ lets add some smaller mini bosses as rare creatures from levels 10-50 anywhere i
 
 Outfits from quests, later thing (plan 22)
 
-the lanterns flicker when you go near them, lets address this 
+the lanterns flicker when you go near them, lets address this (plan 23)
 
 we should redesign the map to have 1 major city per continent and 1 smaller one per continent. (plan 32)
 
-i noticed a lot of the areas are missing the updated art we should align
+we need more spells variety for each 10th level bracket, lets brainstorm on this of what spells could be added, or if we should just make endgame spells rune based so the really high damage spells comes from runes (plan 25)
 
-we need more spells variety for each 10th level bracket, lets brainstorm on this of what spells could be added, or if we should just make endgame spells rune based so the really high damage spells comes from runes
+check where we are missing the new art style compared to the old, there is a lot of mismatching around the world; a lot of the areas are missing the updated art (plan 38)
 
-check where we are missing the new art style compared to the old, there is a lot of mismatching around the world (plan 38)
+lets add a new font to the game simillar to Verdana, verdana seems to be a payed font? (plan 24)
+
+bring every remaining item icon family up to the new hand-drawn Tibia-style look (plan 39)
+
+balance pass for the new gear stats: speed, life leech, mana %, frost damage (plan 26)
