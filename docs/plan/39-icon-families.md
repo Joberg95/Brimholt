@@ -9,8 +9,8 @@ family is left on the old generated shapes or recoloured templates.
 
 ## Today
 Done: tier helmets, armour, legs, and boots stay painted, and the pieces without a painting each take
-their own painted base or two spliced (`derive_icons.py armor_bases`; code-drawn armour fell short
-of the painted look). Drawn the new way (the `icon-art` skill): potions, rings, necklaces, axes, swords, backpacks, coins, the 100
+bands of two or three painted pieces stacked into a new design (`derive_icons.py armor_bases`;
+code-drawn armour fell short of the painted look). Drawn the new way (the `icon-art` skill): potions, rings, necklaces, axes, swords, backpacks, coins, the 100
 monster drops and gathered resources, the showpiece helmets and boots. Still old:
 
 | Family | Today | Builder to use |
@@ -37,5 +37,5 @@ Per family: a look check in `rules_test.gd` (every item of the family uses the n
 weapon silhouette and padding checks, and a visual capture of the family worn or held.
 
 ## Done when
-`derive_icons.py` derives only tier armour (from unique or spliced painted bases) and `item_icon`'s
+`derive_icons.py` derives only tier armour (bands of painted pieces) and `item_icon`'s
 old shape branches are gone.

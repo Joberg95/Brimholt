@@ -133,10 +133,11 @@ template of the same kind (`TEMPLATES`, plain to ornate by level; a catalog `tem
 specific painted icon instead, as the mythic sets do), recoloured to the item's
 catalog colours: outlines and wood stay, gold trim takes the accent colour, and everything else
 follows its brightness on a ramp from the main to the light colour. Tier helmets, armour, legs,
-and boots never share a design (`armor_bases`): each takes its own painted piece of the same slot
-and armor type, nearest in level and used once, or, where two pieces meet cleanly at the cut
-(`SPLIT`: the brow, below the chest, the knee, the ankle), the top of one on the bottom of the
-other, a new design in the same painted style. Drawing armour from code (part maps or 3D solids)
+and boots without their own painting, the mythic sets included, are new designs in the painted
+style (`armor_bases`): bands of two or three painted pieces of the same slot and armor type (another
+type's when none fit) stacked where their edges meet cleanly (`BANDS`: a helmet's crown over
+another's face; body armour's shoulders, belly, and skirt; legs' hips, thighs, and shins; boots'
+shafts and feet), near the item's level, every combination used once, then recoloured. Drawing armour from code (part maps or 3D solids)
 was tried and fell short of the painted look, so armour stays painted-derived. They are written to `assets/sprites/icons_derived/` every run. The extra templates
 (`template_*` icons) come from the unused weapon and off-hand cells of `class_sets.png` and the
 single pieces of `class_pieces.png`. Rings, axes, maces, hammers, crossbows, torches, capes, packs,

@@ -3,8 +3,8 @@
 
 Each item without a painted icon (assets/sprites/icons/<id>.png, imported by
 tools/generators/import_outfits.gd) takes a painted template of the same kind (TEMPLATES, or
-for helmets, armor, legs, and boots its own painted base of the same slot and armor type, or two
-spliced into a new design: armor_bases), recoloured to its catalog colours: outlines stay, wood stays wood, gold trim takes the
+for helmets, armor, legs, and boots bands of two or three painted pieces of the same slot and
+armor type stacked into a new design: armor_bases), recoloured to its catalog colours: outlines stay, wood stays wood, gold trim takes the
 item's accent colour, and every other pixel is mapped by its brightness onto a ramp from the
 item's main colour to its light colour. Templates are ordered plain to ornate and picked by the
 item's level. Results go to assets/sprites/icons_derived/<id>.png (rewritten every run); the
@@ -126,9 +126,12 @@ def painted(kind):
     return M.Image.load(path) if path.exists() else None
 
 
-# Where a spliced piece changes from its top base to its bottom base, as a share of its height
-# (helmets at the brow, body armour below the chest, legs at the knee, boots at the ankle).
-SPLIT = {"helmet": 0.5, "armor": 0.58, "legs": 0.5, "boots": 0.55}
+# A derived armour piece is cut into bands across its height, each band from a different painted
+# piece (BANDS: shares of the height where one band ends and the next begins), so every piece is
+# a new design in the painted style: a helmet's crown over another's face, body armour's
+# shoulders, belly, and skirt from three pieces, legs' hips, thighs, and shins, boots' shafts and feet.
+BANDS = {"helmet": [(0.45,), (0.62,)], "armor": [(0.36, 0.66), (0.5,), (0.4,)], "legs": [(0.3, 0.62), (0.5,)],
+         "boots": [(0.4, 0.7), (0.55,)]}
 
 
 def _span(image, y):
@@ -136,67 +139,104 @@ def _span(image, y):
     return (xs[0], xs[-1]) if xs else None
 
 
-def _cut(image, share):
+def _rows(image):
     rows = [y for y in range(image.height) if any(image.pixels[y])]
-    return rows[0] + round((rows[-1] - rows[0]) * share)
+    return rows[0], rows[-1]
 
 
-def fits(top, bottom, share):
-    """Whether two painted pieces meet cleanly at the cut: about the same edges there."""
-    a, b = painted(top), painted(bottom)
-    cut = _cut(a, share)
-    for y in (cut - 1, cut):
-        sa, sb = _span(a, y), _span(b, y)
-        if sa is None or sb is None or abs(sa[0] - sb[0]) > 1 or abs(sa[1] - sb[1]) > 1:
+def _meets(upper, lower, y):
+    """Whether two painted pieces have about the same edges at row y and the row above it."""
+    for row in (y - 1, y):
+        a, b = _span(upper, row), _span(lower, row)
+        if a is None or b is None or abs(a[0] - b[0]) > 1 or abs(a[1] - b[1]) > 1:
             return False
     return True
 
 
+def _cuts(image, shares):
+    top, bottom = _rows(image)
+    return [top + round((bottom - top) * share) for share in shares]
+
+
+def _combos(first, pool, shares):
+    """Every list of len(shares) + 1 different pieces, starting with `first`, that meet cleanly at
+    the cuts (taken from the first piece's height)."""
+    cuts = _cuts(painted(first), shares)
+    found = []
+
+    def extend(chain):
+        if len(chain) == len(shares) + 1:
+            found.append(tuple(chain))
+            return
+        upper = painted(chain[-1])
+        for other in pool:
+            if other not in chain and _meets(upper, painted(other), cuts[len(chain) - 1]):
+                extend(chain + [other])
+
+    extend([first])
+    return found
+
+
 def armor_bases():
-    """{item: (top base, bottom base or None)} for every unpainted tier helmet, armour, legs, and
-    boots: painted pieces of the same slot and armor type (relics: plate), nearest in level and
-    each used by one item only, so no two pieces in a row share a design. Where a second piece
-    meets the first cleanly at SPLIT, the item takes the first's top on the second's bottom, a
-    new design in the same painted style; without one it skips the nearest piece, so it does not
-    copy its painted neighbour."""
+    """{item: (pieces, shares)} for every unpainted tier helmet, armour, legs, and boots: two or
+    three painted pieces of the same slot and armor type (relics: plate), cut into bands at
+    `shares` of the height, preferring pieces near the item's level, never the same combination
+    twice, and spreading the work over all the painted pieces so none dominates."""
     bases = {}
     groups = {}
     for kind, item in M.ITEMS.items():
         if item.get("slot") in ARMOR_SLOTS:
             groups.setdefault((item["slot"], item.get("armor", "plate")), []).append(kind)
-    for (slot, armor), kinds in groups.items():
-        pool = [k for k in kinds if (PAINTED / f"{k}.png").exists()]
-        if not pool:
+    for (slot, armor), kinds in sorted(groups.items()):
+        pool = sorted(k for k in kinds if (PAINTED / f"{k}.png").exists())
+        if len(pool) < 2:
             continue
-        used = set()
-        todo = sorted((k for k in kinds if k not in pool and M.look(k)[0] not in M.SHOWPIECE_STYLES
-                       and not M.ITEMS[k].get("template")), key=lambda k: (M.ITEMS[k]["level"], k))
+        uses = {k: 0 for k in pool}
+        taken = set()
+        todo = sorted((k for k in kinds if k not in pool and M.look(k)[0] not in M.SHOWPIECE_STYLES),
+                      key=lambda k: (M.ITEMS[k]["level"], k))
+        # Pieces of the same slot but another armor type, for looks no piece of their own type fits.
+        wider = sorted(k for k, entry in M.ITEMS.items() if entry.get("slot") == slot and (PAINTED / f"{k}.png").exists())
         for kind in todo:
             level = M.ITEMS[kind]["level"]
-            ranked = sorted(pool, key=lambda b: (b in used, abs(M.ITEMS[b]["level"] - level), b))
-            first, second = ranked[0], None
-            for other in ranked[1:]:
-                if fits(first, other, SPLIT[slot]):
-                    second = other
+            template = M.ITEMS[kind].get("template")
+            best = None
+            for choices in (pool, wider):
+                for shares in BANDS[slot]:
+                    for first in choices:
+                        for combo in _combos(first, choices, shares):
+                            if combo in taken:
+                                continue
+                            # Near in level, pieces not used much yet, three bands before two, and a
+                            # catalog template (the mythic sets' chosen look) among the bands.
+                            score = (sum(abs(M.ITEMS[k]["level"] - level) for k in combo) / len(combo) / 10.0
+                                     + sum(uses.get(k, 0) for k in combo) * 1.5 - len(combo) * 2.0
+                                     - (2.5 if template in combo else 0.0))
+                            if best is None or score < best[0]:
+                                best = (score, combo, shares)
+                if best is not None:
                     break
-            if second is None and len(ranked) > 1 and ranked[1] not in used:
-                first = ranked[1]
-            used.add(first)
-            bases[kind] = (first, second)
+            if best is None:
+                continue
+            _, combo, shares = best
+            taken.add(combo)
+            for k in combo:
+                uses[k] = uses.get(k, 0) + 1
+            bases[kind] = (combo, shares)
     return bases
 
 
 def armor_base(kind, bases):
-    """The painted art an armour piece is recoloured from: one base, or two spliced at SPLIT."""
-    top, bottom = bases[kind]
-    image = painted(top)
-    if bottom is None:
-        return image
-    lower = painted(bottom)
-    cut = _cut(image, SPLIT[M.ITEMS[kind]["slot"]])
-    out = M.Image(image.width, image.height)
-    for y in range(image.height):
-        out.pixels[y] = list((image if y < cut else lower).pixels[y])
+    """The painted art an armour piece is recoloured from: its pieces' bands stacked."""
+    combo, shares = bases[kind]
+    images = [painted(k) for k in combo]
+    cuts = _cuts(images[0], shares) + [images[0].height]
+    out = M.Image(images[0].width, images[0].height)
+    band = 0
+    for y in range(out.height):
+        while y >= cuts[band]:
+            band += 1
+        out.pixels[y] = list(images[band].pixels[y])
     return out
 
 
