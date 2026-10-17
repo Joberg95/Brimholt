@@ -2384,11 +2384,9 @@ SWORD_SHAPES = ("sword", "greatsword")
 
 
 def sword_style(kind):
-    shape, extras = look(kind)
-    extra = next(iter(extras), "")
-    if shape == "greatsword":
-        return {"fuller": "greatfuller", "grand": "grand"}.get(extra, "great")
-    return extra if extra in pixel_swords.STYLES else "plain"
+    """The sword's own design: the style its look names (sword+<style>, greatsword+<style>)."""
+    _, extras = look(kind)
+    return next(style for style in extras if style in pixel_swords.STYLES)
 
 
 def sword_icon(kind, frame=0):

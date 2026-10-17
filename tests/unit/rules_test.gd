@@ -1633,8 +1633,8 @@ func _showpiece_helmet_checks() -> void:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 27,
-		"showpiece helmets, boots, axes, two backpacks, two necklaces, and three gemmed swords move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 28,
+		"showpiece helmets, boots, axes, two backpacks, two necklaces, and four gemmed swords move in the inventory")
 	var themed: Array[String] = []
 	for kind: String in World.ITEMS:
 		if String(World.ITEMS[kind]["look"]).begins_with("backpack+"):
