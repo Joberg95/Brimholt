@@ -97,7 +97,7 @@ contrast (`_grain`).
 
 **Originality.** Tibia is the reference: matching its item concepts, silhouettes, and colour schemes
 closely is allowed (the owner's decision, 2026-10-16); names stay our own, never Tibia's exact names. Never trace, recolour, or import Tibia's
-or other proprietary sprite files. CC0 only for third-party files, with a license and a
+or other proprietary sprite files. CC0 only for third-party files (the DejaVu Sans font is the one exception), with a license and a
 `CREDITS.md` row.
 
 ## Workflow (look once, not every tweak)

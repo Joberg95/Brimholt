@@ -3959,6 +3959,8 @@ func _climate_checks() -> void:
 	nearest_x.sort()
 	check(nearest_x == [0.0, 32.0, 64.0, 96.0] and Lighting.nearest(requests, Vector2.ZERO, 20).size() == 10,
 		"over the light limit, the lights nearest the camera are kept")
+	check(ThemeDB.fallback_font.resource_path == "res://assets/third_party/fonts/dejavu/DejaVuSans.ttf",
+		"all game text draws with the bundled DejaVu Sans")
 
 
 

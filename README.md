@@ -189,7 +189,7 @@ for the player bots), MIT-licensed and vendored as a GDExtension in `addons/limb
 Windows x86_64, and Linux x86_64 builds) with its `LICENSE.md`; the Windows export ships
 that license beside its DLL. After a fresh clone run `make import` so Godot registers the
 extension. The only third-party assets
-are CC0 (public domain) textures, listed with their licenses in
+are CC0 (public domain) textures and the DejaVu Sans font (Bitstream Vera licence), listed with their licenses in
 [`assets/third_party/CREDITS.md`](assets/third_party/CREDITS.md). Do not
 copy or translate GPL code into this project without a licensing decision.
 MIT reuse requires checking the specific files/dependencies and retaining their

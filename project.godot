@@ -59,3 +59,7 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.055, 0.067, 0.082, 1)
 
+[gui]
+
+theme/custom_font="res://assets/third_party/fonts/dejavu/DejaVuSans.ttf"
+

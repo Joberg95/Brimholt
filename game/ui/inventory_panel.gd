@@ -210,19 +210,19 @@ func _build_stat_sheet(layer: CanvasLayer) -> void:
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.position = Layout.PANEL_ORIGIN + Vector2(0, 342)
-	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("h_separation", 6)
 	# Twelve rows must end above the minimap: lines sit a little closer than a label's own height.
-	grid.add_theme_constant_override("v_separation", -3)
+	grid.add_theme_constant_override("v_separation", -1)
 	layer.add_child(grid)
 	for stat: String in ["vocation", "level", "experience", "gold"] + Array(Balance.STATS):
 		var stat_label := Label.new()
 		stat_label.text = {"vocation": "Class", "level": "Level", "experience": "Experience", "gold": "Gold"}.get(stat,
 			STAT_LABELS.get(stat, stat))
 		stat_label.modulate = Color("#a7b0b8")
-		stat_label.add_theme_font_size_override("font_size", 13)
+		stat_label.add_theme_font_size_override("font_size", 12)
 		grid.add_child(stat_label)
 		var value := Label.new()
-		value.add_theme_font_size_override("font_size", 13)
+		value.add_theme_font_size_override("font_size", 12)
 		grid.add_child(value)
 		_stat_values[stat] = value
 
@@ -259,13 +259,13 @@ func update_stats() -> void:
 		if stat == "critical":
 			text += "%"
 		elif stat in ["defense", "magic_defense"]:
-			text += "  (-%d%%)" % (100 - Balance.damage_taken(100, stats[stat]))
+			text += " (-%d%%)" % (100 - Balance.damage_taken(100, stats[stat]))
 		elif stat == "regen":
 			text += " / 10 s"
 		elif stat == "healing":
 			text += " / s"
 		if bonus != 0:
-			text += "  %+d" % bonus
+			text += " %+d" % bonus
 		_stat_values[stat].text = text
 
 

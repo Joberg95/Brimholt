@@ -15,7 +15,6 @@ we need more spells variety for each 10th level bracket, lets brainstorm on this
 
 check where we are missing the new art style compared to the old, there is a lot of mismatching around the world; a lot of the areas are missing the updated art (plan 38)
 
-lets add a new font to the game simillar to Verdana, verdana seems to be a payed font? (plan 24)
 
 bring every remaining item icon family up to the new hand-drawn Tibia-style look (plan 39)
 

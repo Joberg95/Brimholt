@@ -323,5 +323,8 @@ stays unlit. Set `Weather.override` (for example `"storm"`) to pin the weather i
 
 Original art is generated; the only third-party assets are CC0 textures in
 `assets/third_party/` (currently eight 128 px textures from Kenney's Particle Pack, used for
-lights and particles). Add a CC0 pack only with its original license file beside it and a row
+lights and particles) and the game font. All text draws with DejaVu Sans
+(`assets/third_party/fonts/dejavu/`, the project font `gui/theme/custom_font`, so
+`ThemeDB.fallback_font` is DejaVu too), a free Verdana-like font under the Bitstream Vera licence:
+the one non-CC0 asset, allowed by the owner. Add a CC0 pack only with its original license file beside it and a row
 in `assets/third_party/CREDITS.md`; never import ripped or proprietary art files (Tibia's included).

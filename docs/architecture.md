@@ -79,7 +79,7 @@ game/
     markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster markers
 assets/sprites/          Original generated sprite sheets, imported painted outfits/ and icons/ (+ Godot .import files)
 art/outfits/             Painted outfit sources and manifest.json (imported by make outfits)
-assets/third_party/      CC0 textures with their licenses (CREDITS.md)
+assets/third_party/      CC0 textures and the DejaVu Sans font, with their licenses (CREDITS.md)
 tests/
   unit/                  Deterministic rule checks (no networking, no rendering)
   integration/           Real ENet peers and the two-bot playthrough
