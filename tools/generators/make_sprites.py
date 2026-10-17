@@ -1850,6 +1850,8 @@ def gear_builder(kind):
         icon = helm_icon(kind)
     if icon is None and look(kind)[0] in SWORD_SHAPES:
         icon = sword_icon(kind)
+    if icon is None and kind in STAFF_STYLES:
+        icon = staff_icon(kind)
     build = GEAR_BUILDERS[slot](kind)
     if icon is None or look(kind)[0] == "torch":
         return build
@@ -2054,6 +2056,7 @@ import pixel_coins  # noqa: E402
 import pixel_swords  # noqa: E402
 import pixel_materials  # noqa: E402
 import pixel_potions  # noqa: E402
+import pixel_staves  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2394,6 +2397,26 @@ def sword_style(kind):
 def sword_icon(kind, frame=0):
     image = Image(TILE, TILE)
     image.pixels = pixel_swords.icon(sword_style(kind), ITEMS[kind]["colors"], frame)
+    return image
+
+
+# Wands and rods without a painted icon are hand-pixelled (pixel_staves.py): each its own head
+# after a classic design, held head first (painted_held).
+STAFF_STYLES = {
+    "kindling_wand": "kindling", "spark_wand": "spark", "ember_wand": "embercrown", "flame_wand": "flame",
+    "silverfire_wand": "silverfire", "reliquary_focus": "reliquary", "lodgeseer_wand": "seerfork",
+    "cinder_spindle": "spindle", "dusk_wand": "dusk", "cinderheart_wand": "cinderheart", "starless_wand": "starless",
+    "gravecall_wand": "gravecall",
+    "sapling_rod": "sapling", "thornwood_rod": "thornwood", "moss_rod": "moss", "alder_crook": "alder",
+    "rootbound_rod": "rootbound", "silverleaf_rod": "silverleaf", "lodgestalker_crook": "stalker",
+    "duskroot_branch": "duskroot", "wyrmglass_rod": "wyrmglass", "bloomheart_rod": "bloomheart",
+    "nightbloom_rod": "nightbloom", "thornscale_rod": "thornscale",
+}
+
+
+def staff_icon(kind):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_staves.icon(STAFF_STYLES[kind], ITEMS[kind]["colors"])
     return image
 
 
@@ -2765,7 +2788,7 @@ def icon_volume(icon):
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
-    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion") + SWORD_SHAPES         + MATERIAL_SHAPES
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
 # items.png is a grid of ITEM_COLUMNS icons per row in ITEM_ORDER (one long row would pass the
@@ -2845,6 +2868,8 @@ def item_icon(kind):
         return weapon_icon(kind)
     if shape == "runestone":
         return runestone_icon(kind)
+    if kind in STAFF_STYLES and painted_icon(kind) is None:
+        return staff_icon(kind)
     if shape == "potion":
         # Round bottles on the diagonal, bigger for stronger potions (pixel_potions.py).
         image = Image(TILE, TILE)

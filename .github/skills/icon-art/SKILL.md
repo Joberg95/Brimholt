@@ -34,6 +34,7 @@ world art; this one covers icons.
 | Rounded objects with parts (containers, chests, pouches) | Hand-drawn part map shaded by code | `tools/generators/pixel_bags.py` |
 | Weapons and other thin, ornate items | Hand-pixelled letter rows on a shared haft | `tools/generators/pixel_axes.py` |
 | Necklaces | Chain loop plus a hand-drawn pendant | `tools/generators/pixel_necklaces.py` |
+| Wands and rods | A big hand-drawn head on a thin near-upright shaft, rim-lit, faceted gems, dark seams between parts | `tools/generators/pixel_staves.py` |
 | Rings | Tilted band plus a centrepiece | `ring_icon` in `make_sprites.py` |
 | Showpiece helmets and boots | Solids rendered in 3D | `tools/generators/gear3d.py` |
 | Painted sets, tier armour | Painted art imported by `make outfits`; armour without its own painting stacks bands of two or three painted pieces (`armor_bases`), never a plain recolour or a code-drawn body | `art/outfits/`, `derive_icons.py` |

@@ -10,7 +10,8 @@ family is left on the old generated shapes or recoloured templates.
 ## Today
 Done: tier helmets, armour, legs, and boots stay painted, and the pieces without a painting each take
 bands of two or three painted pieces stacked into a new design (`derive_icons.py armor_bases`;
-code-drawn armour fell short of the painted look). Drawn the new way (the `icon-art` skill): potions, rings, necklaces, axes, swords, backpacks, coins, the 100
+code-drawn armour fell short of the painted look). Drawn the new way (the `icon-art` skill): wands and rods (pixel_staves.py: big heads modelled on
+classic wands and rods, near upright on thin shafts), potions, rings, necklaces, axes, swords, backpacks, coins, the 100
 monster drops and gathered resources, the showpiece helmets and boots. Still old:
 
 | Family | Today | Builder to use |
@@ -18,15 +19,13 @@ monster drops and gathered resources, the showpiece helmets and boots. Still old
 | Runes and spell stones | `runestone_icon` | Hand-drawn stone shapes per rune family |
 | Food | `item_icon` | Part maps (bread, meat, fish dish, fruit) |
 | Bows, crossbows | painted templates, recoloured | Hand-pixelled on the diagonal like swords |
-| Wands and rods | painted templates, recoloured | Hand-pixelled on the diagonal, glowing tips |
 | Maces and hammers | generated `weapon_model` | Hand-pixelled heads on a haft like axes |
 | Shields and spellbooks | painted templates, recoloured | Part maps, front view |
 | Capes | generated | Part map, folded cloth |
 | Torches, packs (quest), bags (crafted) | generated or older bag art | `pixel_bags` styles |
 
 ## Steps
-Work family by family, in this order (most seen first): bows and
-wands, shields, maces and hammers, capes, food, runes, the rest. For each:
+Work family by family, in this order (most seen first): bows, shields, maces and hammers, capes, food, runes, the rest. For each:
 1. Gather references and design one distinct look per item (no recolours of one blueprint).
 2. Draw in the builder named above; route its looks in `item_icon` and `needs_volume`; held or
    worn items get `painted_held` or a textured worn layer.
