@@ -160,6 +160,21 @@ Hunters keep their distance with Crippling arrow; the duels start adjacent, so t
 neither. Below level 20 the gear is too light for the counters to show (a Hunter still beats
 a Warrior at level 10).
 
+## Gear-only stats
+
+The stats only gear gives (`World.GEAR_STATS`) were checked with loadouts over the tier gear
+(`make fight-sim GEAR=slot:item`, `duel_sim.gd --gear1=... --gear2=...`), 2026-10-17:
+
+| Stat | Source | Result |
+| --- | --- | --- |
+| Life leech | Warrior blades, 1-5% (`Items.leech_for`, cap `World.LEECH_MAX` 5) | A small help: 3 bog hulks or behemoths at 45, 2 Blackreed wardens at 50, 4 reedfangs at 47 end with 2-3 points more health and the same potions; about 100 more healing in a level-50 duel. A Warrior deals about 150 damage a second at 45, so 5% is about 7 health a second next to about 50 from regeneration. Leeching blades therefore keep a plain sword's full attack (no `WEAPON_FOCUS_ATTACK` trade); with the trade they ended fights slower and no healthier |
+| Movement speed | Boots 4-10%, the Venomfang axe 4% (Warrior) | Stacks multiply: walking 5.6 tiles a second, mounted 6.9, mounted with 14% gear 7.9; Fleetfoot or Swift growth on top reach about 10 for 8 s every 20 s, an escape window, not a permanent lead. Mounted riders already outrun same-level monsters (0.144 s steps against 0.17 s chases), as before. In duels Hastewind boots only cost armour (a Warrior wins 6 s slower) |
+| Maximum mana | Sorcerer cloth boots 6-8% (Frostbloom slippers, Phialbound boots) | +350-400 mana at 45 (about a third of a mana potion); hunts of 3 bog hulks are not mana-bound, so results do not move |
+| Frost damage | The Rootbound crown, 9% | A Druid on 3 bog hulks at 45: 36.7 to 35.2 s, 8 to 6 potions |
+
+Numbers kept: `HELMET_FOCUS_DEFENSE` 0.85, `WEAPON_FOCUS_SPEED` 4, the boots' extras, and
+`LEECH_LEVELS` 6. Changed: leeching blades keep full attack.
+
 ## Early game
 
 Monsters hit softer early: half damage at level 1, rising to full damage at level 11, so a

@@ -61,9 +61,9 @@ soak: ## Busy hosted session with clock jumps; fails if objects, nodes, or memor
 		echo "$$out" | grep -E 'SOAK|SCRIPT ERROR'; \
 		echo "$$out" | grep -q 'BRIMHOLT_SOAK_PASS'
 
-fight-sim: ## Balance a monster: MONSTER=field_vole LEVELS=1,10,20,30,40 COUNT=3 [OFF_HAND=torch] (auto-attack vs spells+potions)
+fight-sim: ## Balance a monster: MONSTER=field_vole LEVELS=1,10,20,30,40 COUNT=3 [OFF_HAND=torch] [GEAR=boots:hastewind_boots] (auto-attack vs spells+potions)
 	@$(GODOT) --headless --path . --script res://tools/testing/fight_sim.gd -- --monster=$(or $(MONSTER),field_vole) \
-		--levels=$(or $(LEVELS),1,10,20,30,40) --count=$(or $(COUNT),1) $(if $(PLAYER_LEVEL),--player-level=$(PLAYER_LEVEL)) $(if $(OFF_HAND),--off-hand=$(OFF_HAND)) 2>&1 \
+		--levels=$(or $(LEVELS),1,10,20,30,40) --count=$(or $(COUNT),1) $(if $(PLAYER_LEVEL),--player-level=$(PLAYER_LEVEL)) $(if $(OFF_HAND),--off-hand=$(OFF_HAND)) $(if $(GEAR),--gear=$(GEAR)) 2>&1 \
 		| grep -vE '^Godot Engine|^$$'
 
 duel-sim: ## Same-level PvP duels with spells and potions per vocation pair (LEVELS=20,30,45)

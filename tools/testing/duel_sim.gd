@@ -6,6 +6,8 @@ extends SceneTree
 ## (PvP damage, PvP healing and its fading, potion cooldowns).
 ##
 ##   godot --headless --path . --script res://tools/testing/duel_sim.gd -- [--levels=20,30,45]
+##       [--gear1=boots:hastewind_boots] [--gear2=...]  (loadouts over the first or second side's tier gear)
+##       [--pairs=knight-paladin,...]
 
 const World = preload("res://game/core/world.gd")
 const Combat = preload("res://game/core/combat.gd")
@@ -16,16 +18,24 @@ const PAIRS: Array = [["druid", "knight"], ["druid", "paladin"], ["druid", "sorc
 	["paladin", "paladin"], ["sorcerer", "sorcerer"]]
 const TIME_LIMIT: float = 180.0
 
+## Each side's loadout over its tier gear (--gear1, --gear2).
+var loadouts: Array[Dictionary] = [{}, {}]
+
 
 func _initialize() -> void:
 	var levels: String = "20,30,45"
+	var pairs: Array = PAIRS
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--levels="):
 			levels = argument.get_slice("=", 1)
+		elif argument.begins_with("--gear1=") or argument.begins_with("--gear2="):
+			loadouts[argument.substr(6, 1).to_int() - 1] = FightSim.parse_gear(argument.get_slice("=", 1))
+		elif argument.begins_with("--pairs="):
+			pairs = Array(argument.get_slice("=", 1).split(",")).map(func(pair: String) -> Array: return pair.split("-"))
 	var gear: FightSim = FightSim.new()
 	var arena: Vector2i = _arena()
 	for level_text: String in levels.split(","):
-		for pair: Array in PAIRS:
+		for pair: Array in pairs:
 			print(_duel(level_text.to_int(), pair[0], pair[1], arena, gear))
 	gear.free()
 	quit()
@@ -51,7 +61,7 @@ func _duel(level: int, first: String, second: String, arena: Vector2i, gear: Fig
 	for id: int in [1, 2]:
 		var player: Dictionary = world.players[id]
 		player["level"] = level
-		player["equipment"] = gear._gear(level, player["vocation"])
+		player["equipment"] = FightSim.wear(gear._gear(level, player["vocation"]), loadouts[id - 1], player["vocation"], level)
 		var stats: Dictionary = world.player_stats(id)
 		player["health"] = stats["health"]
 		player["mana"] = stats["mana"]

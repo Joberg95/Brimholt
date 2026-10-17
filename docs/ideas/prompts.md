@@ -17,4 +17,3 @@ check where we are missing the new art style compared to the old, there is a lot
 
 bring every remaining item icon family up to the new hand-drawn Tibia-style look (plan 39)
 
-balance pass for the new gear stats: speed, life leech, mana %, frost damage (plan 26)

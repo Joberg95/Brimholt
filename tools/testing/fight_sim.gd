@@ -7,6 +7,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/testing/fight_sim.gd -- \
 ##       --monster=field_vole --levels=1,10,20,30,40 --count=3 [--player-level=N] [--vocations=knight,druid]
+##       [--gear=main_hand:grand_sanguine_blade,boots:hastewind_boots]  (a loadout over the tier gear)
 ##
 ## Reference bands (normal rank, same level) live in .github/skills/monster-authoring/SKILL.md.
 
@@ -21,16 +22,23 @@ const TIME_LIMIT: float = 300.0
 
 ## Replaces every vocation's off-hand item (--off-hand=torch: a dark dungeon, no shield or book).
 var off_hand: String = ""
+## Items worn over the tier gear (--gear=slot:item,...), where the vocation may wear them.
+var loadout: Dictionary = {}
 
 
 func _initialize() -> void:
 	var options: Dictionary = {"monster": "field_vole", "levels": "1,10,20,30,40", "count": "1",
-		"player-level": "", "vocations": "knight,paladin,sorcerer,druid", "off-hand": ""}
+		"player-level": "", "vocations": "knight,paladin,sorcerer,druid", "off-hand": "", "gear": ""}
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--") and argument.contains("="):
 			options[argument.substr(2).get_slice("=", 0)] = argument.get_slice("=", 1)
 	var kind: String = options["monster"]
 	off_hand = options["off-hand"]
+	loadout = parse_gear(options["gear"])
+	if loadout.has("error"):
+		printerr(loadout["error"])
+		quit(1)
+		return
 	if not off_hand.is_empty() and World.ITEMS.get(off_hand, {}).get("slot", "") != "off_hand":
 		printerr("Unknown off-hand item %s" % off_hand)
 		quit(1)
@@ -65,6 +73,26 @@ func _gear(level: int, vocation: String) -> Dictionary:
 			gear[item["slot"]] = kind
 	if not off_hand.is_empty():
 		gear["off_hand"] = off_hand
+	return wear(gear, loadout, vocation, level)
+
+
+## "slot:item,slot:item" as {slot: item}, or {"error": ...} for an unknown item or wrong slot.
+static func parse_gear(text: String) -> Dictionary:
+	var result: Dictionary = {}
+	for pair: String in text.split(",", false):
+		var slot: String = pair.get_slice(":", 0)
+		var kind: String = pair.get_slice(":", 1)
+		if not World.ITEMS.has(kind) or World.ITEMS[kind]["slot"] != slot:
+			return {"error": "Unknown %s item %s" % [slot, kind]}
+		result[slot] = kind
+	return result
+
+
+## The tier gear with the loadout's pieces put on, where a player of the vocation and level may wear them.
+static func wear(gear: Dictionary, pieces: Dictionary, vocation: String, level: int) -> Dictionary:
+	for slot: String in pieces:
+		if World.requirement_error(pieces[slot], level, vocation).is_empty():
+			gear[slot] = pieces[slot]
 	return gear
 
 

@@ -1682,6 +1682,11 @@ func _leech_checks() -> void:
 		"four leeching swords, the Bloodvein greatblade at the most")
 	check(World.stats(45, {"main_hand": "grand_sanguine_blade", "ring_1": "garnet_ring"}, "knight")["leech"] <= World.LEECH_MAX
 		and Combat.leech({"leech": 5}, 200) == 10 and Combat.leech({}, 200) == 0, "leech heals its share of a hit, at most 5%")
+	# Plan 26: at its 5% cap leech is a small help, so leeching blades keep a plain sword's attack.
+	var plain_blade: Dictionary = Items.tier_stats({"level": 45, "slot": "main_hand", "look": "sword", "vocations": ["knight"]})
+	var axe: Dictionary = Items.tier_stats({"level": 45, "slot": "main_hand", "look": "axe", "vocations": ["knight"], "focus": "speed"})
+	check(World.ITEMS["grand_sanguine_blade"]["stats"]["attack"] == plain_blade["attack"] and axe["attack"] < plain_blade["attack"],
+		"leeching blades keep full attack; other focused weapons trade some for their bonus")
 	# A leeching hit heals the attacker.
 	var world := World.new()
 	var combat := Combat.new(world, 3)

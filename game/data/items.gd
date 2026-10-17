@@ -49,7 +49,7 @@ const HELMET_FOCUS: Array[String] = ["health", "mana", "critical", "healing", "r
 const HELMET_FOCUS_DEFENSE: float = 0.85
 ## Focused weapons (showpiece axes) keep WEAPON_FOCUS_ATTACK of their attack and add one bonus:
 ## a ring's critical plus one, half an amulet's health, an armor's regen, a cape's defense, or
-## WEAPON_FOCUS_SPEED percent movement speed.
+## WEAPON_FOCUS_SPEED percent movement speed; leeching blades (leech_for) keep their full attack.
 const WEAPON_FOCUS: Array[String] = ["critical", "health", "regen", "defense", "speed", "leech"]
 const WEAPON_FOCUS_ATTACK: float = 0.9
 const WEAPON_FOCUS_SPEED: int = 4
@@ -213,8 +213,10 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 				weapon["critical"] = CRITICAL_WEAPON + (tier + 1) / 2
 			elif vocation == "druid":
 				weapon["healing"] = maxi(1, roundi(reference_health(level) * ROD_HEALING))
-			if item.has("focus"):
+			# Life leech is weak at its 5% cap (plan 26 sims), so a leeching blade keeps its full attack.
+			if item.has("focus") and item["focus"] != "leech":
 				weapon["attack"] = maxi(floor_attack, roundi(weapon["attack"] * WEAPON_FOCUS_ATTACK))
+			if item.has("focus"):
 				match String(item["focus"]):
 					"critical":
 						weapon["critical"] = weapon.get("critical", 0) + CRITICAL_RING + 1
