@@ -1692,6 +1692,14 @@ func _leech_checks() -> void:
 
 
 func _loot_display_checks() -> void:
+	# Monster drops are drawn as what they are (a claw, a feather, an eye...), not as one generic shape.
+	var trophies: int = 0
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"].is_empty() and item.has("value") and not item.has("rune") and not item.has("drink") 				and not item.has("eat") and not String(item["look"]) in Items.GATHERED_LOOKS:
+			trophies += 1
+			check(String(item["look"]).begins_with("trophy+"), "%s is drawn as its own trophy shape" % kind)
+	check(trophies == 80, "eighty monster trophies (%d)" % trophies)
 	# Gold grows from one coin to a big heap with the stack.
 	check(SpriteArt.coin_stage(1) == 0 and SpriteArt.coin_stage(2) == 1 and SpriteArt.coin_stage(3) == 2
 		and SpriteArt.coin_stage(9) == 3 and SpriteArt.coin_stage(10) == 4 and SpriteArt.coin_stage(100) == 5

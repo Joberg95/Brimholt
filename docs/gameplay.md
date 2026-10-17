@@ -152,6 +152,10 @@ monsters, 25% from elites; 30% of those come from the tier below). Loot spills o
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
 needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
 
+Most hunts drop a common material and, about one kill in ten, a rarer trophy worth half again as
+much: a grey wolf paw, a thornback hide, a dire bear pelt, a scaled lizard tail, a harpy talon, a
+scorpion carapace, a crypt skull, a cave spider fang, a smouldering pelt, a frostbitten paw.
+
 When a monster dies, the players its loot is credited to see green text over the body for four
 seconds, "Loot of a crypt skeleton: 250 gold coins, a bone, a flint hatchet." (`Combat.loot_event`),
 and a "Rare!", "Epic!" or "Legendary!" label in the rarity's colour when the best drop is Rare or

@@ -2052,6 +2052,7 @@ import pixel_bags  # noqa: E402
 import pixel_necklaces  # noqa: E402
 import pixel_coins  # noqa: E402
 import pixel_swords  # noqa: E402
+import pixel_materials  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2392,6 +2393,18 @@ def sword_style(kind):
 def sword_icon(kind, frame=0):
     image = Image(TILE, TILE)
     image.pixels = pixel_swords.icon(sword_style(kind), ITEMS[kind]["colors"], frame)
+    return image
+
+
+# Monster drops (look trophy+<shape>) and gathered resources (looks ore, log, herb, fish) are
+# hand-drawn shapes in pixel_materials.py.
+MATERIAL_SHAPES = ("ore", "log", "herb", "fish")
+
+
+def material_shape_icon(kind):
+    shape, extras = look(kind)
+    image = Image(TILE, TILE)
+    image.pixels = pixel_materials.icon(next(iter(extras)) if shape == "trophy" else shape, ITEMS[kind]["colors"])
     return image
 
 
@@ -2762,7 +2775,7 @@ def icon_volume(icon):
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
-    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins") + SWORD_SHAPES
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
 def finished_icon(kind):
@@ -2826,6 +2839,8 @@ def item_icon(kind):
     shape, extras = look(kind)
     if shape in SWORD_SHAPES and painted_icon(kind) is None:
         return sword_icon(kind)
+    if not ITEMS[kind].get("slot") and (shape == "trophy" or shape in MATERIAL_SHAPES):
+        return material_shape_icon(kind)
     if shape in WEAPON_SHAPES:
         return weapon_icon(kind)
     if shape == "runestone":
