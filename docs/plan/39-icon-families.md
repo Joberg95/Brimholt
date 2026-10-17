@@ -8,12 +8,11 @@ look that rings, necklaces, axes, swords, backpacks, coins, and monster drops no
 family is left on the old generated shapes or recoloured templates.
 
 ## Today
-Drawn the new way (the `icon-art` skill): rings, necklaces, axes, swords, backpacks, coins, the 100
+Drawn the new way (the `icon-art` skill): potions, rings, necklaces, axes, swords, backpacks, coins, the 100
 monster drops and gathered resources, the showpiece helmets and boots. Still old:
 
 | Family | Today | Builder to use |
 | --- | --- | --- |
-| Potions (health, mana, strong) | `item_icon` vials | Part map like `pixel_bags` (glass, liquid, cork, label) |
 | Runes and spell stones | `runestone_icon` | Hand-drawn stone shapes per rune family |
 | Food | `item_icon` | Part maps (bread, meat, fish dish, fruit) |
 | Bows, crossbows | painted templates, recoloured | Hand-pixelled on the diagonal like swords |
@@ -25,7 +24,7 @@ monster drops and gathered resources, the showpiece helmets and boots. Still old
 | Torches, packs (quest), bags (crafted) | generated or older bag art | `pixel_bags` styles |
 
 ## Steps
-Work family by family, in this order (most seen first): potions, tier armour and helmets, bows and
+Work family by family, in this order (most seen first): tier armour and helmets, bows and
 wands, shields, maces and hammers, capes, food, runes, the rest. For each:
 1. Gather references and design one distinct look per item (no recolours of one blueprint).
 2. Draw in the builder named above; route its looks in `item_icon` and `needs_volume`; held or

@@ -2053,6 +2053,7 @@ import pixel_necklaces  # noqa: E402
 import pixel_coins  # noqa: E402
 import pixel_swords  # noqa: E402
 import pixel_materials  # noqa: E402
+import pixel_potions  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2623,17 +2624,6 @@ def material_icon(image, shape, palette, accent):
             points |= box(16 - half, y, half * 2, 1)
         shade(image, points, palette)
         image.rect(15, 8, 2, 16, light)
-    elif shape == "potion":
-        glass = (rgba("d8e4ec"), rgba("b8c8d4"), rgba("8a9aa8"))
-        shade(image, box(14, 8, 4, 6), glass, False)
-        shade(image, box(13, 4, 6, 4), (scale(accent, 1.15), accent, scale(accent, 0.7)), False)
-        body = ellipse(16, 20, 8.5, 8)
-        shade(image, body, palette)
-        for x, y in body:
-            if y < 15:
-                image.set(x, y, glass[0] if (x + y) % 3 else glass[1])
-        image.rect(11, 17, 2, 4, (255, 255, 255, 200))
-        image.rect(13, 15, 1, 1, (255, 255, 255, 200))
     elif shape == "pack":
         body = box(8, 10, 16, 17) - {(8, 10), (23, 10), (8, 26), (23, 26)}
         shade(image, body, palette)
@@ -2775,7 +2765,7 @@ def icon_volume(icon):
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
     (showpieces, axes, backpacks, necklaces) already have their volume."""
-    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy") + SWORD_SHAPES         + MATERIAL_SHAPES
+    return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion") + SWORD_SHAPES         + MATERIAL_SHAPES
 
 
 # items.png is a grid of ITEM_COLUMNS icons per row in ITEM_ORDER (one long row would pass the
@@ -2855,6 +2845,11 @@ def item_icon(kind):
         return weapon_icon(kind)
     if shape == "runestone":
         return runestone_icon(kind)
+    if shape == "potion":
+        # Round bottles on the diagonal, bigger for stronger potions (pixel_potions.py).
+        image = Image(TILE, TILE)
+        image.pixels = pixel_potions.icon(next(iter(extras), "vial"), ITEMS[kind]["colors"])
+        return image
     if shape in MOUNT_SHAPES:
         return mount_icon(kind)
     if shape == "ring":
