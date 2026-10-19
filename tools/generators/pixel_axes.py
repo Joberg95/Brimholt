@@ -6,30 +6,31 @@ pixel ("." leaves the pixel as it is). Letters:
 
   o outline      1-5 steel, bright cutting edge to deep shadow      y Y z gold, light to dark
   a A b the axe's own colour (light, base, dark)                    g a glowing gem (pulses)
-  s S bone       T tongue      w W haft wood      r R grip wrap      p P pommel (style colours)
+  s S bone       T tongue
 
-The haft is shared: a two-pixel diagonal run from HAFT_TOP down to the pommel, lit on its upper
-pixel, with a wrapped grip. `back` segments are drawn under the haft and `wing` segments are also
+Each axe names its haft and pommel from pixel_hafts.py ("haft"), a two-pixel diagonal run from
+HAFT_TOP down to the pommel. `back` segments are drawn under the haft and `wing` segments are also
 mirrored across the haft (double-headed axes). make_sprites.py calls icon(style, colors, frame).
 """
 
 import colorsys
 import math
 
+import pixel_hafts
+
 ANIM_FRAMES = 12
 HAFT_TOP = 6
 HAFT_END = 23
-GRIP = range(17, 22)
 SHIFT = (2, 2)
 
 STEEL = {"1": "e8eef2", "2": "c4ccd2", "3": "9aa4ac", "4": "6e767e", "5": "4a5056"}
 FIXED = {"o": "1c1618", "y": "f8e08a", "Y": "d8a83a", "z": "8a6020", "s": "f0e6cc", "S": "b8a888",
-         "T": "d03a3a", "w": "8a6440", "W": "5c3c24", "r": "7a5a40", "R": "3e2c20", **STEEL}
+         "T": "d03a3a", **STEEL}
 
 AXES = {
     # A plain bearded iron axe with a top spike and two rivets.
     "hewer": {
-        "pommel": "35",
+        "haft": "banded",
         "head": {
             3: [(3, "o")], 4: [(3, "o2o")], 5: [(4, "o23o")], 7: [(4, "ooo")],
             8: [(4, "o122")],
@@ -47,7 +48,7 @@ AXES = {
     },
     # A steel crescent with an amber inlay, a gold collar with a gem, and an amber knob behind.
     "amberaxe": {
-        "pommel": "aA",
+        "haft": "honey",
         "back": {5: [(7, "ooo")], 6: [(8, "aAo")], 7: [(9, "Abo")], 8: [(10, "o")]},
         "head": {
             5: [(3, "ooo")],
@@ -69,8 +70,7 @@ AXES = {
     # Dark steel with a green inlay, a fang hanging from the beard, and a serpent's head on top
     # whose eye glows; green coils wind down the haft.
     "venomaxe": {
-        "pommel": "Ab",
-        "coils": range(12, 17),
+        "haft": "serpent",
         "head": {
             1: [(3, "ooo")],
             2: [(1, "ToaAAo")],
@@ -96,7 +96,7 @@ AXES = {
     },
     # Two feathered silver wings, mirrored across the haft, round a gold collar with a blue gem.
     "seraphaxe": {
-        "pommel": "yz",
+        "haft": "seraph",
         "wing": {
             5: [(3, "ooo")],
             6: [(2, "o122")],
@@ -116,7 +116,7 @@ AXES = {
     },
     # A crimson crescent rimmed in gold with a round cut-out, a hook behind, and a glowing heart.
     "sanguineaxe": {
-        "pommel": "Ab",
+        "haft": "bone",
         "back": {3: [(9, "oo")], 4: [(8, "oAo")], 5: [(8, "Abo")], 6: [(8, "bo")]},
         "head": {
             5: [(3, "ooo")],
@@ -137,7 +137,7 @@ AXES = {
     },
     # Two steel crescents with teal inlays and gold rims, mirrored; starlight glints on them.
     "starsteelaxe": {
-        "pommel": "yz",
+        "haft": "runed",
         "sparks": [(5, 11), (11, 5), (3, 14), (14, 3)],
         "wing": {
             5: [(3, "ooo")],
@@ -193,23 +193,20 @@ def _place(pixels, segments, palette, mirror=False):
                         pixels[py][px] = palette[letter] + (255,)
 
 
-def _haft(pixels, palette, axe):
-    coils = axe.get("coils", range(0))
-    for row in range(HAFT_TOP, HAFT_END + 1):
-        upper, lower = palette["w"], palette["W"]
-        if row in GRIP:
-            upper, lower = (palette["r"], palette["R"]) if row % 2 else (palette["R"], palette["r"])
-        if row in coils:
-            upper, lower = (palette["A"], palette["b"]) if row % 3 else (palette["w"], palette["W"])
-        pixels[row][row - 1] = palette["o"] + (255,)
-        pixels[row][row] = upper + (255,)
-        pixels[row][row + 1] = lower + (255,)
-        pixels[row][row + 2] = palette["o"] + (255,)
-    light, dark = (palette[letter] for letter in axe["pommel"])
-    for x, y, color in ((23, 24, "o"), (24, 24, light), (25, 24, dark), (26, 24, "o"), (23, 25, "o"),
-                        (24, 25, dark), (25, 25, dark), (26, 25, "o"), (24, 26, "o"), (25, 26, "o"),
-                        (24, 23, "o"), (25, 23, "o")):
-        pixels[y][x] = (palette[color] if isinstance(color, str) else color) + (255,)
+def _haft(pixels, palette, axe, colors, frame):
+    """The axe's haft (pixel_hafts.py) inside a dark outline."""
+    haft = {}
+
+    def put(x, y, color):
+        haft[(x, y)] = color
+
+    pixel_hafts.draw(put, axe["haft"], HAFT_TOP, HAFT_END, _rgb(colors[0]), _rgb(colors[2]), frame)
+    for x, y in haft:
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if (nx, ny) not in haft and 0 <= nx < 32 and 0 <= ny < 32:
+                pixels[ny][nx] = palette["o"] + (255,)
+    for (x, y), color in haft.items():
+        pixels[y][x] = tuple(color[:3]) + (255,)
 
 
 def icon(style, colors, frame=0):
@@ -219,7 +216,7 @@ def icon(style, colors, frame=0):
     pixels = [[None] * 32 for _ in range(32)]
     _place(pixels, axe.get("back", {}), palette)
     _place(pixels, axe.get("wing", {}), palette, mirror=True)
-    _haft(pixels, palette, axe)
+    _haft(pixels, palette, axe, colors, frame)
     _place(pixels, axe.get("wing", {}), palette)
     _place(pixels, axe["head"], palette)
     sparks = axe.get("sparks", [])

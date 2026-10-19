@@ -10,11 +10,17 @@ item's main colour to its light colour. Templates are ordered plain to ornate an
 item's level. Results go to assets/sprites/icons_derived/<id>.png (rewritten every run); the
 game and make_sprites.py use a painted icon first, then a derived one, then the generated
 items.png cell. Kinds with no template (axes, maces, hammers, crossbows, capes, packs, torches,
-potions, most materials) keep their generated icons.
+potions, most materials) keep their generated icons. Soft and fitted wear (SHAPED: slippers, robes,
+leggings, breeches, chausses, legplates) is shaped further: a ramp that keeps dark colours' folds
+clear of the outline, specks of the painting's other colours smoothed away, each part rounded
+from the left (form), and slippers cut down from boots with an opening at the collar (slipper).
 
-    python3 tools/generators/derive_icons.py
+    python3 tools/generators/derive_icons.py                 # every derived icon
+    python3 tools/generators/derive_icons.py --only ID ...   # just these, the rest left as they are
 """
+import argparse
 import colorsys
+import math
 import sys
 from pathlib import Path
 
@@ -66,6 +72,23 @@ def ramp(main, light, t):
     return shine
 
 
+def lifted_ramp(main, light, t):
+    """ramp() for shaped wear, its stops kept apart in lightness so dark colours still show their
+    folds: the darkest tone stays clear of the outline, and light and highlight a step above main."""
+    mh, ml, ms = hls(main)
+    lh, ll, ls = hls(light)
+    dark_l = max(0.15, ml * 0.55)
+    main_l = max(ml, dark_l + 0.1)
+    light_l = max(ll, main_l + 0.14)
+    shine_l = min(0.92, max(light_l + 0.16, ll + (1 - ll) * 0.4))
+    stops = [(0.0, rgb(mh, dark_l, ms * 0.9)), (0.42, rgb(mh, main_l, ms)), (0.78, rgb(lh, light_l, ls)),
+             (1.0, rgb(lh, shine_l, ls * 0.8))]
+    for (t0, c0), (t1, c1) in zip(stops, stops[1:]):
+        if t <= t1:
+            return mix(c0, c1, max(0.0, t - t0) / (t1 - t0))
+    return stops[-1][1]
+
+
 def is_gold(h, l, s):
     return 0.08 <= h <= 0.17 and s >= 0.35 and l >= 0.35
 
@@ -74,7 +97,7 @@ def is_wood(h, l, s):
     return 0.03 <= h <= 0.12 and 0.15 <= s <= 0.75 and l < 0.42
 
 
-def recolour(template, item, wooden):
+def recolour(template, item, wooden, lift=False):
     main, light, accent = (M.rgba(c) for c in item["colors"][:3])
     pixels = [(x, y, template.pixels[y][x]) for y in range(template.height) for x in range(template.width)
               if template.pixels[y][x] is not None]
@@ -82,16 +105,51 @@ def recolour(template, item, wooden):
     ranged = [l for h, l, s in body if l >= 0.12 and not is_gold(h, l, s) and not (wooden and is_wood(h, l, s))]
     low, high = (min(ranged), max(ranged)) if ranged else (0.12, 1.0)
     ah, al, a_s = hls(accent)
+    mh, _, ms = hls(main)
+    shade = {(x, y): (hls(color)[1] - low) / max(0.05, high - low) for x, y, color in pixels}
+    own = _main_hue([hls(c) for _, _, c in pixels if _ramped(c, wooden)])
     result = M.Image(template.width, template.height)
     for x, y, color in pixels:
         h, l, s = hls(color)
         if l < 0.12 or (wooden and is_wood(h, l, s)):
-            result.pixels[y][x] = color
+            # Shaped wear: dark folds take the item's hue, so other colours of the painting don't speckle it.
+            result.pixels[y][x] = rgb(mh, l, min(s, ms)) if lift and l >= 0.04 else color
         elif is_gold(h, l, s):
             result.pixels[y][x] = rgb(ah, l * (0.6 + al * 0.8), max(a_s, s * 0.6))
+        elif lift and not _foreign(h, s, own):
+            result.pixels[y][x] = lifted_ramp(main, light, shade[(x, y)])
+        elif lift:
+            # A speck of another colour of the painting: the median of it and its neighbours, so
+            # its different brightness does not speckle the new colour.
+            near = sorted(shade[q] for q in ((x, y), (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))
+                          if q in shade and _ramped(template.pixels[q[1]][q[0]], wooden))
+            result.pixels[y][x] = lifted_ramp(main, light, near[len(near) // 2])
         else:
             result.pixels[y][x] = ramp(main, light, (l - low) / max(0.05, high - low))
     return result
+
+
+def _main_hue(colors):
+    """The hue most of these (h, l, s) colours share, weighted by saturation, or None for grey."""
+    x = sum(s * math.cos(h * math.tau) for h, _, s in colors)
+    y = sum(s * math.sin(h * math.tau) for h, _, s in colors)
+    if math.hypot(x, y) < 0.05 * max(1, len(colors)):
+        return None
+    return (math.atan2(y, x) / math.tau) % 1.0
+
+
+def _foreign(h, s, own):
+    """Whether a colour is a saturated hue other than the painting's own."""
+    if s < 0.2:
+        return False
+    if own is None:
+        return True
+    return min(abs(h - own), 1 - abs(h - own)) > 0.1
+
+
+def _ramped(color, wooden):
+    h, l, s = hls(color)
+    return l >= 0.12 and not is_gold(h, l, s) and not (wooden and is_wood(h, l, s))
 
 
 def hollow(image):
@@ -119,6 +177,94 @@ def hollow(image):
             for x, y in region:
                 image.pixels[y][x] = None
     return image
+
+
+# Soft and fitted wear whose derived icons get extra shaping: a ramp kept clear of the outline for
+# dark colours (recolour lift), round form per part (form), and slippers cut down from boots.
+SHAPED = {"slippers", "robe", "leggings", "breeches", "chausses", "legplates"}
+FORM_STEP = 0.06       # lightness of one step of form shading
+SLIPPER_CUT = 0.55     # share of a boot pair's height above which a slipper is cut away
+
+
+def _body(color):
+    return color is not None and hls(color)[1] >= 0.12
+
+
+def form(image):
+    """Rounds every part across its width like a cloth or metal tube lit from the left: in each
+    row, each run of body pixels between outlines or gaps is lit on its left and shaded on its
+    right, in whole steps, and a little darker towards the bottom of the piece."""
+    result = M.Image(image.width, image.height)
+    result.over(image)
+    rows = [y for y in range(image.height) if any(_body(c) for c in image.pixels[y])]
+    if not rows:
+        return result
+    top, bottom = rows[0], rows[-1]
+    for y in rows:
+        x = 0
+        while x < image.width:
+            if not _body(image.pixels[y][x]):
+                x += 1
+                continue
+            start = x
+            while x < image.width and _body(image.pixels[y][x]):
+                x += 1
+            length = x - start
+            if length < 3:
+                continue
+            for i in range(length):
+                t = (i + 0.5) / length
+                steps = 1 if t < 0.3 else (-1 if t > 0.7 else 0)
+                if length >= 7 and t > 0.88:
+                    steps = -2
+                steps -= (y - top) / max(1, bottom - top) > 0.85
+                if steps:
+                    result.pixels[y][start + i] = M._hls_shift(image.pixels[y][start + i], steps * FORM_STEP)
+    return result
+
+
+def slipper(image):
+    """A pair of slippers from a painted pair of boots: the shafts are cut away above the ankle,
+    the cut edge becomes a lit collar round a dark opening, and the pair is set a little lower
+    than the middle of the icon."""
+    cells = _cells(image)
+    top = min(y for _, y in cells)
+    bottom = max(y for _, y in cells)
+    cut = top + round((bottom - top) * SLIPPER_CUT)
+    shoes = M.Image(image.width, image.height)
+    for y in range(cut, bottom + 1):
+        for x in range(image.width):
+            shoes.pixels[y][x] = image.pixels[y][x]
+    # Each shoe's opening, an ellipse seen from a little above on its run of the cut row: the lit
+    # back rim of the collar, the dark lining inside, and the lit near rim in front.
+    lining = M.rgba("1c1618")
+    x = 0
+    while x < image.width:
+        if not _body(image.pixels[cut][x]):
+            x += 1
+            continue
+        start = x
+        while x < image.width and _body(image.pixels[cut][x]):
+            x += 1
+        width = x - start
+        if width < 5:
+            continue
+        for i in range(start, x):
+            shoes.pixels[cut][i] = M._hls_shift(image.pixels[cut][i], 0.1)
+        depth = 2 if width >= 8 else 1
+        for row in range(1, depth + 1):
+            inset = row if row < depth else row + 1
+            for i in range(start + inset, x - inset):
+                if _body(image.pixels[cut + row][i]):
+                    shoes.pixels[cut + row][i] = lining
+            near = cut + depth + 1
+        for i in range(start + depth + 1, x - depth - 1):
+            if _body(image.pixels[near][i]):
+                shoes.pixels[near][i] = M._hls_shift(image.pixels[near][i], 0.14)
+    shift = min(image.height - 2 - bottom, (image.height - (bottom - cut + 1)) // 2 + 2 - cut)
+    moved = M.Image(image.width, image.height)
+    moved.over(shoes, 0, shift)
+    return moved
 
 
 def painted(kind):
@@ -288,31 +434,62 @@ def template_for(kind, item):
     return choices[rank]
 
 
+def derive(kind, bases):
+    """The derived icon of `kind`, or None where it keeps its painted, hand-drawn, or generated one."""
+    item = M.ITEMS[kind]
+    # Showpiece helmets and boots draw their own icon (make_sprites.py helm_icon), and so do the
+    # hand-pixelled wands, rods, bows, shields, and spellbooks (pixel_staves.py, pixel_bows.py,
+    # pixel_shields.py, pixel_books.py).
+    if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.SHOWPIECE_STYLES \
+            or M.hand_pixelled_icon(kind) is not None:
+        return None
+    shape = M.look(kind)[0]
+    shaped = shape in SHAPED
+    if kind in bases:
+        base = banded_base(kind, bases)
+        wooden = shape in WOODEN and item.get("slot") not in ARMOR_SLOTS
+    else:
+        name = template_for(kind, item)
+        if name is None:
+            return None
+        base, wooden = painted(name), shape in WOODEN
+    if shape == "slippers":
+        base = slipper(base)
+    icon = recolour(base, item, wooden, lift=shaped)
+    if shape == "bow":
+        icon = hollow(icon)
+    if shaped:
+        icon = form(icon)
+    return M.icon_finish(M.icon_volume(icon))
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--only", nargs="+", metavar="ITEM",
+                        help="rewrite only these items' derived icons, leaving every other icon as it is")
+    args = parser.parse_args()
     DERIVED.mkdir(parents=True, exist_ok=True)
+    bases = banded_bases()
+    if args.only:
+        for kind in args.only:
+            if kind not in M.ITEMS:
+                sys.exit(f"{kind} is not in items.json")
+            icon = derive(kind, bases)
+            if icon is None:
+                sys.exit(f"{kind} has no derived icon")
+            icon.save(DERIVED / f"{kind}.png")
+        print(f"derived {len(args.only)} icons into {DERIVED.relative_to(M.ROOT)}")
+        return
     for old in DERIVED.glob("*.png"):
         old.unlink()
     made, skipped = 0, []
-    bases = banded_bases()
-    for kind, item in M.ITEMS.items():
-        # Showpiece helmets and boots draw their own icon (make_sprites.py helm_icon), and so do the
-        # hand-pixelled wands, rods, bows, shields, and spellbooks (pixel_staves.py, pixel_bows.py,
-        # pixel_shields.py, pixel_books.py).
-        if (PAINTED / f"{kind}.png").exists() or not item.get("colors") or M.look(kind)[0] in M.SHOWPIECE_STYLES \
-                or M.hand_pixelled_icon(kind) is not None:
-            continue
-        shape = M.look(kind)[0]
-        if kind in bases:
-            icon = recolour(banded_base(kind, bases), item, shape in WOODEN and item.get("slot") not in ARMOR_SLOTS)
-        else:
-            name = template_for(kind, item)
-            if name is None:
+    for kind in M.ITEMS:
+        icon = derive(kind, bases)
+        if icon is None:
+            if M.ITEMS[kind].get("colors") and not (PAINTED / f"{kind}.png").exists():
                 skipped.append(kind)
-                continue
-            icon = recolour(painted(name), item, shape in WOODEN)
-        if shape == "bow":
-            icon = hollow(icon)
-        M.icon_finish(M.icon_volume(icon)).save(DERIVED / f"{kind}.png")
+            continue
+        icon.save(DERIVED / f"{kind}.png")
         made += 1
     print(f"derived {made} icons into {DERIVED.relative_to(M.ROOT)}; {len(skipped)} keep generated icons")
     # The painted icons get the repeatable part of the shared finish (outline and contrast).

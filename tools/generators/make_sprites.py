@@ -1860,6 +1860,8 @@ def gear_builder(kind):
         return build
     if slot == "main_hand":
         return painted_held(kind, icon)
+    if kind in CAPE_STYLES:
+        icon = cape_icon(kind, back=True)  # the worn cape shows its back: no clasp or neck hole
     return textured(build, icon, kind, cape=slot == "cape")
 
 
@@ -2064,6 +2066,11 @@ import pixel_bows  # noqa: E402
 import pixel_shields  # noqa: E402
 import pixel_books  # noqa: E402
 import pixel_crossbows  # noqa: E402
+import pixel_charms  # noqa: E402
+import pixel_hafted  # noqa: E402
+import pixel_capes  # noqa: E402
+import pixel_packs  # noqa: E402
+import pixel_food  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2488,9 +2495,86 @@ def crossbow_icon(kind):
     return image
 
 
+# Charms are hand-pixelled (pixel_charms.py): a talisman on a short cord loop; the molten heart and
+# the basilisk eye pulse.
+CHARM_STYLES = {
+    "hearth_charm": "hearth", "tide_charm": "tide", "cinder_charm": "cinder", "dusk_charm": "dusk",
+    "star_charm": "star", "wyrm_charm": "wyrm", "cinderheart_charm": "cinderheart",
+    "basilisk_eye_charm": "basilisk",
+}
+
+
+def charm_icon(kind, frame=0):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_charms.icon(CHARM_STYLES[kind], ITEMS[kind]["colors"], frame)
+    return image
+
+
+# Hammers, maces, and plain axes without a painted icon are hand-pixelled (pixel_hafted.py): each
+# its own head laid across the haft; held, they are built from the icon (painted_held).
+HAFTED_STYLES = {
+    "flint_hatchet": "hatchet", "silverleaf_axe": "leafaxe", "duskiron_cleaver": "cleaver",
+    "quarry_handhammer": "handhammer", "bronze_mace": "mace", "cobalt_warhammer": "warhammer",
+    "stonebreak_pickhammer": "pickhammer", "hollowforge_hammer": "forgehammer", "starforged_maul": "maul",
+    "sanctum_warhammer": "sanctum",
+}
+
+
+def hafted_icon(kind, frame=0):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_hafted.icon(HAFTED_STYLES[kind], ITEMS[kind]["colors"], frame)
+    return image
+
+
+# Capes and cloaks are hand-pixelled (pixel_capes.py): a folded cloak under a collar and clasp, each
+# with its own embroidery, pattern, or cut; worn, they are textured from the icon.
+CAPE_STYLES = {
+    "silverleaf_cape": "silverleaf", "matron_silk_cape": "matronsilk", "cobalt_cape": "cobalt",
+    "ember_cape": "ember", "dusk_cape": "dusk", "cyclops_hide_cloak": "cyclopshide",
+    "starweave_cape": "starweave", "wyrmscale_cape": "wyrmscale", "emberwing_cape": "emberwing",
+    "hollowbloom_cape": "hollowbloom", "sovereign_mantle": "sovereign",
+}
+
+
+def cape_icon(kind, frame=0, back=False):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_capes.icon(CAPE_STYLES[kind], ITEMS[kind]["colors"], frame, back)
+    return image
+
+
+# Plain packs and bags (look "pack") are hand-pixelled (pixel_packs.py), bigger for more slots.
+PACK_STYLES = {
+    "traveler_pack": "pouch", "leather_satchel": "satchel", "explorer_pack": "explorer",
+    "reedweave_bag": "basket", "silkthistle_pack": "silk", "pathfinder_pack": "framed",
+    "nightcotton_haversack": "haversack", "starweave_rucksack": "starweave",
+}
+
+
+def pack_icon(kind):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_packs.icon(PACK_STYLES[kind], ITEMS[kind]["colors"])
+    return image
+
+
+# Food, the glowcap, and the torch icon are hand-pixelled (pixel_food.py), each dish its own; the
+# torch flame flickers. The torch held in hand stays held_torch (gear_builder skips look "torch").
+FOOD_STYLES = {
+    "grilled_perch": "perch", "smoked_eel": "eel", "trout_pie": "pie", "pike_stew": "stew",
+    "glimmerfin_feast": "feast", "ice_shrimp": "shrimp", "glowcap": "glowcap", "torch": "torch",
+}
+
+
+def food_icon(kind, frame=0):
+    image = Image(TILE, TILE)
+    image.pixels = pixel_food.icon(FOOD_STYLES[kind], ITEMS[kind]["colors"], frame)
+    return image
+
+
 # The hand-pixelled families by item, before any generated shape (weapon_icon) is tried.
 HAND_PIXELLED = ((STAFF_STYLES, staff_icon), (BOW_STYLES, bow_icon), (SHIELD_STYLES, shield_icon),
-                 (BOOK_STYLES, book_icon), (CROSSBOW_STYLES, crossbow_icon))
+                 (BOOK_STYLES, book_icon), (CROSSBOW_STYLES, crossbow_icon), (HAFTED_STYLES, hafted_icon),
+                 (CAPE_STYLES, cape_icon), (PACK_STYLES, pack_icon), (CHARM_STYLES, charm_icon),
+                 (FOOD_STYLES, food_icon))
 
 
 def hand_pixelled_icon(kind):
@@ -2532,7 +2616,10 @@ def animated(kind):
     shape, extras = look(kind)
     return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE))) \
         or (shape == "necklace" and bool(extras & set(pixel_necklaces.GLOWING))) \
-        or (shape in SWORD_SHAPES and painted_icon(kind) is None and sword_style(kind) in pixel_swords.GLOWING)
+        or (shape in SWORD_SHAPES and painted_icon(kind) is None and sword_style(kind) in pixel_swords.GLOWING) \
+        or (kind in HAFTED_STYLES and painted_icon(kind) is None and HAFTED_STYLES[kind] in pixel_hafted.GLOWING) \
+        or (kind in CHARM_STYLES and CHARM_STYLES[kind] in pixel_charms.ANIMATED) \
+        or (kind in FOOD_STYLES and FOOD_STYLES[kind] in pixel_food.ANIMATED)
 
 
 def icon_frames(kind):
@@ -2548,6 +2635,12 @@ def icon_frames(kind):
             icon = necklace_icon(kind, frame)
         elif shape in SWORD_SHAPES and painted_icon(kind) is None:
             icon = sword_icon(kind, frame)
+        elif kind in HAFTED_STYLES and painted_icon(kind) is None:
+            icon = hafted_icon(kind, frame)
+        elif kind in CHARM_STYLES:
+            icon = charm_icon(kind, frame)
+        elif kind in FOOD_STYLES:
+            icon = food_icon(kind, frame)
         else:
             icon = icon_volume(item_icon(kind)) if needs_volume(kind) else item_icon(kind)
         icon = icon_finish(icon)
@@ -2868,7 +2961,9 @@ def icon_volume(icon):
 
 def needs_volume(kind):
     """Whether an item's icon still needs icon_volume: the 3D-rendered and hand-shaded families
-    (showpieces, axes, backpacks, necklaces) already have their volume."""
+    (showpieces, axes, backpacks, necklaces, and every HAND_PIXELLED family) already have their volume."""
+    if any(kind in styles for styles, _ in HAND_PIXELLED):
+        return False
     return look(kind)[0] not in SHOWPIECE_STYLES + ("backpack", "necklace", "coins", "trophy", "potion", "wand", "rod", "bow", "heater", "tower",
                               "buckler", "book", "crossbow") + SWORD_SHAPES         + MATERIAL_SHAPES
 
