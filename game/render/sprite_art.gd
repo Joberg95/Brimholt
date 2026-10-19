@@ -208,6 +208,16 @@ const DEAD_TREE_FIRST: int = 3
 const DEAD_TREE_VARIANTS: int = 2
 const DESERT_PLANT_FIRST: int = 5
 const DESERT_PLANT_VARIANTS: int = 3
+## The void and "no overlay" in floor_texel.
+const NO_TILE: int = 255
+const BLEND_WATER: int = 16
+const BLEND_SWAY: int = 32
+## Blend priority by the first of each four-tile floor set (grass, below DIRT_TILE, is 8): water
+## lowest, then bog, dusk soil and cave floor, sand, gravel, dirt roads, and snow.
+const FLOOR_PRIORITY: Dictionary = {
+	WATER_TILE: 1 | BLEND_WATER, BOG_TILE: 2, DUSK_TILE: 3, CAVE_TILE: 3, SAND_TILE: 4, GRAVEL_TILE: 5,
+	DIRT_TILE: 6, SNOW_TILE: 7,
+}
 ## Edge overlay order in the tile sheet: north, east, south, west.
 const EDGES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 
@@ -311,61 +321,62 @@ static func _tile_regions() -> Array[Rect2]:
 	return regions
 
 
-static func draw_floor(canvas: CanvasItem, cell: Vector2i, time: float) -> void:
-	var dest: Rect2 = Rect2(Vector2(cell) * TILE, Vector2.ONE * TILE)
+## Floor data for game/render/terrain.gdshader, one texel per cell packed little-endian in an int:
+## R the floor tile; G an overlay tile drawn over the quarters set in B's low four bits (a pier's
+## planks, a building's floor beside its wall; NO_TILE for none); B's high four bits the kerbs by
+## side (EDGES order); A the blend (floor_blend). R = NO_TILE is the void, drawn black.
+static func floor_texel(cell: Vector2i) -> int:
 	var tile: String = tile_at(cell)
 	if tile == " " or tile.is_empty():
-		canvas.draw_rect(dest, Color.BLACK)
-		return
+		return NO_TILE
+	var base: int
+	var overlay: int = NO_TILE
+	var bits: int = 0
 	if tile == "#":
-		_draw_wall_floor(canvas, cell, dest)
-		return
-	canvas.draw_texture_rect_region(TILES, dest, _tile_region(_floor_index(tile, cell, time)))
-	if tile == "=" and World.OVERWORLD.has_point(cell):
-		for side: int in EDGES.size():
-			if tile_at(cell + EDGES[side]) in CURBED:
-				canvas.draw_texture_rect_region(TILES, dest, _tile_region(CURB_TILE + side))
-		return
-	# Only roads, dusk soil, sand, water, and piers have edge overlays; skip neighbour lookups otherwise.
-	if tile != "," and tile != "d" and tile != "~" and tile != "b" and tile != ":" and tile != "K":
-		return
-	for side: int in EDGES.size():
-		var neighbor: String = tile_at(cell + EDGES[side])
-		if (tile == ":" or tile == "K") and (neighbor == "." or neighbor == "T"):
-			canvas.draw_texture_rect_region(TILES, dest, _tile_region(SAND_EDGE_TILE + side))
-		elif (tile == "," and neighbor == ".") or (tile == "d" and neighbor in [".", ","]):
-			canvas.draw_texture_rect_region(TILES, dest, _tile_region(DIRT_EDGE_TILE + side))
-		elif (tile == "~" or tile == "b") and not neighbor.is_empty() and neighbor in World.LAND:
-			canvas.draw_texture_rect_region(TILES, dest, _tile_region(SHORE_TILE + side))
-	if tile == "b":
-		var plank: int = PLANK_TILE if _run(cell, Vector2i.DOWN) > _run(cell, Vector2i.RIGHT) else VERTICAL_PLANK_TILE
-		canvas.draw_texture_rect_region(TILES, dest, _tile_region(plank + noise(cell, 6) % 2))
+		var outside: String = "."
+		var inside: String = ""
+		for side: Vector2i in EDGES:
+			var next: String = tile_at(cell + side)
+			# Never a stairway: a wall beside one would show a second hole under it.
+			if next.is_empty() or next in World.WALLS or next in World.TREES or next in ["~", "b", "v", "^"]:
+				continue
+			if World.ROOM_AT.has(cell + side):
+				inside = next if inside.is_empty() and next in World.LAND and next != "v" else inside
+			elif outside == ".":
+				outside = next
+		base = _floor_index(outside, cell, 0.0)
+		overlay = _floor_index("=" if inside.is_empty() else inside, cell, 0.0, true)
+		var quarter: int = 0
+		for corner: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
+			if World.ROOM_AT.has(cell + Vector2i(corner.x, 0)) or World.ROOM_AT.has(cell + Vector2i(0, corner.y)) \
+					or World.ROOM_AT.has(cell + corner):
+				bits |= 1 << quarter
+			quarter += 1
+		if bits == 0:
+			overlay = NO_TILE
+	else:
+		base = _floor_index(tile, cell, 0.0)
+		if tile == "b":
+			overlay = (PLANK_TILE if _run(cell, Vector2i.DOWN) > _run(cell, Vector2i.RIGHT) else VERTICAL_PLANK_TILE) \
+				+ noise(cell, 6) % 2
+			bits = 15
+		elif tile == "=" and World.OVERWORLD.has_point(cell):
+			for side: int in EDGES.size():
+				if tile_at(cell + EDGES[side]) in CURBED:
+					bits |= 16 << side
+	return base | overlay << 8 | bits << 16 | floor_blend(base) << 24
 
 
-## A thin wall stands in the middle of its tile: the ground outside shows on one side and a
-## building's floor on the inside (each quarter toward a room cell).
-static func _draw_wall_floor(canvas: CanvasItem, cell: Vector2i, dest: Rect2) -> void:
-	var outside: String = "."
-	var inside: String = ""
-	for side: Vector2i in EDGES:
-		var tile: String = tile_at(cell + side)
-		# Never a stairway: a wall beside one would show a second hole under it.
-		if tile.is_empty() or tile in World.WALLS or tile in World.TREES or tile in ["~", "b", "v", "^"]:
-			continue
-		if World.ROOM_AT.has(cell + side):
-			inside = tile if inside.is_empty() and tile in World.LAND and tile != "v" else inside
-		elif outside == ".":
-			outside = tile
-	canvas.draw_texture_rect_region(TILES, dest, _tile_region(_floor_index(outside, cell, 0.0)))
-	if inside.is_empty():
-		inside = "="
-	var region: Rect2 = _tile_region(_floor_index(inside, cell, 0.0, true))
-	for quarter: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
-		if World.ROOM_AT.has(cell + Vector2i(quarter.x, 0)) or World.ROOM_AT.has(cell + Vector2i(0, quarter.y)) \
-				or World.ROOM_AT.has(cell + quarter):
-			var offset := Vector2(16 if quarter.x > 0 else 0, 16 if quarter.y > 0 else 0)
-			canvas.draw_texture_rect_region(TILES, Rect2(dest.position + offset, Vector2(16, 16)),
-				Rect2(region.position + offset, Vector2(16, 16)))
+## How a floor tile meets its neighbours in terrain.gdshader: bits 0-3 a priority (natural ground
+## of a higher priority spills over a lower one in a ragged edge; 0 is a built floor that never
+## blends), BLEND_WATER for animated water with shore foam, BLEND_SWAY for grass that sways.
+static func floor_blend(index: int) -> int:
+	if index < DIRT_TILE:
+		return 8 | BLEND_SWAY
+	for start: int in FLOOR_PRIORITY:
+		if index >= start and index < start + 4:
+			return FLOOR_PRIORITY[start]
+	return 0
 
 
 ## The tile index of a floor; `indoors` marks a building's floor seen beside its wall.

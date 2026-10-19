@@ -1,39 +1,39 @@
 extends Node2D
-## Floors drawn behind the world view, in CHUNK x CHUNK tile pieces. Floors never change, so
-## each chunk is drawn once and kept; chunks near the camera are built a few per frame and far
-## ones are freed. Water and piers sit in a child of each chunk with an animated shader
-## (water.gdshader), so the water moves without any redrawing.
+## Floors on the GPU, in CHUNK x CHUNK tile pieces: each chunk is one quad whose texture is a small
+## data image (one texel per cell plus a one-cell border, SpriteArt.floor_texel) that
+## terrain.gdshader turns into tiles from tiles.png, with blended edges between natural grounds,
+## animated water and shore foam, and swaying grass. Floors never change, so a chunk's data is built
+## once; chunks near the camera are built a few per frame and far ones are freed.
 
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
-const WATER_SHADER: Shader = preload("res://game/render/water.gdshader")
+const TERRAIN_SHADER: Shader = preload("res://game/render/terrain.gdshader")
 const CHUNK: int = 16
 ## Chunks around the view kept or built ahead, and the most built in one frame.
 const KEEP_MARGIN: int = 1
-const BUILDS_PER_FRAME: int = 1
+const BUILDS_PER_FRAME: int = 2
 
 
 class Chunk extends Node2D:
 	var area: Rect2i
-	var water: bool
+	var data: ImageTexture
 
 	func _draw() -> void:
-		for y: int in range(area.position.y, area.end.y):
-			var row: String = World.ROWS[y]
-			for x: int in range(area.position.x, area.end.x):
-				if (row[x] == "~" or row[x] == "b") == water:
-					SpriteArt.draw_floor(self, Vector2i(x, y), 0.0)
+		draw_texture_rect(data, Rect2(Vector2(area.position * SpriteArt.TILE), Vector2(area.size * SpriteArt.TILE)), false)
 
 
 var view: Node2D
 var _chunks: Dictionary = {}
-var _water_material: ShaderMaterial
+var _material: ShaderMaterial
 
 
 func _ready() -> void:
 	show_behind_parent = true
-	_water_material = ShaderMaterial.new()
-	_water_material.shader = WATER_SHADER
+	_material = ShaderMaterial.new()
+	_material.shader = TERRAIN_SHADER
+	_material.set_shader_parameter("tiles", SpriteArt.TILES)
+	_material.set_shader_parameter("curb_tile", SpriteArt.CURB_TILE)
+	_material.set_shader_parameter("water_tile", SpriteArt.WATER_TILE)
 
 
 func _process(_delta: float) -> void:
@@ -63,13 +63,23 @@ func _process(_delta: float) -> void:
 
 
 func _build(area: Rect2i) -> Node2D:
-	var ground := Chunk.new()
-	ground.area = area
-	ground.water = false
-	add_child(ground)
-	var wet := Chunk.new()
-	wet.area = area
-	wet.water = true
-	wet.material = _water_material
-	ground.add_child(wet)
-	return ground
+	var chunk := Chunk.new()
+	chunk.area = area
+	chunk.data = ImageTexture.create_from_image(data_image(area))
+	chunk.material = _material
+	chunk.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(chunk)
+	return chunk
+
+
+## The floor data of an area and a one-cell border around it, RGBA8 (SpriteArt.floor_texel).
+static func data_image(area: Rect2i) -> Image:
+	var size: Vector2i = area.size + Vector2i(2, 2)
+	var bytes := PackedByteArray()
+	bytes.resize(size.x * size.y * 4)
+	var at: int = 0
+	for y: int in range(area.position.y - 1, area.end.y + 1):
+		for x: int in range(area.position.x - 1, area.end.x + 1):
+			bytes.encode_u32(at, SpriteArt.floor_texel(Vector2i(x, y)))
+			at += 4
+	return Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, bytes)

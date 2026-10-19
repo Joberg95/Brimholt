@@ -62,8 +62,8 @@ game/
     start_panel.gd       Start screen until you play: painted backdrop, character list and creation, play solo, host, or join
     controls_menu.gd     Key-binding window
   render/                Client-side drawing only
-    floor_layer.gd       Floors drawn once into cached 16x16-tile chunks (one chunk per frame)
-    water.gdshader       Animated water and pier chunks, no redraw needed
+    floor_layer.gd       Floor chunks: one data texture per 16x16 tiles, drawn by terrain.gdshader
+    terrain.gdshader     GPU floors: blended ragged edges, animated water and foam, swaying grass
     world_view.gd        Depth-ordered walls, trees, NPCs, items and actors (sparse, cached)
     world_overlay.gd     Unlit layer: nameplates, NPC names, target square, floating numbers
     lighting.gd          Day/night, zone ambient, and weather tint (CanvasModulate), pooled point lights
@@ -127,9 +127,15 @@ sender-validated RPCs, the camera, input, and interpolation, and assembles the U
 `game/ui/` (inventory panel and drag-and-drop, action bar, NPC menus and dialogs, minimap and
 world map, HUD, start menu).
 `game/render/world_view.gd` draws the visible, depth-ordered part of the world and `game/render/sprite_art.gd` maps tiles, walls, characters, gear, and icons to
-sprite-sheet regions. Floors are not redrawn per frame: `floor_layer.gd` draws each
-16x16-tile chunk once (visible chunks first, at most one per frame, far chunks freed), and
-water is a separate chunk animated by `water.gdshader`. `world_view.gd` caches the walls,
+sprite-sheet regions. Floors are drawn on the GPU: `floor_layer.gd` packs each 16x16-tile chunk
+into a small data texture once (one RGBA8 texel per cell plus a one-cell border, from
+`SpriteArt.floor_texel`: R base tile, G overlay tile, B overlay quarters and kerb sides, A blend
+priority and flags; visible chunks first, two per frame, far chunks freed), and
+`terrain.gdshader` draws it as one rect, fetching tiles from `tiles.png`. Natural ground of higher
+priority (`SpriteArt.FLOOR_PRIORITY`: grass over dirt over sand over water) reaches a few noisy
+pixels over its lower neighbour with a darkened lip; built floors (cobble, planks, obsidian) keep
+hard edges and exact texels. Water animates with glints, swell, and shore foam, and grass sways,
+from `TIME` alone, so nothing is redrawn per frame. `world_view.gd` caches the walls,
 trees, and NPCs around the view and each frame visits only cells with content, sorted by
 depth. On the host, monster steps share one occupied-tile set per tick
 (`World.occupied_cells`) and monsters sleep at home unless a player is in a nearby 16-tile chunk.

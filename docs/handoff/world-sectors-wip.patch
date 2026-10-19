@@ -1,0 +1,128 @@
+diff --git a/game/data/atlas.gd b/game/data/atlas.gd
+index b820a5f..824e686 100644
+--- a/game/data/atlas.gd
++++ b/game/data/atlas.gd
+@@ -1,43 +1,31 @@
+ extends RefCounted
+-## The overworld's continents and how they sit on the world map. The grid keeps the frost isles
+-## south of the mainland (Biomes.ISLES), where they cost no coordinate changes; the world map
+-## shows them to the west instead, like islands off the coast. Each sheet is a rectangle of cells drawn with its
+-## corner at `at` in map tiles. The baker (tools/generators/world_map.gd) paints the sheets this
+-## way, and the map window (game/ui/world_maps.gd) places everything through to_map().
++## The world's geography: how big the overworld is, how its terrain is stored (SECTOR-sized
++## scenes, see docs/architecture.md), and its continents. Today's heartland (the mainland and the
++## frost isles south of it) sits in the north-west corner; the rest of the OVERWORLD_SIZE square
++## is open deep sea until new land is painted there, east and south. Instanced dungeons and
++## elite caves are painted in bands right of the overworld (game/data/dungeons.gd, caves.gd).
++## The world map (game/ui/world_maps.gd) shows every continent where it really lies.
+ 
+ const Biomes = preload("res://game/data/biomes.gd")
+ 
+-## Map tiles of open sea between the isles and the mainland, and above the isles.
+-const STRAIT: int = 16
+-const ISLES_TOP: int = 16
++## The overworld in cells, from (0, 0). Unpainted cells inside it are deep sea ("~").
++const OVERWORLD_SIZE: Vector2i = Vector2i(1920, 1920)
++## Cells per side of a terrain sector (game/maps/sectors/<sx>_<sy>.tscn) and of a world map page
++## (assets/sprites/world_map/<sx>_<sy>.png).
++const SECTOR: int = 128
+ const MAINLAND: Rect2i = Rect2i(0, 0, 384, 384)
+-## Each sheet is one continent: you cross between them only by boat.
+-const SHEETS: Array = [
+-	{"name": "the mainland", "cells": MAINLAND, "at": Vector2i(160 + STRAIT, 0)},
+-	{"name": "the frost isles", "cells": Biomes.ISLES, "at": Vector2i(0, ISLES_TOP)},
++## Each continent is crossed to and from only by boat.
++const CONTINENTS: Array = [
++	{"name": "the mainland", "cells": MAINLAND},
++	{"name": "the frost isles", "cells": Biomes.ISLES},
+ ]
+-## The world map in tiles: the isles, the strait, and the mainland.
+-const SIZE: Vector2i = Vector2i(160 + STRAIT + 384, 384)
+ 
+ 
+-## The sheet holding `cell`, or the mainland's for cells on no sheet (the sea between them).
+-static func sheet_of(cell: Vector2i) -> Dictionary:
+-	for sheet: Dictionary in SHEETS:
+-		if (sheet["cells"] as Rect2i).has_point(cell):
+-			return sheet
+-	return SHEETS[0]
++## The sector holding `cell`.
++static func sector_of(cell: Vector2i) -> Vector2i:
++	return Vector2i(floori(cell.x / float(SECTOR)), floori(cell.y / float(SECTOR)))
+ 
+ 
+-## Where a (fractional) tile appears on the world map, in map tiles.
+-static func to_map(tile: Vector2) -> Vector2:
+-	var sheet: Dictionary = sheet_of(Vector2i(tile.floor()))
+-	return tile - Vector2(sheet["cells"].position) + Vector2(sheet["at"])
+-
+-
+-## The tile under a world map point, or (-1, -1) for open sea between the sheets.
+-static func from_map(point: Vector2) -> Vector2:
+-	for sheet: Dictionary in SHEETS:
+-		var local: Vector2 = point - Vector2(sheet["at"])
+-		if Rect2(Vector2.ZERO, Vector2(sheet["cells"].size)).has_point(local):
+-			return local + Vector2(sheet["cells"].position)
+-	return Vector2(-1, -1)
++## A sector's cells.
++static func sector_rect(sector: Vector2i) -> Rect2i:
++	return Rect2i(sector * SECTOR, Vector2i(SECTOR, SECTOR))
+diff --git a/game/data/biomes.gd b/game/data/biomes.gd
+index a353174..e54987b 100644
+--- a/game/data/biomes.gd
++++ b/game/data/biomes.gd
+@@ -25,8 +25,8 @@ static func in_desert(cell: Vector2i) -> bool:
+ 
+ 
+ ## The frost isles (tools/generators/frost_isles.gd): snow, firs, and the port of Hrimvik, in free
+-## grid space south of the mainland behind ISLES_SEA rows of open sea, reached only by boat. The
+-## world map shows them west of the mainland (game/data/atlas.gd). Houses there have log walls,
++## grid space south of the mainland behind ISLES_SEA rows of open sea, reached only by boat (a continent of
++## their own, game/data/atlas.gd). Houses there have log walls,
+ ## snowed roofs, and plank floors; it snows instead of raining, and the light is colder.
+ const ISLES_SEA: int = 40
+ const ISLES: Rect2i = Rect2i(0, 384 + ISLES_SEA, 160, 128)
+diff --git a/game/data/caves.gd b/game/data/caves.gd
+index 4f5f3af..f56015e 100644
+--- a/game/data/caves.gd
++++ b/game/data/caves.gd
+@@ -7,8 +7,11 @@ extends RefCounted
+ ## (Balance "elite": more health and damage, five times the experience) and a champion in the
+ ## deepest hall: harder than the hunts above ground, and better paid.
+ 
+-## First column of the cave band: past the Void Throne arena (tools/generators/void_throne.gd).
+-const BAND_X: int = 624
++const Dungeons = preload("res://game/data/dungeons.gd")
++
++## First column of the cave band: past the Void Throne arena (tools/generators/void_throne.gd, 36
++## columns with a gap of four either side) beyond the dungeon band.
++const BAND_X: int = Dungeons.BAND_END + 44
+ ## Rows between caves, stacked top to bottom in ORDER.
+ const GAP: int = 4
+ const ORDER: Array[String] = ["ogre_warrens", "drowned_grotto", "ember_deep", "frostvault", "rimewater_trench",
+diff --git a/game/data/dungeons.gd b/game/data/dungeons.gd
+index b118950..8b647a2 100644
+--- a/game/data/dungeons.gd
++++ b/game/data/dungeons.gd
+@@ -14,15 +14,17 @@ extends RefCounted
+ ## pitch black: only a held torch lights it. "theme" "cellar" draws its walls in red-brown brick
+ ## over a dark brick floor (SpriteArt). Caves are grown by tools/generators/cave_layouts.py.
+ 
++const Atlas = preload("res://game/data/atlas.gd")
++
+ ## Prop symbols in layouts -> furniture kinds (SpriteArt.FURNITURE).
+ const PROPS: Dictionary = {"B": "barrel", "X": "crate"}
+ 
+-## First column of the dungeon band; the overworld is everything left of BAND_X - COPY_GAP.
+-const BAND_X: int = 388
++const COPY_GAP: int = 4
++## First column of the dungeon band, COPY_GAP columns right of the overworld (Atlas.OVERWORLD_SIZE).
++const BAND_X: int = Atlas.OVERWORLD_SIZE.x + COPY_GAP
+ ## Column the band stops before; the Void Throne arena (tools/generators/void_throne.gd) lies past
+ ## it, and repainting the band (tools/generators/dungeons.gd) clears only up to here.
+-const BAND_END: int = 580
+-const COPY_GAP: int = 4
++const BAND_END: int = BAND_X + 192
+ const RESET_SECONDS: float = 60.0
+ ## Band columns, left to right.
+ const ORDER: Array[String] = ["cinder_cellar", "ashford_crypt", "highmoor_mine", "silkhollow"]
