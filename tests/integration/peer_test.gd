@@ -512,9 +512,12 @@ func _dedicated_client_tick(now: float) -> void:
 					and stage_messages.has("Walk closer to a trainer") and state(own)["vocation"] == "druid" \
 					and now - stage_since > 0.25:
 				game.move_item_local({"type": "backpack", "index": 0}, {"type": "ground", "cell": Vector2i(5, 7)})
+				# PvP is switched only at the warden the host checks, never by a forged or distant request.
+				game.request_pvp.rpc_id(1, "reedmere_warden", true)
 				advance()
 		2:
-			if game.ground_view.get(Vector2i(5, 7), []) == ["ember_cap"] and now - stage_since > 0.2:
+			if game.ground_view.get(Vector2i(5, 7), []) == ["ember_cap"] and stage_messages.has("Walk closer to the warden") \
+					and not state(own)["pvp"] and now - stage_since > 0.2:
 				game.move_item_local({"type": "ground", "cell": Vector2i(5, 7)}, {"type": "backpack"})
 				advance()
 		3:

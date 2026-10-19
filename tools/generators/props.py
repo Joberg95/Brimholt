@@ -554,7 +554,7 @@ def _lean(parts, angle):
 def sign(kind):
     """A painted wooden sign hanging from an iron bracket, its face turned to the viewer, with the
     service's emblem on it: a potion and a sword (vendor), a heap of coins (banker), a hammer and
-    a green flask (artisan)."""
+    a green flask (artisan), two crossed swords (warden)."""
     board = wood("8e6238", 4.4)
     parts = [box((-1, 0, 16.4), (13, 0.7, 0.7), DARK_IRON, group=1), box((-13.5, 0, 12), (0.7, 0.7, 5), DARK_IRON, group=1),
              box((-6, 0, 15), (0.35, 0.35, 1.4), DARK_IRON), box((8, 0, 15), (0.35, 0.35, 1.4), DARK_IRON),
@@ -569,6 +569,15 @@ def sign(kind):
     elif kind == "banker":
         for x, z in ((-5, 4.2), (0.5, 4.2), (6, 4.2), (-2.2, 9.2), (3.2, 9.2)):
             parts += [cyl((x, face + 0.9, z), 2.5, 0.6, Material("8a6418")), cyl((x, face + 0.3, z), 1.9, 0.6, GOLD, (0, -1, 0))]
+    elif kind == "warden":
+        # Narrow blades in a blued steel so the two read apart on the small board.
+        blade = Material("a2aab2", gloss=0.9)
+        for tilt, depth in ((0.75, face), (-0.75, face - 0.5)):
+            axis = (math.sin(tilt), 0.0, math.cos(tilt))
+            at = lambda along, axis=axis, depth=depth: (1 + axis[0] * along, depth, 6.5 + axis[2] * along)
+            turn = turn_y(tilt)
+            parts += [box(at(1.8), (0.55, 0.4, 4.6), blade, turn), box(at(-3.2), (2.4, 0.6, 0.55), BRASS, turn),
+                      box(at(-4.5), (0.6, 0.5, 0.8), DARK_WOOD, turn), box(at(-5.7), (0.8, 0.6, 0.5), BRASS, turn)]
     else:
         parts += [box((-3.5, face, 6.0), (0.8, 0.6, 4.4), DARK_WOOD), box((-3.5, face, 11.0), (3.6, 0.8, 1.7), IRON),
                   ell((5, face, 5.6), (3.0, 1.0, 3.0), GLASS_GREEN), box((5, face, 9.6), (1.0, 0.7, 1.6), GLASS_GREEN),

@@ -542,6 +542,7 @@ func _check_town_services() -> bool:
 	trade_scroll.scroll_vertical = 80
 	await process_frame
 	var scrolled: int = trade_scroll.scroll_vertical
+	await create_timer(World.ITEM_SECONDS + 0.05).timeout  # the earlier buy's item cooldown
 	game.buy_local("cinder_vendor", "health_potion", 1)
 	for wait: int in 4:
 		await process_frame

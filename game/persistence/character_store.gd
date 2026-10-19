@@ -131,6 +131,7 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 		"skills": player["skills"].duplicate(true),
 		"skull": player["skull"], "skull_left": maxf(0.0, player["skull_until"] - now) if not player["skull"].is_empty() else 0.0,
 		"unjustified_ages": ages,
+		"pvp": player["pvp"], "pvp_toggle_left": maxf(0.0, player["pvp_toggle_at"] - now),
 	}
 
 
@@ -231,6 +232,10 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 	if skull in ["white", "red"] and left > 0.0:
 		player["skull"] = skull
 		player["skull_until"] = now + minf(left, Combat.RED_SKULL_SECONDS)
+	player["pvp"] = typeof(data.get("pvp")) == TYPE_BOOL and data["pvp"]
+	var toggle_left: float = _float(data.get("pvp_toggle_left"))
+	if toggle_left > 0.0:
+		player["pvp_toggle_at"] = now + minf(toggle_left, Balance.PVP_TOGGLE_SECONDS)
 	var ages: Variant = data.get("unjustified_ages")
 	if typeof(ages) == TYPE_ARRAY:
 		for age: Variant in ages:

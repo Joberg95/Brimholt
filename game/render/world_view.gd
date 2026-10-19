@@ -27,6 +27,7 @@ const TOWNSFOLK_LOOKS: Dictionary = {
 	"vendor": [{"helmet": "ember_cap", "armor": "moss_coat"}, Color("#8a6a3a")],
 	"banker": [{"armor": "bronze_scale_coat"}, Color("#4a4a6a")],
 	"artisan": [{"armor": "hide_jerkin", "helmet": "hide_hood"}, Color("#7a5a3a")],
+	"warden": [{"armor": "bronze_scale_coat", "helmet": "ember_cap"}, Color("#7a3a3a")],
 }
 ## Extra tiles drawn around the view: tall sprites below the view reach up into it.
 const MARGIN: Rect2i = Rect2i(-2, -2, 4, 6)

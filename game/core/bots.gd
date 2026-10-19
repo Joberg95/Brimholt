@@ -9,9 +9,9 @@ extends RefCounted
 ## bots: solo play (game/core/solo.gd) brings its own, and tests use the host's spawn_bot.
 ##
 ## Stances:
-##   "hunter"  hunts monsters near its post and fights back against players who attack it.
-##   "pvp"     also attacks any player in reach while both stand in a PvP zone.
-##   "dummy"   stands still and never attacks: a target for testing damage and skulls.
+##   "hunter"  hunts monsters near its post; its PvP is off, so players cannot attack it.
+##   "pvp"     PvP on: also attacks any player with PvP on in reach while both stand in a PvP zone.
+##   "dummy"   stands still and never attacks: a PvP-on target for testing damage and skulls.
 ## Solo play (game/core/solo.gd) adds two more:
 ##   "companion"  follows its leader in their party at their level and gear tier, fights what
 ##                they fight or what attacks the party, heals and taunts for the group, and
@@ -19,6 +19,11 @@ extends RefCounted
 ##   "rival"      an adventurer band: its leader takes a task at its giver, hunts the task's
 ##                monsters at a camp, and turns it in, again and again (run_plan); members follow
 ##                the leader like companions. A band may ambush players in a PvP zone ("ambush").
+##                Rivals have PvP on; companions follow their leader's PvP switch.
+##                A lone rival ("roamer": its own leader, no band) runs the same errands by
+##                itself. Roamer "pvp" keeps PvP on; roamer "switch" flips it at Reedmere's
+##                warden now and then (SWITCH_CHANCE). With PvP on, a roamer sometimes hunts a
+##                camp in a PvP zone (PVP_HUNT_CHANCE) and attacks any PvP-on player near it there.
 ## Hunters, PvP bots, and rivals also collect the loot their bot group earned and sell it at the
 ## nearest vendor when their packs are nearly full (game/core/bot_loot.gd); loot a human player
 ## earned is left for them, and loot that does not fit stays on the ground.
@@ -94,6 +99,11 @@ const CAMP_REACH: int = 6
 ## camp_post results by camp marker (posts never change).
 static var _posts: Dictionary = {}
 const AMBUSH_RADIUS: int = 12
+## A "switch" roamer's chance, at each new errand, to walk to the warden and flip its PvP switch
+## (when the switch may change: Balance.PVP_TOGGLE_SECONDS, no skull).
+const SWITCH_CHANCE: float = 0.3
+## A PvP-on roamer's chance, at each new errand, to hunt a camp in a PvP zone of its level.
+const PVP_HUNT_CHANCE: float = 0.5
 ## Fights against players: when a trained policy exists (PolicyNet.PVP_PATH, tools/training/), it
 ## moves the bot, casts, and drinks (run_policy) instead of the scripted engage and resources.
 ## Difficulty weakens it like a human: "noise" is the chance of a random choice each turn,
@@ -165,12 +175,17 @@ func add(vocation: String, level: int, stance: String, near: Vector2i, now: floa
 	var post: Vector2i = free_cell_near(near, now, id)
 	bots[id] = {"vocation": vocation, "level": clampi(level, 1, Balance.MAX_LEVEL), "stance": stance, "post": post,
 		"next_think": now + think_phase(id), "last_cell": post, "restore_at": -1.0, "leader": int(extra.get("leader", 0)),
-		"name": String(extra.get("name", "")), "plan": {}, "route": []}
+		"name": String(extra.get("name", "")), "plan": {}, "route": [], "roamer": String(extra.get("roamer", ""))}
 	world.players[id]["bot"] = true
 	if not bots[id]["name"].is_empty():
 		world.players[id]["name"] = bots[id]["name"]
 	# Companions keep what they carry when they die (they come straight back); rivals drop theirs.
 	world.players[id]["companion"] = stance == "companion"
+	# PvP and rival bots fight players with PvP on, and dummies take their hits; hunters keep
+	# PvP off; companions share their leader's switch.
+	world.players[id]["pvp"] = stance in ["pvp", "rival", "dummy"]
+	if stance == "companion":
+		world.players[id]["pvp_of"] = bots[id]["leader"]
 	var agent: Node = BotAgent.new()
 	agent.bots = self
 	agent.id = id
@@ -298,20 +313,29 @@ static func think_phase(id: int) -> float:
 	return THINK_SECONDS * fposmod(id * 0.6180339887, 1.0)
 
 
-## Whether the trained policy fights for this bot now: there is one and its target is a player it
-## may attack.
-func policy_drives(id: int) -> bool:
-	if policy == null or not world.players.has(id):
+## The policy that fights for this bot: its own "net" (an evaluation rival) or the shared one.
+func net_of(id: int) -> PolicyNet:
+	return bots.get(id, {}).get("net", policy) as PolicyNet
+
+
+## Whether the trained policy fights for this bot now: there is one, the bot is not held to the
+## scripted fight ("scripted", the training and evaluation opponent), and its target is a player
+## it may attack. A bot that only defends itself (not a PvP or rival bot) waits for the player to
+## strike first (Combat.justified), so fighting back never earns it a skull.
+func policy_drives(id: int, now: float) -> bool:
+	if net_of(id) == null or not world.players.has(id) or bots.get(id, {}).get("scripted", false):
 		return false
 	var target: int = world.players[id]["target"]
-	return target > 0 and world.players.has(target) and combat.hostile(id, target)
+	if target <= 0 or not world.players.has(target) or not combat.hostile(id, target):
+		return false
+	return bots[id]["stance"] in ["pvp", "rival"] or combat.justified(id, target, now)
 
 
 ## One turn of the trained policy against the bot's player target: it sees the fight (as it was
 ## `delay` turns ago at lower difficulties), picks a move and an act, and carries them out through
 ## the real rules (PvpBrain.apply). False when the policy does not drive this bot (fall back to engage).
 func run_policy(id: int, now: float, events: Array) -> bool:
-	if not policy_drives(id):
+	if not policy_drives(id, now):
 		bots[id].erase("sights")
 		return false
 	var foe: int = world.players[id]["target"]
@@ -321,7 +345,7 @@ func run_policy(id: int, now: float, events: Array) -> bool:
 	while sights.size() > int(level["delay"]) + 1:
 		sights.pop_front()
 	bots[id]["sights"] = sights
-	var choice: Dictionary = policy.choose(sights[0], rng, level["noise"])
+	var choice: Dictionary = net_of(id).choose(sights[0], rng, level["noise"], true)
 	if choice.is_empty():
 		return false
 	PvpBrain.apply(world, combat, id, foe, int(choice.get("move", 0)), int(choice.get("act", 0)), now, events)
@@ -385,6 +409,11 @@ func choose_target(id: int, now: float) -> int:
 	var defend: int = _defend_group(id, now)
 	if defend != 0 or leader != 0 and leader != id:
 		return defend
+	# A PvP-on roamer goes for any player it may attack nearby, wherever its errand takes it.
+	if not bot["roamer"].is_empty():
+		var foe: int = _nearest_player(id, PVP_RADIUS)
+		if foe != 0:
+			return foe
 	if bot["stance"] == "rival":
 		# A band leader looks for prey only at its camp.
 		if bot["plan"].get("state", "") != "hunt":
@@ -420,7 +449,7 @@ func choose_target(id: int, now: float) -> int:
 ## spells also mend hurt allies around the bot, and warriors use Challenge (every monster around)
 ## and Provoke (one monster a few tiles off, onto a softer member) to protect the group.
 func use_resources(id: int, now: float, events: Array) -> void:
-	if policy_drives(id):
+	if policy_drives(id, now):
 		return
 	var player: Dictionary = world.players[id]
 	var stats: Dictionary = world.player_stats(id)
@@ -738,7 +767,8 @@ func follow(id: int, now: float, events: Array) -> bool:
 
 
 ## Heads for `goal` along a planned route, or jumps there when far and unseen. Returns true
-## once within `reach` tiles.
+## once within `reach` tiles. With no route on foot (across water) and in sight, it marks the bot
+## "unroutable" so its errand can give up (run_plan) instead of waiting forever.
 func travel(id: int, goal: Vector2i, reach: int, now: float, events: Array) -> bool:
 	var bot: Dictionary = bots[id]
 	var player: Dictionary = world.players[id]
@@ -749,12 +779,14 @@ func travel(id: int, goal: Vector2i, reach: int, now: float, events: Array) -> b
 		jump(id, Nav.open_beside(goal) if not World.walkable(goal) else goal, now, events)
 		return Combat.distance(world.players[id]["cell"], goal) <= reach
 	var route: Array = bot["route"]
+	bot["unroutable"] = false
 	if route.is_empty() or bot.get("route_goal", Vector2i(-1, -1)) != goal \
 			or Combat.distance(player["cell"], route[0]) != 1:
 		route = Nav.route(player["cell"], goal)
 		bot["route"] = route
 		bot["route_goal"] = goal
 		if route.is_empty():
+			bot["unroutable"] = true
 			return false
 	var next: Vector2i = route[0]
 	var direction: Vector2i = next - player["cell"]
@@ -776,6 +808,7 @@ func travel(id: int, goal: Vector2i, reach: int, now: float, events: Array) -> b
 ##   hunt     until the task is done or HUNT_SECONDS pass
 ##   turn_in  walk back to the giver and turn it in, then pick again
 ##   ambush   (solo.gd) go to a player in a PvP zone and fight them
+##   warden   (a "switch" roamer) walk to the warden and flip its PvP switch, then pick again
 func run_plan(id: int, now: float, events: Array) -> void:
 	var bot: Dictionary = bots[id]
 	var player: Dictionary = world.players[id]
@@ -815,12 +848,32 @@ func run_plan(id: int, now: float, events: Array) -> void:
 				bot["plan"] = {}
 			else:
 				travel(id, world.players[target]["cell"], 2, now, events)
+		"warden":
+			var warden: String = plan["npc"]
+			if travel(id, World.TOWNSFOLK[warden]["cell"], World.TALK_RANGE, now, events):
+				events.append_array(combat.set_pvp(id, warden, plan["on"], now).get("events", []))
+				bot["plan"] = {}
+	# A giver, camp, or warden it cannot walk to while seen (across water): choose another errand.
+	if bot.get("unroutable", false) and plan.get("state", "") in ["accept", "camp", "warden"]:
+		bot["unroutable"] = false
+		bot["plan"] = {}
 
 
 ## A task that fits the band leader's level, with an overworld camp of its monster, else a
-## camp of a monster near its level to hunt for a while.
+## camp of a monster near its level to hunt for a while. Roamers may first flip their PvP switch
+## or, with PvP on, hunt in a PvP zone.
 func _choose_errand(id: int, now: float) -> Dictionary:
 	var player: Dictionary = world.players[id]
+	var roamer: String = bots[id]["roamer"]
+	if roamer == "switch" and combat.rng.randf() < SWITCH_CHANCE:
+		var flip: Dictionary = _pvp_errand(id, now)
+		if not flip.is_empty():
+			return flip
+	if not roamer.is_empty() and world.pvp_on(id) and combat.rng.randf() < PVP_HUNT_CHANCE:
+		var wild: Array[Vector2i] = pvp_camps(player["level"])
+		if not wild.is_empty():
+			var marker: Vector2i = wild[combat.rng.randi_range(0, wild.size() - 1)]
+			return {"state": "camp", "camp": camp_post(marker), "marker": marker, "until": now + HUNT_SECONDS}
 	var state: Dictionary = {"level": player["level"], "vocation": player["vocation"], "tasks": player["tasks"],
 		"done_tasks": player["done_tasks"].keys()}
 	var choices: Array[String] = []
@@ -846,6 +899,28 @@ func _choose_errand(id: int, now: float) -> Dictionary:
 		return {}
 	var spot: Vector2i = near[combat.rng.randi_range(0, near.size() - 1)]
 	return {"state": "camp", "camp": camp_post(spot), "marker": spot, "until": now + HUNT_SECONDS}
+
+
+## A trip to the warden to flip the roamer's PvP switch, or {} while it may not change.
+func _pvp_errand(id: int, now: float) -> Dictionary:
+	var player: Dictionary = world.players[id]
+	if not player["skull"].is_empty() or now < player["pvp_until"] or now < player.get("pvp_toggle_at", -INF):
+		return {}
+	for npc: String in World.TOWNSFOLK:
+		if "pvp" in World.TOWNSFOLK[npc]["services"]:
+			return {"state": "warden", "npc": npc, "on": not player.get("pvp", false)}
+	return {}
+
+
+## Camp markers of normal monsters in PvP zones open to `level`, within LEVEL_MARGIN of it.
+static func pvp_camps(level: int) -> Array[Vector2i]:
+	var camps: Array[Vector2i] = []
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		var zone: Dictionary = World.zone_at(spawn["cell"])
+		if zone.get("pvp", false) and level >= int(zone["min_level"]) and absi(spawn["level"] - level) <= LEVEL_MARGIN \
+				and Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal" and camp_post(spawn["cell"]).x >= 0:
+			camps.append(spawn["cell"])
+	return camps
 
 
 ## The nearest live monster of the band leader's camp worth hunting, or 0.
@@ -876,7 +951,8 @@ func _camps_of(monster: String, level: int) -> Array[Vector2i]:
 
 
 ## Where a band waits at a camp: CAMP_DISTANCE tiles from its marker, since monsters do not
-## respawn with a player right beside it (Combat respawns); (-1, -1) if there is no open ground.
+## respawn with a player right beside it (Combat respawns), in the camp's own zone (the open
+## overworld, or a PvP zone); (-1, -1) if there is no open ground.
 static func camp_post(camp: Vector2i) -> Vector2i:
 	if _posts.has(camp):
 		return _posts[camp]
@@ -889,7 +965,7 @@ static func _find_post(camp: Vector2i) -> Vector2i:
 			Vector2i(CAMP_DISTANCE, CAMP_DISTANCE - 2), Vector2i(-CAMP_DISTANCE, CAMP_DISTANCE - 2),
 			Vector2i(CAMP_DISTANCE, 2 - CAMP_DISTANCE), Vector2i(-CAMP_DISTANCE, 2 - CAMP_DISTANCE)]:
 		var cell: Vector2i = camp + step
-		if World.walkable(cell) and World.zone_at(cell).is_empty() and not Nav.grid().is_point_solid(cell):
+		if World.walkable(cell) and World.zone_at(cell) == World.zone_at(camp) and not Nav.grid().is_point_solid(cell):
 			var way: Array[Vector2i] = Nav.route(cell, camp)
 			if not way.is_empty() and way.size() <= CAMP_DISTANCE * 2:
 				return cell

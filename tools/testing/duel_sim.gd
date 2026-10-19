@@ -61,6 +61,7 @@ func _duel(level: int, first: String, second: String, arena: Vector2i, gear: Fig
 	for id: int in [1, 2]:
 		var player: Dictionary = world.players[id]
 		player["level"] = level
+		player["pvp"] = true
 		player["equipment"] = FightSim.wear(gear._gear(level, player["vocation"]), loadouts[id - 1], player["vocation"], level)
 		var stats: Dictionary = world.player_stats(id)
 		player["health"] = stats["health"]

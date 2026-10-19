@@ -1,7 +1,8 @@
 extends Node
 ## Right-click menus and the shared dialog panel: an NPC's services (Travel, Trade, Bank,
-## Quests), a ferryman's routes and fares, a vendor's stock, the banker's gold and depot,
-## hunting tasks, the Relic keeper's quests, an artisan's crafting, and party options for players. Trade, bank,
+## Quests, PvP), a ferryman's routes and fares, a vendor's stock, the banker's gold and depot,
+## hunting tasks, the Relic keeper's quests, an artisan's crafting, the warden's PvP switch, and
+## party options for players. Trade, bank,
 ## and quest dialogs rebuild when your gold, items, or task progress change.
 
 const World = preload("res://game/core/world.gd")
@@ -16,7 +17,7 @@ const Crafting = preload("res://game/core/crafting.gd")
 const Professions = preload("res://game/data/professions.gd")
 const Items = preload("res://game/data/items.gd")
 const NPC_SERVICES: Dictionary = {"travel": "Travel", "trade": "Trade", "bank": "Bank", "quests": "Quests", "vocation": "Class",
-	"runes": "Runes", "craft": "Craft"}
+	"runes": "Runes", "craft": "Craft", "pvp": "PvP"}
 const DEPOT_COLUMNS: int = 8
 const PARTY_LABELS: Dictionary = {"invite": "Invite to party", "revoke": "Withdraw invitation",
 	"join": "Join party", "leave": "Leave party"}
@@ -27,7 +28,7 @@ var panel: PanelContainer
 var list: VBoxContainer
 ## The NPC whose dialog is open, or "".
 var talking_to: String = ""
-## The open dialog: "travel", "trade", "bank", "quests", or "vocation".
+## The open dialog: "travel", "trade", "bank", "quests", "vocation", "runes", "craft", or "pvp".
 var mode: String = ""
 var _shown_state: String = ""
 var _bank_amount: int = 100
@@ -101,7 +102,7 @@ func _state_key() -> String:
 	var state: Dictionary = actors[game.self_id]["state"]
 	return str([state.get("gold"), state.get("bank"), state.get("backpack"), state.get("tasks"), state.get("done_tasks"),
 		state.get("trophies"), state.get("level"), state["equipment"].get("bag"), state.get("vocation"), state.get("spell_ranks"),
-		state.get("skills"), craft_profession, craft_tier])
+		state.get("skills"), state.get("pvp"), state.get("skull"), craft_profession, craft_tier])
 
 
 func _open(kind: String, npc: String) -> void:
@@ -118,6 +119,8 @@ func _open(kind: String, npc: String) -> void:
 			open_runes(npc)
 		"craft":
 			open_craft(npc)
+		"pvp":
+			open_pvp(npc)
 
 
 ## Right-clicking a person opens their services; there is no typed dialogue.
@@ -138,7 +141,7 @@ func _npc_service_chosen(id: int) -> void:
 	var service: Variant = npc_menu.get_item_metadata(npc_menu.get_item_index(id))
 	if service == "travel":
 		talk_to(npc_menu_target)
-	elif service in ["trade", "bank", "quests", "vocation", "runes", "craft"]:
+	elif service in ["trade", "bank", "quests", "vocation", "runes", "craft", "pvp"]:
 		_open(service, npc_menu_target)
 
 
@@ -324,6 +327,31 @@ func open_vocation(npc: String) -> void:
 	_button("Become a %s" % profile["name"], passed and levelled, func() -> void: game.vocation_local(npc))
 	_farewell()
 	_show(npc, "vocation")
+
+
+## The warden's PvP switch (Combat.set_pvp): what it means, where you stand, and the one button.
+func open_pvp(npc: String) -> void:
+	if not _begin(npc) or not "pvp" in World.npc(npc).get("services", []):
+		return
+	var view: Dictionary = game.actors[game.self_id]
+	var state: Dictionary = view["state"]
+	var on: bool = state.get("pvp", false)
+	_wrapped("%s, %s\n\"Steel or peace? Choose, and the isles will know.\"" % [World.npc(npc)["name"], World.npc(npc)["place"]])
+	_wrapped("With PvP on, other players with PvP on can attack you in PvP zones (Blackreed Isle, The Hollow Reach), "
+		+ "and you them. With it off, no player can harm you anywhere. Towns are always safe.", Color("#a7b0b8"))
+	_label("Your PvP is %s." % ("ON" if on else "OFF"), Color("#ff8a7a") if on else Color("#9fe07a"))
+	var left: float = state.get("pvp_toggle_left", 0.0) - (game._now() - view.get("received", game._now()))
+	var blocked: String = ""
+	if not String(state.get("skull", "")).is_empty():
+		blocked = "Not while you carry a skull."
+	elif left > 0.0:
+		blocked = "You can change it again in %d:%02d." % [int(left) / 60, int(left) % 60]
+	if not blocked.is_empty():
+		_label(blocked, Color("#e05a4a"))
+	_label("After a change you must wait %d minutes to change it again." % int(Balance.PVP_TOGGLE_SECONDS / 60.0), Color("#ffcf6a"))
+	_button("Turn PvP off" if on else "Turn PvP on", blocked.is_empty(), func() -> void: game.pvp_local(npc, not on))
+	_farewell()
+	_show(npc, "pvp")
 
 
 ## A class trainer's runes: carve rune shards into your spells, one rank at a time

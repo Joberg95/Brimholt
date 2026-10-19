@@ -8,6 +8,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/testing/fight_sim.gd -- \
 ##       --monster=field_vole --levels=1,10,20,30,40 --count=3 [--player-level=N] [--vocations=knight,druid]
 ##       [--gear=main_hand:grand_sanguine_blade,boots:hastewind_boots]  (a loadout over the tier gear)
+##   ... -- --survey=1 [--vocations=...]  (every elite and champion, solo, at its lowest spawn level)
 ##
 ## Reference bands (normal rank, same level) live in .github/skills/monster-authoring/SKILL.md.
 
@@ -17,6 +18,7 @@ const Balance = preload("res://game/data/balance.gd")
 const Items = preload("res://game/data/items.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const Dungeons = preload("res://game/data/dungeons.gd")
 const OFFSETS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1)]
 const TIME_LIMIT: float = 300.0
 
@@ -32,6 +34,10 @@ func _initialize() -> void:
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--") and argument.contains("="):
 			options[argument.substr(2).get_slice("=", 0)] = argument.get_slice("=", 1)
+	if options.has("survey"):
+		_survey(options["vocations"].split(","))
+		quit()
+		return
 	var kind: String = options["monster"]
 	off_hand = options["off-hand"]
 	loadout = parse_gear(options["gear"])
@@ -59,6 +65,28 @@ func _initialize() -> void:
 				line.append(_fight(player_level, level, vocation, clampi(options["count"].to_int(), 1, OFFSETS.size()), kind, full))
 			print("%-9s L%2d vs %s x L%2d  |  auto: %-28s |  full: %s" % [vocation, player_level, options["count"], level, line[0], line[1]])
 	quit()
+
+
+## Solo content check (--survey=1): every elite and champion that spawns in the world or a
+## dungeon, at its lowest spawn level, against a same-level player of each vocation with spells
+## and potions. Elites fight alone and in pairs (camps hold two at a time); champions alone.
+func _survey(vocations: PackedStringArray) -> void:
+	var levels: Dictionary = {}
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		levels[spawn["monster"]] = mini(levels.get(spawn["monster"], Balance.MAX_LEVEL), spawn["level"])
+	for dungeon: String in Dungeons.DUNGEONS:
+		for placement: Array in Dungeons.spawns(dungeon):
+			levels[placement[1]] = mini(levels.get(placement[1], Balance.MAX_LEVEL), placement[2])
+	var kinds: Array = levels.keys().filter(func(kind: String) -> bool:
+		return Monsters.MONSTERS[kind]["rank"] in ["elite", "champion"])
+	kinds.sort_custom(func(a: String, b: String) -> bool: return levels[a] < levels[b] or (levels[a] == levels[b] and a < b))
+	for kind: String in kinds:
+		var rank: String = Monsters.MONSTERS[kind]["rank"]
+		for count: int in ([1, 2] if rank == "elite" else [1]):
+			var line: PackedStringArray = []
+			for vocation: String in vocations:
+				line.append("%s %s" % [vocation.left(4), _fight(levels[kind], levels[kind], vocation, count, kind, true)])
+			print("SURVEY %-20s %-8s L%2d x%d | %s" % [kind, rank, levels[kind], count, " | ".join(line)])
 
 
 ## Vendor-style gear of the player's tier (no relics or hunting drops).

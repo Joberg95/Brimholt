@@ -5,10 +5,11 @@ GODOT ?= godot
 PYTHON ?= python3
 ADDR ?= 127.0.0.1
 PORT ?= 1234
+RL_PYTHON ?= .tools/rl-venv/bin/python
 GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
-.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim bench playtest check \
+.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim duel-eval train-setup train export-policy bench playtest check \
 	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
@@ -61,14 +62,30 @@ soak: ## Busy hosted session with clock jumps; fails if objects, nodes, or memor
 		echo "$$out" | grep -E 'SOAK|SCRIPT ERROR'; \
 		echo "$$out" | grep -q 'BRIMHOLT_SOAK_PASS'
 
-fight-sim: ## Balance a monster: MONSTER=field_vole LEVELS=1,10,20,30,40 COUNT=3 [OFF_HAND=torch] [GEAR=boots:hastewind_boots] (auto-attack vs spells+potions)
+fight-sim: ## Balance a monster: MONSTER=field_vole LEVELS=1,10,20,30,40 COUNT=3 [OFF_HAND=torch] [GEAR=boots:hastewind_boots] (auto-attack vs spells+potions); SURVEY=1 fights every elite and champion solo
 	@$(GODOT) --headless --path . --script res://tools/testing/fight_sim.gd -- --monster=$(or $(MONSTER),field_vole) \
-		--levels=$(or $(LEVELS),1,10,20,30,40) --count=$(or $(COUNT),1) $(if $(PLAYER_LEVEL),--player-level=$(PLAYER_LEVEL)) $(if $(OFF_HAND),--off-hand=$(OFF_HAND)) $(if $(GEAR),--gear=$(GEAR)) 2>&1 \
+		--levels=$(or $(LEVELS),1,10,20,30,40) --count=$(or $(COUNT),1) $(if $(PLAYER_LEVEL),--player-level=$(PLAYER_LEVEL)) $(if $(OFF_HAND),--off-hand=$(OFF_HAND)) $(if $(GEAR),--gear=$(GEAR)) $(if $(SURVEY),--survey=1) 2>&1 \
 		| grep -vE '^Godot Engine|^$$'
 
 duel-sim: ## Same-level PvP duels with spells and potions per vocation pair (LEVELS=20,30,45)
 	@$(GODOT) --headless --path . --script res://tools/testing/duel_sim.gd -- --levels=$(or $(LEVELS),20,30,45) 2>&1 \
 		| grep -vE '^Godot Engine|^$$'
+
+duel-eval: ## Trained PvP policy vs the scripted bot per vocation pair (GAMES=10 LEVELS=10,20,30,40,50 DIFFICULTY=hard [BASELINE=1] [POLICY=res://...json] [RIVAL=res://...json])
+	@$(GODOT) --headless --path . --script res://tools/testing/duel_eval.gd -- --games=$(or $(GAMES),10) \
+		$(if $(LEVELS),--levels=$(LEVELS)) --difficulty=$(or $(DIFFICULTY),hard) $(if $(BASELINE),--baseline) \
+		$(if $(POLICY),--policy=$(POLICY)) $(if $(RIVAL),--rival=$(RIVAL)) 2>&1 \
+		| grep -vE '^Godot Engine|^$$'
+
+train-setup: ## Create the training venv in .tools/rl-venv (uv, Python 3.12, tools/training/requirements.txt)
+	uv venv --python 3.12 .tools/rl-venv
+	uv pip install --python $(RL_PYTHON) -r tools/training/requirements.txt
+
+train: ## Train the PvP duel policy with PPO (STEPS=10000000 PROCESSES=8 [RESUME=.tools/rl/pvp_duel.zip] [SELF_PLAY=0.5]); see docs/bot-training.md
+	$(RL_PYTHON) tools/training/train.py --steps=$(or $(STEPS),10000000) --processes=$(or $(PROCESSES),8) $(if $(RESUME),--resume=$(RESUME)) $(if $(SELF_PLAY),--self-play=$(SELF_PLAY))
+
+export-policy: ## Write the trained model (MODEL=.tools/rl/pvp_duel.zip) to game/data/policies/pvp_duel.json
+	$(RL_PYTHON) tools/training/export_policy.py $(if $(MODEL),--model=$(MODEL))
 
 bench: ## Frame benchmark: solo town, hunt, and raid offscreen; prints frame times and where they go
 	$(GODOT) --position 99999,99999 --resolution 64x64 --path . --script res://tools/testing/bench.gd 2>&1 | grep BENCH

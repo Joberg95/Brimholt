@@ -30,6 +30,9 @@ const Titles = preload("res://game/data/titles.gd")
 const VoidThrone = preload("res://tools/generators/void_throne.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Regions = preload("res://game/data/regions.gd")
+const PolicyNet = preload("res://game/core/ai/policy_net.gd")
+const PvpBrain = preload("res://game/core/ai/pvp_brain.gd")
+const DuelArena = preload("res://tools/training/duel_arena.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Professions = preload("res://game/data/professions.gd")
 const Solo = preload("res://game/core/solo.gd")
@@ -98,6 +101,7 @@ func _run() -> void:
 	_chase_checks()
 	_monster_catalog_checks()
 	_pvp_and_spell_checks()
+	_pvp_switch_checks()
 	_dungeon_task_and_region_checks()
 	_spawn_and_rest_checks()
 	_armor_and_control_checks()
@@ -198,6 +202,7 @@ func _run() -> void:
 	_quest_hub_and_lexicon_checks()
 	_bot_checks()
 	_bot_loot_checks()
+	_pvp_policy_checks()
 	_armor_type_checks()
 	print("BRIMHOLT_RULES: %d checks, %d failures (%d cases)" % [checks, failures, cases])
 	quit(0 if failures == 0 else 1)
@@ -431,13 +436,14 @@ func _bot_checks() -> void:
 	var now: float = _run_bots(bots, combat, 0.0, 30.0)
 	check(world.players[hunter].get("bot", false) and world.export_player(hunter, now)["bot"] and not world.monsters.has(prey)
 		and world.players[hunter]["experience"] > 0, "a hunter bot hunts monsters near its post")
-	# PvP: a PvP bot attacks a player in a PvP zone (and takes a white skull) but not outside one.
+	# PvP: a PvP bot attacks a PvP-on player in a PvP zone (and takes a white skull) but not outside one.
 	var pvp_world := World.new()
 	var pvp_combat := Combat.new(pvp_world, 4)
 	var pvp_bots := Bots.new(pvp_world, pvp_combat)
 	pvp_world.monsters.clear()
 	pvp_world.add_player(1, 0.0, "knight")
 	pvp_world.players[1]["level"] = 40
+	pvp_world.players[1]["pvp"] = true
 	pvp_world.clamp_vitals(1)
 	_place(pvp_world, 1, arena)
 	var full_health: int = pvp_world.player_stats(1)["health"]
@@ -445,18 +451,23 @@ func _bot_checks() -> void:
 	var hunter_pvp: int = pvp_bots.add("paladin", 40, "pvp", arena + Vector2i(3, 0), 0.0)["id"]
 	var passive: int = pvp_bots.add("knight", 40, "hunter", arena + Vector2i(-3, 0), 0.0)["id"]
 	var dummy: int = pvp_bots.add("druid", 40, "dummy", arena + Vector2i(0, 3), 0.0)["id"]
-	now = _run_bots(pvp_bots, pvp_combat, 0.0, 6.0)
+	# The trained policy samples its moves, so give it time to land the first hit.
+	now = 0.0
+	while now < 15.0 and pvp_world.players[1]["health"] >= full_health:
+		now = _run_bots(pvp_bots, pvp_combat, now, 1.0)
 	check(pvp_world.players[hunter_pvp]["target"] == 1 and pvp_world.players[1]["health"] < full_health
 		and pvp_world.players[hunter_pvp]["skull"] == "white", "a PvP bot attacks players in a PvP zone and takes a white skull")
 	check(pvp_world.players[passive]["target"] == 0 and pvp_world.players[dummy]["target"] == 0,
 		"hunter bots and dummies leave players alone")
-	# Self-defence: attacking the hunter bot makes it fight back, without a skull; the dummy never does.
-	pvp_combat.set_target(1, passive, now)
-	now = _run_bots(pvp_bots, pvp_combat, now, 4.0)
-	check(pvp_world.players[passive]["target"] == 1 and pvp_world.players[passive]["skull"].is_empty(),
-		"a hunter bot fights back in self-defence without a skull")
+	# Hunter bots keep PvP off, so players cannot attack them; dummies take hits and never strike back.
+	check(not pvp_world.players[passive]["pvp"] and not pvp_combat.set_target(1, passive, now)["ok"]
+		and not pvp_combat.hostile(1, passive) and not pvp_combat.hostile(passive, 1),
+		"hunter bots have PvP off: players cannot attack them, nor they players")
+	_place(pvp_world, 1, arena + Vector2i(0, 2))
 	pvp_combat.set_target(1, dummy, now)
-	now = _run_bots(pvp_bots, pvp_combat, now, 4.0)
+	var swung: float = now
+	while now < swung + 10.0 and pvp_world.players[dummy]["health"] >= pvp_world.player_stats(dummy)["health"]:
+		now = _run_bots(pvp_bots, pvp_combat, now, 1.0)
 	check(pvp_world.players[dummy]["target"] == 0 and pvp_world.players[dummy]["health"] < pvp_world.player_stats(dummy)["health"],
 		"a training dummy takes hits and never strikes back")
 	# Outside PvP zones nobody is attacked.
@@ -512,6 +523,78 @@ func _bot_checks() -> void:
 		"removing a bot frees its slot")
 	check(not full_bots.add("pirate", 10, "dummy", World.SPAWNS[0], 0.0)["ok"] and not full_bots.add("knight", 10, "berserk", World.SPAWNS[0], 0.0)["ok"],
 		"bots need a real vocation and stance")
+
+
+## The trained PvP policy (game/core/ai/): the JSON network's forward pass and validation, the
+## shared observation, difficulty noise and delay, and when the policy drives a bot (a hostile
+## player target only; scripted fallback otherwise).
+func _pvp_policy_checks() -> void:
+	# Two heads (2 and 3 choices) over 3 inputs through one tanh layer and a linear layer.
+	var spec: Dictionary = {"version": 1, "obs_size": 3, "heads": [{"name": "a", "size": 2}, {"name": "b", "size": 3}],
+		"layers": [{"inputs": 3, "outputs": 2, "activation": "tanh", "weights": [1, 0, 0, 0, 1, 0], "biases": [0, 0]},
+		{"inputs": 2, "outputs": 5, "activation": "linear", "weights": [1, 0, -1, 0, 0, 1, 0, -1, 0, 0], "biases": [0, 0, 0, 0, 0.5]}]}
+	var net: PolicyNet = PolicyNet.from_dict(spec) as PolicyNet
+	check(net != null and net.obs_size == 3, "a well-formed policy file loads")
+	var scores: PackedFloat32Array = net.scores(PackedFloat32Array([1.0, -2.0, 7.0])) if net != null else PackedFloat32Array()
+	check(scores.size() == 5 and is_equal_approx(scores[0], tanh(1.0)) and is_equal_approx(scores[1], -tanh(1.0))
+		and is_equal_approx(scores[2], tanh(-2.0)) and is_equal_approx(scores[3], -tanh(-2.0)) and is_equal_approx(scores[4], 0.5),
+		"the policy's forward pass multiplies row by row, squashes hidden layers, and adds biases")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	check(net != null and net.choose(PackedFloat32Array([1.0, -2.0, 7.0]), rng) == {"a": 0, "b": 1}
+		and net.choose(PackedFloat32Array([1.0, 2.0]), rng).is_empty(), "the policy picks each head's best choice and ignores a wrong-sized observation")
+	var seen: Dictionary = {}
+	for _draw: int in 60:
+		var noisy: Dictionary = net.choose(PackedFloat32Array([1.0, -2.0, 7.0]), rng, 1.0) if net != null else {}
+		seen[noisy.get("b", -1)] = true
+	check(seen.keys().all(func(choice: int) -> bool: return choice >= 0 and choice < 3) and seen.size() == 3,
+		"difficulty noise picks random choices within each head")
+	var drawn: Dictionary = {}
+	for _draw: int in 400:
+		var pick: int = net.choose(PackedFloat32Array([1.0, -2.0, 7.0]), rng, 0.0, true).get("a", -1) if net != null else -1
+		drawn[pick] = drawn.get(pick, 0) + 1
+	# Head a scores tanh(1) and -tanh(1): softmax odds of about 82% and 18%.
+	check(drawn.size() == 2 and drawn.get(0, 0) > 290 and drawn.get(0, 0) < 370, "sampling follows the scores' softmax odds")
+	for broken: Dictionary in [{"version": 2}, {"layers": [{"inputs": 3, "outputs": 5, "weights": [], "biases": []}]},
+			{"heads": [{"name": "a", "size": 4}]}, {"obs_size": 4}]:
+		var bad: Dictionary = spec.duplicate(true)
+		bad.merge(broken, true)
+		check(PolicyNet.from_dict(bad) == null, "a policy file with wrong sizes or version is refused: %s" % broken)
+	if FileAccess.file_exists(PolicyNet.PVP_PATH):
+		var shipped: PolicyNet = PolicyNet.load_file(PolicyNet.PVP_PATH) as PolicyNet
+		check(shipped != null and shipped.obs_size == PvpBrain.OBS_SIZE, "the shipped PvP policy loads and matches the observation")
+	# A runtime-sized policy that always chases and attacks.
+	var biases: Array = []
+	biases.resize(PvpBrain.HEADS["act"] + PvpBrain.HEADS["move"])
+	biases.fill(0.0)
+	biases[1] = 30.0
+	biases[PvpBrain.HEADS["act"] + PvpBrain.MOVE_CHASE] = 30.0
+	var weights: Array = []
+	weights.resize(biases.size() * PvpBrain.OBS_SIZE)
+	weights.fill(0.0)
+	var chaser: PolicyNet = PolicyNet.from_dict({"version": 1, "obs_size": PvpBrain.OBS_SIZE,
+		"heads": [{"name": "act", "size": PvpBrain.HEADS["act"]}, {"name": "move", "size": PvpBrain.HEADS["move"]}],
+		"layers": [{"inputs": PvpBrain.OBS_SIZE, "outputs": biases.size(), "activation": "linear", "weights": weights, "biases": biases}]}) as PolicyNet
+	var arena := DuelArena.new()
+	arena.rng.seed = 11
+	arena.start({"policy": chaser, "learner": "knight", "foe": "sorcerer", "level": 30, "distance": 5, "difficulty": "easy"})
+	var sight: PackedFloat32Array = arena.observe()
+	check(sight.size() == PvpBrain.OBS_SIZE and Array(sight).all(func(value: float) -> bool: return value >= -1.0 and value <= 1.0),
+		"the PvP observation has its fixed size with every value in [-1, 1]")
+	var gap: int = Combat.distance(arena.world.players[arena.learner]["cell"], arena.world.players[arena.foe]["cell"])
+	for _turn: int in 10:
+		arena.advance()
+	check(arena.bots.policy_drives(arena.learner, arena.now) and not arena.bots.policy_drives(arena.foe, arena.now)
+		and arena.bots.bots[arena.learner].get("sights", []).size() == Bots.DIFFICULTY["easy"]["delay"] + 1
+		and Combat.distance(arena.world.players[arena.learner]["cell"], arena.world.players[arena.foe]["cell"]) < gap,
+		"the policy drives a bot whose target is a hostile player (on delayed sight at easy), not a scripted one")
+	var learner_cell: Vector2i = arena.world.players[arena.learner]["cell"]
+	arena.world.players[arena.learner]["target"] = arena.combat.spawn_monster("field_vole", 1, arena.bots.free_cell_near(learner_cell, arena.now), arena.now)
+	check(not arena.bots.policy_drives(arena.learner, arena.now) and not arena.bots.run_policy(arena.learner, arena.now, []),
+		"the policy leaves fights against monsters to the scripted bot")
+	arena.bots.policy = null
+	arena.world.players[arena.learner]["target"] = arena.foe
+	check(not arena.bots.run_policy(arena.learner, arena.now, []), "without a policy file bots fall back to the scripted fight")
 
 
 ## Bot loot (game/core/bot_loot.gd): kills claim their loot for who earned them; bots collect only
@@ -1135,8 +1218,9 @@ func _crafting_checks() -> void:
 		"a meal regenerates health and mana faster")
 
 
-## Solo play: companions form your party at your level and follow you anywhere; rival bands
-## take tasks and ambush you in PvP zones; a raid fills to Balance.RAID at level 50.
+## Solo play: you start alone and invite companions, who form your party at your level and
+## follow you anywhere; rival bands take tasks and ambush you in PvP zones; lone roamers flip PvP
+## at the warden and hunt PvP-on players in PvP zones; a raid fills to Balance.RAID at level 50.
 func _solo_checks() -> void:
 	var world := World.new()
 	var combat := Combat.new(world, 11)
@@ -1157,6 +1241,20 @@ func _solo_checks() -> void:
 			bots.tick(sim_clock[0])
 			solo.tick(sim_clock[0])
 			instances.tick(sim_clock[0])
+	check(solo.companions().is_empty() and combat.party_members(1).size() <= 1 and solo.slot_ids == [0, 0, 0],
+		"solo starts alone (%s)" % [solo.slot_ids])
+	var lone_ok: bool = solo.roamers.size() == Solo.ROAMERS.size()
+	for index: int in solo.roamers:
+		var id: int = solo.roamers[index]
+		lone_ok = lone_ok and bots.bots.has(id) and bots.bots[id]["leader"] == id and combat.party_members(id).size() <= 1 \
+			and world.players[id]["level"] == clampi(20 + Solo.ROAMERS[index][2], 1, Balance.MAX_LEVEL)
+	check(lone_ok, "six lone rivals roam, each its own leader, at your level plus its offset")
+	check(solo.roamers.keys().all(func(index: int) -> bool:
+		return Solo.ROAMERS[index][3] != "pvp" or world.players[solo.roamers[index]]["pvp"]), "pvp roamers keep PvP on")
+	check(not solo.dismiss(0)["ok"] and not solo.invite(5, 0.0)["ok"], "invites need a real, empty slot")
+	for slot: int in 3:
+		check(solo.invite(slot, 0.0)["ok"], "a companion joins on invite")
+	check(not solo.invite(0, 0.0)["ok"], "a slot holds one companion")
 	var friends: Array[int] = solo.companions()
 	var vocations: Array = friends.map(func(id: int) -> String: return world.players[id]["vocation"])
 	vocations.sort()
@@ -1274,13 +1372,16 @@ func _solo_checks() -> void:
 		counts[world.players[id]["vocation"]] = counts.get(world.players[id]["vocation"], 0) + 1
 	check(counts == Balance.RAID and Balance.raid_check(counts)["ok"], "the raid matches the balanced raid composition")
 	check(solo.raid(false, sim_clock[0])["ok"] and combat.party_members(1).size() == 4 and solo.bands.values().all(
-		func(band: Dictionary) -> bool: return band["members"].size() == 3), "disbanding keeps your companions and brings the rivals back")
+		func(band: Dictionary) -> bool: return band["members"].size() == 3) and solo.roamers.values().all(
+		func(id: int) -> bool: return bots.bots.has(id)), "disbanding keeps your companions and brings the rivals back")
 	# Ambush: a band comes for your group in a PvP zone.
 	var island: Vector2i = Vector2i(205, 197)
 	check(World.zone_at(island).get("pvp", false), "Blackreed Isle is a PvP zone")
 	for band: int in solo.bands:
 		solo.bands[band]["rest_until"] = 0.0  # disbanding a raid gives the bands a rest first
 	_place(world, 1, island)
+	world.players[1]["pvp"] = true
+	check(friends.all(func(friend: int) -> bool: return world.pvp_on(friend)), "companions follow their leader's PvP switch")
 	var hunted: bool = false
 	# Whoever strikes first, a rival fighting one of your group in reach is the ambush.
 	var group: Array = [1] + friends
@@ -1292,6 +1393,42 @@ func _solo_checks() -> void:
 						and Combat.distance(world.players[rival_id]["cell"], me["cell"]) <= Combat.TARGET_RANGE:
 					hunted = true
 	check(hunted, "rivals ambush your group in a PvP zone")
+	# Roamers: with PvP on they hunt in PvP zones of their level and attack PvP-on players there.
+	var wild: Array[Vector2i] = Bots.pvp_camps(45)
+	check(not wild.is_empty() and wild.all(func(camp: Vector2i) -> bool:
+		return World.zone_at(camp).get("pvp", false) and World.zone_at(Bots.camp_post(camp)) == World.zone_at(camp)),
+		"roamers find camps of their level in PvP zones, and wait inside them")
+	var lone: int = solo.roamers[0]
+	_place(world, 1, island)  # the ambush may have sent you back to town
+	me["health"] = world.player_stats(1)["health"]
+	world.players[lone]["target"] = 0
+	_place(world, lone, me["cell"] + Vector2i(0, 3))
+	for monster: int in world.monsters:
+		if world.monsters[monster]["target"] == lone:
+			world.monsters[monster]["target"] = 0
+	# A band member or another roamer may stand nearer; any PvP-on player will do.
+	var prey: int = bots.choose_target(lone, sim_clock[0])
+	check(world.players.has(prey) and prey != lone and combat.hostile(lone, prey),
+		"a PvP roamer attacks a PvP-on player in a PvP zone (%d)" % prey)
+	me["pvp"] = false
+	check(bots.choose_target(lone, sim_clock[0]) != 1, "but leaves one with PvP off")
+	me["pvp"] = true
+	# A "switch" roamer walks to Reedmere's warden and flips its PvP switch.
+	var switcher: int = solo.roamers[2]
+	var flipper: Dictionary = world.players[switcher]
+	flipper["skull"] = ""
+	flipper["pvp_toggle_at"] = 0.0
+	var was: bool = flipper["pvp"]
+	var warden: Vector2i = World.TOWNSFOLK["reedmere_warden"]["cell"]
+	bots.jump(switcher, warden + Vector2i(0, 3), sim_clock[0], [])
+	bots.bots[switcher]["plan"] = bots._pvp_errand(switcher, sim_clock[0])
+	check(bots.bots[switcher]["plan"].get("state", "") == "warden", "a switch roamer plans a trip to the warden")
+	for wait: int in 60:
+		if flipper["pvp"] != was:
+			break
+		run.call(0.5)
+	check(flipper["pvp"] != was and flipper["pvp_toggle_at"] > sim_clock[0], "the roamer flips its PvP switch at the warden")
+	check(bots._pvp_errand(switcher, sim_clock[0]).is_empty(), "and waits before flipping it again")
 	# Choosing companions: a slot swaps to another class, and the raid plan follows your party.
 	_place(world, 1, World.SPAWNS[0])
 	run.call(0.5)
@@ -1333,6 +1470,14 @@ func _solo_checks() -> void:
 	check(not solo.set_companion(1, "druid", sim_clock[0])["ok"] and not solo.set_raid_plan("druid", 1)["ok"],
 		"companions and the plan are fixed while the raid is out")
 	check(solo.raid(false, sim_clock[0])["ok"] and combat.party_members(1).size() == 4, "and it disbands back to your companions")
+	# Dismissing: a companion goes home and its slot keeps its class for a later invite.
+	var leaving: int = solo.slot_ids[1]
+	check(solo.dismiss(1)["ok"] and not world.players.has(leaving) and solo.slot_ids[1] == 0 and combat.party_members(1).size() == 3,
+		"a dismissed companion leaves your party")
+	check(solo.set_companion(1, "druid", sim_clock[0])["ok"] and solo.slot_ids[1] == 0 and solo.party_plan[1] == "druid",
+		"an empty slot just remembers its class")
+	check(solo.invite(1, sim_clock[0])["ok"] and world.players[solo.slot_ids[1]]["vocation"] == "druid"
+		and combat.party_members(1).size() == 4, "and invites that class")
 
 
 ## Start-menu characters: names are cleaned, and a profile's summary is read defensively.
@@ -3099,7 +3244,7 @@ func _town_checks() -> void:
 		towns.get(person["place"], []).append(person["role"])
 		check(World.NPC_CELLS.get(person["cell"], "") == id and not World.walkable(person["cell"]), "%s blocks its tile" % id)
 		check(_beside(id) != person["cell"], "%s can be reached" % id)
-		check(person["services"] == {"banker": ["bank"], "artisan": ["craft"]}.get(person["role"], ["trade"]), "%s offers its service" % id)
+		check(person["services"] == {"banker": ["bank"], "artisan": ["craft"], "warden": ["pvp"]}.get(person["role"], ["trade"]), "%s offers its service" % id)
 	var banks: Array = []
 	for town: String in towns:
 		check("vendor" in towns[town], "%s has a vendor" % town)
@@ -4905,6 +5050,8 @@ func _armor_and_control_checks() -> void:
 	_place(world, 4, arena + Vector2i(0, 1))
 	world.players[4]["mana"] = 999999
 	world.players[4]["target"] = 2
+	for id: int in [2, 4]:
+		world.players[id]["pvp"] = true
 	var rooted: Dictionary = combat.cast(4, "entangling_roots", 10.0)
 	check(rooted["ok"] and world.players[2]["rooted_until"] == 13.0, "Entangling roots strikes and roots a player for 3 s")
 	world.players[2]["next_move"] = 0.0
@@ -5551,6 +5698,8 @@ func _combat_checks() -> void:
 	druid["cooldowns"] = {}
 	druid["groups"] = {}
 	druid["mana"] = world.player_stats(4)["mana"]
+	druid["pvp"] = true
+	paladin["pvp"] = true
 	check(combat.hostile(4, 1) and combat.cast(4, "mass_mend", time + 20.0)["ok"] and paladin["health"] == 10,
 		"group heals never mend a foe in a PvP zone")
 	_place(world, 4, Vector2i(14, 4))
@@ -5600,10 +5749,75 @@ func _combat_checks() -> void:
 		world.monsters.clear()
 		_place(world, 1, pvp_cells[0])
 		_place(world, 4, pvp_cells[1])
-		check(combat.set_target(1, 4, time + 40.0)["ok"] and combat.hostile(4, 1), "players can fight inside a PvP zone")
+		paladin["pvp"] = true
+		druid["pvp"] = true
+		check(combat.set_target(1, 4, time + 40.0)["ok"] and combat.hostile(4, 1), "players with PvP on can fight inside a PvP zone")
 		_place(world, 4, Vector2i(14, 4))
 		combat.tick(time + 41.0)
 		check(paladin["target"] == 0, "leaving the PvP zone drops the target")
+
+
+## The PvP switch at Reedmere's warden (Combat.set_pvp): off by default, both players need it on,
+## never while skulled or fighting, a cooldown between changes, and kept across restarts.
+func _pvp_switch_checks() -> void:
+	var wardens: Array = World.TOWNSFOLK.keys().filter(func(id: String) -> bool: return World.TOWNSFOLK[id]["role"] == "warden")
+	check(wardens.size() == 1 and World.TOWNSFOLK[wardens[0]]["place"] == "Reedmere"
+		and World.zone_at(World.TOWNSFOLK[wardens[0]]["cell"]).get("town", false), "Reedmere has the one PvP warden")
+	if wardens.size() != 1:
+		return
+	var warden: String = wardens[0]
+	var counter: Vector2i = World.TOWNSFOLK[warden]["cell"] + World.TOWNSFOLK[warden]["facing"]
+	check(World.walkable(counter) and World.npc_near(counter, "pvp") == warden, "the warden serves customers in front of them")
+	var world := World.new()
+	var combat := Combat.new(world, 7)
+	world.monsters.clear()
+	var arena: Vector2i = _open_cell(true)
+	world.add_player(1, 0.0, "knight")
+	world.add_player(2, 0.0, "sorcerer")
+	_place(world, 1, arena)
+	_place(world, 2, arena + Vector2i(2, 0))
+	var one: Dictionary = world.players[1]
+	check(not one["pvp"] and not world.pvp_on(2) and not world.export_player(1, 0.0)["pvp"], "PvP is off by default")
+	check(not combat.hostile(1, 2) and combat.set_target(1, 2, 0.0)["reason"].begins_with("Your PvP is off"),
+		"players with PvP off cannot fight, even in a PvP zone")
+	check(combat.set_pvp(1, warden, true, 10.0)["reason"].begins_with("Walk closer"), "only at the warden")
+	_place(world, 1, counter)
+	check(not combat.set_pvp(1, warden, "yes", 10.0)["ok"] and not combat.set_pvp(1, "reedmere_vendor", true, 10.0)["ok"]
+		and not combat.set_pvp(1, warden, false, 10.0)["ok"], "forged values, other NPCs, and no-op switches are refused")
+	var switched: Dictionary = combat.set_pvp(1, warden, true, 10.0)
+	check(switched["ok"] and one["pvp"] and switched["events"].any(func(event: Dictionary) -> bool: return event["kind"] == "player")
+		and world.export_player(1, 10.0)["pvp"] and world.export_player(1, 10.0, true)["pvp_toggle_left"] == Balance.PVP_TOGGLE_SECONDS,
+		"the warden turns PvP on and starts the cooldown")
+	check(not combat.set_pvp(1, warden, false, 10.0 + Balance.PVP_TOGGLE_SECONDS - 1.0)["ok"]
+		and combat.set_pvp(1, warden, false, 10.0 + Balance.PVP_TOGGLE_SECONDS - 1.0)["reason"].begins_with("You can change it again"),
+		"PvP can change only once per cooldown")
+	_place(world, 1, arena)
+	check(not combat.hostile(1, 2) and combat.set_target(1, 2, 20.0)["reason"].ends_with("has PvP off"),
+		"a player with PvP on cannot attack one with it off")
+	world.players[2]["pvp"] = true
+	check(combat.hostile(1, 2) and combat.hostile(2, 1) and combat.set_target(1, 2, 20.0)["ok"], "two players with PvP on can fight")
+	_place(world, 1, counter)
+	var later: float = 20.0 + Balance.PVP_TOGGLE_SECONDS
+	one["skull"] = "white"
+	check(combat.set_pvp(1, warden, false, later)["reason"].begins_with("Not while you carry a skull"), "not while skulled")
+	one["skull"] = ""
+	one["pvp_until"] = later + 5.0
+	check(combat.set_pvp(1, warden, false, later)["reason"].begins_with("Not in the middle of a fight"), "not in the middle of a fight")
+	one["pvp_until"] = 0.0
+	check(combat.set_pvp(1, warden, false, later)["ok"] and not one["pvp"], "after the cooldown PvP turns off again")
+	# Saved with the character, the cooldown keeping its remaining time; forged values are clamped.
+	world.players[2]["pvp_toggle_at"] = 100.0
+	var data: Dictionary = CharacterStore.capture(world, 2, 40.0)
+	var restored := World.new()
+	restored.add_player(9, 0.0, "sorcerer")
+	CharacterStore.restore(restored, 9, data, 1000.0)
+	check(restored.players[9]["pvp"] and is_equal_approx(restored.players[9]["pvp_toggle_at"], 1060.0),
+		"the PvP switch and its cooldown persist")
+	data["pvp"] = "true"
+	data["pvp_toggle_left"] = 1e12
+	CharacterStore.restore(restored, 9, data, 1000.0)
+	check(not restored.players[9]["pvp"] and restored.players[9]["pvp_toggle_at"] <= 1000.0 + Balance.PVP_TOGGLE_SECONDS,
+		"saved PvP values are sanitized")
 
 
 ## Items of `kind` across entries, counting stacks.

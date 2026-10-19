@@ -53,7 +53,7 @@ const HOUSE_DOOR: int = 16
 static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
-const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan"]
+const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan", "warden"]
 ## Spells and runes landing (Combat.cast, Combat.use_rune; Spells.ELEMENTS): per element a row of
 ## RUNE_FX_FRAMES 32x32 frames, played once over RUNE_FX_SECONDS on every tile hit.
 const RUNE_FX: Texture2D = preload("res://assets/sprites/rune_fx.png")

@@ -230,7 +230,7 @@ func in_pvp_zone(id: int) -> bool:
 	return World.zone_at(creature(id)["cell"]).get("pvp", false)
 
 
-## Players fight monsters anywhere, and each other only when both stand in a PvP zone.
+## Players fight monsters anywhere, and each other only when both stand in a PvP zone with PvP on.
 func hostile(attacker: int, target: int) -> bool:
 	if attacker == target or not exists(attacker) or not exists(target):
 		return false
@@ -240,10 +240,33 @@ func hostile(attacker: int, target: int) -> bool:
 	if World.dungeon_at(creature(attacker)["cell"]) != World.dungeon_at(creature(target)["cell"]):
 		return false
 	if attacker > 0 and target > 0:
-		if same_party(attacker, target):
+		if same_party(attacker, target) or not world.pvp_on(attacker) or not world.pvp_on(target):
 			return false
 		return in_pvp_zone(attacker) and in_pvp_zone(target)
 	return true
+
+
+## Turns a player's PvP on or off at an NPC offering "pvp" (Reedmere's warden). Not while skulled
+## or in PvP combat, and only once every Balance.PVP_TOGGLE_SECONDS. Returns {ok, events} or
+## {ok: false, reason}.
+func set_pvp(id: int, npc: Variant, on: Variant, now: float) -> Dictionary:
+	if not world.players.has(id) or typeof(on) != TYPE_BOOL:
+		return {"ok": false, "reason": "Unknown player"}
+	var player: Dictionary = world.players[id]
+	if not World.serves(npc, "pvp", player["cell"]):
+		return {"ok": false, "reason": "Walk closer to the warden"}
+	if player.get("pvp", false) == on:
+		return {"ok": false, "reason": "Your PvP is already %s" % ("on" if on else "off")}
+	if not player["skull"].is_empty():
+		return {"ok": false, "reason": "Not while you carry a skull"}
+	if now < player["pvp_until"]:
+		return {"ok": false, "reason": "Not in the middle of a fight"}
+	if now < player.get("pvp_toggle_at", -INF):
+		return {"ok": false, "reason": "You can change it again in %d min" % ceili((player["pvp_toggle_at"] - now) / 60.0)}
+	player["pvp"] = on
+	player["pvp_toggle_at"] = now + Balance.PVP_TOGGLE_SECONDS
+	return {"ok": true, "events": [{"kind": "player", "id": id},
+		{"kind": "message", "id": id, "text": "PvP is now %s" % ("on: other PvP players may attack you in PvP zones" if on else "off")}]}
 
 
 func export_monster(id: int, now: float) -> Dictionary:
@@ -382,6 +405,10 @@ func set_target(id: int, target: Variant, _now: float) -> Dictionary:
 	if not exists(target):
 		return {"ok": false, "reason": "Unknown target"}
 	if target > 0 and not hostile(id, target):
+		if not world.pvp_on(id):
+			return {"ok": false, "reason": "Your PvP is off (Reedmere's warden can turn it on)"}
+		if not world.pvp_on(target):
+			return {"ok": false, "reason": "%s has PvP off" % describe(target)}
 		return {"ok": false, "reason": "You can only attack players inside a PvP zone"}
 	if not hostile(id, target):
 		return {"ok": false, "reason": "You cannot attack that"}

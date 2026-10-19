@@ -9,6 +9,10 @@ const PvpBrain = preload("res://game/core/ai/pvp_brain.gd")
 var sight := PackedFloat32Array()
 ## The choice waiting for the arena's next step ({"act": i, "move": j}), empty once taken.
 var choice: Dictionary = {}
+## The finished duel's result ("win", "loss", "draw", "fled") for the step that reports done.
+var outcome: String = ""
+## Who the finished duel was against: "scripted" or "policy" (a self-play snapshot).
+var opponent: String = ""
 
 
 func _init() -> void:
@@ -17,6 +21,10 @@ func _init() -> void:
 
 func get_obs() -> Dictionary:
 	return {"obs": Array(sight)}
+
+
+func get_info() -> Dictionary:
+	return {} if outcome.is_empty() else {"result": outcome, "opponent": opponent}
 
 
 func get_reward() -> float:

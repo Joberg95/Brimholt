@@ -41,10 +41,10 @@ static var FERRYMEN: Dictionary = {}
 ## Quest NPCs by node name: name, place, cell, facing, services (["quests"]), and task (a
 ## Quests.TASKS id, or "" for the Relic keeper).
 static var QUEST_GIVERS: Dictionary = {}
-## Vendors, bankers, and artisans by node name: name, place, cell, facing, role, services
-## (["trade"], ["bank"], or ["craft"]).
+## Vendors, bankers, artisans, and wardens by node name: name, place, cell, facing, role, services
+## (["trade"], ["bank"], ["craft"], or ["pvp"]).
 static var TOWNSFOLK: Dictionary = {}
-## Cell -> NPC id (ferryman, quest giver, vendor, or banker); NPCs block their tile.
+## Cell -> NPC id (ferryman, quest giver, or townsfolk); NPCs block their tile.
 static var NPC_CELLS: Dictionary = {}
 ## Gameplay zones {name, rect (tiles), pvp, min_level, max_level}; the first match wins.
 static var ZONES: Array = []
@@ -268,7 +268,7 @@ static func _static_init() -> void:
 			TOWNSFOLK[String(marker.name)] = {
 				"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
 				"cell": _cell_of(marker), "facing": marker.get("facing"), "role": role,
-				"services": {"banker": ["bank"], "artisan": ["craft"]}.get(role, ["trade"]),
+				"services": {"banker": ["bank"], "artisan": ["craft"], "warden": ["pvp"]}.get(role, ["trade"]),
 			}
 			NPC_CELLS[_cell_of(marker)] = String(marker.name)
 	if scene.has_node("Zones"):
@@ -1034,6 +1034,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {}, "title": 0, "slain": {},
 				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
+				"pvp": false, "pvp_toggle_at": -INF,
 				"skills": {}, "gathering": {}, "next_craft": now, "fed": {}, "bags": ["", "", ""],
 			}
 			var limits: Dictionary = stats(1, {}, vocation)
@@ -1045,6 +1046,16 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 
 func remove_player(id: int) -> void:
 	players.erase(id)
+
+
+## Whether a player fights other players (Combat.set_pvp at Reedmere's warden; off for new
+## characters), or for a companion bot ("pvp_of") whether its leader does.
+func pvp_on(id: int) -> bool:
+	var player: Dictionary = players.get(id, {})
+	var leader: int = player.get("pvp_of", 0)
+	if leader != 0 and players.has(leader):
+		player = players[leader]
+	return player.get("pvp", false)
 
 
 ## Removes ground stacks unchanged for GROUND_DECAY_SECONDS, checking every GROUND_SWEEP_SECONDS.
@@ -1079,7 +1090,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		"remaining": remaining, "duration": player.get("step", MOVE_SECONDS), "facing": player["facing"],
 		"equipment": player["equipment"].duplicate(), "level": player["level"], "vocation": player["vocation"],
 		"health": player["health"], "max_health": player_stats(id)["health"], "skull": player["skull"],
-		"party": player["party"], "title": player.get("title", 0),
+		"party": player["party"], "title": player.get("title", 0), "pvp": pvp_on(id),
 	}
 	if player.get("bot", false):
 		state["bot"] = true
@@ -1100,6 +1111,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["mana"] = player["mana"]
 		state["town_rest"] = player["town_rest"]
 		state["town_rest_left"] = maxf(0.0, player["town_rest_ready"] - now)
+		state["pvp_toggle_left"] = maxf(0.0, player["pvp_toggle_at"] - now)
 		state["max_mana"] = player_stats(id)["mana"]
 		state["target"] = player["target"]
 		for timers: String in ["cooldowns", "groups"]:

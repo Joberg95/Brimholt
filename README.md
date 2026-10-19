@@ -9,14 +9,15 @@ and the 384×384 world) is original.
 **Features at a glance**
 
 - Server-authoritative LAN play for up to twenty-four players (native Godot ENet), with saves on the host
-- Four classes, spells with ranks, parties with shared experience, Tibia-style skulls and PvP zones
+- Four classes, spells with ranks, parties with shared experience, Tibia-style skulls and PvP zones, with an opt-in PvP switch at Reedmere's warden
 - Ten gear tiers, hunting weapons, level-50 mythic sets, and boss relics, all visible on your character
 - Towns, waystones, ferries, instanced dungeons, quest chains, and a lexicon of every monster
 - Gathering (mining, woodcutting, herbalism, fishing) and crafting (smithing, woodworking,
   tailoring, alchemy, cooking) at town artisans
 - A backpack plus three bag slots, a bank depot, vendors, potions, and food
-- **Play solo** with three AI companions who follow, heal, and tank for you, rival adventurer
-  bands who quest, level, and ambush you in PvP zones, and a twenty-player AI raid (you pick its classes) for the final bosses
+- **Play solo**, alone or with up to three AI companions you invite who follow, heal, and tank for
+  you, rival adventurer bands who quest, level, and ambush you in PvP zones, lone rivals who
+  roam, flip their PvP at the warden, and hunt PvP-on players in PvP zones, and a twenty-player AI raid (you pick its classes) for the final bosses
 
 ## About
 

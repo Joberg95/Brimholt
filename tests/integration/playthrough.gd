@@ -2,8 +2,8 @@ extends SceneTree
 ## Automated playthrough bot. Two of these join a real dedicated server as a Knight and a
 ## Sorcerer and play through every system using the same client calls as the UI: gear up,
 ## walk out of town with pathfinding, hunt the nearest monsters with spells and healing, loot
-## gold, walk to the waystone and travel to Reedmere, walk to the pier and sail to Blackreed
-## Isle, then duel there (white skull, self-defence, death, item loss, looting the corpse).
+## gold, walk to the waystone and travel to Reedmere, turn PvP on at the warden, walk to the pier
+## and sail to Blackreed Isle, then duel there (white skull, self-defence, death, item loss, looting the corpse).
 ## Rendering goes to an offscreen buffer; screenshots land in .tools/playtest. Run it through
 ## tools/testing/playtest.py, which starts the server and writes the report.
 ## Output lines: PLAYTEST <role> <phase> <ok|fail|info|finding> <detail>, PLAYTEST_SHOT <file> <caption>.
@@ -323,6 +323,7 @@ func _process(delta: float) -> bool:
 		"hunt": _hunt()
 		"to_port": _to_port()
 		"sail_coast": _sail_coast()
+		"to_warden": _to_warden()
 		"to_reedmere": _to_reedmere()
 		"sail_isle": _sail_isle()
 		"duel": _duel()
@@ -471,11 +472,29 @@ func _sail_coast() -> void:
 	if Combat.distance(me()["cell"], World.FERRYMEN["reedmere_coach"]["cell"]) <= World.TALK_RANGE:
 		report("ok", "travelled by waystone to Reedmere; gold now %d" % me()["gold"])
 		shot("coach", "Arrived at Reedmere through the waystones")
-		_enter("to_reedmere")
+		_enter("to_warden")
 	elif throttle(1.2) and not sail("cinder_coach", "reedmere_coach"):
 		_finish()
 	elif now() - phase_since > 15.0:
 		report("fail", "the coach did not leave: %s" % game.last_action_message)
+		_finish()
+
+
+## Both duellists turn PvP on at Reedmere's warden (Combat.set_pvp) before sailing to the isle.
+func _to_warden() -> void:
+	if defend():
+		return
+	if me().get("pvp", false):
+		report("ok", "PvP turned on at the warden in %.0f s; message: %s" % [now() - phase_since, game.last_action_message])
+		shot("warden", "PvP switched on at Warden Kessa in Reedmere")
+		_enter("to_reedmere")
+		return
+	var warden: Dictionary = World.TOWNSFOLK["reedmere_warden"]
+	if walk_to(warden["cell"] + warden["facing"]):
+		if throttle(1.2):
+			game.pvp_local("reedmere_warden", true)
+	elif now() - phase_since > WALK_SECONDS:
+		report("fail", "could not turn PvP on at the warden from %s: %s" % [me()["cell"], game.last_action_message])
 		_finish()
 
 

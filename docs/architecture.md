@@ -16,9 +16,10 @@ game/
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
     bots.gd              Host player bots: hunter, PvP, dummy, companion, and rival stances through the real rules
     bot_loot.gd          Bots collect the loot their group earned (Combat.loot_claims) and sell it at vendors
-    solo.gd              Solo play: companions around your class, rival bands, PvP ambushes, raid fill and disband
+    solo.gd              Solo play: optional companions (invite/dismiss), rival bands, lone roamers, PvP ambushes, raid fill and disband
     nav.gd               Long-range bot navigation: AStarGrid2D over the walkable overworld
-    ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/
+    ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/;
+                         pvp_brain.gd and policy_net.gd run the trained PvP policy (docs/bot-training.md)
   data/                  Static catalogs and curves
     balance.gd           Level 1-50 curves, vocations, stats
     items.json           Item catalog (also read by the sprite generator)
@@ -30,6 +31,7 @@ game/
     bot_behavior.tres    The bots' LimboAI behavior tree (edit in the editor's LimboAI tab; `make bot-tree` rebuilds it)
     biomes.gd            Climate regions (the desert: no rain, cactus scrub)
     regions.gd           Named overworld regions (anchors and descriptions; levels derived)
+    policies/            Trained bot policies as JSON weights (pvp_duel.json, written by make export-policy)
     buildings.gd         Finds buildings (rooms, doors, roof footprints) from walls
     monsters.gd          Monster catalog, loot tables, bosses and their relics
     spells.gd            Spell catalog and cooldown groups
@@ -86,7 +88,9 @@ tests/
   visual/                Offscreen rendering checks
 tools/
   generators/            make_sprites.py, import_outfits.gd, make_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, fill_gaps.gd, clear_walls.gd, cobble_towns.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
-  testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd, bench.gd
+  testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd, duel_eval.gd, bench.gd
+  training/              PvP policy training: duel arena and Godot RL Agents env (GDScript), train.py and export_policy.py (docs/bot-training.md)
+addons/                  LimboAI (GDExtension) and the training-only Godot RL Agents plugin
 docs/                    Gameplay, world editing, art, balance, testing, this file
 .tools/                  Ignored: test reports, captures, downloads
 ```

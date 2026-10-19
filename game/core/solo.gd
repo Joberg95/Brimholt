@@ -1,12 +1,15 @@
 extends RefCounted
-## Solo play on the host (the start screen's "Play solo"): a private world where your own
-## companions (Bots "companion") complete a tank, healer, and damage group around your class,
-## and two rival adventurer bands (Bots "rival") take tasks, hunt, level alongside you, and
-## ambush your group when you enter a PvP zone. "Raid" fills your party to the raid the final
-## bosses are balanced for, sending the rival bands home meanwhile to stay within
-## World.MAX_PLAYERS; "Disband raid" sends the extra companions away again. You choose your
-## companions' classes (set_companion) and the raid's makeup (set_raid_plan, starting from
-## Balance.RAID; Balance.raid_check says whether it can beat the final boss) in the party window.
+## Solo play on the host (the start screen's "Play solo"): a private world where you start
+## alone. Up to three companions (Bots "companion", a tank, healer, and damage group around your
+## class) join when you invite them from the party window (invite, dismiss). Two rival adventurer
+## bands (Bots "rival") take tasks, hunt, level alongside you, and ambush you when you enter a
+## PvP zone, and six lone rivals (ROAMERS) do the same errands by themselves: some keep PvP on,
+## others flip it at Reedmere's warden now and then (Bots SWITCH_CHANCE), and with PvP on they
+## hunt in PvP zones and attack PvP-on players there. "Raid" fills your party to the raid the
+## final bosses are balanced for, sending the rivals home meanwhile to stay within
+## World.MAX_PLAYERS; "Disband raid" sends the extra companions away and the rivals back out. You
+## choose your companions' classes (set_companion) and the raid's makeup (set_raid_plan, starting
+## from Balance.RAID; Balance.raid_check says whether it can beat the final boss) in the party window.
 ## Everything runs through game/core/bots.gd, so bots play by the same rules as players.
 ## Results are events like Combat.tick; {"kind": "bot_left", "id"} asks the host to drop a bot.
 
@@ -31,6 +34,13 @@ const BANDS: Array = [
 	["the Ashen Hand", [["knight", "Varric", 1], ["sorcerer", "Ysmay", 1], ["druid", "Corvin", 1]]],
 	["the Thornwardens", [["paladin", "Lirien", 2], ["knight", "Haldor", 2], ["druid", "Saskia", 2]]],
 ]
+## Lone rivals: [vocation, name, level offset from you, temper]. Temper "pvp" keeps PvP on;
+## "switch" flips it at the warden now and then (Bots._pvp_errand).
+const ROAMERS: Array = [
+	["knight", "Torvin the Lone", 2, "pvp"], ["sorcerer", "Ilsabet the Lone", 3, "pvp"],
+	["paladin", "Merrow the Lone", -1, "switch"], ["druid", "Edda the Lone", 0, "switch"],
+	["knight", "Joren the Lone", 1, "switch"], ["paladin", "Kestra the Lone", -2, "switch"],
+]
 ## Rival bands level from their own kills and tasks like you do. A band member who falls more
 ## than BAND_SLACK levels behind its place (your level plus its offset) is lifted to that floor
 ## between errands, so a band never drops out of your range; one ahead of you keeps its levels.
@@ -47,13 +57,16 @@ var bots: Bots
 ## The playing host.
 var leader: int = 1
 var raiding: bool = false
-## Your companions' classes, one per slot (starting as COMPANIONS), and the bot in each slot.
+## Your companions' classes, one per slot (starting as COMPANIONS), and the bot in each slot
+## (0 while you have not invited it).
 var party_plan: Array[String] = []
 var slot_ids: Array[int] = []
 ## The raid's classes: vocation -> players, you and your companions included (starting as Balance.RAID).
 var raid_plan: Dictionary = {}
 ## Band index -> {leader: bot id (0 while away), members: [ids], rest_until}.
 var bands: Dictionary = {}
+## Roamer index (ROAMERS) -> its bot id, 0 while away.
+var roamers: Dictionary = {}
 var _next_check: float = 0.0
 
 
@@ -63,7 +76,7 @@ func _init(owner: World, fights: Combat, brains: Bots) -> void:
 	bots = brains
 
 
-## Brings out your companions and the rival bands.
+## Brings out the rival bands and the roamers; you start alone (invite companions with invite).
 func start(id: int, now: float) -> Array:
 	leader = id
 	var events: Array = []
@@ -73,12 +86,49 @@ func start(id: int, now: float) -> Array:
 	raid_plan = Balance.RAID.duplicate()
 	slot_ids.clear()
 	for index: int in party_plan.size():
-		var kind: String = party_plan[index]
-		slot_ids.append(_add_companion(kind, _free_name(kind), now, events))
+		slot_ids.append(0)
 	for band: int in BANDS.size():
 		bands[band] = {"leader": 0, "members": [], "rest_until": 0.0}
 		_send_band(band, now, events)
+	for index: int in ROAMERS.size():
+		roamers[index] = 0
+		_send_roamer(index, now, events)
 	return events
+
+
+## Brings the companion of a slot (its class from party_plan) to your side.
+func invite(slot: int, now: float) -> Dictionary:
+	var events: Array = []
+	if slot < 0 or slot >= party_plan.size():
+		return {"ok": false, "reason": "Unknown companion", "events": events}
+	if raiding:
+		return {"ok": false, "reason": "Disband the raid before changing your companions", "events": events}
+	if bots.bots.has(slot_ids[slot]):
+		return {"ok": false, "reason": "That companion is already with you", "events": events}
+	var vocation: String = party_plan[slot]
+	var name: String = _free_name(vocation)
+	slot_ids[slot] = _add_companion(vocation, name, now, events)
+	if slot_ids[slot] == 0:
+		return {"ok": false, "reason": "No room for another companion", "events": events}
+	_keep_room()
+	events.append({"kind": "message", "id": leader, "text": "%s the %s joins you." % [name, Balance.VOCATIONS[vocation]["name"]]})
+	return {"ok": true, "events": events}
+
+
+## Sends the companion of a slot home; the slot keeps its class for a later invite.
+func dismiss(slot: int) -> Dictionary:
+	var events: Array = []
+	if slot < 0 or slot >= party_plan.size():
+		return {"ok": false, "reason": "Unknown companion", "events": events}
+	if raiding:
+		return {"ok": false, "reason": "Disband the raid before changing your companions", "events": events}
+	if not bots.bots.has(slot_ids[slot]):
+		return {"ok": false, "reason": "That companion is not with you", "events": events}
+	var name: String = world.players[slot_ids[slot]]["name"]
+	_drop(slot_ids[slot], events)
+	slot_ids[slot] = 0
+	events.append({"kind": "message", "id": leader, "text": "%s leaves your party." % name})
+	return {"ok": true, "events": events}
 
 
 ## Your companions (raid companions included), in the order they joined.
@@ -91,7 +141,8 @@ func companions() -> Array[int]:
 	return result
 
 
-## Gives a companion slot another class: its companion goes home and one of `vocation` joins.
+## Gives a companion slot another class: its companion goes home and one of `vocation` joins
+## (an empty slot only remembers the class for its invite).
 func set_companion(slot: int, vocation: String, now: float) -> Dictionary:
 	var events: Array = []
 	if slot < 0 or slot >= party_plan.size() or not Balance.VOCATIONS.has(vocation):
@@ -100,19 +151,25 @@ func set_companion(slot: int, vocation: String, now: float) -> Dictionary:
 		return {"ok": false, "reason": "Disband the raid before changing your companions", "events": events}
 	if party_plan[slot] == vocation and bots.bots.has(slot_ids[slot]):
 		return {"ok": false, "reason": "That companion already is a %s" % Balance.VOCATIONS[vocation]["name"], "events": events}
-	if bots.bots.has(slot_ids[slot]):
-		_drop(slot_ids[slot], events)
+	if not bots.bots.has(slot_ids[slot]):
+		party_plan[slot] = vocation
+		return {"ok": true, "events": events}
+	_drop(slot_ids[slot], events)
 	party_plan[slot] = vocation
 	var name: String = _free_name(vocation)
 	slot_ids[slot] = _add_companion(vocation, name, now, events)
 	if slot_ids[slot] == 0:
 		return {"ok": false, "reason": "No room for another companion", "events": events}
-	# The raid plan keeps room for everyone already in your party.
+	_keep_room()
+	events.append({"kind": "message", "id": leader, "text": "%s the %s joins you." % [name, Balance.VOCATIONS[vocation]["name"]]})
+	return {"ok": true, "events": events}
+
+
+## The raid plan keeps room for everyone already in your party.
+func _keep_room() -> void:
 	var have: Dictionary = party_classes()
 	for kind: String in have:
 		raid_plan[kind] = maxi(raid_plan.get(kind, 0), have[kind])
-	events.append({"kind": "message", "id": leader, "text": "%s the %s joins you." % [name, Balance.VOCATIONS[vocation]["name"]]})
-	return {"ok": true, "events": events}
 
 
 ## Raises or lowers how many of a class the raid brings (never below those already in your party).
@@ -168,6 +225,10 @@ func raid(on: bool, now: float) -> Dictionary:
 	if on:
 		for band: int in bands:
 			_recall_band(band, events)
+		for index: int in roamers:
+			if roamers[index] != 0:
+				_drop(roamers[index], events)
+				roamers[index] = 0
 		var wanted: Dictionary = raid_plan.duplicate()
 		for id: int in [leader] + companions():
 			var vocation: String = world.players[id]["vocation"]
@@ -184,11 +245,14 @@ func raid(on: bool, now: float) -> Dictionary:
 		for band: int in bands:
 			bands[band]["rest_until"] = now + AMBUSH_COOLDOWN
 			_send_band(band, now, events)
+		for index: int in roamers:
+			_send_roamer(index, now, events)
 		events.append({"kind": "message", "id": leader, "text": "Your raid disbands; your companions stay with you."})
 	return {"ok": true, "events": events}
 
 
-## Keeps rival bands at your level between errands and sends one after you in a PvP zone.
+## Keeps rival bands and roamers at your level between errands and sends a band after you in a
+## PvP zone.
 func tick(now: float) -> Array:
 	var events: Array = []
 	if now < _next_check or not world.players.has(leader):
@@ -201,6 +265,10 @@ func tick(now: float) -> Array:
 		var head: Dictionary = bots.bots[state["leader"]]
 		if head["plan"].is_empty():
 			_level_band(band, events)
+	for index: int in roamers:
+		var id: int = roamers[index]
+		if id != 0 and bots.bots.has(id) and bots.bots[id]["plan"].is_empty():
+			_lift(id, ROAMERS[index][2], events)
 	if combat.in_pvp_zone(leader) and not raiding:
 		var busy: bool = bands.values().any(func(state: Dictionary) -> bool:
 			return state["leader"] != 0 and bots.bots.has(state["leader"]) and bots.bots[state["leader"]]["plan"].get("state", "") == "ambush")
@@ -265,6 +333,26 @@ func _send_band(band: int, now: float, events: Array) -> void:
 			bots.join_leader(id, now, events)
 
 
+## Puts a roamer in a town (not the bands' two farthest, nor the one nearest you), at its level.
+## A "switch" roamer starts with PvP on or off at random and may flip it after a while.
+func _send_roamer(index: int, now: float, events: Array) -> void:
+	if roamers.get(index, 0) != 0:
+		return
+	var entry: Array = ROAMERS[index]
+	var added: Dictionary = bots.add(entry[0], _band_level(entry[2]), "rival", _far_town(index, BANDS.size()), now,
+		{"name": entry[1], "roamer": entry[3]})
+	if not added["ok"]:
+		return
+	var id: int = added["id"]
+	bots.bots[id]["leader"] = id
+	var player: Dictionary = world.players[id]
+	if entry[3] == "switch":
+		player["pvp"] = combat.rng.randf() < 0.5
+		player["pvp_toggle_at"] = now + combat.rng.randf_range(0.0, Balance.PVP_TOGGLE_SECONDS)
+	roamers[index] = id
+	events.append({"kind": "player", "id": id})
+
+
 func _recall_band(band: int, events: Array) -> void:
 	var state: Dictionary = bands[band]
 	for id: int in state["members"]:
@@ -297,13 +385,18 @@ func _level_band(band: int, events: Array) -> void:
 		var id: int = state["members"][index]
 		if not bots.bots.has(id):
 			continue
-		var floor_level: int = maxi(1, _band_level(members[mini(index, members.size() - 1)][2]) - BAND_SLACK)
-		var player: Dictionary = world.players[id]
-		if player["level"] < floor_level:
-			player["level"] = floor_level
-			player["experience"] = 0
-			bots.track_level(id, events)
-			world.clamp_vitals(id)
+		_lift(id, members[mini(index, members.size() - 1)][2], events)
+
+
+## Lifts a rival more than BAND_SLACK levels behind its place (your level plus `offset`) to that floor.
+func _lift(id: int, offset: int, events: Array) -> void:
+	var floor_level: int = maxi(1, _band_level(offset) - BAND_SLACK)
+	var player: Dictionary = world.players[id]
+	if player["level"] < floor_level:
+		player["level"] = floor_level
+		player["experience"] = 0
+		bots.track_level(id, events)
+		world.clamp_vitals(id)
 
 
 ## Sends a band to fight you in your PvP zone: they arrive out of sight inside the zone and close in.
@@ -342,13 +435,15 @@ static func _near_camp(cell: Vector2i) -> bool:
 	return false
 
 
-## A town far from you (towns are zones flagged "town"), different for each band.
-func _far_town(band: int) -> Vector2i:
+## A town far from you (towns are zones flagged "town"), different for each band; roamers
+## (`skip` = the bands' count) spread over the next ones, never the town nearest you.
+func _far_town(band: int, skip: int = 0) -> Vector2i:
 	var you: Vector2i = world.players[leader]["cell"] if world.players.has(leader) else World.SPAWNS[0]
 	var towns: Array = World.ZONES.filter(func(zone: Dictionary) -> bool: return zone["town"])
 	towns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return Combat.distance(a["rect"].get_center(), you) > Combat.distance(b["rect"].get_center(), you))
-	var town: Dictionary = towns[mini(band, towns.size() - 1)]
+	var town: Dictionary = towns[mini(band, towns.size() - 1)] if skip == 0 \
+		else towns[skip + band % maxi(1, towns.size() - 1 - skip)]
 	var centre: Vector2i = town["rect"].get_center()
 	for radius: int in range(0, 12):
 		for dy: int in range(-radius, radius + 1):

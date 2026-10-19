@@ -60,7 +60,7 @@ filtering:
 | `mushrooms.png` | 64×96 giant mushrooms (`mushroom`), 3 variants drawn like trees for `U` in Mirewood Fen: a pale stalk and a broad spotted cap |
 | `furniture.png` | 32×48 furniture drawn 16 px above its tile, painted like the creatures from 3D solids (`tools/generators/props.py`: boxes, cylinders, and ellipsoids under the same camera and top-left light, five-tone ramps, wood grain and plank seams, gloss on metal and glass, glowing flames and lantern glass, coloured outlines): shop counter, bank counter, potion shelf, bookshelf, weapon rack, barrel, crate, strongbox, anvil, workbench, cauldron, loom, hearth, then home furniture: bed, table, chair, potted plant, chest, then street furniture: lamp post, well, bench, market stall, then a stall and a bench seen from behind (`props.furniture("stall_back")`: any kind turned round) (`SpriteArt.FURNITURE` order) |
 | `fountain.png` | Four 96×112 frames of the town square's three-tier stone fountain (`props.fountain`): a round basin of stone blocks with a rippling pool, two bowls on a pedestal, and drops falling bowl to bowl a step lower each frame (6 fps). Drawn from the bottom-middle of the 3x3 tiles it blocks (`"fountain"`; the other eight are `"fountain_basin"`) |
-| `signs.png` | 32×32 hanging signs on an iron bracket, painted from 3D solids (`props.sign`) with the board turned to the viewer: shop (flask and sword), bank (coins), workshop (hammer and green flask) |
+| `signs.png` | 32×32 hanging signs on an iron bracket, painted from 3D solids (`props.sign`) with the board turned to the viewer: shop (flask and sword), bank (coins), workshop (hammer and green flask), warden (crossed swords) |
 | `herbs.png` | 32×32 herb patches for herbalism, painted leafy bushes with flower heads (`props.herb`), two variants per resource band (sunflax, mirereed, silverthistle, nightcotton, starpetal colours), drawn on their tile (`SpriteArt.draw_herb`) |
 | `menu_icons.png` | 8 painted 32×32 micro-menu icons in `MENU_ICONS` order (`make_sprites.py` `menu_icon`): character helm, spell book, professions pick and hammer, quest scroll, lexicon bestiary, world map, party trio under a pennant, controls cog |
 | `title.png` | 400×267 start-screen painting shown at 3× (`make_sprites.py` `title_painting`): a castle on a hill above a lake at dusk, dithered sunset sky with stars and a moon, layered mountains, far-shore pines, and a grassy ledge framed by pines where the start screen draws your character from behind |
@@ -242,7 +242,8 @@ Held weapons are posed from `WEAPON_ANGLES` (per grip style: melee, wand, staff,
 and held at `GRIP_AT`, a share of their length from the bottom: blades and axes by the hilt,
 wands near the end, staves a little below the middle (the foot by the boots), bows in the
 middle. A skin-toned fist is drawn over the grip whenever the weapon is in front of the body.
-Walking, blades rest angled out from the hip; side-on they lean forward across the chest
+On the character a weapon is drawn at `HELD_SCALE` (0.55) of its modelled size, scaled about
+the fist; item icons keep full size. Walking, blades rest angled out from the hip; side-on they lean forward across the chest
 and staves lean back over the shoulder. The attack wind-up raises the hand to shoulder height
 and the strike swings it forward and low. Painted weapons are drawn at `LENGTHS` pixels.
 

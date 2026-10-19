@@ -26,8 +26,9 @@ const HEADER: float = 34.0
 ## Region names on the world map: muted parchment, under the brighter town and zone labels.
 const REGION_TINT: Color = Color("#d8c89a")
 const PVP_TINT: Color = Color("#c43c32")
-## Map markers: ferrymen teal, quest givers gold, vendors green, bankers pale blue, artisans amber.
-const TOWNSFOLK_COLORS: Dictionary = {"vendor": Color("#9fe07a"), "banker": Color("#a8c8ff"), "artisan": Color("#e8a85a")}
+## Map markers: ferrymen teal, quest givers gold, vendors green, bankers pale blue, artisans amber, wardens red.
+const TOWNSFOLK_COLORS: Dictionary = {"vendor": Color("#9fe07a"), "banker": Color("#a8c8ff"), "artisan": Color("#e8a85a"),
+	"warden": Color("#e0605a")}
 const MAP_COLORS: Dictionary = {
 	".": Color("#4e693b"), ",": Color("#a08a6a"), "~": Color("#2d5a78"), "#": Color("#9196a0"),
 	"T": Color("#26401f"), ":": Color("#d8c48a"), "=": Color("#b0aca4"), "b": Color("#8a5a34"),

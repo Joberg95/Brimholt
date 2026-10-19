@@ -231,7 +231,9 @@ func _update_zone() -> void:
 		_continent = continent
 	zone_label.visible = not zone.is_empty() and not below
 	if not zone.is_empty():
-		var rule: String = "PvP zone: other players can attack you" if zone["pvp"] else "safe zone"
+		var pvp: bool = actors[self_id]["state"].get("pvp", false)
+		var rule: String = ("PvP zone: other PvP players can attack you" if pvp
+			else "PvP zone, but your PvP is off: players cannot attack you") if zone["pvp"] else "safe zone"
 		if zone.has("cave"):
 			rule = "a hunting cave shared with every hunter; the stairs up lead back"
 		elif zone.get("underground", false):

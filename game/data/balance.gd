@@ -23,6 +23,9 @@ const PVP_DAMAGE: float = 1.5
 const PVP_HEALING: float = 0.35
 const PVP_COMBAT_SECONDS: float = 10.0
 const PVP_DAMPENING_SECONDS: float = 90.0
+## Players fight each other only when both turned PvP on (off for new characters) at Reedmere's
+## warden; the switch then waits PVP_TOGGLE_SECONDS, and never flips while skulled or in PvP combat.
+const PVP_TOGGLE_SECONDS: float = 600.0
 ## Seconds per tile a chasing monster takes: CHASE_SECONDS_EVEN against a target of its level or
 ## higher (a touch quicker than a player's World.MOVE_SECONDS, 0.18), down to CHASE_SECONDS_FAST
 ## once it outlevels the target by CHASE_GAP_LEVELS or more. Nobody outruns a monster far above

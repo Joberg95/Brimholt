@@ -111,8 +111,28 @@ monsters at the player's level currently give:
 | Fight | Auto-attacks only | Spells and potions |
 | --- | --- | --- |
 | One monster | 3–27% health lost; nobody dies | 3–27% lost, 0–3 potions |
-| A camp of three | Warriors end at 5–60% health; Hunters die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–6 potions (Druids about 4–6, mostly mana); higher-level spells clear camps faster (a level 45 Sorcerer in about 6 s, a Hunter in about 8 s) |
+| A camp of three | Warriors end at 5–60% health; Hunters die from level 10, Sorcerers and Druids always | Everyone wins, ending at 43–82% health, 0–5 potions (Druids 2–5); higher-level spells clear camps faster (a level 45 Sorcerer in about 6 s, a Hunter in about 8 s) |
 | Level 1 against a level 40 | Dead within 2 seconds | Dead |
+
+### Solo content
+
+Everything but the four raid bosses (rank `boss`, see [the final boss](#the-final-boss)) is
+meant to be cleared alone by every class; parties only make it faster. `make fight-sim SURVEY=1`
+fights every elite and champion that spawns in the world or a dungeon, at its lowest spawn level,
+against one same-level player of each class in vendor tier gear with spells and potions: elites
+alone and in pairs (a cave camp holds two at once), champions alone. Nobody dies anywhere:
+
+| Class | Elite | Two elites | Champion |
+| --- | --- | --- | --- |
+| Warrior | 23–28 s, 5–7 potions | 50–60 s, 14–19 potions | 60–101 s, 13–22 potions |
+| Hunter | 17–19 s, 2–3 potions | 33–35 s, 7–9 potions | 41–72 s, 7–11 potions |
+| Sorcerer | 10–13 s, 0–1 potions | 21–27 s, 5–9 potions | 27–33 s, 6–7 potions |
+| Druid | 33–37 s, 5–6 potions | 71–82 s, 18–22 potions | 63–92 s, 15–22 potions |
+
+Druids heal best and hit weakest (`damage` 0.4), so their attack spells (Frost bolt, Thorn
+lash, Hailstorm) carry higher power than other classes' to keep their solo pace close to a
+Warrior's. Spell power does not enter `raid_damage`, so the curves stay put. Druids still lose
+every same-level duel against another class (below).
 
 ## PvP
 
@@ -134,10 +154,10 @@ duels with spells and potions (levels 20, 30, 45; duelists start adjacent):
 | Warrior vs Hunter | Warrior, 54–94 s |
 | Hunter vs Sorcerer | Hunter, 10–13 s (Sorcerer at 30) |
 | Sorcerer vs Warrior | Sorcerer, 15 s (Warrior at 30) |
-| Warrior vs Druid | Warrior, 25–30 s |
-| Hunter vs Druid | Hunter, 19–22 s |
+| Warrior vs Druid | Warrior, 30–39 s |
+| Hunter vs Druid | Hunter, 17–27 s |
 | Sorcerer vs Druid | Sorcerer, 8–10 s |
-| Warrior and Druid mirrors | 37–158 s |
+| Warrior and Druid mirrors | 25–158 s |
 | Hunter mirror | 55–61 s |
 | Sorcerer mirror | 6 s: glass cannons |
 

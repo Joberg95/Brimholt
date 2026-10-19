@@ -12,6 +12,7 @@ Run these through `make` (see `make help`) or directly. Every check uses Godot 4
 | `make test-visual` | `tools/testing/test_visual.py`: offscreen graphical checks, `.tools/visual-report.html` | ~30 s |
 | `make fight-sim` | `tools/testing/fight_sim.gd`: one monster (`MONSTER=`, `LEVELS=`, `COUNT=`) against each class, auto-attacks vs spells and potions | ~10 s |
 | `make duel-sim` | `tools/testing/duel_sim.gd`: same-level PvP duels per class pair with spells and potions (`LEVELS=`) | ~30 s |
+| `make duel-eval` | `tools/testing/duel_eval.gd`: the trained PvP policy against the scripted bot per class pair (`GAMES=`, `LEVELS=`, `DIFFICULTY=`, `BASELINE=1`) | ~1 min |
 | `make soak` | `tests/integration/soak_test.gd`: busy hosted session, fails on growth (memory, objects, nodes, pools) | ~1 min |
 | `make check` | Import, lint, unit, LAN, visual, and soak | ~3 min |
 | `make playtest` | `tools/testing/playtest.py`: two-bot playthrough, `.tools/playtest/report.html` | ~5 min |
@@ -76,7 +77,7 @@ cooldown, crowded docks), gold pickup, zones and monster spawns (levels within 1
 their zone, Blackreed Isle as a level 40–50 PvP zone reached only from Reedmere), and key
 bindings (defaults 1–9 and 0, rebinding moves conflicting keys, Escape is reserved, save/load,
 and malformed or duplicate saved values), and combat: catalogs and spawns, line of sight
-and reach, target validation (malformed, unknown, self, too far, PvP only in PvP zones),
+and reach, target validation (malformed, unknown, self, too far, PvP only in PvP zones and between players with PvP on),
 the two-second attack boundary and damage range, monster aggro, chasing onto free tiles
 only, leashing home and healing, experience shared by damage and level ups, loot tables
 (every monster has one, catalog items with icons and shop values, seeded determinism,

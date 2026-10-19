@@ -1423,6 +1423,9 @@ WEAPON_ANGLES = {
 # the hilt, wands near the end, staves a little below the middle (their foot by the boots), bows
 # in the middle. Painted weapons are drawn at LENGTHS pixels (before compact_humanoid).
 GRIP_AT = {"melee": 0.16, "wand": 0.18, "staff": 0.36, "bow": 0.5, "crossbow": 0.3}
+# Weapons held on the character are drawn at this share of their modelled size, scaled about the
+# fist (icons keep their full size).
+HELD_SCALE = 0.55
 LENGTHS = {"sword": 22, "greatsword": 27, "axe": 22, "mace": 20, "hammer": 22, "wand": 16, "rod": 36, "bow": 30,
            "crossbow": 22}
 
@@ -1459,7 +1462,7 @@ def held_builder(kind):
 
     def build(direction, frame):
         angle = WEAPON_ANGLES[style]["side" if direction == "left" else direction][frame]
-        size = 0.85 if style == "bow" else 1.0
+        size = (0.85 if style == "bow" else 1.0) * HELD_SCALE
         posed = pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle), size)
         return gripped(posed, direction, frame)
     return build
@@ -1836,7 +1839,7 @@ def painted_held(kind, icon):
 
     def build(direction, frame):
         angle = WEAPON_ANGLES[style]["side" if direction == "left" else direction][frame]
-        posed = pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle))
+        posed = pose_weapon(model, FRAME, weapon_hand(direction, frame), math.radians(angle), HELD_SCALE)
         return gripped(posed, direction, frame)
     return build
 
@@ -5767,7 +5770,7 @@ def main():
         "log_walls.png": sheet([thin_wall(mask, stone=LOG_WOOD, height=HOUSE_RAISE) for mask in range(16)], 16,
                                TILE + HOUSE_RAISE),
         "roofs.png": roof_sheet(),
-        "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan")]),
+        "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan"), sign("warden")]),
         "title.png": title_painting(),
         "menu_icons.png": sheet_row([menu_icon(kind) for kind in MENU_ICONS]),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),

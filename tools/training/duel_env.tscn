@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tools/training/duel_env.gd" id="1_env"]
+[ext_resource type="Script" path="res://addons/godot_rl_agents/sync.gd" id="2_sync"]
+
+[node name="DuelEnv" type="Node"]
+process_mode = 3
+script = ExtResource("1_env")
+
+[node name="Sync" type="Node" parent="."]
+process_mode = 3
+script = ExtResource("2_sync")
+action_repeat = 1

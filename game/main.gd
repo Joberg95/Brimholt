@@ -546,7 +546,7 @@ func host_game(private: bool = false) -> void:
 	_status_message = "Hosting on UDP %d%s" % [port, " (dedicated)" if dedicated else " — you are the host"]
 	if solo_mode and world.players.has(1):
 		_handle_events(solo.start(1, _now()))
-		_status_message = "Playing solo with your companions — rivals roam the world"
+		_status_message = "Playing solo — invite companions in the party window; rivals roam the world"
 	get_viewport().gui_release_focus()
 	print("BRIMHOLT_HOST_READY port=%d" % port)
 
@@ -572,6 +572,16 @@ func companion_local(slot: int, vocation: String) -> void:
 	if not solo_mode or not hosting:
 		return
 	var result: Dictionary = solo.set_companion(slot, vocation, _now())
+	_handle_events(result["events"])
+	if not result["ok"]:
+		last_action_message = result["reason"]
+
+
+## Solo only: brings a companion slot's companion to your side, or sends it home (Solo.invite, Solo.dismiss).
+func invite_local(slot: int, on: bool) -> void:
+	if not solo_mode or not hosting:
+		return
+	var result: Dictionary = solo.invite(slot, _now()) if on else solo.dismiss(slot)
 	_handle_events(result["events"])
 	if not result["ok"]:
 		last_action_message = result["reason"]
@@ -997,6 +1007,16 @@ func vocation_local(npc: String) -> void:
 		request_vocation.rpc_id(1, npc)
 
 
+## Turns your PvP on or off at the warden (Combat.set_pvp checks reach, skull, fight, and cooldown).
+func pvp_local(npc: String, on: bool) -> void:
+	if not connected or self_id == 0:
+		return
+	if hosting:
+		_handle_pvp(1, npc, on)
+	else:
+		request_pvp.rpc_id(1, npc, on)
+
+
 func buy_local(npc: String, kind: String, count: int) -> void:
 	if not connected or self_id == 0:
 		return
@@ -1249,6 +1269,22 @@ func request_vocation(npc: Variant) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	if _valid_sender(sender):
 		_handle_vocation(sender, npc)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_pvp(npc: Variant, on: Variant) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if _valid_sender(sender):
+		_handle_pvp(sender, npc, on)
+
+
+func _handle_pvp(id: int, npc: Variant, on: Variant) -> void:
+	var result: Dictionary = combat.set_pvp(id, npc, on, _now())
+	if result["ok"]:
+		_handle_events(result["events"])
+		_save_player(id)
+	else:
+		_send_feedback(id, result["reason"], 0.0, false)
 
 
 func _handle_vocation(id: int, npc: Variant) -> void:

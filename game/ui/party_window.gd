@@ -1,7 +1,8 @@
 extends PanelContainer
 ## The party window (Keybinds "party", O by default, or the micro menu): your party's members
 ## with their class, level, and health, invitations to accept, invitations you sent, and
-## Leave party. Solo, it lists your companions with a class picker each (main.companion_local),
+## Leave party. Solo, it lists your three companion slots with a class picker each
+## (main.companion_local) and Invite or Dismiss (main.invite_local; you start alone),
 ## the raid plan with a count per class and whether it can beat the final boss (Balance.raid_check,
 ## main.raid_plan_local), and gathers or disbands that raid at level 50 (main.raid_local). Invite players by right-clicking them. Rebuilt only when the party,
 ## invitations, or raid change; health bars redraw while it is open.
@@ -11,7 +12,7 @@ const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const UiTheme = preload("res://game/ui/ui_theme.gd")
 
-const WIDTH: float = 560.0
+const WIDTH: float = 600.0
 ## Classes in the pickers, in the trainers' order.
 const CLASSES: Array[String] = ["knight", "paladin", "sorcerer", "druid"]
 const TITLE: Color = Color("#ffcf6a")
@@ -106,7 +107,7 @@ func _rebuild() -> void:
 	close.pressed.connect(hide)
 	header.add_child(close)
 	if game.solo_mode:
-		_column.add_child(_hint("Your companions follow you everywhere and share experience and loot. At level %d, gather a raid of %d for the final bosses." % [Balance.MAX_LEVEL, _raid_size()], 12, MUTED))
+		_column.add_child(_hint("You play alone until you invite companions: they follow you everywhere and share experience and loot. At level %d, gather a raid of %d for the final bosses." % [Balance.MAX_LEVEL, _raid_size()], 12, MUTED))
 	elif party == 0:
 		_column.add_child(_hint("You are not in a party. Right-click another player to invite them; party members share experience.", 12, MUTED))
 	else:
@@ -130,13 +131,28 @@ func _rebuild() -> void:
 		vocation.custom_minimum_size = Vector2(90, 0)
 		grid.add_child(vocation)
 		var bar := Control.new()
-		bar.custom_minimum_size = Vector2(160, 14)
+		bar.custom_minimum_size = Vector2(130, 14)
 		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.draw.connect(_draw_health.bind(bar, id))
 		grid.add_child(bar)
 		_bars.append(bar)
 		var slot: int = game.solo.slot_ids.find(id) if game.solo_mode else -1
-		grid.add_child(_class_picker(slot) if slot >= 0 else Control.new())
+		grid.add_child(_slot_controls(slot, true) if slot >= 0 else Control.new())
+	if game.solo_mode:
+		# Empty companion slots: pick a class and invite it.
+		for slot: int in game.solo.slot_ids.size():
+			if game.actors.has(game.solo.slot_ids[slot]):
+				continue
+			var open: Label = _label("Open slot", 13, MUTED)
+			open.custom_minimum_size = Vector2(150, 0)
+			open.autowrap_mode = TextServer.AUTOWRAP_OFF
+			grid.add_child(open)
+			var kind: Label = _label(Balance.VOCATIONS[game.solo.party_plan[slot]]["name"], 13, MUTED)
+			kind.custom_minimum_size = Vector2(90, 0)
+			kind.autowrap_mode = TextServer.AUTOWRAP_OFF
+			grid.add_child(kind)
+			grid.add_child(Control.new())
+			grid.add_child(_slot_controls(slot, false))
 	for leader: int in state.get("invites", []):
 		if game.actors.has(leader) and party == 0:
 			_row("%s invites you to their party." % _name_of(leader), "Join", func() -> void: game.party_local("join", leader))
@@ -153,7 +169,7 @@ func _rebuild() -> void:
 		raid_button.disabled = not raiding and (too_low or game.solo.raid_size() != _raid_size())
 		raid_button.tooltip_text = "Raids are for level %d: the final bosses need a full raid at the top." % Balance.MAX_LEVEL \
 			if not raiding and too_low else ("Plan a raid of %d first." % _raid_size() if raid_button.disabled
-			else "Send the raid home and keep your three companions." if raiding
+			else "Send the raid home and keep your companions." if raiding
 			else "Fill your party to the planned raid (rival bands step aside).")
 		raid_button.pressed.connect(func() -> void: game.raid_local(not raiding))
 		_column.add_child(raid_button)
@@ -165,8 +181,26 @@ func _rebuild() -> void:
 		_column.add_child(leave)
 
 
-## A companion's class picker: choosing another class sends it home and brings one of that class.
-func _class_picker(slot: int) -> OptionButton:
+## A companion slot's class picker and its Dismiss (`present`) or Invite button.
+func _slot_controls(slot: int, present: bool) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.add_child(_class_picker(slot, present))
+	var button := Button.new()
+	button.text = "Dismiss" if present else "Invite"
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 12)
+	button.disabled = game.solo.raiding
+	button.tooltip_text = "Disband the raid to change companions" if game.solo.raiding \
+		else ("Send this companion home" if present else "Bring this companion to your side")
+	button.pressed.connect(func() -> void: game.invite_local(slot, not present))
+	row.add_child(button)
+	return row
+
+
+## A companion slot's class picker: choosing another class sends its companion home and brings
+## one of that class (an empty slot just remembers the class).
+func _class_picker(slot: int, present: bool) -> OptionButton:
 	var picker := OptionButton.new()
 	picker.focus_mode = Control.FOCUS_NONE
 	picker.add_theme_font_size_override("font_size", 12)
@@ -174,7 +208,8 @@ func _class_picker(slot: int) -> OptionButton:
 		picker.add_item(Balance.VOCATIONS[vocation]["name"])
 	picker.select(CLASSES.find(game.solo.party_plan[slot]))
 	picker.disabled = game.solo.raiding
-	picker.tooltip_text = "Disband the raid to change companions" if game.solo.raiding else "Swap this companion for another class"
+	picker.tooltip_text = "Disband the raid to change companions" if game.solo.raiding \
+		else ("Swap this companion for another class" if present else "The class to invite")
 	picker.item_selected.connect(func(index: int) -> void: game.companion_local(slot, CLASSES[index]))
 	return picker
 

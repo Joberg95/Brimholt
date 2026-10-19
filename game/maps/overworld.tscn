@@ -5305,6 +5305,14 @@ place = "Lastlight"
 role = "artisan"
 facing = Vector2i(0, -1)
 
+[node name="reedmere_warden" type="Marker2D" parent="Townsfolk" unique_id=1733204519]
+position = Vector2(4048, 6576)
+script = ExtResource("7_yncsc")
+npc_name = "Warden Kessa"
+place = "Reedmere"
+role = "warden"
+facing = Vector2i(0, -1)
+
 [node name="artisan_reedmere" type="Marker2D" parent="Townsfolk" unique_id=921511340]
 position = Vector2(4368, 6352)
 script = ExtResource("7_yncsc")

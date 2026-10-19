@@ -118,7 +118,14 @@ mana comes back ten times faster than normal (about 25 seconds from empty to ful
 are full or leave town. Then the rest needs 3 minutes before it can start again, so a town is
 not a free heal in the middle of a fight; the line under the minimap shows "resting", "rest
 ready", or the time left. Players can only attack each other while both stand in a PvP zone (Blackreed
-Isle or the Hollow Reach); leaving it drops the target. Players hit each other 1.5 times
+Isle or the Hollow Reach) **and both have PvP on**; leaving the zone drops the target. PvP starts
+**off**: nobody can attack you, anywhere, and you cannot attack players. **Warden Kessa**, in
+the building with the crossed-swords sign in south-west **Reedmere** (red on the maps), turns it on or off
+(right-click her, **PvP**). Not while you carry a skull or within 10 seconds of a hit between
+players, and then not again for 10 minutes (`Balance.PVP_TOGGLE_SECONDS`); the switch is saved
+with your character. Your companions follow your switch; PvP bots, rival bands, and training
+dummies always have PvP on, hunter bots never; lone rivals (roamers) keep it on or flip it at
+Kessa now and then. Players hit each other 1.5 times
 harder than their normal damage, and for 10 seconds after any hit between players both are
 in **PvP combat**: all healing (spells, potions, and regeneration) works at 35%, and it fades
 to nothing over 90 seconds of continuous PvP combat, so every duel ends. Same-level duels take
@@ -345,9 +352,11 @@ their 32-pixel art.
 ## Playing solo: companions, rivals, and raids
 
 **Play solo** on the start screen opens a private world that only this computer can reach. It
-saves your character like hosting does, but brings the group game to you:
+saves your character like hosting does, but brings the group game to you. You start **alone**:
+companions are optional, and the whole game except the four raid bosses can be cleared solo
+(`docs/balance.md`, Solo content).
 
-- **Companions.** Three named companions join your party at once, completing a tank, healer,
+- **Companions.** Up to three named companions join your party when you invite them, completing a tank, healer,
   and damage group around your class (a Warrior gets a Druid, a Hunter, and a Sorcerer, and so
   on). They always match your level, wear the best regular gear of your tier, and follow you
   everywhere: across the map, through waystones and ferries, after you die, and down dungeon
@@ -363,16 +372,25 @@ saves your character like hosting does, but brings the group game to you:
   closing in, so Blackreed Isle and the Hollow Reach become group fights. Outside PvP zones
   rivals cannot attack you, as for any player; skulls, death penalties, and loot drops all
   apply to them (beat them for their potions). A band rests a few minutes between ambushes.
+- **Lone rivals (roamers).** Six named adventurers (*Torvin the Lone*, *Ilsabet the Lone*, and
+  four more) play by themselves from towns away from you, at about your level: they take tasks,
+  hunt camps, sell their loot, and level like the bands. Two always keep **PvP on**; the other
+  four start with it on or off and now and then walk to Warden Kessa and flip it (under the
+  same rules as yours: not while skulled or fighting a player, and then not again for 10
+  minutes). With PvP on, a roamer often hunts a camp of its level inside a PvP zone, and there it
+  attacks any player with PvP on within 7 tiles (you, a band, or another roamer), fighting with
+  the trained PvP policy. With PvP off, a roamer cannot be attacked and attacks no one.
 - **How bots level.** Bots level while you play, not only when a game starts:
 
   | Bot | Level |
   | --- | --- |
   | Companion | Always your level; its gear follows your tier. |
-  | Rival band member | Earns experience from its kills and tasks like a player; each level gained brings that level's gear. A death costs what it costs you. Between errands, a member more than 2 levels below its place (your level plus its band's offset, 1 or 2) is lifted to that floor; one ahead of you keeps its levels. |
+  | Rival band member, roamer | Earns experience from its kills and tasks like a player; each level gained brings that level's gear. A death costs what it costs you. Between errands, a member more than 2 levels below its place (your level plus its offset: 1 or 2 for the bands, −2 to +3 for roamers) is lifted to that floor; one ahead of you keeps its levels. |
   | Hunter, PvP, training dummy | Test bots: they return to their starting level when they fall. |
-- **Choosing companions.** The party window (O) has a class picker beside each companion:
-  pick another class and that companion goes home while one of the new class joins, at your
-  level. Build the group you want, two healers for a hard dungeon or three damage dealers for PvP.
+- **Choosing companions.** The party window (O) lists three companion slots, each with a class
+  picker and **Invite** (an open slot) or **Dismiss** (a companion with you). Invite brings that
+  class to your side at your level; Dismiss sends it home and the slot keeps its class. Picking
+  another class for a present companion sends it home while one of the new class joins. Build the group you want, two healers for a hard dungeon or three damage dealers for PvP.
 - **Raids.** The party window also holds the **raid plan**: a count per class (with − and +),
   starting from the twenty-player raid the final bosses are balanced for (four Warriors, six
   Hunters, six Sorcerers, four Druids, you included), and never below the classes already in
@@ -380,15 +398,15 @@ saves your character like hosting does, but brings the group game to you:
   what it lacks. At level 50, with twenty planned, choose **Gather a raid**: your party fills
   to the plan. The raid's Warriors trade the boss when its wounds stack on the tank (three or
   more), and the Druids keep everyone up through its pulses. The rival bands step aside
-  meanwhile, to stay within the twenty-four-player limit. **Disband the raid** sends the extra
-  companions home; your three stay. Companions and the plan stay fixed while a raid is out.
+  meanwhile, and so do the roamers, to stay within the twenty-four-player limit. **Disband the
+  raid** sends the extra companions home and the rivals back out; the companions you invited stay. Companions and the plan stay fixed while a raid is out.
 
 Companions and rivals are bots (below): they play through the server's own rules and are never
 saved. Their nameplates show their name and level.
 
 ## Bots
 
-Bots come with solo play (companions and rivals, above); there is no menu to add them. The
+Bots come with solo play (companions, rival bands, and roamers, above); there is no menu to add them. The
 host's `spawn_bot` (tests, the fight and duel simulators) still adds standalone bots in three
 stances. Bots are real players on the host: they take player slots (twenty-four in
 all), wear the best regular gear of their level (with accessories from level 20), carry 50
@@ -401,15 +419,24 @@ below half their mana or whenever their strongest ready spell costs more than th
 
 | Stance | Behaviour |
 | --- | --- |
-| Hunter | Hunts monsters (up to 3 levels above it) within 10 tiles of where it was placed, and fights back when a player attacks it |
-| PvP | Also attacks any player (bots too) within 7 tiles while both stand in a PvP zone: take one to Blackreed Isle to duel it |
-| Training dummy | Stands still and never fights back: test damage, spells, and skulls |
+| Hunter | Hunts monsters (up to 3 levels above it) within 10 tiles of where it was placed; its PvP is off, so players cannot attack it |
+| PvP | PvP on: also attacks any player with PvP on (bots too) within 7 tiles while both stand in a PvP zone: take one to Blackreed Isle to duel it |
+| Training dummy | PvP on: stands still and never fights back: test damage, spells, and skulls |
+
+**Fighting players.** A bot whose target is a player it may attack (PvP bots, rival ambushes,
+roamers in PvP zones, companions defending you) fights with a policy trained by reinforcement learning against the
+scripted fight (`game/data/policies/pvp_duel.json`, `docs/bot-training.md`): every turn it
+picks a step (or chases or backs off) and an action (attack, control, heal, support spell, or a
+potion) through the same rules. Bots fighting monsters, and every bot when the policy file is
+missing, keep the scripted fight. The **Easy / Normal / Hard** picker beside Play solo sets how
+well they play: Easy bots act on what they saw two turns ago and take a random action 30% of
+the time, Normal one turn late and 10%, Hard on what they see now with no added randomness.
 
 A **LimboAI behavior tree** (`game/data/bot_behavior.tres`) makes each bot's decisions: dummies
 idle; everyone else uses spells and potions (in a party: heals for hurt allies, Provoke and Challenge for the
 group), then fights a target (its leader's, attackers of its group, PvP victims, monsters after
 it, or prey near its post), collects loot, sells it, follows its leader (companions and rival
-band members), runs its errand (rival band leaders: tasks, camps, ambushes), or walks back to its
+band members), runs its errand (rival band leaders and roamers: tasks, camps, ambushes, trips to the warden), or walks back to its
 post.
 
 **Bots and loot** (`game/core/bot_loot.gd`). When a monster dies, the tiles its loot spills onto
@@ -433,8 +460,8 @@ saved and leave with the host; clients cannot create them.
 ## Talking to people
 
 There is no typed dialogue: right-click a person to open their menu and pick an option.
-Ferrymen and waystones offer **Travel**, vendors **Trade**, bankers **Bank**, and quest givers
-(gold names) **Quests**. Stand within 2 tiles; a dialog closes when you walk away.
+Ferrymen and waystones offer **Travel**, vendors **Trade**, bankers **Bank**, artisans
+**Craft**, Reedmere's warden **PvP** (the PvP switch), and quest givers (gold names) **Quests**. Stand within 2 tiles; a dialog closes when you walk away.
 
 ## Vendors, potions, and the bank
 
