@@ -8,7 +8,8 @@ extends RefCounted
 ##     Sequence
 ##       UseSpellsAndPotions                    (heal, potions, attack spells)
 ##       Selector
-##         Sequence: PickTarget, EngageTarget   (fight)
+##         Sequence: PickTarget                 (fight)
+##           Selector: RunPolicy, EngageTarget  (the trained PvP policy against players, else scripted)
 ##         CollectLoot                          (stacks the bot's group earned nearby)
 ##         SellLoot                             (a selling trip once the packs are nearly full)
 ##         FollowLeader                         (companions, rival band members)
@@ -21,6 +22,7 @@ const UseResources = preload("res://game/core/ai/tasks/bt_use_resources.gd")
 const IsStance = preload("res://game/core/ai/tasks/bt_is_stance.gd")
 const PickTarget = preload("res://game/core/ai/tasks/bt_pick_target.gd")
 const Engage = preload("res://game/core/ai/tasks/bt_engage.gd")
+const RunPolicy = preload("res://game/core/ai/tasks/bt_run_policy.gd")
 const AwayFromPost = preload("res://game/core/ai/tasks/bt_away_from_post.gd")
 const WalkHome = preload("res://game/core/ai/tasks/bt_walk_home.gd")
 const FollowLeader = preload("res://game/core/ai/tasks/bt_follow_leader.gd")
@@ -32,7 +34,7 @@ const PATH: String = "res://game/data/bot_behavior.tres"
 
 static func build() -> BehaviorTree:
 	var tree := BehaviorTree.new()
-	tree.description = "Brimholt player bot: dummies idle; others use resources, fight a target, collect their group's loot, sell it at a vendor, follow their leader, run a rival errand, or walk back to their post."
+	tree.description = "Brimholt player bot: dummies idle; others use resources, fight a target (players with the trained policy when there is one), collect their group's loot, sell it at a vendor, follow their leader, run a rival errand, or walk back to their post."
 	var root := BTSelector.new()
 	root.custom_name = "Bot"
 	var dummy := BTSequence.new()
@@ -48,7 +50,11 @@ static func build() -> BehaviorTree:
 	var fight := BTSequence.new()
 	fight.custom_name = "Fight"
 	fight.add_child(PickTarget.new())
-	fight.add_child(Engage.new())
+	var how := BTSelector.new()
+	how.custom_name = "Policy or scripted"
+	how.add_child(RunPolicy.new())
+	how.add_child(Engage.new())
+	fight.add_child(how)
 	choose.add_child(fight)
 	choose.add_child(CollectLoot.new())
 	choose.add_child(SellLoot.new())

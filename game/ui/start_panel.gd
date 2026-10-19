@@ -8,6 +8,7 @@ extends Control
 const Identity = preload("res://game/persistence/identity.gd")
 const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
+const Bots = preload("res://game/core/bots.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const BACKDROP: Texture2D = preload("res://assets/sprites/title.png")
 const UiTheme = preload("res://game/ui/ui_theme.gd")
@@ -110,7 +111,17 @@ func setup(game_node: Node, address: LineEdit) -> void:
 	solo.tooltip_text = "A private world: three companions join your party, rival bands roam, quest, and hunt you in PvP zones"
 	solo.custom_minimum_size.y = 38
 	solo.add_theme_font_size_override("font_size", 17)
-	_play.add_child(solo)
+	solo.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var solo_row := HBoxContainer.new()
+	_play.add_child(solo_row)
+	solo_row.add_child(solo)
+	var difficulty := OptionButton.new()
+	difficulty.tooltip_text = "How well bots fight you in PvP: Easy hesitates and slips, Hard plays its best"
+	for level: String in Bots.DIFFICULTIES:
+		difficulty.add_item(level.capitalize())
+	difficulty.select(maxi(0, Bots.DIFFICULTIES.find(game.bot_difficulty)))
+	difficulty.item_selected.connect(func(index: int) -> void: game.bot_difficulty = Bots.DIFFICULTIES[index])
+	solo_row.add_child(difficulty)
 	var actions := HBoxContainer.new()
 	_play.add_child(actions)
 	var host := _button("Host a game", func() -> void: _start(true))

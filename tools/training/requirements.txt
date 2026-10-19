@@ -1,0 +1,5 @@
+# Training the bots' PvP combat policy (tools/training/, docs/bot-training.md). Not needed to play.
+# Install with `make train-setup` (a Python 3.12 venv in .tools/rl-venv).
+godot-rl==0.8.2
+stable-baselines3==2.4.0
+torch>=2.5

@@ -187,7 +187,10 @@ for high-level container/item concepts and inventory-event/UI separation, not
 Godot/ENet dependencies. The only third-party code is **LimboAI v1.6.0** (behavior trees
 for the player bots), MIT-licensed and vendored as a GDExtension in `addons/limboai/` (macOS,
 Windows x86_64, and Linux x86_64 builds) with its `LICENSE.md`; the Windows export ships
-that license beside its DLL. After a fresh clone run `make import` so Godot registers the
+that license beside its DLL. Training the bots' PvP policy also uses the Godot side of
+[Godot RL Agents](https://github.com/edbeeching/godot_rl_agents) (MIT, `addons/godot_rl_agents/`
+with its `LICENSE`, training only and left out of exports) and, outside the game, the Python
+packages in `tools/training/requirements.txt` (see `docs/bot-training.md`). After a fresh clone run `make import` so Godot registers the
 extension. The only third-party assets
 are CC0 (public domain) textures and the DejaVu Sans font (Bitstream Vera licence), listed with their licenses in
 [`assets/third_party/CREDITS.md`](assets/third_party/CREDITS.md). Do not

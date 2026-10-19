@@ -40,6 +40,8 @@ const Nav = preload("res://game/core/nav.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const BotLoot = preload("res://game/core/bot_loot.gd")
+const PolicyNet = preload("res://game/core/ai/policy_net.gd")
+const PvpBrain = preload("res://game/core/ai/pvp_brain.gd")
 
 ## Stances for standalone bots (tests, the fight and duel simulators); solo play uses SOLO_STANCES.
 const STANCES: Array[String] = ["hunter", "pvp", "dummy"]
@@ -92,6 +94,13 @@ const CAMP_REACH: int = 6
 ## camp_post results by camp marker (posts never change).
 static var _posts: Dictionary = {}
 const AMBUSH_RADIUS: int = 12
+## Fights against players: when a trained policy exists (PolicyNet.PVP_PATH, tools/training/), it
+## moves the bot, casts, and drinks (run_policy) instead of the scripted engage and resources.
+## Difficulty weakens it like a human: "noise" is the chance of a random choice each turn,
+## "delay" how many turns old the fight it reacts to is.
+const DIFFICULTIES: Array[String] = ["easy", "normal", "hard"]
+const DIFFICULTY: Dictionary = {"easy": {"noise": 0.3, "delay": 2}, "normal": {"noise": 0.1, "delay": 1},
+	"hard": {"noise": 0.0, "delay": 0}}
 var world: World
 var combat: Combat
 ## Bot id -> {vocation, level, stance, post, next_think, last_cell, restore_at, leader, name,
@@ -105,6 +114,10 @@ var _brains: Dictionary = {}
 var _tree: BehaviorTree = BotTree.load_tree()
 ## Collecting the group's loot and selling it at vendors (game/core/bot_loot.gd).
 var loot: BotLoot
+## The trained PvP policy (null: every fight is scripted) and how well the bots play it.
+var policy: PolicyNet = PolicyNet.shared() as PolicyNet
+var difficulty: String = "normal"
+var rng := RandomNumberGenerator.new()
 
 
 func _init(owner: World, fights: Combat) -> void:
@@ -196,6 +209,12 @@ func free_cell_near(near: Vector2i, now: float, except_id: int = 0) -> Vector2i:
 	return near
 
 
+## Restores a bot now at `at` (its post if none): for the training arena, which drives some bots
+## itself ("external") and starts every duel afresh.
+func restore(id: int, now: float, at: Vector2i = Vector2i(-1, -1)) -> void:
+	_restore(id, now, at)
+
+
 ## Gives a bot its level, gear, potions, and full health and mana at its post (or `at`).
 ## With keep_progress the experience it has left is kept (a rival after a death).
 func _restore(id: int, now: float, at: Vector2i = Vector2i(-1, -1), keep_progress: bool = false) -> void:
@@ -234,6 +253,10 @@ func tick(now: float) -> Array:
 			continue
 		var bot: Dictionary = bots[id]
 		var player: Dictionary = world.players[id]
+		# Driven from outside (the training arena, tools/training/): its owner moves and restores it.
+		if bot.get("external", false):
+			bot["last_cell"] = player["cell"]
+			continue
 		if bot["restore_at"] >= 0.0:
 			if now >= bot["restore_at"]:
 				var leader: int = bot["leader"]
@@ -273,6 +296,36 @@ func tick(now: float) -> Array:
 ## raid's bots do not all think in the same frame.
 static func think_phase(id: int) -> float:
 	return THINK_SECONDS * fposmod(id * 0.6180339887, 1.0)
+
+
+## Whether the trained policy fights for this bot now: there is one and its target is a player it
+## may attack.
+func policy_drives(id: int) -> bool:
+	if policy == null or not world.players.has(id):
+		return false
+	var target: int = world.players[id]["target"]
+	return target > 0 and world.players.has(target) and combat.hostile(id, target)
+
+
+## One turn of the trained policy against the bot's player target: it sees the fight (as it was
+## `delay` turns ago at lower difficulties), picks a move and an act, and carries them out through
+## the real rules (PvpBrain.apply). False when the policy does not drive this bot (fall back to engage).
+func run_policy(id: int, now: float, events: Array) -> bool:
+	if not policy_drives(id):
+		bots[id].erase("sights")
+		return false
+	var foe: int = world.players[id]["target"]
+	var level: Dictionary = DIFFICULTY.get(difficulty, DIFFICULTY["normal"])
+	var sights: Array = bots[id].get("sights", [])
+	sights.append(PvpBrain.observe(world, combat, id, foe, now))
+	while sights.size() > int(level["delay"]) + 1:
+		sights.pop_front()
+	bots[id]["sights"] = sights
+	var choice: Dictionary = policy.choose(sights[0], rng, level["noise"])
+	if choice.is_empty():
+		return false
+	PvpBrain.apply(world, combat, id, foe, int(choice.get("move", 0)), int(choice.get("act", 0)), now, events)
+	return true
 
 
 ## Moves into reach of the bot's target along a real path; ranged vocations back off a step
@@ -367,6 +420,8 @@ func choose_target(id: int, now: float) -> int:
 ## spells also mend hurt allies around the bot, and warriors use Challenge (every monster around)
 ## and Provoke (one monster a few tiles off, onto a softer member) to protect the group.
 func use_resources(id: int, now: float, events: Array) -> void:
+	if policy_drives(id):
+		return
 	var player: Dictionary = world.players[id]
 	var stats: Dictionary = world.player_stats(id)
 	var share: float = float(player["health"]) / stats["health"]

@@ -105,6 +105,9 @@ var keybinds := Keybinds.new()
 ## Hosts save characters (game/persistence/character_store.gd) unless started with --no-save;
 ## --save-dir=PATH picks the folder (default user://saves).
 var save_enabled: bool = true
+## How well bots fight players with the trained policy (Bots.DIFFICULTY): picked next to
+## "Play solo", or --bot-difficulty=easy|normal|hard.
+var bot_difficulty: String = "normal"
 var save_dir: String = CharacterStore.DEFAULT_DIR
 var store: CharacterStore
 ## Peer id -> save account (SHA-256 of the identity token) of every character in the world.
@@ -205,6 +208,12 @@ func _ready() -> void:
 			identity_token = arg.trim_prefix("--token=")
 		elif arg.begins_with("--profile="):
 			identity_profile = arg.trim_prefix("--profile=")
+		elif arg.begins_with("--bot-difficulty="):
+			bot_difficulty = arg.trim_prefix("--bot-difficulty=")
+			if not bot_difficulty in Bots.DIFFICULTIES:
+				_fail("Bot difficulty must be one of: %s." % ", ".join(Bots.DIFFICULTIES))
+				get_tree().quit(1)
+				return
 	if not Identity.valid_profile(identity_profile) or not (identity_token.is_empty() or Identity.valid_token(identity_token)):
 		_fail("Profiles use letters, digits, - and _; tokens are 64 lowercase hex digits.")
 		get_tree().quit(1)
@@ -463,6 +472,7 @@ func _reset_session() -> void:
 	instances = Instances.new(world, combat)
 	bots = Bots.new(world, combat)
 	bots.instances = instances
+	bots.difficulty = bot_difficulty
 	solo = Solo.new(world, combat, bots)
 	solo_mode = false
 	_known_monsters.clear()
