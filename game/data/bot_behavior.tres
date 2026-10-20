@@ -1,16 +1,18 @@
-[gd_resource type="BehaviorTree" load_steps=32 format=3]
+[gd_resource type="BehaviorTree" format=3 uid="uid://b7o7sje8cy0yw"]
 
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_is_stance.gd" id="1_mh4ou"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_use_resources.gd" id="2_8qq5o"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_pick_target.gd" id="3_jpmkg"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_run_policy.gd" id="4_laul0"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_engage.gd" id="5_pywc4"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_collect_loot.gd" id="6_lf2mx"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_sell_loot.gd" id="7_30e7k"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_follow_leader.gd" id="8_l7qvd"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_run_plan.gd" id="9_r2mda"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_away_from_post.gd" id="10_8b5x6"]
-[ext_resource type="Script" path="res://game/core/ai/tasks/bt_walk_home.gd" id="11_jbcbo"]
+[ext_resource type="Script" uid="uid://b7kgu6b10w3cp" path="res://game/core/ai/tasks/bt_is_stance.gd" id="1_mh4ou"]
+[ext_resource type="Script" uid="uid://dwq8q6epdk67h" path="res://game/core/ai/tasks/bt_use_resources.gd" id="2_8qq5o"]
+[ext_resource type="Script" uid="uid://c0jefsjl8nvwm" path="res://game/core/ai/tasks/bt_pick_target.gd" id="3_jpmkg"]
+[ext_resource type="Script" uid="uid://dlx0dtk220ac" path="res://game/core/ai/tasks/bt_run_policy.gd" id="4_laul0"]
+[ext_resource type="Script" uid="uid://pmoou50nmyee" path="res://game/core/ai/tasks/bt_engage.gd" id="5_pywc4"]
+[ext_resource type="Script" uid="uid://cmkxbcvgi45g5" path="res://game/core/ai/tasks/bt_collect_loot.gd" id="6_lf2mx"]
+[ext_resource type="Script" uid="uid://biwjn6ri2vrlr" path="res://game/core/ai/tasks/bt_sell_loot.gd" id="7_30e7k"]
+[ext_resource type="Script" uid="uid://dr1k4ullboclj" path="res://game/core/ai/tasks/bt_follow_leader.gd" id="8_l7qvd"]
+[ext_resource type="Script" uid="uid://bo5l2kdroo1ag" path="res://game/core/ai/tasks/bt_run_plan.gd" id="9_r2mda"]
+[ext_resource type="Script" uid="uid://bqr8ucw17jccn" path="res://game/core/ai/tasks/bt_away_from_post.gd" id="10_8b5x6"]
+[ext_resource type="Script" uid="uid://r85223uhgxny" path="res://game/core/ai/tasks/bt_walk_home.gd" id="11_jbcbo"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_mh4ou"]
 
 [sub_resource type="BTCondition" id="BTCondition_05ace"]
 script = ExtResource("1_mh4ou")
@@ -82,4 +84,5 @@ children = [SubResource("BTSequence_jlxyk"), SubResource("BTSequence_tjquv")]
 
 [resource]
 description = "Brimholt player bot: dummies idle; others use resources, fight a target (players with the trained policy when there is one), collect their group's loot, sell it at a vendor, follow their leader, run a rival errand, or walk back to their post."
+blackboard_plan = SubResource("BlackboardPlan_mh4ou")
 root_task = SubResource("BTSelector_him5m")

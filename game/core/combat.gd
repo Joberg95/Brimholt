@@ -82,7 +82,9 @@ const WOUND_SECONDS: float = 12.0
 const ENRAGE_MULTIPLIER: float = 10.0
 ## Chance per kill of one equipment piece from the monster's tier (Combat.gear_drop).
 ## Bosses drop relics from their loot table instead.
-const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.04, "elite": 0.25, "champion": 1.0, "boss": 0.0}
+## Tiered gear is rare from ordinary monsters (plan 42: their worth is in valuables); champions
+## always drop a piece.
+const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.01, "elite": 0.08, "champion": 1.0, "boss": 0.0}
 const GEAR_LOWER_TIER_CHANCE: float = 0.3
 const PARTY_ACTIONS: Array[String] = ["invite", "revoke", "join", "leave"]
 ## What an Adventurer hears from every giver but the trial master, and at a dungeon stairway.
@@ -110,9 +112,17 @@ var _last_tick: float = -INF
 var _by_home: Dictionary = {}
 var _indexed: int = 0
 var _active: Dictionary = {}
-## Camps not spawned yet (populate's lazy mode): marker chunk -> [spawn indices]. A camp spawns the
-## first time a player or bot comes within WAKE_REACH chunks of it, and stays.
+## Camps not spawned yet (populate's lazy mode): marker chunk -> [spawn indices]. A camp spawns
+## when a player or bot comes within WAKE_REACH chunks of it, and goes dormant again (_rest_camps)
+## once nobody has been within REST_REACH of it for REST_SECONDS, so the monsters alive follow
+## where the players are and a long session does not pile up every camp it ever passed.
 var _dormant: Dictionary = {}
+## Awake chunks (lazy mode): chunk -> the last time a player or bot was within REST_REACH.
+var _awake_since: Dictionary = {}
+var _next_rest: float = 0.0
+const REST_SECONDS: float = 300.0
+const REST_REACH: int = WAKE_REACH + 2
+const REST_CHECK_SECONDS: float = 5.0
 ## Occupied tiles (cell -> number of creatures on or reserving it) for one moment, built once and
 ## kept current as monsters step, instead of scanning every creature for each step.
 var _taken: Dictionary = {}
@@ -325,11 +335,52 @@ func _wake_camps(now: float, events: Array) -> void:
 				var chunk: Vector2i = centre + Vector2i(dx, dy)
 				while _dormant.has(chunk) and budget > 0:
 					_fill_camp(_dormant[chunk].pop_back(), now, events)
+					_awake_since[chunk] = now
 					budget -= 1
 					if _dormant[chunk].is_empty():
 						_dormant.erase(chunk)
 				if budget == 0:
 					return
+
+
+## Puts awake chunks nobody has come near for REST_SECONDS back to sleep: their camps' monsters
+## go (none fighting, chasing, or away from home: such a chunk waits for the next check), their
+## pending respawns are dropped, and the camps wait dormant for the next visitor.
+func _rest_camps(now: float, events: Array) -> void:
+	if _awake_since.is_empty() or now < _next_rest:
+		return
+	_next_rest = now + REST_CHECK_SECONDS
+	var near: Dictionary = {}
+	for id: int in world.players:
+		var centre: Vector2i = world.players[id]["cell"] / SLEEP_CHUNK
+		for dy: int in range(-REST_REACH, REST_REACH + 1):
+			for dx: int in range(-REST_REACH, REST_REACH + 1):
+				near[centre + Vector2i(dx, dy)] = true
+	for chunk: Vector2i in _awake_since.keys():
+		if near.has(chunk):
+			_awake_since[chunk] = now
+			continue
+		if now - float(_awake_since[chunk]) < REST_SECONDS:
+			continue
+		var camps: Dictionary = {}
+		for index: int in World.MONSTER_SPAWNS.size():
+			if World.MONSTER_SPAWNS[index]["cell"] / SLEEP_CHUNK == chunk:
+				camps[index] = true
+		var leaving: Array[int] = []
+		var busy: bool = false
+		for id: int in world.monsters:
+			var monster: Dictionary = world.monsters[id]
+			if camps.has(int(monster.get("spawn", -1))):
+				busy = busy or _active.has(id) or int(monster.get("target", 0)) != 0
+				leaving.append(id)
+		if busy:
+			continue
+		for id: int in leaving:
+			despawn(id, events)
+		respawns = respawns.filter(func(entry: Array) -> bool: return not camps.has(int(entry[1])))
+		var indices: Array = camps.keys()
+		_dormant[chunk] = indices
+		_awake_since.erase(chunk)
 
 
 ## Camps still waiting for a visitor.
@@ -1055,33 +1106,61 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 				return {"ok": false, "reason": "Slay %s first" % (target if definition["count"] == 1
 					else "%d %s" % [definition["count"], target]), "events": []}
 			var items: Array = World.task_items(task, player["vocation"])
-			# A rare roll needs a slot ready for its prize, whether or not it comes.
+			# A pack task's supplies go into the pack it gives: the backpack as it will be once worn.
+			var pack: String = "" if definition["reward"] == "experience" else Quests.next_pack(player["equipment"].get("bag", ""))
+			var room: Array = player["backpack"].duplicate()
+			if not pack.is_empty():
+				var before: int = World.main_size(player)
+				var grown: int = mini(World.BACKPACK_MAX, World.BACKPACK_SIZE + int(World.ITEMS[pack].get("slots", 0))) - before
+				for added: int in maxi(0, grown):
+					room.insert(before, "")
+			# Gear and trophies need backpack room; potions and food that do not fit go to the ground
+			# at your feet. A rare roll needs a slot ready for its prize, whether or not it comes.
+			var needed: Array = items.filter(func(entry: Array) -> bool: return not _supply(entry[0]))
+			var supplies: Array = items.filter(func(entry: Array) -> bool: return _supply(entry[0]))
 			var rare: Dictionary = definition.get("rare", {})
-			if not rare.is_empty() and World.with_items(player["backpack"], items + [[rare["items"][0], 1]]).is_empty():
-				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % (items.size() + 1),
+			if not rare.is_empty() and World.with_items(room, needed + [[rare["items"][0], 1]]).is_empty():
+				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % (needed.size() + 1),
 					"events": []}
 			if not rare.is_empty() and rng.randf() < float(rare["chance"]):
-				items.append([rare["items"][rng.randi_range(0, rare["items"].size() - 1)], 1])
-			var packed: Array = World.with_items(player["backpack"], items)
-			if not items.is_empty() and packed.is_empty():
-				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % items.size(),
+				var prize: Array = [rare["items"][rng.randi_range(0, rare["items"].size() - 1)], 1]
+				needed.append(prize)
+				items.append(prize)
+			var packed: Array = World.with_items(room, needed) if not needed.is_empty() else room
+			if packed.is_empty():
+				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % needed.size(),
 					"events": []}
+			var left: Array[String] = []
+			for entry: Array in supplies:
+				var fitted: Array = World.with_items(packed, [entry])
+				if fitted.is_empty():
+					left.append(World.make_entry(entry[0], entry[1]))
+				else:
+					packed = fitted
 			player["tasks"].erase(task)
 			player["done_tasks"][task] = true
-			if not items.is_empty():
-				player["backpack"] = packed
+			if not pack.is_empty():
+				world.wear_pack(id, pack)
+			# Filled in place: the pack was worn on this same array.
+			(player["backpack"] as Array).assign(packed)
+			if not left.is_empty():
+				var dropped: Array[Vector2i] = spill(player["cell"], left)
+				if not dropped.is_empty():
+					events.append({"kind": "ground", "cells": dropped})
 			if definition["reward"] == "experience":
 				var reward: Dictionary = Quests.reward(task)
 				player["gold"] += reward["gold"]
 				text = "%s rewards you with %d gold%s." % [giver, reward["gold"], World.items_text(items)]
 				grant_experience(id, reward["experience"], events)
 			else:
-				var pack: String = Quests.next_pack(player["equipment"].get("bag", ""))
 				if pack.is_empty():
 					text = "%s thanks you. Your pack is already the largest there is." % giver
 				else:
-					world.wear_pack(id, pack)
 					text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], World.main_size(player)]
+				if not items.is_empty():
+					text += " Supplies: %s." % World.items_text(items).substr(2)
+			if not left.is_empty():
+				text += " Your backpack is full, so the rest lies at your feet."
 		_:
 			return {"ok": false, "reason": "Unknown task request", "events": []}
 	if action == "complete":
@@ -1090,6 +1169,12 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 	if action == "complete":
 		check_title(id, events)
 	return {"ok": true, "events": events}
+
+
+## Whether a reward item is a supply (a potion or food: Quests.supplies) that may go to the ground
+## when the backpack is full.
+static func _supply(kind: String) -> bool:
+	return World.ITEMS[kind].has("drink") or World.ITEMS[kind].has("eat")
 
 
 ## Raises a player's title (game/data/titles.gd) to the highest tier their record now earns; a
@@ -1347,11 +1432,36 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 		loot.append(Monsters.MOUNTS[kind])
 	if rng.randf() < float(definition.get("gear_chance", GEAR_DROP_CHANCE.get(definition["rank"], 0.0))):
 		loot.append(gear_drop(level))
+	loot.append_array(roll_valuables(level, definition["rank"]))
 	var expected: float = Balance.coins_per_kill(level, definition["rank"])
 	var piles: int = floori(expected) + (1 if rng.randf() < expected - floorf(expected) else 0)
 	if piles > 0:
 		loot.append(World.make_entry("gold_coins", piles))
 	return loot
+
+
+## Gems a kill drops (Monsters.VALUABLES): worth Balance.valuables_per_kill on average, as a small
+## gem of the monster's level (or the one below), and from level 35 sometimes a great gem.
+func roll_valuables(level: int, rank: String) -> Array[String]:
+	var found: Array[String] = []
+	var worth: float = Balance.valuables_per_kill(level, rank)
+	var greats: Array = Monsters.GREAT_VALUABLES.filter(func(entry: Array) -> bool: return level >= int(entry[1]))
+	if not greats.is_empty():
+		_valuable(greats[-1][0], worth * Monsters.GREAT_SHARE, found)
+		worth *= 1.0 - Monsters.GREAT_SHARE
+	var smalls: Array = Monsters.VALUABLES.filter(func(entry: Array) -> bool: return level >= int(entry[1]))
+	if not smalls.is_empty():
+		var pick: Array = smalls[-1] if smalls.size() == 1 or rng.randf() < 0.6 else smalls[-2]
+		_valuable(pick[0], worth, found)
+	return found
+
+
+## Adds `kind` worth `worth` gold on average: whole gems for each full value, and the rest as a chance.
+func _valuable(kind: String, worth: float, found: Array[String]) -> void:
+	var share: float = worth / float(World.ITEMS[kind]["value"])
+	var count: int = floori(share) + (1 if rng.randf() < share - floorf(share) else 0)
+	if count > 0:
+		found.append(World.make_entry(kind, count))
 
 
 ## A random equipment piece from the monster's level tier, or (GEAR_LOWER_TIER_CHANCE) the
@@ -1590,6 +1700,7 @@ func tick(now: float) -> Array:
 		if world.players.has(id):
 			_player_tick(id, now, events)
 	_wake_camps(now, events)
+	_rest_camps(now, events)
 	var awake: Dictionary = _awake_chunks()
 	for id: int in _near_players():
 		if world.monsters.has(id) and _awake(world.monsters[id], awake):

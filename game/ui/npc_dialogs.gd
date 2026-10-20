@@ -656,8 +656,11 @@ func _reward_label(task: String, state: Dictionary) -> void:
 	var pack: String = Quests.next_pack(state["equipment"].get("bag", ""))
 	if pack.is_empty():
 		return
-	var line: Label = _label("Reward: a %s (%d backpack slots)." % [World.ITEMS[pack]["name"],
-		mini(World.BACKPACK_MAX, World.BACKPACK_SIZE + World.ITEMS[pack]["slots"])], Color("#a7b0b8"))
+	var line: Label = _label("Reward: a %s (%d backpack slots)%s." % [World.ITEMS[pack]["name"],
+		mini(World.BACKPACK_MAX, World.BACKPACK_SIZE + World.ITEMS[pack]["slots"]),
+		World.items_text(World.task_items(task, state.get("vocation", Balance.DEFAULT_VOCATION)))], Color("#a7b0b8"))
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	line.custom_minimum_size.x = 460
 	line.mouse_filter = Control.MOUSE_FILTER_PASS
 	game.inventory.tip(line, pack)
 

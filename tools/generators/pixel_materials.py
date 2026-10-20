@@ -18,6 +18,8 @@ FIXED = {"b": (232, 222, 196), "f": (214, 140, 130), "y": (216, 168, 58), "s": (
 
 # Shapes no larger than this (in either direction) are drawn at twice the size.
 GROW_BELOW = 14
+# Shapes always drawn at their own size: the gems stay small, as in Tibia.
+KEEP_SIZE = {"gem", "great_gem"}
 
 SHAPES = {
     "tail": [
@@ -480,6 +482,36 @@ SHAPES = {
         ".mmllllllmm.",
         "..mmmmmmmm..",
     ],
+    # Cut gems (Combat's valuables), small like Tibia's: a chunky stone rounded on its upper left,
+    # a steep right side and a flat base, its facets lit on the top-left (l, w) and shaded toward
+    # the lower right (a). Drawn at their own size (KEEP_SIZE).
+    "gem": [
+        "......mmmm...",
+        "....mmlwwlm..",
+        "..mmlwlllwlm.",
+        ".mlwllwlllllm",
+        "mlllwllwllmam",
+        "mllllmllwmaam",
+        "mmlllmmmmaaam",
+        ".mmmmmmmaaaam",
+        "..mmmmmaaaam.",
+        "...mmmmmmmm..",
+    ],
+    "great_gem": [
+        ".........mmmmmm...",
+        "......mmmlwwwllm..",
+        "....mmlwwlllllwlm.",
+        "...mlwwllllwlllllm",
+        "..mlwllllwllwllllm",
+        ".mllllwlllllwllmam",
+        "mllllwlllllllwmaam",
+        "mllllmllllmmmmaaam",
+        "mmlllmmllmmmmaaaam",
+        ".mmmmmmmmmmmaaaaam",
+        "..mmmmmmmmmaaaaam.",
+        "...mmmmmmmaaaaam..",
+        "....mmmmmmmmmmm...",
+    ],
     "pincer": [
         "mm.......",
         "mmm......",
@@ -507,7 +539,7 @@ def icon(shape, colors):
     rows = SHAPES[shape]
     # Small shapes are drawn at twice the size (the shading still works per pixel), so every drop
     # fills about two thirds of its icon.
-    if max(max(len(row) for row in rows), len(rows)) <= GROW_BELOW:
+    if shape not in KEEP_SIZE and max(max(len(row) for row in rows), len(rows)) <= GROW_BELOW:
         rows = ["".join(letter * 2 for letter in row)
                 for row in rows for _ in range(2)]
     width, height = max(len(row) for row in rows), len(rows)

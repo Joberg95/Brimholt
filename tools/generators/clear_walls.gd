@@ -1,7 +1,7 @@
 extends SceneTree
 ## Clears the stone walls ("#") that belong to nothing. A wall stays when it is part of a
 ## building (a run touching one: World.ROOF_AT), a castle keep's (a run beside its sandstone floor
-## or carpet: keeps stand open, so they are no buildings), or a town's own wall: the cells within EDGE of
+## or carpet: keeps stand open, so they are no buildings), a monster fort's (FORTS), or a town's own wall: the cells within EDGE of
 ## its town zone's border, in a run with at least TOWN_WALL of them. Everything else goes: stubs
 ## inside towns, the arms a town wall pushes inward, the dry-stone pens and loose wall bits of the
 ## countryside, and the bits on Blackreed Isle. A cleared cell takes the ground most common round it
@@ -16,6 +16,9 @@ const EDGE: int = 1
 const TOWN_WALL: int = 8
 const GROUND: String = ".,:=ms"
 const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
+const Orcs = preload("res://tools/generators/orcs.gd")
+## Monster forts whose walls stand on their own: the Grimtusk Hold.
+const FORTS: Array[Rect2i] = [Orcs.FORT]
 
 
 func _initialize() -> void:
@@ -51,7 +54,7 @@ static func stray_walls() -> Array[Vector2i]:
 						seen[next] = true
 						run.append(next)
 				index += 1
-			if run.any(func(cell: Vector2i) -> bool: return World.ROOF_AT.has(cell) or _keep_wall(cell)):
+			if run.any(func(cell: Vector2i) -> bool: return World.ROOF_AT.has(cell) or _keep_wall(cell) or _fort_wall(cell)):
 				continue
 			var edge: Array[Vector2i] = run.filter(func(cell: Vector2i) -> bool: return on_town_edge(cell))
 			var keep: bool = edge.size() >= TOWN_WALL
@@ -59,6 +62,14 @@ static func stray_walls() -> Array[Vector2i]:
 				if not keep or not edge.has(cell):
 					stray.append(cell)
 	return stray
+
+
+## Whether a wall is part of a monster fort (FORTS).
+static func _fort_wall(cell: Vector2i) -> bool:
+	for fort: Rect2i in FORTS:
+		if fort.has_point(cell):
+			return true
+	return false
 
 
 ## Whether a wall stands beside a castle keep's floor (sandstone flags or carpet).

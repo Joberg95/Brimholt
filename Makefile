@@ -10,7 +10,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim duel-eval train-setup train export-policy bench playtest check \
-	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands bake-map relocate mainland orcs underground caves-below map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -168,6 +168,24 @@ clear-walls: ## Clear stone walls that belong to no building or town wall (a re-
 
 frost-isles: ## Paint the frost isles and Hrimvik south of the mainland (then make towns town-paths caves world-map)
 	$(GODOT) --headless --path . --script res://tools/generators/frost_isles.gd
+
+mainland: ## One-time pass: grow the mainland to 640 x 640 with Brackenford and level 1-30 land (then make towns town-paths cobble-towns world-map)
+	$(GODOT) --headless --path . --script res://tools/generators/mainland.gd
+
+orcs: ## One-time pass: build the Grimtusk Hold, the orc fort and its camps east of the Wolfholt (then make towns world-map)
+	$(GODOT) --headless --path . --script res://tools/generators/orcs.gd
+
+underground: ## One-time pass: dig the floor below the mainland: tunnel networks with holes, sewers under the bigger towns (then make world-map)
+	$(GODOT) --headless --path . --script res://tools/generators/underground.gd
+
+caves-below: ## Move the caves marked "below" in game/data/caves.gd to the floor below, under their mouths (a re-run changes nothing)
+	$(GODOT) --headless --path . --script res://tools/generators/caves_below.gd
+
+relocate: ## One-time pass: move the frost isles south and Silverwood east for the 640 x 640 mainland (a re-run changes nothing)
+	$(GODOT) --headless --path . --script res://tools/generators/relocate.gd
+
+bake-map: ## Bake the map (game/maps/world.bake) the game loads, after painting in Godot (generators bake it themselves)
+	$(GODOT) --headless --path . --script res://tools/generators/bake_map.gd
 
 islands: ## Paint the archipelago islands not yet painted (then make towns town-paths world-map; a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/islands.gd

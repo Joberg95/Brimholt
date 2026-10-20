@@ -87,6 +87,7 @@ func _run() -> void:
 	_persistence_checks()
 	_dungeon_checks()
 	_cave_checks()
+	_underground_checks()
 	_isles_checks()
 	_scale_checks()
 	_spell_fx_checks()
@@ -145,7 +146,7 @@ func _run() -> void:
 	world.players[1]["from"] = Vector2i(5, 6)
 	world.players[1]["next_move"] = 0.0
 	var transit: Dictionary = world.export_player(2, 0.29)
-	check(is_equal_approx(transit["remaining"], 0.09), "late join sees remaining movement")
+	check(is_equal_approx(transit["remaining"], 0.2 + world.players[2]["step"] - 0.29), "late join sees remaining movement")
 	check(transit["from"] == Vector2i(6, 6), "late join sees movement origin")
 	check(world.move(1, Vector2i.RIGHT, 0.4)["ok"], "origin released after movement")
 	check(world.players[1]["facing"] == Vector2i.RIGHT, "authoritative facing")
@@ -190,8 +191,13 @@ func _run() -> void:
 	var timing := World.new()
 	timing.add_player(1, 0.0)
 	check(timing.move(1, Vector2i.RIGHT, 0.0)["ok"], "timing baseline move")
-	check(not timing.move(1, Vector2i.RIGHT, World.MOVE_SECONDS - 0.000001)["ok"], "reject just before 180 ms")
-	check(timing.move(1, Vector2i.RIGHT, World.MOVE_SECONDS)["ok"], "accept exactly at 180 ms")
+	# A step lasts 180 ms times the ground's cost (World.GROUND_STEP: streets and roads are quicker).
+	var first_step: float = World.MOVE_SECONDS * float(World.GROUND_STEP.get(World.terrain(timing.players[1]["cell"]), 1.0))
+	check(is_equal_approx(timing.players[1]["step"], first_step), "a step takes 180 ms times its ground's cost")
+	check(not timing.move(1, Vector2i.RIGHT, first_step - 0.000001)["ok"], "reject just before the step ends")
+	check(timing.move(1, Vector2i.RIGHT, first_step)["ok"], "accept exactly when the step ends")
+	check(World.GROUND_STEP[","] < 1.0 and World.GROUND_STEP["="] < 1.0 and World.GROUND_STEP["m"] > 1.0
+		and World.GROUND_STEP.keys().all(func(tile: String) -> bool: return tile in World.WALKABLE), "roads are quicker to walk, bog slower")
 	_inventory_checks()
 	_sprite_checks()
 	_slot_and_stat_checks()
@@ -305,7 +311,7 @@ func _quest_hub_and_lexicon_checks() -> void:
 		check(not World.next_task(state).is_empty(), "a task fits at every level (%d)" % level)
 	check(World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": []}) == "wolf_winter"
 		and World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": ["wolf_winter", "lodge_wolves"]})
-		== "highway_robbers", "the suggestion moves to the best remaining fit")
+		== "orc_raiders", "the suggestion moves to the best remaining fit")
 	_hunters_lodge_checks()
 	_profession_data_checks()
 	_gathering_checks()
@@ -381,10 +387,10 @@ func _quest_hub_and_lexicon_checks() -> void:
 		check(found["drops"] == Monsters.LOOT[found["kind"]] and not found["places"].is_empty() and found["levels"].x >= 1
 			and found["gear"] == Combat.GEAR_DROP_CHANCE[found["rank"]], "%s's lexicon entry matches its loot and spawns" % found["kind"])
 	var spider: Dictionary = Lexicon.entry("cave_spider")
-	check(spider["places"] == ["Silkhollow (dungeon)"] and spider["tasks"] == ["silk_harvest"] and Lexicon.matches(spider, "SILK")
+	check("Silkhollow (dungeon)" in spider["places"] and spider["tasks"] == ["silk_harvest"] and Lexicon.matches(spider, "SILK")
 		and Lexicon.matches(spider, "spider silk") and not Lexicon.matches(spider, "golem"), "lexicon search finds names, places, and drops")
 	var vole: Dictionary = Lexicon.entry("field_vole")
-	check(vole["gold"] == roundi(Balance.coins_per_kill(1) * World.ITEMS["gold_coins"]["gold"]) and vole["places"] == ["Cinder Meadows"],
+	check(vole["gold"] == roundi(Balance.coins_per_kill(1) * World.ITEMS["gold_coins"]["gold"]) and "Cinder Meadows" in vole["places"] and "Bracken Leas" in vole["places"],
 		"the lexicon's gold matches the expected coin piles")
 
 
@@ -757,6 +763,7 @@ func _world_layout_checks() -> void:
 		tidy = tidy and layer.scene_file_path == MapIO.sector_path(sector) 			and Atlas.sector_rect(sector).encloses(layer.get_used_rect())
 	scene.free()
 	check(tidy, "every terrain sector holds only its own cells (make sectors re-splits them)")
+	check(MapIO.bake_current(), "the baked map matches the map (run make bake-map after painting in Godot)")
 	# A version-2 save standing in a cave comes back in the same cave after the bands moved.
 	var world := World.new()
 	world.add_player(1, 0.0, "knight")
@@ -783,8 +790,8 @@ func _island_checks() -> void:
 		check(scene.has_meta("island_" + id), "%s is painted once (scene metadata)" % id)
 		check(World.FERRYMEN.has(id) and World.FERRYMEN[id]["routes"].has(spec["port"][0])
 			and World.FERRYMEN[spec["port"][0]]["routes"].has(id), "%s is linked by boat to %s and back" % [id, spec["port"][0]])
-		check(World.continent_at(World.FERRYMEN[id]["cell"]) == "" and not Atlas.MAINLAND.has_point(World.FERRYMEN[id]["cell"]),
-			"%s's harbour lies off the mainland" % id)
+		check(World.continent_at(World.FERRYMEN[id]["cell"]) not in ["", "the mainland"] and not Atlas.MAINLAND.has_point(World.FERRYMEN[id]["cell"]),
+			"%s's harbour lies on its own continent, off the mainland" % id)
 		# On foot from the harbour.
 		var reached: Dictionary = {}
 		var queue: Array[Vector2i] = []
@@ -1528,6 +1535,7 @@ func _solo_checks() -> void:
 	var flipper: Dictionary = world.players[switcher]
 	flipper["skull"] = ""
 	flipper["pvp_toggle_at"] = 0.0
+	flipper["pvp_until"] = 0.0
 	var was: bool = flipper["pvp"]
 	var warden: Vector2i = World.TOWNSFOLK["reedmere_warden"]["cell"]
 	bots.jump(switcher, warden + Vector2i(0, 3), sim_clock[0], [])
@@ -1717,10 +1725,37 @@ func _hunters_lodge_checks() -> void:
 	check(combat.task_action(1, "lodgemaster_varga", chain[0], "complete", 2.0)["reason"].begins_with("Make room"),
 		"a reward needs backpack room")
 	player["backpack"] = full
-	player["backpack"][0] = ""
+	for slot: int in 4:
+		player["backpack"][slot] = ""
+	var potions: int = 0
+	for entry: Array in World.task_items(chain[0], player["vocation"]):
+		potions += entry[1] if entry[0] == Quests.supplies(Quests.TASKS[chain[0]]["level"])[0][0] else 0
 	check(combat.task_action(1, "lodgemaster_varga", chain[0], "complete", 3.0)["ok"]
-		and World.carried(player["backpack"], "health_potion") == 5 and player["backpack"].has("lodgeranger_boots")
-		and World.bound("lodgeranger_boots"), "the first contract pays potions and the Hunter's bound Lodge boots")
+		and World.carried(player["backpack"], Quests.supplies(Quests.TASKS[chain[0]]["level"])[0][0]) == potions and potions > 5
+		and player["backpack"].has("lodgeranger_boots")
+		and World.bound("lodgeranger_boots"), "the first contract pays potions, supplies, and the Hunter's bound Lodge boots")
+	# Every hunting task stocks you up, done once as it is: potions of the grade for its level and food.
+	check(Quests.supplies(12)[0][0] == "health_potion" and Quests.supplies(25)[1][0] == "strong_mana_potion"
+		and Quests.supplies(40)[0] == ["great_health_potion", 30] and Quests.supplies(40)[2] == ["glimmerfin_feast", 7],
+		"task supplies grow with the task's level")
+	for task: String in Quests.TASKS:
+		var paid: Array = World.task_items(task, "knight").map(func(entry: Array) -> String: return entry[0])
+		check(paid.any(func(kind: String) -> bool: return World.ITEMS[kind].has("drink"))
+			and paid.any(func(kind: String) -> bool: return World.ITEMS[kind].has("eat")), "%s pays potions and food" % task)
+	# Supplies that do not fit lie at your feet; the task still turns in.
+	var stocked := World.new()
+	var stocked_combat := Combat.new(stocked, 5)
+	stocked.add_player(1, 0.0, "knight")
+	var stocker: Dictionary = stocked.players[1]
+	stocker["level"] = 12
+	_place(stocked, 1, World.QUEST_GIVERS["harbourmaster_ilse"]["cell"] + World.QUEST_GIVERS["harbourmaster_ilse"]["facing"])
+	stocked_combat.task_action(1, "harbourmaster_ilse", "highway_robbers", "accept", 1.0)
+	stocker["tasks"]["highway_robbers"] = Quests.TASKS["highway_robbers"]["count"]
+	stocker["backpack"].fill("glowcap#100")
+	var stocked_turn: Dictionary = stocked_combat.task_action(1, "harbourmaster_ilse", "highway_robbers", "complete", 2.0)
+	var underfoot: Array = stocked.ground.get(stocker["cell"], [])
+	check(stocked_turn["ok"] and not underfoot.is_empty() and stocker["done_tasks"].has("highway_robbers"),
+		"a full backpack sends a task's supplies to the ground at your feet")
 	check(combat.task_action(1, "lodgemaster_varga", chain[1], "accept", 4.0)["ok"], "the next contract opens")
 	# Spell ranks: a class trainer carves rune shards into a known spell.
 	var trainer: String = "trainer_paladin"
@@ -1854,11 +1889,13 @@ func _showpiece_boot_checks() -> void:
 	world.players[1]["level"] = 30
 	world.players[1]["equipment"]["boots"] = "hastewind_boots"
 	world.move(1, Vector2i.RIGHT, 0.0)
-	check(is_equal_approx(world.players[1]["next_move"], World.MOVE_SECONDS / 1.1), "10% speed boots step 10% faster")
+	var ground: Callable = func() -> float: return float(World.GROUND_STEP.get(World.terrain(world.players[1]["cell"]), 1.0))
+	check(is_equal_approx(world.players[1]["next_move"], World.MOVE_SECONDS * ground.call() / 1.1), "10% speed boots step 10% faster")
 	world.players[1]["equipment"]["mount"] = "void_steed_mount"
 	world.players[1]["next_move"] = 0.0
 	world.move(1, Vector2i.LEFT, 1.0)
-	check(is_equal_approx(world.players[1]["next_move"], 1.0 + World.MOVE_SECONDS * World.MOUNT_STEP / 1.1), "speed boots stack with a mount")
+	check(is_equal_approx(world.players[1]["next_move"], 1.0 + World.MOVE_SECONDS * World.MOUNT_STEP * ground.call() / 1.1),
+		"speed boots stack with a mount")
 	var plain: int = World.stats(35, {}, "sorcerer")["mana"]
 	var slippers: Dictionary = World.stats(35, {"boots": "frostbloom_slippers"}, "sorcerer")
 	check(slippers["mana"] >= roundi(plain * 1.08), "8% mana slippers raise maximum mana by 8% (%d -> %d)" % [plain, slippers["mana"]])
@@ -1986,7 +2023,7 @@ func _loot_display_checks() -> void:
 		if item["slot"].is_empty() and item.has("value") and not item.has("rune") and not item.has("drink") 				and not item.has("eat") and not String(item["look"]) in Items.GATHERED_LOOKS:
 			trophies += 1
 			check(String(item["look"]).begins_with("trophy+"), "%s is drawn as its own trophy shape" % kind)
-	check(trophies == 80, "eighty monster trophies (%d)" % trophies)
+	check(trophies == 98, "ninety-eight monster trophies, the cut gems, the crimson insignia, and the orcs' included (%d)" % trophies)
 	# Gold grows from one coin to a big heap with the stack.
 	check(SpriteArt.coin_stage(1) == 0 and SpriteArt.coin_stage(2) == 1 and SpriteArt.coin_stage(3) == 2
 		and SpriteArt.coin_stage(9) == 3 and SpriteArt.coin_stage(10) == 4 and SpriteArt.coin_stage(100) == 5
@@ -2066,8 +2103,8 @@ func _mount_checks() -> void:
 	world.add_player(1, 0.0)
 	world.players[1]["equipment"]["mount"] = "void_steed_mount"
 	world.move(1, Vector2i.RIGHT, 0.0)
-	check(is_equal_approx(world.players[1]["next_move"], World.MOVE_SECONDS * World.MOUNT_STEP)
-		and is_equal_approx(world.export_player(1, 0.0)["duration"], World.MOVE_SECONDS * World.MOUNT_STEP),
+	var ridden: float = World.MOVE_SECONDS * World.MOUNT_STEP * float(World.GROUND_STEP.get(World.terrain(world.players[1]["cell"]), 1.0))
+	check(is_equal_approx(world.players[1]["next_move"], ridden) and is_equal_approx(world.export_player(1, 0.0)["duration"], ridden),
 		"a rider steps 25% faster")
 	var below: Vector2i = Vector2i(-1, -1)
 	for zone: Dictionary in World.ZONES:
@@ -2454,7 +2491,7 @@ func _zone_checks() -> void:
 	var central: int = 0
 	for id: String in World.FERRYMEN:
 		var cell: Vector2 = Vector2(World.FERRYMEN[id]["cell"])
-		if World.FERRYMEN[id]["vehicle"] == "waystone" and cell.distance_to(Vector2(Atlas.MAINLAND.get_center())) < 220.0:
+		if World.FERRYMEN[id]["vehicle"] == "waystone" and cell.distance_to(Vector2(Atlas.HEARTLAND.get_center())) < 220.0:
 			central += 1
 	check(central >= 4, "coach towns ring the centre of the map")
 	# The mainland's own ferries (the archipelago's ports lie off its coast).
@@ -2462,7 +2499,7 @@ func _zone_checks() -> void:
 		return (World.FERRYMEN[id]["vehicle"] == "ferry" and id not in ["reedmere", "blackreed_isle", "hrimvik"]
 			and Atlas.MAINLAND.has_point(World.FERRYMEN[id]["cell"])))
 	check(ferries.size() == 2 and World.FERRYMEN["cinder_landing"]["routes"].has("lastlight")
-		and World.FERRYMEN["lastlight"]["cell"].y > Atlas.MAINLAND.end.y - 100, "one coastal ferry runs from the top to the bottom")
+		and World.FERRYMEN["lastlight"]["cell"].y > Atlas.HEARTLAND.end.y - 100, "one coastal ferry runs from the top of the heartland to the bottom")
 	if World.FERRYMEN.has("blackreed_isle") and World.FERRYMEN.has("reedmere"):
 		var isle: Dictionary = World.zone_at(World.FERRYMEN["blackreed_isle"]["cell"])
 		check(isle.get("pvp", false) and isle["min_level"] == 40 and isle["max_level"] == 50, "Blackreed Isle is a level 40-50 PvP zone")
@@ -2480,8 +2517,8 @@ func _zone_checks() -> void:
 					and Atlas.MAINLAND.has_point(World.FERRYMEN[id]["cell"]):
 				check(not World.FERRYMEN[id]["routes"].has("blackreed_isle") and World.FERRYMEN[id]["cell"].x < 64,
 					"coastal ports sail the western sea only")
-		check(Atlas.MAINLAND == Rect2i(0, 0, 384, 384) and World.OVERWORLD.encloses(Atlas.MAINLAND)
-			and World.OVERWORLD.encloses(Biomes.ISLES), "the 384 by 384 mainland and the frost isles lie in the overworld")
+		check(Atlas.MAINLAND == Rect2i(0, 0, 640, 640) and Atlas.MAINLAND.encloses(Atlas.HEARTLAND) and World.OVERWORLD.encloses(Atlas.MAINLAND)
+			and World.OVERWORLD.encloses(Biomes.ISLES), "the 640 by 640 mainland and the frost isles lie in the overworld")
 		check(coaches.size() >= 6, "coach stations link the inland towns")
 		for id: String in coaches:
 			var routes: Dictionary = World.FERRYMEN[id]["routes"]
@@ -2782,7 +2819,7 @@ func _gear_tier_checks() -> void:
 	for roll: int in 400:
 		for entry: String in drops.roll_loot("blackreed_warden", 45):
 			elite_gear += 1 if not World.ITEMS[World.kind_of(entry)]["slot"].is_empty() else 0
-	check(elite_gear > 70 and elite_gear < 130, "elites drop gear about a quarter of the time")
+	check(elite_gear > 15 and elite_gear < 60, "elites drop gear about one kill in twelve (%d of 400)" % elite_gear)
 	for kind: String in Monsters.MONSTERS:
 		for slot: String in Monsters.MONSTERS[kind].get("gear", {}):
 			check(World.fits(Monsters.MONSTERS[kind]["gear"][slot], slot), "%s wears catalog gear" % kind)
@@ -3570,7 +3607,9 @@ func _town_checks() -> void:
 		and not player["tasks"].has(task) and player["done_tasks"].has(task), "finishing a task gives the first pack")
 	check(world.export_player(1, 0.0, true)["backpack"].size() == backpack.size() and task in world.export_player(1, 0.0, true)["done_tasks"],
 		"the bigger backpack and finished tasks replicate to the owner")
-	check(world.move_item(1, slot0, {"type": "backpack", "index": backpack.size() - 1}, tick.call())["reason"] == "There is no item there",
+	# The task's supplies took the first free slots; an empty one is still empty.
+	var empty_slot: Dictionary = {"type": "backpack", "index": player["backpack"].find("")}
+	check(world.move_item(1, empty_slot, {"type": "backpack", "index": backpack.size() - 1}, tick.call())["reason"] == "There is no item there",
 		"new pack slots are usable")
 	check(not combat.task_action(1, giver, task, "accept", tick.call())["ok"], "a finished task cannot be repeated")
 	for target: Variant in [slot0, {"type": "ground", "cell": player["cell"] + Vector2i.DOWN}, {"type": "backpack"}]:
@@ -3687,6 +3726,117 @@ func _cave_checks() -> void:
 	check(thirties >= 15, "the elite caves give levels 30-45 fifteen tasks (%d)" % thirties)
 
 
+## The floor below the mainland (docs/plan/44, tools/generators/underground.gd): a plane beside the
+## overworld lined up under it, joined by holes in the wilds and ladders in town streets over stairs
+## up right below; tunnel networks for levels 10-40 and sewers under the bigger towns, each an
+## underground zone whose camps are all reached on foot from its stairs.
+func _underground_checks() -> void:
+	var Underground: GDScript = load("res://tools/generators/underground.gd")
+	var scene: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
+	check(scene.has_meta("underground") and Underground.TERRAINS == World.TERRAINS, "the underground is dug once (scene metadata)")
+	scene.free()
+	check(Atlas.UNDERGROUND.position.x > Caves.BAND_X and not Atlas.UNDERGROUND.intersects(World.OVERWORLD)
+		and Atlas.UNDERGROUND.size == World.OVERWORLD.size and Atlas.below(Vector2i(10, 20)) == Vector2i(Atlas.UNDER_X + 10, 20)
+		and Atlas.above(Atlas.below(Vector2i(7, 9))) == Vector2i(7, 9), "the floor below lies beside the overworld, cell for cell")
+	var wild: int = 0
+	var ladders: int = 0
+	var paired: bool = true
+	for cell: Vector2i in World.HOLES:
+		var other: Vector2i = World.HOLES[cell]
+		paired = paired and World.HOLES.get(other, Vector2i(-1, -1)) == cell
+		if World.terrain(cell) != "v":
+			continue
+		paired = paired and World.terrain(other) == "^" and other == Atlas.below(cell) and not World.FURNITURE.has(cell)
+		if World.zone_at(cell).get("town", false):
+			ladders += 1
+		else:
+			wild += 1
+			paired = paired and World.zone_at(cell).is_empty()
+	check(paired, "every hole and ladder has stairs up right below it, and nothing stands on it")
+	check(wild >= Underground.NETWORK_ORDER.size() * 3 and ladders >= Underground.SEWERS.size() * 2,
+		"holes in the wilds lead into every network, ladders in the streets into the sewers (%d holes, %d ladders)" % [wild, ladders])
+	# Zones: one per network and sewer, underground, apart; every camp inside one and reached from its stairs.
+	var zones: Array = World.ZONES.filter(func(zone: Dictionary) -> bool:
+		return Atlas.UNDERGROUND.encloses(zone["rect"]) and not zone.has("cave"))
+	check(zones.size() == Underground.NETWORK_ORDER.size() + Underground.SEWERS.size()
+		and zones.all(func(zone: Dictionary) -> bool: return zone.get("underground", false) and not zone["town"] and zone.has("ambient")),
+		"every network and sewer is an underground zone")
+	for index: int in zones.size():
+		for other: int in range(index + 1, zones.size()):
+			check(not zones[index]["rect"].intersects(zones[other]["rect"]), "underground zones do not overlap")
+	for zone: Dictionary in zones:
+		var reached: Dictionary = {}
+		var queue: Array[Vector2i] = []
+		for cell: Vector2i in World.HOLES:
+			if zone["rect"].has_point(cell):
+				reached[cell] = true
+				queue.append(cell)
+		check(not queue.is_empty(), "%s has a way up" % zone["name"])
+		while not queue.is_empty():
+			var at: Vector2i = queue.pop_back()
+			for side: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				var next: Vector2i = at + side
+				if not reached.has(next) and zone["rect"].has_point(next) and World.walkable(next):
+					reached[next] = true
+					queue.append(next)
+		var camps: int = 0
+		for spawn: Dictionary in World.MONSTER_SPAWNS:
+			if zone["rect"].has_point(spawn["cell"]):
+				camps += 1
+				check(reached.has(spawn["cell"]) and spawn["level"] >= 3 and spawn["level"] <= 42,
+					"%s's camps are reached from its stairs" % zone["name"])
+		check(camps >= 4, "%s has hunting camps (%d)" % [zone["name"], camps])
+	for spawn: Dictionary in World.MONSTER_SPAWNS:
+		if Atlas.UNDERGROUND.has_point(spawn["cell"]):
+			check(World.zone_at(spawn["cell"]).get("underground", false), "underground camps lie in a zone (a network, a sewer, or a cave)")
+	# Down a hole and back up: out beside the way at the other end, never on it.
+	var world := World.new()
+	var combat := Combat.new(world, 3)
+	var instances := Instances.new(world, combat)
+	world.monsters.clear()
+	world.add_player(1, 0.0, "knight")
+	world.players[1]["equipment"]["mount"] = "dire_wolf_mount"
+	var hole: Vector2i = World.HOLES.keys().filter(func(cell: Vector2i) -> bool:
+		return World.terrain(cell) == "v" and not World.zone_at(cell).get("town", false))[0]
+	_place(world, 1, hole)
+	var down: Array = instances.after_move(1, 1.0)
+	var below: Vector2i = world.players[1]["cell"]
+	check(World.chebyshev(below, Atlas.below(hole)) <= 3 and World.terrain(below) != "^" and World.zone_at(below).get("underground", false)
+		and down.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and String(event["text"]).begins_with("You climb down")),
+		"a hole leads down beside the stairs right below it")
+	check(not World.riding(world.players[1]["equipment"], below), "nobody rides underground")
+	_place(world, 1, Atlas.below(hole))
+	instances.after_move(1, 2.0)
+	check(World.OVERWORLD.has_point(world.players[1]["cell"]) and World.chebyshev(world.players[1]["cell"], hole) <= 3
+		and World.terrain(world.players[1]["cell"]) != "v", "the stairs lead back up beside the hole")
+	check(Nav.space_of(below)[0] == "underground" and Nav.space_of(below)[1].has_point(below), "bots route underground in a space of its own")
+	# Caves moved below (Caves "below", caves_below.gd): stairs right under the mouth, apart from the
+	# tunnels, the sewers, and each other, their band rect left empty; a save inside follows the cave.
+	var moved: Array = Caves.ORDER.filter(func(cave: String) -> bool: return Caves.CAVES[cave].has("below"))
+	check(moved.size() >= 4, "caves have moved below (%d)" % moved.size())
+	var scene_below: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
+	for cave: String in moved:
+		var area: Rect2i = Caves.rect(cave)
+		check(scene_below.has_meta("cave_below_" + cave) and Atlas.UNDERGROUND.encloses(area)
+			and World.CAVE_STAIRS[cave] == Atlas.below(World.MOUTH_OF[cave]) and World.HOLES.get(World.MOUTH_OF[cave]) == World.CAVE_STAIRS[cave],
+			"%s lies under its mouth" % cave)
+		check(not zones.any(func(zone: Dictionary) -> bool: return zone["rect"].intersects(area.grow(1)))
+			and not moved.any(func(other: String) -> bool: return other != cave and Caves.rect(other).intersects(area)),
+			"%s keeps clear of the tunnels, the sewers, and the other caves" % cave)
+		var band: Rect2i = Caves.band_rect(cave)
+		check([band.position, band.get_center(), band.end - Vector2i.ONE].all(func(cell: Vector2i) -> bool: return World.terrain(cell) in ["", " "]),
+			"%s left the band empty" % cave)
+		var saved := World.new()
+		saved.add_player(1, 0.0, "knight")
+		var inside: Vector2i = World.CAVE_STAIRS[cave] + Vector2i(1, 0)
+		if not World.walkable(inside):
+			inside = World.CAVE_STAIRS[cave] + Vector2i(0, 1)
+		CharacterStore.restore(saved, 1, {"version": CharacterStore.VERSION, "level": 40,
+			"cell": [inside.x - area.position.x + band.position.x, inside.y - area.position.y + band.position.y]}, 1.0)
+		check(saved.players[1]["cell"] == inside, "a save in %s's old place comes back in the cave" % cave)
+	scene_below.free()
+
+
 ## The frost isles (tools/generators/frost_isles.gd): reached only by boat, south of the mainland,
 ## with Hrimvik's snowy streets and the trench under the sea ice.
 func _isles_checks() -> void:
@@ -3779,6 +3929,23 @@ func _scale_checks() -> void:
 	check(not world.monsters.values().any(func(monster: Dictionary) -> bool:
 		return Combat.distance(monster["home"], camp["cell"]) > (Combat.WAKE_REACH + 2) * Combat.SLEEP_CHUNK)
 		and Combat.distance(far, camp["cell"]) > 100, "only the camps round the player woke")
+	# Plan 41: once nobody comes near for REST_SECONDS, the camps go dormant again, monsters and
+	# all, and wake again for the next visitor.
+	var woke: int = combat.dormant_camps()
+	_place(world, 1, far)
+	for step: int in 12:
+		combat.tick(20.0 + step * 0.5)
+	check(world.monsters.values().any(func(monster: Dictionary) -> bool: return monster["spawn"] == index),
+		"a camp stays awake while its visitor has only just left")
+	for step: int in 10:
+		combat.tick(20.0 + Combat.REST_SECONDS + step * 3.0)
+	check(not world.monsters.values().any(func(monster: Dictionary) -> bool: return monster["spawn"] == index)
+		and combat.dormant_camps() > woke, "camps nobody has visited for a while go dormant again, monsters and all")
+	_place(world, 1, camp["cell"] + Vector2i(4, 0))
+	for step: int in 20:
+		combat.tick(40.0 + Combat.REST_SECONDS + step * 0.5)
+	check(world.monsters.values().filter(func(monster: Dictionary) -> bool: return monster["spawn"] == index).size() == camp["count"],
+		"a rested camp wakes again for its next visitor")
 	# Every camp filled at once, as tools and tests may ask: a tick visits a small share.
 	var full_world := World.new()
 	var full := Combat.new(full_world, 30)
@@ -4073,7 +4240,8 @@ func _dungeon_checks() -> void:
 	var monster_count: int = 0
 	for spawn: Dictionary in World.MONSTER_SPAWNS:
 		check(World.OVERWORLD.has_point(spawn["cell"]) or World.zone_at(spawn["cell"]).get("name", "") == "The Void Throne"
-			or World.zone_at(spawn["cell"]).has("cave"), "overworld spawns stay out of dungeon copies")
+			or World.zone_at(spawn["cell"]).has("cave") or Atlas.UNDERGROUND.has_point(spawn["cell"]),
+			"overworld spawns stay out of dungeon copies")
 		monster_count += spawn["count"]
 	check(monster_count > 550, "the smaller overworld is densely populated")
 
@@ -5688,7 +5856,29 @@ func _combat_checks() -> void:
 		if not World.ITEMS[kind]["slot"].is_empty():
 			gear += tally[kind]
 			check(World.ITEMS[kind]["level"] == 1, "a level-1 monster drops tier-1 gear only")
-	check(gear > 110 and gear < 220, "normal monsters drop a piece of gear about 4% of the time")
+	check(gear > 20 and gear < 70, "normal monsters drop a piece of gear about 1% of the time (%d of 4000)" % gear)
+	# Valuables (plan 42): cut gems worth Balance.valuables_per_kill on average, of the monster's
+	# level, great gems only from level 35; they sell to vendors for their value.
+	for level: int in [5, 20, 40]:
+		var worth: float = 0.0
+		var kinds: Dictionary = {}
+		for roll: int in 6000:
+			for entry: String in loot_rolls.roll_valuables(level, "normal"):
+				var kind: String = World.kind_of(entry)
+				worth += World.ITEMS[kind]["value"] * World.count_of(entry)
+				kinds[kind] = true
+		var gem_worth: float = Balance.valuables_per_kill(level, "normal")
+		check(absf(worth / 6000.0 - gem_worth) < gem_worth * 0.15, "a level-%d kill drops about %d gold of gems (%.1f)" % [
+			level, roundi(gem_worth), worth / 6000.0])
+		check(kinds.keys().all(func(kind: String) -> bool:
+			var found: Array = (Monsters.VALUABLES + Monsters.GREAT_VALUABLES).filter(func(entry: Array) -> bool: return entry[0] == kind)
+			return found.size() == 1 and level >= int(found[0][1])), "level-%d monsters drop only gems of their level" % level)
+		check(kinds.keys().any(func(kind: String) -> bool: return kind.begins_with("great_")) == (level >= 35),
+			"great gems drop from level 35 only (level %d)" % level)
+	for entry: Array in Monsters.VALUABLES + Monsters.GREAT_VALUABLES:
+		check(Economy.sell_price(entry[0]) == World.ITEMS[entry[0]]["value"] and World.stackable(entry[0]),
+			"%s stacks and sells for its value" % entry[0])
+	check(Balance.valuables_per_kill(40, "elite") > Balance.valuables_per_kill(40) * 3.0, "elites drop richer gems")
 	check(tally.get("gold_coins", 0) > 800 and tally.get("gold_coins", 0) < 960, "level-1 monsters drop a coin about 22% of the time")
 	var warden_loot: Array[String] = loot_rolls.roll_loot("blackreed_warden", 50)
 	var warden_gold: int = _count(warden_loot, "gold_coins")

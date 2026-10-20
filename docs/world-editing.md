@@ -3,8 +3,9 @@
 The overworld is a Godot scene; this is how to edit it safely.
 
 The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor. The overworld is
-1920×1920 tiles (`Atlas.OVERWORLD_SIZE`): today's heartland, the 384×384 mainland and the frost
-isles south of it, sits in its north-west corner, and new land grows east and south. Its terrain
+1920×1920 tiles (`Atlas.OVERWORLD_SIZE`): the 640×640 mainland (`Atlas.MAINLAND`, grown by
+`make mainland` round the old 384×384 heartland, `Atlas.HEARTLAND`) sits in its north-west corner,
+the frost isles south of it and the archipelago's islands out in the sea. Its terrain
 is stored in 128×128 sectors (`game/maps/sectors/<sx>_<sy>.tscn`, one per square that holds any
 painted cell), which `overworld.tscn` instances under its `Sectors` node, so the editor still
 shows one world:
@@ -86,6 +87,10 @@ remembers each island (metadata `island_<id>`), so a re-run changes nothing; aft
 `make towns town-paths cobble-towns world-map`, then edit the island by hand. Never run
 `make clear-walls` without checking it keeps the keeps (it does: walls beside `F` or `Y` stay).
 
+**The baked map**: the game loads `game/maps/world.bake`, written from the scene by
+`make bake-map` and by every generator that saves the map. After painting in Godot, run
+`make bake-map`; until then the game reads the scene (slower) and the rules check fails.
+
 **Generators and sectors**: every generator loads the map with `MapIO.load_scene()`
 (`game/maps/map_io.gd`), which merges the sectors into one `Terrain` layer for it to edit, and
 writes it back with `MapIO.save_scene()`, which splits the terrain into sectors again, rewrites
@@ -103,6 +108,9 @@ stairway under each `DungeonEntrances` marker, keeping
 other edits. Move a `DungeonEntrance` marker in Godot to move a stairway, then run
 `make dungeons` and the rules check. Never paint gameplay into the dungeon band by hand: the
 painter replaces it.
+
+A dungeon with "under" (another dungeon's id) stacks its copies below that dungeon's in the same
+column, so new dungeons fit without widening the band (the Aldmoor barracks sit under the crypt).
 
 **The south-western desert** is defined by `game/data/biomes.gd` (an ellipse) and painted by
 `tools/generators/desert.gd` (`make desert`): inside it, grass (`.`) and trees (`T`) where
@@ -182,6 +190,15 @@ and the champion in the deepest hall. Each mouth is a `CaveMouths` marker on a h
 cave's region. Terrain is repainted the same way every run; existing camps and mouths keep their
 places but take their monster, level, and size from the table, so edit the table and run it
 again, or move markers in Godot.
+
+**The floor below** (`tools/generators/underground.gd`, `make underground`, once): a plane the
+size of the overworld beside it from `Atlas.UNDER_X`, lined up cell for cell under it
+(`Atlas.below`, `Atlas.above`). Paint it in its sectors like the surface: cave earth (`c`) and
+cave rock (`C`) for tunnels, cobbles (`=`), water, planks, and brick (`#`) for sewers, void where
+nothing is painted. A way between the floors is a `v` on the surface with a `^` right below it
+(`World.HOLES` pairs them at load; a `v` without its `^` does nothing): a hole in the wilds, a
+ladder opening in a town. Each network or sewer needs a Zone marker on the plane covering it
+(zones there are underground: dim, dry, no mounts) and its camps inside that zone.
 
 **The frost isles** (`tools/generators/frost_isles.gd`, `make frost-isles`): three snowbound isles
 (`Biomes.ISLES`) south of the mainland, behind 40 rows of open sea, so they

@@ -19,25 +19,25 @@ const TOWNSFOLK_SCRIPT: Script = preload("res://game/maps/markers/townsfolk.gd")
 const SPAWN_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 const TOWN_NAME: String = "Hrimvik"
 ## Open sea painted round the isles and below the mainland (beyond them the grid stays unpainted).
-const SEA: Array[Rect2i] = [Rect2i(0, 384, 384, Biomes.ISLES_SEA), Rect2i(0, 424, 200, 136)]
+const SEA: Array[Rect2i] = [Rect2i(0, 640, 640, Biomes.ISLES_SEA), Rect2i(0, 704, 200, 136)]
 ## Isles: centre, radii, and noise salt; a tile is land when its scaled distance (ragged by noise)
 ## is under one.
 const ISLANDS: Array = [
-	[Vector2(58, 482), Vector2(46, 36), 101],
-	[Vector2(138, 470), Vector2(15, 17), 102],
-	[Vector2(112, 532), Vector2(30, 11), 103],
+	[Vector2(58, 762), Vector2(46, 36), 101],
+	[Vector2(138, 750), Vector2(15, 17), 102],
+	[Vector2(112, 812), Vector2(30, 11), 103],
 ]
 ## Plank bridges: corners of an L-shaped walk two tiles wide, painted over water only.
 const BRIDGES: Array = [
-	[Vector2i(94, 500), Vector2i(132, 500), Vector2i(132, 482)],
-	[Vector2i(80, 512), Vector2i(80, 526), Vector2i(94, 526)],
+	[Vector2i(94, 780), Vector2i(132, 780), Vector2i(132, 762)],
+	[Vector2i(80, 792), Vector2i(80, 806), Vector2i(94, 806)],
 ]
 ## The town, its harbour water, and the pier with the boat at its end. Walls never stand one
 ## tile apart (Buildings would read the gap as a doorway): two tiles or more, or shared.
-const TOWN: Rect2i = Rect2i(60, 452, 46, 36)
-const HARBOUR: Rect2i = Rect2i(108, 444, 16, 52)
-const PIER: Rect2i = Rect2i(106, 468, 12, 2)
-const BOAT: Vector2i = Vector2i(117, 468)
+const TOWN: Rect2i = Rect2i(60, 732, 46, 36)
+const HARBOUR: Rect2i = Rect2i(108, 724, 16, 52)
+const PIER: Rect2i = Rect2i(106, 748, 12, 2)
+const BOAT: Vector2i = Vector2i(117, 748)
 ## [walls rect (relative to TOWN), door (relative)]: wealthy longhouses and the shop to the
 ## north, the bank, the artisan's hall, and a longhouse round the square, and the huts of the
 ## fishers and furriers in the south quarter.
@@ -58,11 +58,11 @@ const GATES: Array[Vector2i] = [Vector2i(0, 16), Vector2i(0, 17), Vector2i(45, 1
 const ROUTES: Dictionary = {"lastlight": 45, "cinder_landing": 60}
 ## Tundra camps: [monster, level, count, wander radius, cell].
 const CAMPS: Array = [
-	["snow_wolf", 28, 5, 3, Vector2i(30, 470)], ["snow_wolf", 29, 5, 3, Vector2i(22, 492)],
-	["snow_wolf", 30, 5, 3, Vector2i(44, 506)], ["tusked_walrus", 30, 5, 2, Vector2i(132, 462)],
-	["tusked_walrus", 32, 5, 2, Vector2i(142, 478)], ["tusked_walrus", 31, 5, 2, Vector2i(30, 512)],
-	["barbarian_raider", 31, 5, 2, Vector2i(18, 474)], ["barbarian_raider", 33, 5, 2, Vector2i(52, 490)],
-	["barbarian_raider", 34, 5, 2, Vector2i(136, 468)],
+	["snow_wolf", 28, 5, 3, Vector2i(30, 750)], ["snow_wolf", 29, 5, 3, Vector2i(22, 772)],
+	["snow_wolf", 30, 5, 3, Vector2i(44, 786)], ["tusked_walrus", 30, 5, 2, Vector2i(132, 742)],
+	["tusked_walrus", 32, 5, 2, Vector2i(142, 758)], ["tusked_walrus", 31, 5, 2, Vector2i(30, 792)],
+	["barbarian_raider", 31, 5, 2, Vector2i(18, 754)], ["barbarian_raider", 33, 5, 2, Vector2i(52, 770)],
+	["barbarian_raider", 34, 5, 2, Vector2i(136, 748)],
 ]
 
 

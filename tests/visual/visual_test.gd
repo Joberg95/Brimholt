@@ -6,6 +6,7 @@ const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Combat = preload("res://game/core/combat.gd")
 const WorldViewScript = preload("res://game/render/world_view.gd")
+const Atlas = preload("res://game/data/atlas.gd")
 const WorldOverlay = preload("res://game/render/world_overlay.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
@@ -728,6 +729,62 @@ func _check_ferry_and_maps() -> bool:
 	game._publish_actor(1)
 	if not _expect(not World.task_targets("outlaw_bounty", {"tasks": {"outlaw_bounty": 0}}).is_empty(),
 			"An outlaw bounty has no camps to point to"):
+		return false
+	# Page Down shows the floor below in the tiles of the land above: a tunnel's earth where it lies.
+	var tunnel: Vector2i = Vector2i(-1, -1)
+	for stairs: Vector2i in World.HOLES:
+		if World.terrain(stairs) == "^" and tunnel.x < 0:
+			for dy: int in range(-6, 7):
+				for dx: int in range(-6, 7):
+					var probe_cell: Vector2i = stairs + Vector2i(dx, dy)
+					if tunnel.x < 0 and [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT].all(
+							func(side: Vector2i) -> bool: return World.terrain(probe_cell + side) == "c"):
+						tunnel = probe_cell
+	var page_down := InputEventKey.new()
+	page_down.keycode = KEY_PAGEDOWN
+	page_down.pressed = true
+	game._world_map.gui_input.emit(page_down)
+	maps.center = Vector2(tunnel - Vector2i(Atlas.UNDER_X, 0)) + Vector2(0.5, 0.5)
+	game._world_map.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var below_map: Image = screen.get_texture().get_image()
+	below_map.save_png("res://.tools/visual-map-below.png")
+	var earth: Color = maps.MAP_COLORS["c"]
+	var seen: Color = below_map.get_pixelv(Vector2i(game.VIEW_ORIGIN + maps.map_point(maps.center)))
+	if not _expect(tunnel.x >= 0 and maps.shown_floor == 1 and absf(seen.r - earth.r) + absf(seen.g - earth.g) + absf(seen.b - earth.b) < 0.12,
+			"Page Down did not show the floor below (%s vs %s)" % [seen, earth]):
+		return false
+	var page_up := InputEventKey.new()
+	page_up.keycode = KEY_PAGEUP
+	page_up.pressed = true
+	game._world_map.gui_input.emit(page_up)
+	maps.center = Vector2(here) + Vector2(0.5, 0.5)
+	if not _expect(maps.shown_floor == 0, "Page Up did not return to the surface"):
+		return false
+	# Right-click opens the marker menu; a marker is drawn on the map, saved, read back, and removed.
+	maps.marker_file = "user://visual_test_markers.json"
+	maps.markers.clear()
+	var right := InputEventMouseButton.new()
+	right.button_index = MOUSE_BUTTON_RIGHT
+	right.pressed = true
+	right.position = maps.map_point(Vector2(probe) + Vector2(0.5, 0.5))
+	game._world_map.gui_input.emit(right)
+	var menu_open: bool = maps._marker_menu.visible and maps._marker_cell == probe
+	maps._marker_menu.hide()
+	maps.add_marker(probe, "star", "Camp spot")
+	game._world_map.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var marked: Image = screen.get_texture().get_image()
+	marked.save_png("res://.tools/visual-map-marker.png")
+	var star: Color = marked.get_pixelv(Vector2i(game.VIEW_ORIGIN + maps.map_point(Vector2(probe) + Vector2(0.5, 0.5))))
+	maps.load_markers()
+	var kept_marker: bool = maps.markers.size() == 1 and maps.markers[0]["cell"] == probe and maps.markers[0]["label"] == "Camp spot"
+	maps.remove_marker(probe)
+	maps.load_markers()
+	if not _expect(menu_open and kept_marker and maps.markers.is_empty() and star.r > 0.8 and star.g > 0.7 and star.b < 0.5,
+			"Map markers failed (menu %s, saved %s, colour %s)" % [menu_open, kept_marker, star]):
 		return false
 	# Wheel in around a point (it stays under the cursor), drag (the map follows the mouse), then
 	# wheel out until the whole map fits, where it can no longer pan.

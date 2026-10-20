@@ -14,11 +14,21 @@ const Biomes = preload("res://game/data/biomes.gd")
 const OVERWORLD_SIZE: Vector2i = Vector2i(1920, 1920)
 ## Cells per side of a terrain sector (game/maps/map_io.gd) and of a world map page.
 const SECTOR: int = 128
-const MAINLAND: Rect2i = Rect2i(0, 0, 384, 384)
+## The mainland, grown to 640 x 640 (tools/generators/mainland.gd) round the old heartland in its
+## north-west corner, where the game began.
+const MAINLAND: Rect2i = Rect2i(0, 0, 640, 640)
+const HEARTLAND: Rect2i = Rect2i(0, 0, 384, 384)
+## The underground (docs/plan/44-underground-floor.md): a floor below the overworld, laid beside it
+## past the dungeon and cave bands and lined up under it, so the cell under surface (x, y) is
+## (x + UNDER_X, y). A hole ("v") on the surface over stairs up ("^") right below joins the two.
+const UNDER_X: int = 2560
+const UNDERGROUND: Rect2i = Rect2i(UNDER_X, 0, OVERWORLD_SIZE.x, OVERWORLD_SIZE.y)
 ## Each continent is crossed to and from only by boat.
 const CONTINENTS: Array = [
 	{"name": "the mainland", "cells": MAINLAND},
 	{"name": "the frost isles", "cells": Biomes.ISLES},
+	# The archipelago (tools/generators/islands.gd ISLANDS).
+	{"name": "Silverwood", "cells": Rect2i(760, 60, 240, 220)},
 ]
 ## The baked world map: one PNG per page (<sx>_<sy>.png, MAP_SCALE pixels per cell), a small
 ## overview of the whole overworld (one pixel per cell) for zooming far out, and pages.json with
@@ -63,3 +73,12 @@ static func continent_at(cell: Vector2i) -> String:
 		if (continent["cells"] as Rect2i).has_point(cell):
 			return continent["name"]
 	return ""
+
+
+## The underground cell under a surface cell, and the surface cell over an underground one.
+static func below(cell: Vector2i) -> Vector2i:
+	return cell + Vector2i(UNDER_X, 0)
+
+
+static func above(cell: Vector2i) -> Vector2i:
+	return cell - Vector2i(UNDER_X, 0)

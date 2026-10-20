@@ -720,6 +720,114 @@ def giant(frame, s):
     return parts
 
 
+IRON = Material("8a8a92", "stone", gloss=0.7)
+WOOD = Material("7a5a3a", "bone")
+
+
+def _orc_weapon(kind, fist, side):
+    """What an orc holds in one fist, held forward and to the side so it shows in every facing."""
+    if kind == "axe":
+        top = add(fist, (side * 1.2, 3.0, 7.5))
+        return [limb(add(fist, (0, -0.4, -1.5)), top, 0.55, WOOD, group="weapon"),
+                ell(add(top, (side * 0.4, 1.2, -0.8)), (0.6, 2.6, 2.4), IRON, basis((0, 1, 0.3)), "weapon")]
+    if kind == "spear":
+        tip = add(fist, (side * 0.4, 5.5, 11.0))
+        return [limb(add(fist, (0, -2.2, -4.0)), tip, 0.45, WOOD, group="weapon"),
+                limb(tip, add(tip, (0, 1.0, 2.6)), 0.65, IRON, group="weapon")]
+    if kind == "staff":
+        top = add(fist, (side * 0.6, 1.6, 12.0))
+        parts = [limb(add(fist, (0, -0.6, -6.0)), top, 0.5, WOOD, group="weapon"),
+                 ell(top, (1.4, 1.5, 1.4), BONE, group="weapon"),
+                 ell(add(top, (0, 1.1, 0.1)), (0.5, 0.4, 0.45), emissive("70e070"), group="weapon")]
+        for k in (-1, 1):
+            parts.append(limb(add(top, (k * 0.9, 0, -1.2)), add(top, (k * 1.6, 0.2, -4.0)), 0.35,
+                              Material("c84a3a", "fur"), group="weapon"))
+        return parts
+    if kind == "cleaver":
+        top = add(fist, (side * 1.0, 3.2, 8.5))
+        return [limb(add(fist, (0, -0.4, -1.2)), add(fist, (side * 0.4, 1.2, 2.6)), 0.6, WOOD, group="weapon"),
+                ell(add(fist, (side * 0.8, 2.4, 6.4)), (0.55, 2.6, 4.6), IRON, basis((side * 0.15, 0.35, 1.0)), "weapon"),
+                ell(top, (0.5, 0.8, 0.6), IRON, group="weapon")]
+    if kind == "shield":
+        center = add(fist, (side * 1.4, 1.8, 1.0))
+        return [ell(center, (0.9, 3.4, 3.4), WOOD, basis((side, 0.2, 0)), "shield"),
+                ell(add(center, (side * 0.8, 0.2, 0)), (0.6, 1.2, 1.2), IRON, group="shield")]
+    return []
+
+
+def orc(frame, s):
+    """An orc: a stocky green biped with a heavy jaw, tusks from the underbite, a low brow over
+    small glowing eyes, long pointed ears, a hide kilt and belt, boots, and its gear: `armor` over
+    the chest (bare skin and `paint` for berserkers), `helmet` (with `horns`), `pauldrons`, a
+    `cape`, a `hair` top-knot, and a weapon in each fist (`weapon`, `off`). `bulk` widens it."""
+    swing = (0.0, 1.0, -1.0)[frame] * 2.4
+    bob = (0.0, 0.6, 0.6)[frame]
+    skin = s["skin"]
+    bulk = s.get("bulk", 1.0)
+    boots = s.get("boots", Material("3a2a1e", "fur"))
+    cloth = s.get("cloth", Material("5a4632", "fur"))
+    parts = []
+    hip_z = 12 + bob
+    for side in (1, -1):
+        phase = swing * side
+        knee = (side * 2.6 * bulk, phase * 0.5 + 0.8, 6.5 + bob * 0.5)
+        foot = (side * 2.8 * bulk, phase, 1.2)
+        group = "leg%d" % side
+        parts += [limb((side * 2.4 * bulk, 0, hip_z), knee, 1.6 * bulk, skin, group=group),
+                  limb(knee, foot, 1.4 * bulk, boots, group=group),
+                  ell(add(foot, (0, 1.1, -0.3)), (1.6 * bulk, 2.3, 1.1), boots, group=group)]
+    parts.append(ell((0, 0.2, hip_z + 0.2), (4.6 * bulk, 3.3 * bulk, 2.4), cloth, group="kilt"))
+    for k, x in enumerate((-1.8, 1.8)):
+        at = (x * bulk, 2.4 * bulk, hip_z - 0.4)
+        parts.append(limb(at, add(at, (x * 0.2, 0.5, -4.2)), 1.2, cloth, group="flap%d" % k))
+    chest = (0, 0.6, 18.5 + bob)
+    parts.append(ell(chest, (5.2 * bulk, 3.6 * bulk, 5.0), s.get("armor", skin), tilt_y(-0.25), "torso"))
+    if s.get("paint"):
+        for k in (-1, 1):
+            parts.append(limb(add(chest, (k * 2.6, 3.2 * bulk, 2.2)), add(chest, (k * 0.8, 3.5 * bulk, -1.6)), 0.55,
+                              s["paint"], group="paint"))
+    parts.append(ell((0, 0.3, hip_z + 2.4), (4.9 * bulk, 3.5 * bulk, 0.9), Material("4a3020", "cloth"), group="belt"))
+    parts.append(ell((0, 3.5 * bulk, hip_z + 2.4), (1.0, 0.5, 0.8), IRON, group="buckle"))
+    head = add(chest, (0, 1.6, 6.4))
+    parts.append(ell(head, (3.1, 3.0, 3.0), skin, group="head"))
+    parts.append(ell(add(head, (0, 1.8, -1.6)), (2.6, 1.9, 1.4), skin, group="jaw"))
+    parts.append(ell(add(head, (0, 2.3, 0.9)), (2.9, 1.0, 0.7), skin, group="brow"))
+    parts.append(ell(add(head, (0, 3.1, -0.3)), (0.8, 0.6, 0.8), skin, group="nose"))
+    for side in (1, -1):
+        parts.append(ell(add(head, (side * 1.15, 2.75, 0.25)), (0.6, 0.4, 0.5), emissive(s.get("eyes", "f0c040")), group="eye"))
+        tusk = add(head, (side * 1.4, 3.0, -2.0))
+        parts.append(limb(tusk, add(tusk, (side * 0.3, 0.5, 1.7)), 0.45, BONE, group="tusk"))
+        ear = add(head, (side * 2.7, 0, 0.5))
+        parts.append(limb(ear, add(ear, (side * 1.8, -0.7, 1.2)), 0.6, skin, group="ear%d" % side))
+    if s.get("hair"):
+        parts.append(ell(add(head, (0, -0.6, 2.9)), (1.2, 1.2, 1.5), s["hair"], group="hair"))
+        parts += chain([add(head, (0, -1.4, 3.6)), add(head, (0, -3.0, 2.0)), add(head, (0, -3.6, -0.6))], [0.8, 0.6],
+                       s["hair"], "hair")
+    if s.get("helmet"):
+        parts.append(ell(add(head, (0, -0.2, 1.3)), (3.4, 3.3, 2.5), s["helmet"], group="helmet"))
+        if s.get("horns"):
+            for side in (1, -1):
+                base = add(head, (side * 2.8, 0, 2.2))
+                parts += chain([base, add(base, (side * 1.8, 0.4, 1.6)), add(base, (side * 2.2, 1.2, 3.8))], [0.8, 0.5],
+                               s["horns"], "horn%d" % side)
+    if s.get("cape"):
+        parts.append(ell(add(chest, (0, -3.6 * bulk, -2.5)), (4.8 * bulk, 0.8, 7.2), s["cape"], group="cape"))
+    for side in (1, -1):
+        group = "arm%d" % side
+        shoulder = add(chest, (side * 5.4 * bulk, 0, 3.0))
+        phase = -swing * side * 0.6
+        elbow = add(shoulder, (side * 1.6, phase * 0.5 + 0.8, -4.6))
+        fist = add(elbow, (side * 0.2, phase + 2.0, -4.0))
+        parts += [ell(shoulder, (2.0 * bulk, 2.0 * bulk, 1.9), skin, group=group),
+                  limb(shoulder, elbow, 1.5 * bulk, skin, group=group),
+                  limb(elbow, fist, 1.4 * bulk, s.get("bracers", skin), group=group),
+                  ell(fist, (1.5, 1.5, 1.4), skin, group=group)]
+        if s.get("pauldrons"):
+            parts.append(ell(add(shoulder, (0, 0, 0.8)), (2.5 * bulk, 2.5 * bulk, 1.6), s["pauldrons"], group="pauldron%d" % side))
+        parts += _orc_weapon(s.get("weapon", "axe") if side == 1 else s.get("off", ""), fist, side)
+    return parts
+
+
 # ---------------------------------------------------------------- species
 
 def M(base, pattern="smooth", **kw):
@@ -865,6 +973,22 @@ SPECIES = {
     "grimclaw": (spider, dict(body=M("3a5468", "chitin", gloss=0.8), abdomen=M("2e4658", "chitin", gloss=0.7),
                               legs=M("243848", "chitin", gloss=0.5), eyes="ffb0a0", pincers=M("6a8aa0", "chitin", gloss=0.8),
                               marking=M("c8e0f0", gloss=0.6), abdomen_size=0.6, scale=1.08), (15, 4.5)),
+    # Orcs (the Grimtusk Hold, tools/generators/orcs.gd): raiders with axes and spears, armoured
+    # warriors, bone-staffed shamans, painted berserkers, caped leaders, and their horned warlord.
+    "orc": (orc, dict(skin=M("6e8a42", "warts"), armor=M("6a4a2e", "cloth"), hair=M("2a2018", "fur"), weapon="axe"), (9, 3)),
+    "orc_spearman": (orc, dict(skin=M("7a8a4a", "warts"), armor=M("7a6040", "fur"), weapon="spear", eyes="e8d060"), (9, 3)),
+    "orc_warrior": (orc, dict(skin=M("5e7a3a", "warts"), armor=M("6a6a72", "stone", gloss=0.5), helmet=M("5a5a62", "stone", gloss=0.6),
+                              bracers=M("4a3a28", "cloth"), weapon="axe", off="shield", bulk=1.05), (10, 3.5)),
+    "orc_shaman": (orc, dict(skin=M("7a9a5a", "warts"), armor=M("5a3a5a", "cloth"), cloth=M("4a2e4a", "cloth"),
+                             hair=M("d8ccb0", "bone"), weapon="staff", eyes="80f080"), (9, 3)),
+    "orc_berserker": (orc, dict(skin=M("6a8a3a", "warts"), paint=M("b02a20"), hair=M("c84a2a", "fur"), weapon="axe", off="axe",
+                                eyes="ff4a2a", bulk=1.1, bracers=M("4a3a28", "cloth")), (10, 3.5)),
+    "orc_leader": (orc, dict(skin=M("4e6a32", "warts"), armor=M("4a4a52", "stone", gloss=0.6), helmet=M("4a4a52", "stone", gloss=0.7),
+                             pauldrons=M("5a5a62", "stone", gloss=0.7), cape=M("8a2a22", "cloth"), bracers=M("3a3a40", "stone"),
+                             weapon="cleaver", off="shield", bulk=1.12), (10, 3.5)),
+    "gruzzak": (orc, dict(skin=M("44602c", "warts"), armor=M("3a3a40", "stone", gloss=0.7), helmet=M("2e2e34", "stone", gloss=0.7),
+                          horns=BONE, pauldrons=M("6a5a3a", "stone", gloss=0.6), cape=M("6a1e1a", "cloth"),
+                          bracers=M("2e2e34", "stone"), weapon="cleaver", eyes="ff3a2a", bulk=1.2), (11, 4)),
     "sylvaine": (wraith, dict(robe=M("5a3a80", "cloth"), hood=M("3a5a3a", "fur"), eyes="f0d0ff", claws=M("5a7a40"),
                               flowers=M("e888c0", gloss=0.3), antlers=M("8a6a48", "bone"), scale=1.05), (11, 3.5)),
 }
@@ -881,7 +1005,8 @@ ZOOM = {"frostfang_wolf": 1.2, "greymaw": 1.0, "behemoth": 1.05, "cyclops": 1.25
         "dune_scorpion": 1.4, "stone_troll": 1.25, "cave_troll": 1.2, "ogre_brute": 1.25, "ogre_smasher": 1.2,
         "gorvak": 1.1, "bog_troll": 1.2, "grotto_leech": 1.35, "drowned_abbess": 1.3, "magma_hound": 1.2,
         "cinder_brute": 1.6, "frost_ogre": 1.2, "rime_stalker": 1.15, "glacial_golem": 1.6, "hoarfrost_jarl": 1.1,
-        "snow_wolf": 1.2, "tusked_walrus": 1.0, "trench_crab": 1.4, "grimclaw": 1.4}
+        "snow_wolf": 1.2, "tusked_walrus": 1.0, "trench_crab": 1.4, "grimclaw": 1.4, "orc": 1.3, "orc_spearman": 1.3,
+        "orc_warrior": 1.3, "orc_shaman": 1.3, "orc_berserker": 1.3, "orc_leader": 1.3, "gruzzak": 1.25}
 
 
 def frames(kind, direction, frame):

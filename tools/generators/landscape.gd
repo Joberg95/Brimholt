@@ -27,7 +27,7 @@ const TILE: int = 32
 ## The overworld; the dungeon band lies to its right.
 const WORLD: Rect2i = Rect2i(0, 0, 384, 384)
 ## The frost isles (Biomes.ISLES), south of WORLD behind open sea; painted by frost_isles.gd.
-const ISLES: Rect2i = Rect2i(0, 424, 160, 128)
+const ISLES: Rect2i = Rect2i(0, 704, 160, 128)
 const OVERWORLD: Rect2i = Rect2i(0, 0, 1920, 1920)
 const CAPITAL: String = "Reedmere"
 ## [town, absorbed town]: the absorbed zone is removed, its townsfolk and quest givers take the

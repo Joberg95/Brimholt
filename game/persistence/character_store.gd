@@ -19,12 +19,16 @@ const Quests = preload("res://game/data/quests.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Professions = preload("res://game/data/professions.gd")
+const Caves = preload("res://game/data/caves.gd")
 
 ## Version 2 added armor types; version 1 saves still load and are migrated (_migrate_armor).
 ## Version 3 moved the dungeon and cave bands past the 1920-column overworld; older saves standing
 ## in them are moved with them (BANDS_MOVED_FROM, BANDS_SHIFT).
-const VERSION: int = 3
-const SUPPORTED_VERSIONS: Array[int] = [1, 2, 3]
+## Version 4 moved the frost isles south and Silverwood east (tools/generators/relocate.gd);
+## older saves standing there move with them (RELOCATED).
+const VERSION: int = 4
+const SUPPORTED_VERSIONS: Array[int] = [1, 2, 3, 4]
+const RELOCATED: Array = [[Rect2i(0, 424, 160, 128), Vector2i(0, 280)], [Rect2i(500, 60, 240, 220), Vector2i(260, 0)]]
 ## Before version 3 everything from this column east was a dungeon, the Void Throne, or a cave,
 ## and tools/generators/move_bands.gd moved it this many columns east.
 const BANDS_MOVED_FROM: int = 384
@@ -253,6 +257,17 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 		var saved_cell := Vector2i(int(cell[0]), int(cell[1]))
 		if _int(data.get("version"), VERSION) < 3 and saved_cell.x >= BANDS_MOVED_FROM:
 			saved_cell.x += BANDS_SHIFT
+		if _int(data.get("version"), VERSION) < 4:
+			for move: Array in RELOCATED:
+				if (move[0] as Rect2i).has_point(saved_cell):
+					saved_cell += move[1]
+					break
+		# A cave moved to the floor below (Caves "below") left its band rect empty: whoever stood in
+		# it, from any save version, stands in the cave where it is now.
+		for cave: String in Caves.ORDER:
+			if Caves.CAVES[cave].has("below") and Caves.band_rect(cave).has_point(saved_cell):
+				saved_cell += Caves.rect(cave).position - Caves.band_rect(cave).position
+				break
 		if World.walkable(saved_cell) and not world.occupied(saved_cell, now, id):
 			player["cell"] = saved_cell
 			player["from"] = saved_cell

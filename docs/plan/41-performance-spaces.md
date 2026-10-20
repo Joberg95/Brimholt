@@ -9,7 +9,19 @@ World startup 2.5 s on host and every client (0.8 s instantiating the map scene)
 monsters on the map, 7.9 s and ~53 MB if all are placed; host tick 0.04 ms (only monsters near
 players). Rendering, floors, world map pages, and network interest already follow the player.
 
-## Steps
+## Done (2026-10-20)
+- **Baked map:** `game/maps/world.bake` (141 KB, zstd), written by `make bake-map` and every
+  `MapIO.save_scene`; reading the map takes 45 ms instead of instancing the scene (~1.1 s). World
+  startup 2.5 s -> 1.45 s; what is left is deriving buildings and furniture (0.8 s) and regions
+  (0.2 s), which grow with towns, not world size (bake them too if they start to matter).
+- **Dormant camps:** an awake chunk nobody has come within REST_REACH of for REST_SECONDS (5 min)
+  goes dormant again, its idle monsters and pending respawns gone (Combat._rest_camps).
+- **Spaces:** each continent (Atlas.CONTINENTS, Silverwood added) is a space; bot navigation is
+  one AStarGrid2D per space, built on first use (Nav.grid(cell)).
+- **Travel curtain:** crossing into another space (a ferry to another continent, a cave, a
+  dungeon copy) draws a dark card naming the destination over the game window, which fades.
+
+## Steps (as planned)
 1. **Baked map:** `MapIO.read_map()` returns terrain bytes plus every marker as a record
    {name, cell, props}; World builds from records. `make bake-map` (and every
    `MapIO.save_scene`) writes a compressed bake with a fingerprint of overworld.tscn, the

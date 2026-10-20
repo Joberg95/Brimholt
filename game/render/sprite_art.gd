@@ -9,6 +9,7 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const Atlas = preload("res://game/data/atlas.gd")
 const FRAME: float = 64.0
 const FRAME_ANCHOR: Vector2 = Vector2(32, 40)
 const TILE: float = 32.0
@@ -205,6 +206,9 @@ const LOG_WALLS: Texture2D = preload("res://assets/sprites/log_walls.png")
 const ICE_CAVE: String = "rimewater_trench"
 ## Cellar walls: the house wall shapes (house_walls.png) in red-brown brick.
 const CELLAR_WALLS: Texture2D = preload("res://assets/sprites/cellar_walls.png")
+## cave_rock.png: the rock of every cave (rock off the overworld), laid out like mountains.png but
+## built of rounded pale boulders with dark crevices, as in Tibia's caves.
+const CAVE_ROCK: Texture2D = preload("res://assets/sprites/cave_rock.png")
 ## mountains.png: Tibia-style rock blocks for mountains ("L") and rock outcrops ("C" on the
 ## overworld), 48x48 frames drawn like walls: 16 columns by open sides (1 N, 2 W, 4 S, 8 E, see
 ## rock_mask), and ROCK_SPAN x ROCK_SPAN rows that are the parts of one seamless rock texture
@@ -358,12 +362,22 @@ static func floor_texel(cell: Vector2i) -> int:
 		for side: Vector2i in EDGES:
 			var next: String = tile_at(cell + side)
 			# Never a stairway: a wall beside one would show a second hole under it.
-			if next.is_empty() or next in World.WALLS or next in World.TREES or next in ["~", "b", "v", "^"]:
+			if next.is_empty() or next in World.WALLS or next in World.TREES or next in ["~", "b", "v", "^", " "]:
 				continue
 			if _inner(cell + side):
 				inside = next if inside.is_empty() and next in World.LAND and next != "v" else inside
 			elif outside == ".":
 				outside = next
+		# A wall with nothing open on its outer side (a dungeon's outer wall) stands on its inside floor.
+		if outside == "." and not inside.is_empty() and not EDGES.any(func(side: Vector2i) -> bool: return tile_at(cell + side) == "."):
+			outside = inside
+		# Below ground there is no grass: a corner wall of the sewers stands on the floor beside it.
+		if outside == "." and inside.is_empty() and Atlas.UNDERGROUND.has_point(cell):
+			for corner: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
+				var floor_beside: String = tile_at(cell + corner)
+				if floor_beside in World.LAND and floor_beside not in ["v", "^"]:
+					outside = floor_beside
+					break
 		base = _floor_index(outside, cell, 0.0)
 		# A carpet never runs under a wall: a keep's wall shows its sandstone floor inside.
 		overlay = _floor_index("=" if inside.is_empty() else ("F" if inside == "Y" else inside), cell, 0.0, true)
@@ -474,6 +488,9 @@ static func ground_under(cell: Vector2i) -> String:
 ## crypt) a ladder opening, into a cave (rock walls) or an elite cave a hole in the ground; out of
 ## a built dungeon a ladder up, out of a cave rough steps.
 static func way_tile(cell: Vector2i) -> int:
+	if tile_at(cell) == "^" and Atlas.UNDERGROUND.has_point(cell):
+		# Up to a town (a sewer's ladder) or out of the tunnels by rough steps.
+		return STAIRS_UP_TILE if World.zone_at(Atlas.above(cell)).get("town", false) else ROCK_STEPS_TILE
 	if tile_at(cell) == "^":
 		var place: Array = World.dungeon_at(cell)
 		return STAIRS_UP_TILE if not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] == "#" else ROCK_STEPS_TILE
@@ -592,9 +609,10 @@ static func natural_rock(cell: Vector2i) -> bool:
 	return tile == "L" or tile == "C"
 
 
-## A cave hewn by nature, not built: an elite or farming cave, or a dungeon with rock walls.
+## A cave hewn by nature, not built: an elite or farming cave, the underground's tunnels, or a
+## dungeon with rock walls.
 static func rock_cave(cell: Vector2i) -> bool:
-	if not Caves.at(cell).is_empty():
+	if not Caves.at(cell).is_empty() or Atlas.UNDERGROUND.has_point(cell):
 		return true
 	var place: Array = World.dungeon_at(cell)
 	return not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] in ["L", "C"]
@@ -619,7 +637,7 @@ static func thin_wall_mask(cell: Vector2i) -> int:
 		var tile: String = tile_at(next)
 		# Only a building's doorway joins the wall over it: a one-tile corridor between two walls
 		# (dungeons, alleys) looks like a doorway too, but there the walls stay apart.
-		if (not tile.is_empty() and tile in World.WALLS) or (World.ROOM_AT.has(next) or castle_stone(next)) 				and Buildings.is_door(World.terrain, next):
+		if (not tile.is_empty() and tile in World.WALLS) or (World.ROOM_AT.has(next) or castle_stone(next) and World.OVERWORLD.has_point(next)) 				and Buildings.is_door(World.terrain, next):
 			mask |= 1 << bit
 	return mask
 
@@ -637,7 +655,7 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 	if natural_rock(cell):
 		# Natural rock: a block of the seamless rock texture with cliff faces where it meets open ground.
 		var part: int = posmod(cell.x, ROCK_SPAN) + posmod(cell.y, ROCK_SPAN) * ROCK_SPAN
-		canvas.draw_texture_rect_region(MOUNTAINS, dest, Rect2(rock_mask(cell) * WALL_SIZE, part * WALL_SIZE, WALL_SIZE, WALL_SIZE))
+		canvas.draw_texture_rect_region(MOUNTAINS if World.OVERWORLD.has_point(cell) else CAVE_ROCK, dest, Rect2(rock_mask(cell) * WALL_SIZE, part * WALL_SIZE, WALL_SIZE, WALL_SIZE))
 		return
 	canvas.draw_texture_rect_region(wall_sheet(cell), dest, wall_region(cell))
 	if tile_at(cell) == "#" and tile_at(cell + Vector2i.RIGHT) == "#" and tile_at(cell + Vector2i.DOWN) == "#" 			and tile_at(cell + Vector2i.ONE) == "#":

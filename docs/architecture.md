@@ -182,6 +182,12 @@ dungeon and cave bands right of it is one byte per cell in `World.GRID` (about 4
 128×128 sector scenes (`game/maps/map_io.gd`) in under two seconds. Live entities and their work
 follow the players:
 
+- **Baked map**: the game loads `game/maps/world.bake` (terrain bytes and marker records,
+  `MapIO.read_map`) instead of instancing the editor scene; a stale bake falls back to the scene.
+- **Camps rest**: camps wake when someone comes near and go dormant again five minutes after
+  everyone has left (`Combat._rest_camps`), so live monsters follow the players.
+- **Spaces**: each continent has its own bot navigation grid, built on first use (`Nav.grid`);
+  crossing into another space shows a short travel curtain (`hud.gd`).
 - **Painted, not whole**: passes over all the land (bot navigation's `AStarGrid2D`, gathering
   nodes, the region grid, the checks) cover `World.PAINTED`, the bounding box of every painted
   overworld cell, not the open sea round it; it grows as new regions are painted.

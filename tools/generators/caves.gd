@@ -53,6 +53,9 @@ func _initialize() -> void:
 	_flood(starts, WALKABLE, reached)
 	var missing: PackedStringArray = []
 	for cave: String in Caves.ORDER:
+		# A cave moved below (caves_below.gd) keeps its painted cells: the scene is its source now.
+		if Caves.CAVES[cave].has("below"):
+			continue
 		var halls: Array = _carve(cave)
 		changed += halls.size()
 		changed += _place_camps(scene_root, spawns, cave, halls)

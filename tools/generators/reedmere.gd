@@ -103,7 +103,8 @@ static func rebuild(scene_root: Node) -> int:
 		# Towns are paved inside their walls (cobble_towns.gd): open ground is cobbles or quay.
 		if tile in CobbleTowns.PAVED and CobbleTowns.in_town(cell):
 			tile = "b" if _terrain_of(layer, cell) == "b" else "="
-		if _terrain_of(layer, cell) == tile:
+		# Ladders down to the sewers (underground.gd) stay where they were dug.
+		if _terrain_of(layer, cell) == tile or _terrain_of(layer, cell) == "v":
 			continue
 		if tile in "#WT" and blocked.has(cell):
 			push_error("Reedmere would wall in %s at %s" % [blocked[cell], cell])

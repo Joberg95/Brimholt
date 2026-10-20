@@ -158,8 +158,14 @@ chance]` row rolls independently. Rows include materials unique to the monster (
 toad slime, boar tusks, ... warden crests; 20–50% chance), which vendors will buy for its
 `value`. On top, gold coins drop as one stack: `Balance.coins_per_kill` on average, 0.2 + 0.02
 per level (about 5 gold a kill at level 1, 15 at level 19, 30 at level 50; elites and bosses 3
-coins more), and a piece of **tiered gear** from the monster's level tier (4% from normal
-monsters, 25% from elites; 30% of those come from the tier below). Loot spills onto nearby
+coins more), **valuables**, and rarely a piece of **tiered gear** from the monster's level tier
+(1% from normal monsters, 8% from elites; 30% of those come from the tier below; named hunting
+gear is rare too). A hunt's worth is in its valuables: cut gems worth
+`Balance.valuables_per_kill` on average (1 gold per monster level, four times that from elites,
+12 from champions, 25 from bosses), a small amethyst, emerald, ruby, sapphire, topaz, or diamond
+by the monster's level (`Monsters.VALUABLES`), and from level 35 a rare great emerald, ruby,
+sapphire, or diamond (worth 400 to 1,200). Gems stack and sell to any vendor for their value
+(the sell-all-materials button takes them too), and the gold buys high-value gear. Loot spills onto nearby
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
 needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
 
@@ -564,6 +570,12 @@ boars, levels 5–7), **Captain Ardo** in Ashford (25 outlaw archers, levels 19�
 kill of that monster that earns you experience (your own or your party's shared kills) counts;
 progress shows in the message line and in the quest dialog. Turn it in to the giver.
 
+Since each task is done only once, every one also stocks you up with **supplies**: health and
+mana potions of the grade for the task's level (strong from level 20, great from 35), 10 plus
+half the level of each, and 3 plus a tenth of the level in meals of the matching cooking tier
+(grilled perch up to glimmerfin feasts). Supplies that do not fit in your backpack are left at
+your feet; gear rewards still need a free slot.
+
 **Quest hubs** fill the levels between: one giver in the town nearest each band of overworld
 monsters, paying experience and gold.
 
@@ -664,9 +676,29 @@ thunderstorms with lightning, the same for everyone in the session. Weather is o
 It never rains underground or in the desert, and over Mirewood Fen low cloud and drizzle hang
 whatever the sky does elsewhere. At dusk the lamp posts along the town streets are lit.
 
-The heartland, the mainland where everyone starts, is 384×384 tiles: walking straight across
-takes about a minute and three quarters. It lies in the north-west corner of a 1920×1920 overworld
-that new, higher-level regions will fill to the east and south; until then the rest is open sea. Monster camps are dense (about 1,000 monsters, in packs of three or more), so levelling is close to town.
+The mainland where everyone starts is 640×640 tiles in the north-west corner of a 1920×1920
+overworld. Its north-west part, the heartland (384×384, walking straight across takes about a
+minute and three quarters), is where the game began; the newer land wraps round it to the east and
+south, levels 1-30 rising from **Brackenford**, a small walled town at the elbow with a coach
+station, through leas, downs, a wolf holt, windy heights, and bare peaks to the north, and meres,
+barrow heath, and a salt marsh on the bay to the west. East of the north road the orcs of the
+**Grimtusk Hold** hunt in rings round their stone fort: raiders and spear throwers (levels 10-14) in
+the woods, warriors and shamans (15-20) under the walls, berserkers and leaders (21-27) in the yard,
+and Warlord Gruzzak (level 30 champion, who may drop a Grimtusk warg mount) in his hut. Scout Rhydda
+on Brackenford's square gives a chain of tasks through the rings.
+
+**Underground.** Below the mainland lies a second floor, right under the land above it, as in
+Tibia. Holes in the wilds drop into twelve winding tunnel networks for levels 10-40 (Greywood
+Burrows and Hazel Downs Dens for the low teens up to the Smoulder Deeps' cave trolls), each with
+about eight holes and rough steps back up; ladders in the streets of Reedmere, Ashford, Dunmere,
+Highmoor, and Brackenford lead down into their rat-infested sewers. It is dim and dry below, and
+mounts stay above. The Ogre Warrens, the Drowned Grotto, the Rimewater Trench, and the Thornroot
+Hollows now lie on this floor too, right under their mouths. The world map's ▲ and ▼ (or Page Up
+and Page Down) show either floor, and right-clicking it places your own marker (an icon and a
+label, kept on your computer). Roads and streets are quicker to walk (a fifth off every step),
+bridges a little; sand, snow, and bog slow you. Beyond lies open sea, the frost isles to the
+south-west and Silverwood to the east. Monster camps are dense (packs of five to seven), so
+levelling is close to town.
 **Cinder Crossing**, the starting town, is a castle town: a battlemented curtain wall with towers
 runs round it from the keep (the training hall in the north-west corner, its walls castle stone
 with a tower at each corner) to the harbour, with gatehouses where the roads leave to the north,

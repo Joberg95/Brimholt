@@ -150,6 +150,10 @@ func select(kind: String) -> void:
 		_drop_row(drop[0], "%s%%" % _percent(float(drop[1])))
 	if found["gold"] > 0:
 		_drop_row("gold_coins", "about %d gold" % found["gold"])
+	if not found.get("valuables", []).is_empty():
+		_details.add_child(_label("Gems worth about %d gold a kill on average:" % found["valuable_gold"], 13, TEXT))
+		for gem: String in found["valuables"]:
+			_drop_row(gem, "sells for %d" % World.ITEMS[gem]["value"])
 	if found["gear"] > 0.0:
 		var tiers: Vector2i = found["gear_tiers"]
 		_details.add_child(_label("%s%% chance of tier-%s gear (any slot)" % [_percent(found["gear"]),

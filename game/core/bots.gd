@@ -965,7 +965,7 @@ static func _find_post(camp: Vector2i) -> Vector2i:
 			Vector2i(CAMP_DISTANCE, CAMP_DISTANCE - 2), Vector2i(-CAMP_DISTANCE, CAMP_DISTANCE - 2),
 			Vector2i(CAMP_DISTANCE, 2 - CAMP_DISTANCE), Vector2i(-CAMP_DISTANCE, 2 - CAMP_DISTANCE)]:
 		var cell: Vector2i = camp + step
-		if World.walkable(cell) and World.zone_at(cell) == World.zone_at(camp) and not Nav.grid().is_point_solid(cell):
+		if World.walkable(cell) and World.zone_at(cell) == World.zone_at(camp) and not Nav.grid(cell).is_point_solid(cell):
 			var way: Array[Vector2i] = Nav.route(cell, camp)
 			if not way.is_empty() and way.size() <= CAMP_DISTANCE * 2:
 				return cell

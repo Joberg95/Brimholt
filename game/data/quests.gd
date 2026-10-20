@@ -6,7 +6,9 @@ extends RefCounted
 ## Rewards: town tasks ("reward": "pack") replace your pack with the next one in PACKS, so the
 ## reward does not depend on the order you finish them. Dungeon tasks ("reward": "experience")
 ## pay experience and gold derived from Balance (see reward()): `share` of what the kills
-## themselves gave, so a boss task (share 1) doubles the boss's experience.
+## themselves gave, so a boss task (share 1) doubles the boss's experience. Every task also pays
+## supplies (supplies(): potions and food for its level), since it is done only once; those that
+## do not fit in the backpack go to the ground at your feet.
 ##
 ## Caves: a task with "cave" (game/data/caves.gd) counts only kills inside that cave. Rare rolls:
 ## "rare" ({chance, items}) adds one of its items, drawn at random, to the reward that often.
@@ -207,6 +209,28 @@ const TASKS: Dictionary = {
 	"crypt_rest": {"title": "Rest for the dead", "giver": "sexton_wren", "monster": "crypt_skeleton",
 		"also": ["grave_ghoul"], "target": "risen dead", "count": 30, "reward": "experience", "share": 0.5,
 		"intro": "The dead of Ashford's crypt will not lie still. Put them back to rest."},
+	"crimson_watch": {"title": "The Crimson Watch", "giver": "sergeant_brenna", "monster": "crimson_guard",
+		"also": ["crimson_crossbowman"], "target": "crimson watchmen", "count": 40, "reward": "experience", "share": 0.5,
+		"intro": "The old guard took the barracks under the keep and wear red for a rebel captain. Thin their ranks."},
+	"captain_marrec": {"title": "The captain's mutiny", "giver": "sergeant_brenna", "monster": "captain_marrec", "count": 1,
+		"reward": "experience", "share": 1.0, "items": [["great_ruby", 1]],
+		"intro": "Captain Marrec holds the far hall of the barracks. End his mutiny and the keep sleeps easy again."},
+	# The Grimtusk Hold (tools/generators/orcs.gd): Scout Rhydda in Brackenford, one task per ring
+	# of the hold and one for its warlord.
+	"orc_raiders": {"title": "Grimtusk raiders", "giver": "scout_rhydda", "monster": "orc", "also": ["orc_spearman"],
+		"target": "orc raiders", "count": 25, "level": 12, "reward": "experience", "share": 0.5,
+		"intro": "Orcs from the Grimtusk Hold raid the downs for sheep and travellers. Twenty-five fewer raiders, please."},
+	"orc_warband": {"title": "Break the warband", "giver": "scout_rhydda", "monster": "orc_warrior", "also": ["orc_shaman"],
+		"target": "orc warriors and shamans", "count": 30, "level": 18, "reward": "experience", "share": 0.5,
+		"requires": "orc_raiders",
+		"intro": "Warriors and their shamans gather under the hold's walls. Break the warband before it marches."},
+	"orc_berserkers": {"title": "Inside the hold", "giver": "scout_rhydda", "monster": "orc_berserker", "also": ["orc_leader"],
+		"target": "berserkers and leaders", "count": 30, "level": 24, "reward": "experience", "share": 0.5,
+		"requires": "orc_warband",
+		"intro": "Inside the palisade the berserkers paint themselves for war. Get in there and thin them out."},
+	"warlord_gruzzak": {"title": "The warlord's horn", "giver": "scout_rhydda", "monster": "gruzzak", "count": 1,
+		"reward": "experience", "share": 1.0, "requires": "orc_berserkers", "items": [["small_topaz", 1]],
+		"intro": "Warlord Gruzzak sits in the great hut at the back of the hold. Bring him down, and the Grimtusk scatter."},
 	"abbot_morrow": {"title": "The abbot's last rites", "giver": "sexton_wren", "monster": "abbot_morrow", "count": 1,
 		"reward": "experience", "share": 1.0, "items": [["abbots_prayer_beads", 1]],
 		"intro": "Abbot Morrow raises them all from the bottom of the crypt. End his vigil."},
@@ -293,6 +317,30 @@ static func dungeon_of(task: String) -> String:
 			if Dungeons.DUNGEONS[dungeon]["monsters"][symbol][0] == kind:
 				return dungeon
 	return ""
+
+
+## Supplies every hunting task pays on top of its reward: a task is done only once, so it stocks
+## you up for the next hunts. Health and mana potions of the grade for the task's level (strong
+## from 20, great from 35), 10 + level / 2 of each, and 3 + level / 10 meals of the cooking tier
+## for that level. [lowest level, item(s)], best first.
+const SUPPLY_POTIONS: Array = [[35, "great_health_potion", "great_mana_potion"], [20, "strong_health_potion", "strong_mana_potion"],
+	[1, "health_potion", "mana_potion"]]
+const SUPPLY_FOOD: Array = [[40, "glimmerfin_feast"], [30, "pike_stew"], [20, "trout_pie"], [10, "smoked_eel"], [1, "grilled_perch"]]
+
+
+## [item, count] supplies for a hunting task at `level` (SUPPLY_POTIONS, SUPPLY_FOOD).
+static func supplies(level: int) -> Array:
+	var result: Array = []
+	for grade: Array in SUPPLY_POTIONS:
+		if level >= int(grade[0]):
+			result.append([grade[1], 10 + level / 2])
+			result.append([grade[2], 10 + level / 2])
+			break
+	for meal: Array in SUPPLY_FOOD:
+		if level >= int(meal[0]):
+			result.append([meal[1], 3 + level / 10])
+			break
+	return result
 
 
 ## {experience, gold} for an "experience" task: `share` of the experience and expected gold of

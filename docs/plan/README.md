@@ -16,6 +16,10 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |
 | 21 | [Rare mini-bosses](21-mini-bosses.md) | L | Later, when the game is stable |
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
+| 45 | [Floors follow-up: map floors, road speed, markers, old caves below](45-floors-follow-up.md) | L | Review in game; four caves left to fit |
+| 44 | [The floor below: tunnels and sewers under the mainland](44-underground-floor.md) | L | Review in game |
+| 43 | [The mainland doubled: 640 x 640, levels 1-30](43-mainland-growth.md) | L | Review in game |
+| 42 | [Loot in valuables, cave rock, castle dungeons](42-loot-caves-castle-dungeons.md) | L | |
 | 41 | [Performance: baked map, spaces, dormant camps](41-performance-spaces.md) | L | |
 | 40 | [The archipelago: biome islands with castle capitals](40-archipelago.md) | XL | Review each island |
 

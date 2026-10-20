@@ -254,7 +254,7 @@ func _cache_tall(area: Rect2i) -> void:
 	for y: int in range(area.position.y, area.end.y):
 		for x: int in range(area.position.x, area.end.x):
 			var cell := Vector2i(x, y)
-			if World.terrain(cell) in ["F", "Y"] and Buildings.is_door(World.terrain, cell):
+			if World.terrain(cell) in ["F", "Y"] and World.OVERWORLD.has_point(cell) and Buildings.is_door(World.terrain, cell):
 				_tall[cell] = "door"
 	for building: Dictionary in World.BUILDINGS:
 		if building["rect"].intersects(area):

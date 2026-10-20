@@ -28,8 +28,9 @@ static func in_desert(cell: Vector2i) -> bool:
 ## grid space south of the mainland behind ISLES_SEA rows of open sea, reached only by boat. The
 ## world map shows them west of the mainland (game/data/atlas.gd). Houses there have log walls,
 ## snowed roofs, and plank floors; it snows instead of raining, and the light is colder.
-const ISLES_SEA: int = 40
-const ISLES: Rect2i = Rect2i(0, 384 + ISLES_SEA, 160, 128)
+const ISLES_SEA: int = 64
+## South of the doubled mainland (640 x 640, plan 43), moved there by tools/generators/relocate.gd.
+const ISLES: Rect2i = Rect2i(0, 640 + ISLES_SEA, 160, 128)
 const ISLES_LIGHT: Color = Color(0.9, 0.95, 1.06)
 
 

@@ -27,7 +27,7 @@ const BAND_X: int = Atlas.OVERWORLD_SIZE.x + COPY_GAP
 const BAND_END: int = BAND_X + 192
 const RESET_SECONDS: float = 60.0
 ## Band columns, left to right.
-const ORDER: Array[String] = ["cinder_cellar", "ashford_crypt", "highmoor_mine", "silkhollow"]
+const ORDER: Array[String] = ["cinder_cellar", "ashford_crypt", "highmoor_mine", "silkhollow", "aldmoor_barracks"]
 const DUNGEONS: Dictionary = {
 	"cinder_cellar": {
 		"name": "Cinder cellar", "town": "Cinder Crossing", "copies": 6, "floor": "=", "wall": "#", "theme": "cellar",
@@ -179,6 +179,41 @@ const DUNGEONS: Dictionary = {
 			"################################################",
 		],
 	},
+	# Under Aldmoor's keep (docs/plan/42): the old barracks of the castle guard, where the Crimson
+	# Watch turned on the crown. Sandstone floors, so its walls are the keep's fieldstone. Its
+	# copies stack under the crypt's ("under"). Placeholder levels 45-50 like Silverwood's.
+	"aldmoor_barracks": {
+		"name": "Aldmoor barracks", "town": "Aldmoor", "copies": 4, "floor": "F", "wall": "#", "under": "ashford_crypt",
+		"ambient": Color(0.66, 0.6, 0.54), "min_level": 45, "max_level": 50, "boss": "C", "entrance": Vector2i(804, 156),
+		"monsters": {"g": ["crimson_guard", 45], "G": ["crimson_guard", 48], "x": ["crimson_crossbowman", 47],
+			"C": ["captain_marrec", 50]},
+		"rows": [
+			"################################",
+			"#^@....#.......g......#........#",
+			"#......#..............#..x..g..#",
+			"#..g...#...B......B...#........#",
+			"#......####..######..##..g.....#",
+			"#.............g.............x..#",
+			"####..##########..##########..##",
+			"#......X#......g...#X......g...#",
+			"#..x....#..........#...........#",
+			"#...g...#..g....x..#....g......#",
+			"#.......####..######.......x...#",
+			"#B..........................B..#",
+			"#######..##########..###########",
+			"#....g.....#...........#...x...#",
+			"#..........#...g..g....#.......#",
+			"#..x...g...#...........#..g....#",
+			"#..........####...######.......#",
+			"#....B.........................#",
+			"######..##########..############",
+			"#..............................#",
+			"#...G....x.....C.....x....G....#",
+			"#..............................#",
+			"#X............................X#",
+			"################################",
+		],
+	},
 }
 
 
@@ -187,13 +222,19 @@ static func size(id: String) -> Vector2i:
 	return Vector2i(String(layout[0]).length(), layout.size())
 
 
-## Top-left tile of a copy in the band.
+## Top-left tile of a copy in the band: each dungeon has a column, left to right in ORDER, its
+## copies stacked down it; a dungeon with "under" stacks its copies below that dungeon's instead.
 static func origin(id: String, copy: int) -> Vector2i:
+	var under: String = String(DUNGEONS[id].get("under", ""))
+	if not under.is_empty():
+		var below: Vector2i = origin(under, int(DUNGEONS[under]["copies"]))
+		return Vector2i(below.x, below.y + copy * (size(id).y + COPY_GAP))
 	var x: int = BAND_X
 	for other: String in ORDER:
 		if other == id:
 			break
-		x += size(other).x + COPY_GAP
+		if not DUNGEONS[other].has("under"):
+			x += size(other).x + COPY_GAP
 	return Vector2i(x, COPY_GAP + copy * (size(id).y + COPY_GAP))
 
 

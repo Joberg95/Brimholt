@@ -27,6 +27,14 @@ var _action: Label
 var _zone_name: String = ""
 ## The continent you were last on (World.continent_at): sailing to another one is announced.
 var _continent: String = ""
+## The space you are in (plan 41: a continent, or the cave or dungeon copy you went down into).
+## Crossing into another draws the travel curtain over the game window: a dark card naming
+## where you arrive that fades as the new place appears (hidden from tests, which never persist).
+var _space: String = ""
+var curtain: ColorRect
+var _curtain_label: Label
+const CURTAIN_HOLD: float = 0.35
+const CURTAIN_FADE: float = 0.6
 ## Under the minimap: where you are and its monster levels (World.location_at).
 var location_label: Label
 var _location_key: String = ""
@@ -36,6 +44,20 @@ var _message_since: float = 0.0
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
+	curtain = ColorRect.new()
+	curtain.position = Layout.VIEW_ORIGIN
+	curtain.size = Layout.VIEW_SIZE
+	curtain.color = Color(0.03, 0.03, 0.04)
+	curtain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	curtain.modulate.a = 0.0
+	_curtain_label = Label.new()
+	_curtain_label.size = Layout.VIEW_SIZE
+	_curtain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_curtain_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_curtain_label.add_theme_font_size_override("font_size", 22)
+	_curtain_label.add_theme_color_override("font_color", Color("#e8dcc0"))
+	curtain.add_child(_curtain_label)
+	layer.add_child(curtain)
 	address = LineEdit.new()
 	address.text = "127.0.0.1"
 	address.visible = false
@@ -200,6 +222,29 @@ func _update_location() -> void:
 		game.last_action_message = "Entering %s (%s)." % [place["name"], levels]
 
 
+## Draws the travel curtain when you cross into another space (see _space).
+func _update_space(zone: Dictionary, continent: String) -> void:
+	var underground: bool = zone.has("cave") or zone.get("underground", false)
+	var space: String = "%s#%d" % [zone["name"], int(zone.get("copy", 0))] if underground else continent
+	if space.is_empty() or space == _space:
+		return
+	var first: bool = _space.is_empty()
+	var was_underground: bool = _space.contains("#")
+	_space = space
+	if first or not game.keybinds.persistent:
+		return
+	var text: String = "Arriving on %s" % continent
+	if underground:
+		text = "Descending into %s" % zone["name"]
+	elif was_underground:
+		text = "Back to %s" % continent
+	_curtain_label.text = text
+	curtain.modulate.a = 1.0
+	var tween: Tween = curtain.create_tween()
+	tween.tween_interval(CURTAIN_HOLD)
+	tween.tween_property(curtain, "modulate:a", 0.0, CURTAIN_FADE)
+
+
 ## " · resting", " · rest ready", or " · rest in 2:31" (town rest, combat.gd TOWN_REST_*).
 func _rest_text(state: Dictionary, view: Dictionary) -> String:
 	if state.get("town_rest", false):
@@ -229,6 +274,7 @@ func _update_zone() -> void:
 		if not _continent.is_empty():
 			game.last_action_message = "You arrive on %s." % continent
 		_continent = continent
+	_update_space(zone, continent)
 	zone_label.visible = not zone.is_empty() and not below
 	if not zone.is_empty():
 		var pvp: bool = actors[self_id]["state"].get("pvp", false)

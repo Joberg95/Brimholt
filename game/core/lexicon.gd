@@ -65,7 +65,25 @@ static func entry(kind: String) -> Dictionary:
 		"gear": float(Combat.GEAR_DROP_CHANCE.get(definition["rank"], 0.0)),
 		"gear_tiers": Vector2i(Items.tier_for(maxi(levels.x, 1)), Items.tier_for(maxi(levels.y, 1))),
 		"tasks": tasks, "relics": definition.get("relics", []),
+		"valuables": valuables(levels), "valuable_gold": roundi(Balance.valuables_per_kill(average, definition["rank"])),
 	}
+
+
+## The gems monsters of `levels` can drop (Combat.roll_valuables): the best small gem of each level
+## and the one below it, and the great gems from level 35.
+static func valuables(levels: Vector2i) -> Array[String]:
+	var found: Array[String] = []
+	if levels.y <= 0:
+		return found
+	for level: int in range(maxi(levels.x, 1), levels.y + 1):
+		var smalls: Array = Monsters.VALUABLES.filter(func(gem_row: Array) -> bool: return level >= int(gem_row[1]))
+		for gem_row: Array in smalls.slice(maxi(0, smalls.size() - 2)):
+			if not String(gem_row[0]) in found:
+				found.append(gem_row[0])
+		var greats: Array = Monsters.GREAT_VALUABLES.filter(func(gem_row: Array) -> bool: return level >= int(gem_row[1]))
+		if not greats.is_empty() and not String(greats[-1][0]) in found:
+			found.append(greats[-1][0])
+	return found
 
 
 ## Whether an entry matches a search: its name, a place, or a drop's name contains `text`.
@@ -75,6 +93,9 @@ static func matches(found: Dictionary, text: String) -> bool:
 		return true
 	for place: String in found["places"]:
 		if place.to_lower().contains(needle):
+			return true
+	for gem: String in found.get("valuables", []):
+		if String(World.ITEMS[gem]["name"]).to_lower().contains(needle):
 			return true
 	for drop: Array in found["drops"]:
 		if String(World.ITEMS[drop[0]]["name"]).to_lower().contains(needle):

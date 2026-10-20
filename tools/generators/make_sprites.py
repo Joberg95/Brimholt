@@ -4538,6 +4538,88 @@ def _rock_field():
     return _ROCK_FIELD
 
 
+# Cave rock (the owner's Tibia cave screenshots): masses of rounded light-grey boulders with dark
+# crevices between them, on the same seamless span and block layout as the mountains.
+CAVE_ROCK = (rgba("e6e3dc"), rgba("cdcac2"), rgba("b1ada5"), rgba("928e87"), rgba("726f69"), rgba("524f4b"), rgba("33312e"))
+CAVE_ROCK_LINE = rgba("1f1d1b")
+_BOULDER_FIELD = {}
+
+
+def _boulder_field():
+    """Every pixel of the seamless span: (dome height 0-1 of its boulder, crevice?, boulder id).
+    Boulders 4-7 px across sit on jittered points; where two meet a dark crevice runs."""
+    if _BOULDER_FIELD:
+        return _BOULDER_FIELD
+    points = _feature_points(4300, 260, ROCK_PERIOD)
+    for y in range(ROCK_PERIOD):
+        for x in range(ROCK_PERIOD):
+            f1, f2, a, b = _worley(x + 0.5, y + 0.5, points, ROCK_PERIOD, which=True)
+            radius = 4.5 + (a * 37 % 5) * 0.6
+            dome = max(0.0, 1.0 - (f1 / radius) ** 2)
+            _BOULDER_FIELD[x, y] = (dome, f2 - f1 < 0.85, a)
+    return _BOULDER_FIELD
+
+
+def cave_rock(mask, variant):
+    """One cave rock block (48x48, laid out like mountain()): a top of rounded boulders lit from
+    the top-left with dark crevices, ragged where it meets the cave floor to the north and west,
+    and faces of stacked boulders, darker, on its open south and east sides."""
+    open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
+    ox, oy = (variant % ROCK_SPAN) * TILE, (variant // ROCK_SPAN) * TILE
+    image = Image(WALL, WALL)
+    field = _boulder_field()
+
+    def boulder(u, v, darker):
+        dome, crack, _ = field[int(u) % ROCK_PERIOD, int(v) % ROCK_PERIOD]
+        if crack or dome <= 0.0:
+            return CAVE_ROCK[5] if dome > 0.0 else CAVE_ROCK[6]
+        lit = field[int(u - 1) % ROCK_PERIOD, int(v - 1) % ROCK_PERIOD][0] - field[int(u + 1) % ROCK_PERIOD, int(v + 1) % ROCK_PERIOD][0]
+        tone = 1 if lit < -0.12 else 2 if dome > 0.55 else 3 if dome > 0.25 else 4
+        if lit > 0.18:
+            tone += 1
+        return CAVE_ROCK[max(0, min(6, tone + darker))]
+
+    if open_east:
+        for y in range(FRAME):
+            for x in range(32, 48):
+                depth = 48 - (x + 0.5)
+                if 16 - depth <= y + 0.5 < 48 - depth:
+                    level = y + 0.5 + depth - 16
+                    color = boulder(level + oy + 61, depth * 1.3 + 17, 2)
+                    image.set(x, y, CAVE_ROCK_LINE if level < 1.0 or x == 47 else color)
+    if open_south:
+        for y in range(32, 48):
+            rise = 48 - (y + 0.5)
+            for x in range(0, 48):
+                if 16 - rise <= x + 0.5 < 48 - rise:
+                    color = boulder(x + 0.5 + rise - 16 + ox, rise * 1.3 + 41, 1)
+                    if y == 47 or x + 0.5 < 16 - rise + 1.0:
+                        color = CAVE_ROCK_LINE
+                    image.set(x, y, color)
+
+    def bite(t, salt):
+        wave = 0.5 + 0.3 * math.sin(t * 0.55 + salt) + 0.2 * math.sin(t * 1.7 + salt * 2.3)
+        return int(3.2 * math.sin(math.pi * t / TILE) * wave * (0.6 + 0.4 * _grain(int(t), int(salt), 5)) + 0.4)
+
+    top = Image(TILE, TILE)
+    for y in range(TILE):
+        for x in range(TILE):
+            if open_north and y < bite(x, ox * 0.37) or open_west and x < bite(y, oy * 0.37):
+                continue
+            if open_north and open_west and x < 4 and y < 4 and (x - 4) ** 2 + (y - 4) ** 2 > 14:
+                continue
+            top.set(x, y, boulder(x + ox, y + oy, 0))
+    for x in range(TILE):
+        for y in range(TILE):
+            if top.get(x, y) is None:
+                continue
+            if any(top.get(x + dx, y + dy) is None and 0 <= x + dx < TILE and 0 <= y + dy < TILE
+                   for dx, dy in ((-1, 0), (0, -1))) or (open_north and y == 0) or (open_west and x == 0):
+                top.set(x, y, CAVE_ROCK_LINE)
+    image.over(top)
+    return image
+
+
 def mountain(mask, variant):
     """One mountain rock block (48x48, drawn like a wall 16 px up and left of its tile), indexed by
     its open sides (1 N, 2 W, 4 S, 8 E) and its place in the seamless rock texture (variant): a
@@ -5994,6 +6076,7 @@ def main():
         "ores.png": sheet([ore_vein(band, glint) for glint in (False, True) for band in range(5)], 5, WALL),
         "castle_walls.png": sheet([castle_block(mask, False) for mask in range(16)], 16, TILE + CASTLE_RAISE + CASTLE_PAD),
         "castle_towers.png": sheet([castle_block(mask, True) for mask in range(16)], 16, TILE + TOWER_RAISE + CASTLE_PAD),
+        "cave_rock.png": sheet([cave_rock(mask, variant) for variant in range(MOUNTAIN_VARIANTS) for mask in range(16)], 16, WALL),
         "mountains.png": sheet([mountain(mask, variant) for variant in range(MOUNTAIN_VARIANTS) for mask in range(16)], 16, WALL),
         "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)]
                            + [wall(mask, CAVE_STONE) for mask in range(16)] + [thin_wall(mask) for mask in range(16)]

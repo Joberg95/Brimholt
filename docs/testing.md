@@ -101,7 +101,7 @@ and reachable on foot from Cinder Crossing, obsidian blocking movement and sight
 loot on death inside it while relics stay and other zones keep the 10% rule), boss raid
 mechanics (engage warning, pulse timing, radius, and damage, wound stacks and their expiry,
 Challenge swaps, enrage time and damage, and the reset when the raid leaves), and the
-1920×1920 overworld (the 384×384 heartland, deep sea where unpainted, the dungeon and cave bands past its edge, terrain sectors that hold only their own cells, a single top-to-bottom coastal ferry, waystones linking every town,
+1920×1920 overworld (the 640×640 mainland round the 384×384 heartland, deep sea where unpainted, the dungeon and cave bands past its edge, terrain sectors that hold only their own cells, a single top-to-bottom coastal ferry, waystones linking every town,
 towns as safe zones without spawns and away from the Hollow Reach, and more than 550 monsters),
 instanced dungeons (stairways in towns, copies outside the overworld, layouts with one arrival,
 exit, and champion, private and party-shared copies, a full dungeon, exits, delayed reset of

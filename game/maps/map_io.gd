@@ -8,7 +8,14 @@ extends RefCounted
 ## Generators load the map with load_scene(), which merges the sectors into one TileMapLayer named
 ## "Terrain" (not saved), edit that layer and the markers, and write it back with save_scene(),
 ## which splits the terrain into sectors again (a cell painted into the wrong sector moves to its
-## own) and removes the files of sectors left empty. World reads the sectors directly (cells()).
+## own) and removes the files of sectors left empty.
+##
+## The game itself reads a bake (read_map): the terrain as one byte per cell and every marker as a
+## plain record {name, cell, and the marker's own properties}, written to BAKE_PATH by
+## write_bake() (make bake-map, and every save_scene). Loading it takes a fraction of instancing
+## the scene. A bake older than the scene (painted in Godot since) is not used: the map is read
+## from the scene with a warning, and the rules check asks for make bake-map. Exported builds,
+## whose scenes Godot converts, always use the bake.
 
 const Atlas = preload("res://game/data/atlas.gd")
 
@@ -17,6 +24,129 @@ const SECTOR_DIR: String = "res://game/maps/sectors"
 const TILESET_PATH: String = "res://game/maps/terrain.tres"
 const SECTORS: String = "Sectors"
 const TERRAIN: String = "Terrain"
+const BAKE_PATH: String = "res://game/maps/world.bake"
+const BAKE_VERSION: int = 1
+## Marker groups the bake keeps, as World reads them.
+const MARKER_GROUPS: Array[String] = ["Spawns", "Items", "Ferrymen", "QuestGivers", "Townsfolk", "Zones", "DungeonEntrances",
+	"CaveMouths", "MonsterSpawns", "Decor"]
+## Character of unpainted overworld cells (deep sea) and of unpainted cells beyond it (void).
+const SEA: int = 126
+const VOID: int = 32
+
+
+## The map as plain data: {grid: PackedByteArray (one terrain character per cell, row-major),
+## size, painted (the painted part of the overworld), markers: {group: [records]}}, from the bake
+## when it is current, else from the scene.
+static func read_map() -> Dictionary:
+	if FileAccess.file_exists(BAKE_PATH):
+		var file: FileAccess = FileAccess.open_compressed(BAKE_PATH, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+		var baked: Variant = file.get_var() if file != null else null
+		if typeof(baked) == TYPE_DICTIONARY and int(baked.get("version", 0)) == BAKE_VERSION \
+				and (OS.has_feature("template") or String(baked.get("fingerprint", "")) == fingerprint()):
+			return baked
+		push_warning("The baked map is older than the map; run make bake-map. Reading the scene instead.")
+	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var data: Dictionary = extract(scene_root)
+	scene_root.free()
+	return data
+
+
+## Whether the bake matches the map scene, its sectors, and the tile set.
+static func bake_current() -> bool:
+	if not FileAccess.file_exists(BAKE_PATH):
+		return false
+	var file: FileAccess = FileAccess.open_compressed(BAKE_PATH, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	var data: Variant = file.get_var() if file != null else null
+	return typeof(data) == TYPE_DICTIONARY and String(data.get("fingerprint", "")) == fingerprint()
+
+
+## The sources' fingerprint: a hash of overworld.tscn, terrain.tres, and every sector scene.
+static func fingerprint() -> String:
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
+	var files: Array[String] = [SCENE_PATH, TILESET_PATH]
+	var sectors: PackedStringArray = DirAccess.get_files_at(SECTOR_DIR)
+	sectors.sort()
+	for file: String in sectors:
+		if file.get_extension() == "tscn":
+			files.append(SECTOR_DIR.path_join(file))
+	for path: String in files:
+		hashing.update(FileAccess.get_file_as_bytes(path))
+	return hashing.finish().hex_encode()
+
+
+## Writes the bake from the scene on disk.
+static func write_bake() -> Error:
+	var scene_root: Node = (ResourceLoader.load(SCENE_PATH, "", ResourceLoader.CACHE_MODE_REPLACE_DEEP) as PackedScene).instantiate()
+	var data: Dictionary = extract(scene_root)
+	scene_root.free()
+	data["version"] = BAKE_VERSION
+	data["fingerprint"] = fingerprint()
+	var file: FileAccess = FileAccess.open_compressed(BAKE_PATH, FileAccess.WRITE, FileAccess.COMPRESSION_ZSTD)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_var(data)
+	file.close()
+	return OK
+
+
+## The map data of an instantiated overworld scene (see read_map).
+static func extract(scene_root: Node) -> Dictionary:
+	var found: Array[TileMapLayer] = layers(scene_root)
+	var tile_set: TileSet = found[0].tile_set
+	var lookup: Dictionary = {}
+	for index: int in tile_set.get_source_count():
+		var source_id: int = tile_set.get_source_id(index)
+		var source: TileSetAtlasSource = tile_set.get_source(source_id) as TileSetAtlasSource
+		if source == null:
+			continue
+		for tile: int in source.get_tiles_count():
+			var coords: Vector2i = source.get_tile_id(tile)
+			var kind: Variant = source.get_tile_data(coords, 0).get_custom_data("terrain")
+			if typeof(kind) == TYPE_STRING and String(kind).length() == 1:
+				lookup[Vector3i(source_id, coords.x, coords.y)] = String(kind).unicode_at(0)
+	var size: Vector2i = Atlas.OVERWORLD_SIZE
+	for layer: TileMapLayer in found:
+		size = size.max(layer.get_used_rect().end)
+	var sea_row := PackedByteArray()
+	sea_row.resize(size.x)
+	sea_row.fill(VOID)
+	for x: int in Atlas.OVERWORLD_SIZE.x:
+		sea_row[x] = SEA
+	var void_row := PackedByteArray()
+	void_row.resize(size.x)
+	void_row.fill(VOID)
+	var grid := PackedByteArray()
+	for y: int in size.y:
+		grid.append_array(sea_row if y < Atlas.OVERWORLD_SIZE.y else void_row)
+	var painted := Rect2i()
+	for layer: TileMapLayer in found:
+		for cell: Vector2i in layer.get_used_cells():
+			if cell.x < 0 or cell.y < 0:
+				continue
+			var coords: Vector2i = layer.get_cell_atlas_coords(cell)
+			grid[cell.y * size.x + cell.x] = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), VOID)
+			if cell.x < Atlas.OVERWORLD_SIZE.x and cell.y < Atlas.OVERWORLD_SIZE.y:
+				painted = Rect2i(cell, Vector2i.ONE) if painted.size == Vector2i.ZERO else painted.expand(cell)
+	var markers: Dictionary = {}
+	for group: String in MARKER_GROUPS:
+		var records: Array = []
+		if scene_root.has_node(group):
+			for marker: Node in scene_root.get_node(group).get_children():
+				if marker is Node2D:
+					records.append(_record(marker as Node2D))
+		markers[group] = records
+	return {"grid": grid, "size": size, "painted": Rect2i(painted.position, painted.size + Vector2i.ONE), "markers": markers}
+
+
+## A marker as a plain record: its name, its cell, and its script's exported properties.
+static func _record(marker: Node2D) -> Dictionary:
+	var record: Dictionary = {"name": String(marker.name), "cell": Vector2i((marker.position / 32.0).floor())}
+	for property: Dictionary in marker.get_property_list():
+		if int(property["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			var value: Variant = marker.get(property["name"])
+			record[String(property["name"])] = Dictionary(value) if value is Dictionary else value
+	return record
 
 
 static func sector_path(sector: Vector2i) -> String:
@@ -145,6 +275,8 @@ static func save_scene(scene_root: Node, path: String = SCENE_PATH) -> Error:
 	scene_root.remove_child(sectors)
 	scene_root.add_child(merged)
 	scene_root.move_child(merged, index)
+	if result == OK and path == SCENE_PATH:
+		result = write_bake()
 	return result
 
 

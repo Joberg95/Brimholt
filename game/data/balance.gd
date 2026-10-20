@@ -48,6 +48,11 @@ const BASE_CRITICAL: int = 5
 const KILL_COINS: float = 0.2
 const KILL_COINS_PER_LEVEL: float = 0.02
 const RANKED_KILL_COINS: float = 3.0
+## Valuables (cut gems, Monsters.VALUABLES) a kill drops on average, in gold:
+## VALUABLE_GOLD_PER_LEVEL x level, times VALUABLE_RANK for its rank. They sell to any vendor for
+## their value, so gems, not gear, are what a hunt is worth (plan 42): 40 gold a level-40 kill.
+const VALUABLE_GOLD_PER_LEVEL: float = 1.0
+const VALUABLE_RANK: Dictionary = {"normal": 1.0, "elite": 4.0, "champion": 12.0, "boss": 25.0}
 ## Base health regenerated every 10 seconds, as a fraction of max health (tripled when resting).
 const REGEN_FRACTION: float = 0.04
 ## Health a full healer (healing 1.0) restores per second, as a fraction of paladin health.
@@ -173,6 +178,11 @@ static func coins_per_kill(level: float, rank: String = "normal") -> float:
 	return KILL_COINS + KILL_COINS_PER_LEVEL * level + (RANKED_KILL_COINS if rank != "normal" else 0.0)
 
 
+## Gold worth of valuables a kill drops on average (see VALUABLE_GOLD_PER_LEVEL).
+static func valuables_per_kill(level: float, rank: String = "normal") -> float:
+	return VALUABLE_GOLD_PER_LEVEL * level * float(VALUABLE_RANK.get(rank, 1.0))
+
+
 ## Same-level normal kills per level: quick early levels (4 for level 2), longer later.
 static func kills_to_level(level: int) -> int:
 	return 4 + 3 * (clampi(level, 1, MAX_LEVEL) - 1)
@@ -266,4 +276,5 @@ static func signature() -> String:
 		REGEN_FRACTION, HEAL_FRACTION, EARLY_DAMAGE_LEVELS, VOCATIONS, RAID, RAID_FIGHT_SECONDS, ENRAGE_SECONDS,
 		BOSS_HEALING_PRESSURE, MIN_TANKS, RANKS, CHASE_SECONDS_EVEN, CHASE_SECONDS_FAST, CHASE_GAP_LEVELS,
 		PVP_DAMAGE, PVP_HEALING, PVP_COMBAT_SECONDS, PVP_DAMPENING_SECONDS, KILL_COINS, KILL_COINS_PER_LEVEL, RANKED_KILL_COINS,
+		VALUABLE_GOLD_PER_LEVEL, VALUABLE_RANK,
 		ARMOR_TYPES, MAGIC_VOCATIONS])

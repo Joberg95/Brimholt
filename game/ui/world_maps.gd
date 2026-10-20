@@ -8,7 +8,12 @@ extends Node
 ## task when it lies off the minimap. The world map opens centred on you at OPEN_ZOOM pixels per
 ## tile; the mouse wheel (or + and −) zooms around the cursor, dragging pans (over the painted
 ## land and a margin of sea), and its key, Esc, or Close closes it. Quest givers show their
-## "!"/"?" marks.
+## "!"/"?" marks. The floor buttons (or Page Up and Page Down) switch between the surface and the
+## floor below (Atlas.UNDERGROUND), drawn in the same tiles as the land above it: one pixel per
+## tile of the tunnels and sewers (World.underground_bounds), their names, and the ways up. It opens
+## on the floor you stand on. Right-click the world map to place your own marker (an icon and a
+## label) or remove one; markers are kept on this computer (marker_file), as Tibia keeps its
+## minimap markers, and show on the world map and the minimap on their own floor.
 
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")
@@ -64,6 +69,21 @@ var _overview: ImageTexture
 ## Off the overworld (dungeons, caves, the Void Throne): a flat map of the area you are in.
 var _flat_area: Rect2i = Rect2i()
 var _flat_texture: ImageTexture
+## The floor the world map shows: 0 the surface, 1 the floor below; and the floor below's map.
+var shown_floor: int = 0
+var _under_texture: ImageTexture
+var _floor_label: Label
+## Your markers: {cell (a world cell, either floor), icon (MARKER_ICONS), label}, saved to
+## marker_file; and the menu that places or removes one.
+var markers: Array = []
+var marker_file: String = "user://map_markers.json"
+var _marker_menu: PopupPanel
+var _marker_name: LineEdit
+var _marker_remove: Button
+var _marker_cell: Vector2i
+const MARKER_ICONS: Dictionary = {"star": Color("#ffd84a"), "flag": Color("#e0503a"), "cross": Color("#f2f0e6"),
+	"skull": Color("#c8c0b0"), "coin": Color("#e8b040"), "heart": Color("#e06a8a")}
+const MARKER_LABEL_LENGTH: int = 40
 ## Pixels per tile, and the tile at the centre of the map area.
 var zoom: float = OPEN_ZOOM
 var center: Vector2 = Vector2.ZERO
@@ -80,6 +100,159 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 		if typeof(meta) == TYPE_DICTIONARY and typeof(meta.get("pages")) == TYPE_DICTIONARY:
 			_baked = meta["pages"]
 	_build_controls(layer)
+	load_markers()
+
+
+## Reads your markers from marker_file (none if it is missing or unreadable).
+func load_markers() -> void:
+	markers.clear()
+	if not FileAccess.file_exists(marker_file):
+		return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(marker_file))
+	if typeof(parsed) != TYPE_ARRAY:
+		return
+	for entry: Variant in parsed:
+		if typeof(entry) == TYPE_DICTIONARY and typeof(entry.get("cell")) == TYPE_ARRAY and (entry["cell"] as Array).size() == 2 \
+				and MARKER_ICONS.has(entry.get("icon", "")):
+			markers.append({"cell": Vector2i(int(entry["cell"][0]), int(entry["cell"][1])), "icon": String(entry["icon"]),
+				"label": String(entry.get("label", "")).left(MARKER_LABEL_LENGTH)})
+
+
+func _save_markers() -> void:
+	var file: FileAccess = FileAccess.open(marker_file, FileAccess.WRITE)
+	if file == null:
+		push_warning("Could not save map markers to %s" % marker_file)
+		return
+	file.store_string(JSON.stringify(markers.map(func(marker: Dictionary) -> Dictionary:
+		return {"cell": [marker["cell"].x, marker["cell"].y], "icon": marker["icon"], "label": marker["label"]})))
+
+
+## Places a marker at a world cell (replacing one already there) and saves.
+func add_marker(cell: Vector2i, icon: String, label: String) -> void:
+	if not MARKER_ICONS.has(icon):
+		return
+	remove_marker(cell, false)
+	markers.append({"cell": cell, "icon": icon, "label": label.strip_edges().left(MARKER_LABEL_LENGTH)})
+	_save_markers()
+	redraw()
+
+
+## Removes the marker at a world cell, if any (and saves unless told not to).
+func remove_marker(cell: Vector2i, save: bool = true) -> void:
+	var before: int = markers.size()
+	markers = markers.filter(func(marker: Dictionary) -> bool: return marker["cell"] != cell)
+	if save and markers.size() != before:
+		_save_markers()
+		redraw()
+
+
+## The world cell under a point of the world map window, on the floor it shows.
+func cell_at(point: Vector2) -> Vector2i:
+	var tile: Vector2 = center + (point - _map_area().get_center()) / zoom
+	return Vector2i(tile.floor()) + (Vector2i(Atlas.UNDER_X, 0) if shown_floor == 1 else Vector2i.ZERO)
+
+
+## Right-click on the world map: the marker menu for the cell there (or the marker within a few
+## pixels of it, to rename or remove).
+func _open_marker_menu(point: Vector2) -> void:
+	_marker_cell = cell_at(point)
+	var reach: float = maxf(1.0, 6.0 / zoom)
+	for marker: Dictionary in markers:
+		var at: Vector2 = _marker_at(Vector2(marker["cell"]), Vector2.ZERO, 1.0, true)
+		var tile: Vector2 = center + (point - _map_area().get_center()) / zoom
+		if at.distance_to(tile) <= reach + 0.5:
+			_marker_cell = marker["cell"]
+	var existing: Array = markers.filter(func(marker: Dictionary) -> bool: return marker["cell"] == _marker_cell)
+	_marker_name.text = existing[0]["label"] if not existing.is_empty() else ""
+	_marker_remove.visible = not existing.is_empty()
+	_marker_menu.popup(Rect2i(Vector2i(world_map.get_screen_position() + point), Vector2i.ZERO))
+	_marker_name.grab_focus()
+
+
+func _build_marker_menu() -> void:
+	_marker_menu = PopupPanel.new()
+	var column := VBoxContainer.new()
+	_marker_menu.add_child(column)
+	var title := Label.new()
+	title.text = "Map marker"
+	column.add_child(title)
+	_marker_name = LineEdit.new()
+	_marker_name.placeholder_text = "Label (optional)"
+	_marker_name.max_length = MARKER_LABEL_LENGTH
+	_marker_name.custom_minimum_size = Vector2(200, 0)
+	column.add_child(_marker_name)
+	var icons := HBoxContainer.new()
+	column.add_child(icons)
+	for icon: String in MARKER_ICONS:
+		var button := Button.new()
+		button.tooltip_text = icon.capitalize()
+		button.custom_minimum_size = Vector2(30, 30)
+		button.focus_mode = Control.FOCUS_NONE
+		button.draw.connect(func() -> void: _draw_marker_icon(button, button.size / 2.0, icon, 7.0))
+		button.pressed.connect(func() -> void:
+			add_marker(_marker_cell, icon, _marker_name.text)
+			_marker_menu.hide())
+		icons.add_child(button)
+	_marker_remove = Button.new()
+	_marker_remove.text = "Remove marker"
+	_marker_remove.focus_mode = Control.FOCUS_NONE
+	_marker_remove.pressed.connect(func() -> void:
+		remove_marker(_marker_cell)
+		_marker_menu.hide())
+	column.add_child(_marker_remove)
+	world_map.add_child(_marker_menu)
+
+
+## A marker's icon, `size` pixels from its centre to its tips, with a dark outline.
+func _draw_marker_icon(canvas: CanvasItem, at: Vector2, icon: String, size: float) -> void:
+	var color: Color = MARKER_ICONS[icon]
+	var dark := Color("#1a140a")
+	match icon:
+		"star":
+			var points := PackedVector2Array()
+			for k: int in 10:
+				var angle: float = -PI / 2.0 + k * PI / 5.0
+				points.append(at + Vector2(cos(angle), sin(angle)) * (size if k % 2 == 0 else size * 0.45))
+			canvas.draw_colored_polygon(points, color)
+			points.append(points[0])
+			canvas.draw_polyline(points, dark, 1.0)
+		"flag":
+			canvas.draw_line(at + Vector2(-size * 0.5, size), at + Vector2(-size * 0.5, -size), dark, 2.0)
+			var cloth := PackedVector2Array([at + Vector2(-size * 0.4, -size), at + Vector2(size, -size * 0.5), at + Vector2(-size * 0.4, 0)])
+			canvas.draw_colored_polygon(cloth, color)
+			cloth.append(cloth[0])
+			canvas.draw_polyline(cloth, dark, 1.0)
+		"cross":
+			for ends: Array in [[Vector2(-1, -1), Vector2(1, 1)], [Vector2(1, -1), Vector2(-1, 1)]]:
+				canvas.draw_line(at + ends[0] * size * 0.8, at + ends[1] * size * 0.8, dark, 4.0)
+				canvas.draw_line(at + ends[0] * size * 0.8, at + ends[1] * size * 0.8, color, 2.0)
+		"skull":
+			canvas.draw_circle(at + Vector2(0, -size * 0.15), size * 0.8, dark)
+			canvas.draw_circle(at + Vector2(0, -size * 0.15), size * 0.65, color)
+			canvas.draw_rect(Rect2(at + Vector2(-size * 0.4, size * 0.3), Vector2(size * 0.8, size * 0.5)), color)
+			for side: float in [-1.0, 1.0]:
+				canvas.draw_circle(at + Vector2(side * size * 0.28, -size * 0.2), size * 0.18, dark)
+		"heart":
+			for side: float in [-1.0, 1.0]:
+				canvas.draw_circle(at + Vector2(side * size * 0.4, -size * 0.25), size * 0.5, color)
+			canvas.draw_colored_polygon(PackedVector2Array([at + Vector2(-size * 0.88, -size * 0.1),
+				at + Vector2(size * 0.88, -size * 0.1), at + Vector2(0, size * 0.9)]), color)
+		_:
+			canvas.draw_circle(at, size * 0.85, dark)
+			canvas.draw_circle(at, size * 0.7, color)
+			canvas.draw_circle(at, size * 0.35, color.darkened(0.25))
+
+
+## Your markers on a canvas (on the world map, those on the floor it shows, with their labels).
+func _draw_player_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2, folded: bool) -> void:
+	var font: Font = ThemeDB.fallback_font
+	for marker: Dictionary in markers:
+		var at: Vector2 = _marker_at(Vector2(marker["cell"]), origin, scale, folded)
+		if not area.grow(8.0).has_point(at):
+			continue
+		_draw_marker_icon(canvas, at, marker["icon"], 6.0 if canvas == world_map else 4.0)
+		if canvas == world_map and not String(marker["label"]).is_empty():
+			_draw_label(font, at, marker["label"], 12, Color("#f4ecd8"), Vector2(0, 18), true)
 
 
 ## A page: the bake if it matches the map (World.page_hash), else a flat one; PvP zones tinted.
@@ -260,13 +433,22 @@ func _build_controls(layer: CanvasLayer) -> void:
 			zoom = maxf(OPEN_ZOOM, _fit_zoom())
 			# Underground (dungeon copies lie outside the overworld) it opens on the painted world's centre.
 			var here: Vector2 = game.camera_focus() / World.TILE_SIZE
+			var below: bool = Atlas.UNDERGROUND.has_point(Vector2i(here))
+			if below:
+				here -= Vector2(Atlas.UNDER_X, 0)
 			center = here if World.OVERWORLD.has_point(Vector2i(here)) else bounds().get_center()
+			_show_floor(1 if below else 0)
 			_clamp_view())
 	layer.add_child(world_map)
 	var buttons := HBoxContainer.new()
-	buttons.position = Vector2(Layout.VIEW_SIZE.x - 150, 4)
+	buttons.position = Vector2(Layout.VIEW_SIZE.x - 300, 4)
 	world_map.add_child(buttons)
-	for entry: Array in [["−", func() -> void: zoom_by(1.0 / ZOOM_STEP, _map_area().get_center())],
+	_floor_label = Label.new()
+	_floor_label.custom_minimum_size = Vector2(84, 0)
+	_floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	buttons.add_child(_floor_label)
+	for entry: Array in [["▲", func() -> void: _show_floor(0)], ["▼", func() -> void: _show_floor(1)],
+			["−", func() -> void: zoom_by(1.0 / ZOOM_STEP, _map_area().get_center())],
 			["+", func() -> void: zoom_by(ZOOM_STEP, _map_area().get_center())], ["Close", world_map.hide]]:
 		var button := Button.new()
 		button.text = entry[0]
@@ -274,6 +456,21 @@ func _build_controls(layer: CanvasLayer) -> void:
 		button.custom_minimum_size = Vector2(32, 0)
 		button.pressed.connect(entry[1])
 		buttons.add_child(button)
+	_build_marker_menu()
+
+
+## Shows the surface (0) or the floor below (1).
+func _show_floor(level: int) -> void:
+	shown_floor = clampi(level, 0, 1)
+	_floor_label.text = "Surface" if shown_floor == 0 else "Floor below"
+	world_map.queue_redraw()
+
+
+## The floor below at one pixel per tile, over the part that holds its tunnels and sewers.
+func _floor_below_texture() -> ImageTexture:
+	if _under_texture == null and World.underground_bounds().has_area():
+		_under_texture = ImageTexture.create_from_image(_flat(World.underground_bounds()))
+	return _under_texture
 
 
 ## The part of the world map window that shows the map (below the header).
@@ -313,7 +510,10 @@ func _clamp_view() -> void:
 
 
 func _world_map_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
+	if event is InputEventKey and event.pressed and event.keycode in [KEY_PAGEUP, KEY_PAGEDOWN]:
+		_show_floor(0 if event.keycode == KEY_PAGEUP else 1)
+		world_map.accept_event()
+	elif event is InputEventMouseButton:
 		match event.button_index:
 			MOUSE_BUTTON_WHEEL_UP:
 				if event.pressed:
@@ -321,6 +521,9 @@ func _world_map_input(event: InputEvent) -> void:
 			MOUSE_BUTTON_WHEEL_DOWN:
 				if event.pressed:
 					zoom_by(1.0 / ZOOM_STEP, event.position)
+			MOUSE_BUTTON_RIGHT:
+				if event.pressed:
+					_open_marker_menu(event.position)
 			MOUSE_BUTTON_LEFT:
 				_dragging = event.pressed
 				world_map.mouse_default_cursor_shape = Control.CURSOR_DRAG if _dragging else Control.CURSOR_ARROW
@@ -354,31 +557,44 @@ func _draw_label(font: Font, at: Vector2, text: String, size: int, color: Color,
 	return Rect2(corner - Vector2(2, size), Vector2(width + 4, size + 4))
 
 
-func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2) -> void:
+## Where a cell's marker lands on a canvas. The world map (`folded`) draws each floor in the tiles
+## of the surface and leaves out what lies on the other floor (Vector2.INF, outside every area).
+func _marker_at(cell: Vector2, origin: Vector2, scale: float, folded: bool) -> Vector2:
+	if folded:
+		var below: bool = Atlas.UNDERGROUND.has_point(Vector2i(cell))
+		if below != (shown_floor == 1):
+			return Vector2.INF
+		if below:
+			cell -= Vector2(Atlas.UNDER_X, 0)
+	return origin + (cell + Vector2(0.5, 0.5)) * scale
+
+
+func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2, folded: bool = false) -> void:
 	for id: String in World.FERRYMEN:
-		var at: Vector2 = origin + (Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = _marker_at(Vector2(World.FERRYMEN[id]["cell"]), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#7fe0d0"))
 	for id: String in World.QUEST_GIVERS:
-		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = _marker_at(Vector2(World.QUEST_GIVERS[id]["cell"]), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#ffcf6a"))
-	for cell: Vector2i in World.DUNGEON_ENTRANCES.keys() + World.CAVE_MOUTHS.keys():
-		var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
+	# Ways down and up: stairways, cave mouths, and the holes, ladders, and stairs between the floors.
+	for cell: Vector2i in World.DUNGEON_ENTRANCES.keys() + World.CAVE_MOUTHS.keys() + World.HOLES.keys():
+		var at: Vector2 = _marker_at(Vector2(cell), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#c9884a"))
 	for id: String in World.TOWNSFOLK:
-		var at: Vector2 = origin + (Vector2(World.TOWNSFOLK[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = _marker_at(Vector2(World.TOWNSFOLK[id]["cell"]), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), TOWNSFOLK_COLORS[World.TOWNSFOLK[id]["role"]])
 	var actors: Dictionary = game.actors
 	for id: int in actors:
-		var at: Vector2 = origin + (actors[id]["visual"] + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = _marker_at(actors[id]["visual"], origin, scale, folded)
 		if id != game.self_id and area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2.ONE * 1.5, Vector2.ONE * 3.0), Color.WHITE)
 	if actors.has(game.self_id):
 		var me: Dictionary = actors[game.self_id]
-		var at: Vector2 = origin + (me["visual"] + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = _marker_at(me["visual"], origin, scale, folded)
 		if area.has_point(at):
 			_draw_self(canvas, at, Vector2(me["state"].get("facing", Vector2i.DOWN)), 6.0 if canvas == world_map else 5.0)
 
@@ -451,6 +667,7 @@ func _draw_minimap() -> void:
 		_draw_terrain(minimap, origin, MINIMAP_SCALE, region, false)
 		_draw_guidance(minimap, origin, MINIMAP_SCALE, view)
 	_draw_markers(minimap, origin, MINIMAP_SCALE, view)
+	_draw_player_markers(minimap, origin, MINIMAP_SCALE, view, false)
 	minimap.draw_rect(view, Color("#3a4450"), false, 1.0)
 
 
@@ -463,11 +680,16 @@ func _draw_world_map() -> void:
 	var painted: Rect2 = bounds()
 	var shown := Rect2(origin + painted.position * scale, painted.size * scale).intersection(_map_area())
 	var tiles := Rect2((shown.position - origin) / scale, shown.size / scale)
+	var font: Font = ThemeDB.fallback_font
+	if shown_floor == 1:
+		_draw_floor_below(origin, scale, shown, font)
+		_draw_header(font)
+		return
 	_draw_terrain(world_map, origin, scale, tiles, zoom < OVERVIEW_ZOOM)
 	_draw_guidance(world_map, origin, scale, shown)
-	_draw_markers(world_map, origin, scale, shown)
+	_draw_markers(world_map, origin, scale, shown, true)
+	_draw_player_markers(world_map, origin, scale, shown, true)
 	_draw_quest_marks(origin, scale, shown)
-	var font: Font = ThemeDB.fallback_font
 	var labels: Array = [[World.WORLD_NAME, Vector2(World.SPAWNS[0]) + Vector2(4, -3)]]
 	for id: String in World.FERRYMEN:
 		var place: String = World.FERRYMEN[id]["place"]
@@ -512,9 +734,37 @@ func _draw_world_map() -> void:
 				break
 		taken.append(_draw_label(font, at, title[0], title[3], title[2], shift, true))
 		taken.append(_draw_label(font, at + Vector2(0, 13), levels[0], levels[3], levels[2], shift, true))
-	world_map.draw_rect(Rect2(Vector2.ZERO, Vector2(view_size.x, HEADER)), Color(0.03, 0.04, 0.05))
-	world_map.draw_string(font, Vector2(12, 22), "Arrow = you · rings = your tasks · ! = quests · orange = dungeons · red = PvP"
-		+ " · drag, wheel to zoom", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
+	_draw_header(font)
+
+
+func _draw_header(font: Font) -> void:
+	world_map.draw_rect(Rect2(Vector2.ZERO, Vector2(Layout.VIEW_SIZE.x, HEADER)), Color(0.03, 0.04, 0.05))
+	world_map.draw_string(font, Vector2(12, 22), "Rings: tasks · orange: ways down · red: PvP · right-click: marker",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
+
+
+## The floor below: black rock with the tunnels and sewers in the tiles of the land above, their
+## names and levels, the ways up, and you when you are down there.
+func _draw_floor_below(origin: Vector2, scale: float, shown: Rect2, font: Font) -> void:
+	world_map.draw_rect(shown, Color.BLACK)
+	var texture: ImageTexture = _floor_below_texture()
+	if texture == null:
+		return
+	var area: Rect2i = World.underground_bounds()
+	var above := Rect2(Vector2(area.position - Vector2i(Atlas.UNDER_X, 0)), Vector2(area.size))
+	var visible: Rect2 = Rect2((shown.position - origin) / scale, shown.size / scale).intersection(above)
+	if visible.has_area():
+		world_map.draw_texture_rect_region(texture, Rect2(origin + visible.position * scale, visible.size * scale),
+			Rect2(visible.position - above.position, visible.size))
+	_draw_markers(world_map, origin, scale, shown, true)
+	_draw_player_markers(world_map, origin, scale, shown, true)
+	for zone: Dictionary in World.ZONES:
+		if not Atlas.UNDERGROUND.encloses(zone["rect"]):
+			continue
+		var at: Vector2 = origin + Vector2(zone["rect"].get_center() - Vector2i(Atlas.UNDER_X, 0)) * scale
+		if shown.has_point(at):
+			_draw_label(font, at, zone["name"], 13, Color("#e0a870"), Vector2.ZERO, true)
+			_draw_label(font, at, "levels %d–%d" % [zone["min_level"], zone["max_level"]], 11, REGION_TINT, Vector2(0, 13), true)
 
 
 ## Gold "!" and "?" over quest givers that have something for you (World.quest_mark).

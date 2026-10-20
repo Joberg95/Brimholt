@@ -58,6 +58,9 @@ static var ENTRANCE_OF: Dictionary = {}
 ## stairs up (its "^" cell), where players arrive and leave.
 static var CAVE_MOUTHS: Dictionary = {}
 static var MOUTH_OF: Dictionary = {}
+## Ways between the floors (Atlas.UNDERGROUND): a hole or ladder ("v") on the surface and the stairs
+## up ("^") right below it, each cell -> the other.
+static var HOLES: Dictionary = {}
 static var CAVE_STAIRS: Dictionary = {}
 ## The walkable world players reach on foot (Atlas.OVERWORLD_SIZE); dungeon copies lie right of it.
 static var OVERWORLD: Rect2i = Rect2i()
@@ -137,6 +140,9 @@ const MOVE_SECONDS: float = 0.18
 const SLOWED_STEP: float = 2.0
 ## A rider's steps take this share of a walker's (25% faster). Mounts carry you only above ground.
 const MOUNT_STEP: float = 0.8
+## The ground's walking cost, as in Tibia: a step onto a dirt road, a street, or a bridge is quicker,
+## onto sand, snow, or bog slower (a share of a plain step; anything else is 1). Nav routes by it.
+const GROUND_STEP: Dictionary = {",": 0.8, "=": 0.8, "b": 0.85, "F": 0.85, "Y": 0.85, ":": 1.1, "s": 1.15, "m": 1.3}
 ## Stats only gear gives (none of them in Balance.STATS): movement speed and maximum mana in percent
 ## (speed_factor, stats), frost spell and rune damage in percent (Combat.ELEMENT_STATS), and life
 ## leech in percent (Combat.leech, at most LEECH_MAX).
@@ -212,94 +218,58 @@ var _next_ground_sweep: float = 0.0
 
 
 static func _static_init() -> void:
-	var scene: Node = (load(MAP_SCENE) as PackedScene).instantiate()
-	var layers: Array[TileMapLayer] = MapIO.layers(scene)
-	var tile_set: TileSet = layers[0].tile_set
-	var lookup: Dictionary = {}
-	for index: int in tile_set.get_source_count():
-		var source_id: int = tile_set.get_source_id(index)
-		var source: TileSetAtlasSource = tile_set.get_source(source_id) as TileSetAtlasSource
-		if source == null:
-			continue
-		for tile: int in source.get_tiles_count():
-			var coords: Vector2i = source.get_tile_id(tile)
-			var kind: Variant = source.get_tile_data(coords, 0).get_custom_data("terrain")
-			if typeof(kind) == TYPE_STRING and kind.length() == 1 and kind in TERRAINS:
-				lookup[Vector3i(source_id, coords.x, coords.y)] = kind
-	var size: Vector2i = Atlas.OVERWORLD_SIZE
-	for layer: TileMapLayer in layers:
-		size = size.max(layer.get_used_rect().end)
-	# Unpainted overworld cells are deep sea; unpainted cells beyond it (round the dungeon and
-	# cave bands) are void.
-	var sea_row := PackedByteArray()
-	sea_row.resize(size.x)
-	sea_row.fill(32)
-	for x: int in Atlas.OVERWORLD_SIZE.x:
-		sea_row[x] = 126
-	var void_row := PackedByteArray()
-	void_row.resize(size.x)
-	void_row.fill(32)
-	var grid := PackedByteArray()
-	for y: int in size.y:
-		grid.append_array(sea_row if y < Atlas.OVERWORLD_SIZE.y else void_row)
-	var painted := Rect2i()
-	for layer: TileMapLayer in layers:
-		for cell: Vector2i in layer.get_used_cells():
-			var coords: Vector2i = layer.get_cell_atlas_coords(cell)
-			var kind: String = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), " ")
-			if cell.x >= 0 and cell.y >= 0:
-				grid[cell.y * size.x + cell.x] = kind.unicode_at(0)
-				if cell.x < Atlas.OVERWORLD_SIZE.x and cell.y < Atlas.OVERWORLD_SIZE.y:
-					painted = Rect2i(cell, Vector2i.ONE) if painted.size == Vector2i.ZERO else painted.expand(cell)
-	PAINTED = Rect2i(painted.position, painted.size + Vector2i.ONE)
-	GRID = grid
-	GRID_SIZE = size
+	# The map as plain data (MapIO): from the bake, or from the scene when the bake is stale.
+	var data: Dictionary = MapIO.read_map()
+	var markers: Dictionary = data["markers"]
+	GRID = data["grid"]
+	GRID_SIZE = data["size"]
+	PAINTED = data["painted"]
 	_CHARS.clear()
 	for code: int in 256:
 		_CHARS.append(String.chr(code) if code > 0 else "")
-	for marker: Node2D in scene.get_node("Spawns").get_children():
-		SPAWNS.append(_cell_of(marker))
-	for marker: Node2D in scene.get_node("Items").get_children():
-		GROUND_ITEMS.append([_cell_of(marker), String(marker.get("item"))])
-		_STARTING_CELLS[_cell_of(marker)] = true
-	for marker: Node2D in scene.get_node("Ferrymen").get_children():
+	for marker: Dictionary in markers.get("Spawns", []):
+		SPAWNS.append(marker["cell"])
+	for marker: Dictionary in markers.get("Items", []):
+		GROUND_ITEMS.append([marker["cell"], String(marker.get("item"))])
+		_STARTING_CELLS[marker["cell"]] = true
+	for marker: Dictionary in markers.get("Ferrymen", []):
 		var routes: Dictionary = {}
 		var fares: Dictionary = marker.get("routes")
 		for destination: Variant in fares:
 			routes[String(destination)] = int(fares[destination])
-		FERRYMEN[String(marker.name)] = {
+		FERRYMEN[String(marker["name"])] = {
 			"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
-			"cell": _cell_of(marker), "facing": marker.get("facing"), "routes": routes, "services": ["travel"],
+			"cell": marker["cell"], "facing": marker.get("facing"), "routes": routes, "services": ["travel"],
 			"vehicle": String(marker.get("vehicle")) if marker.get("vehicle") != null else "ferry",
 		}
-		NPC_CELLS[_cell_of(marker)] = String(marker.name)
-	if scene.has_node("QuestGivers"):
-		for marker: Node2D in scene.get_node("QuestGivers").get_children():
+		NPC_CELLS[marker["cell"]] = String(marker["name"])
+	if markers.has("QuestGivers"):
+		for marker: Dictionary in markers["QuestGivers"]:
 			# A giver offers every task naming it (game/data/quests.gd), plus its marker's task.
-			var tasks: Array[String] = Quests.tasks_of(String(marker.name))
+			var tasks: Array[String] = Quests.tasks_of(String(marker["name"]))
 			var own: String = String(marker.get("task")) if marker.get("task") != null else ""
 			if not own.is_empty() and Quests.TASKS.has(own) and own not in tasks:
 				tasks.push_front(own)
-			QUEST_GIVERS[String(marker.name)] = {
+			QUEST_GIVERS[String(marker["name"])] = {
 				"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
-				"cell": _cell_of(marker), "facing": marker.get("facing"),
-				"services": ["vocation", "runes"] if Quests.TRAINERS.has(String(marker.name)) else ["quests"],
-				"tasks": tasks, "boss": String(Quests.RELIC_KEEPERS.get(String(marker.name), "")),
+				"cell": marker["cell"], "facing": marker.get("facing"),
+				"services": ["vocation", "runes"] if Quests.TRAINERS.has(String(marker["name"])) else ["quests"],
+				"tasks": tasks, "boss": String(Quests.RELIC_KEEPERS.get(String(marker["name"]), "")),
 			}
-			NPC_CELLS[_cell_of(marker)] = String(marker.name)
-	if scene.has_node("Townsfolk"):
-		for marker: Node2D in scene.get_node("Townsfolk").get_children():
+			NPC_CELLS[marker["cell"]] = String(marker["name"])
+	if markers.has("Townsfolk"):
+		for marker: Dictionary in markers["Townsfolk"]:
 			var role: String = String(marker.get("role"))
-			TOWNSFOLK[String(marker.name)] = {
+			TOWNSFOLK[String(marker["name"])] = {
 				"name": String(marker.get("npc_name")), "place": String(marker.get("place")),
-				"cell": _cell_of(marker), "facing": marker.get("facing"), "role": role,
+				"cell": marker["cell"], "facing": marker.get("facing"), "role": role,
 				"services": {"banker": ["bank"], "artisan": ["craft"], "warden": ["pvp"]}.get(role, ["trade"]),
 			}
-			NPC_CELLS[_cell_of(marker)] = String(marker.name)
-	if scene.has_node("Zones"):
-		for marker: Node2D in scene.get_node("Zones").get_children():
+			NPC_CELLS[marker["cell"]] = String(marker["name"])
+	if markers.has("Zones"):
+		for marker: Dictionary in markers["Zones"]:
 			ZONES.append({
-				"name": String(marker.get("zone_name")), "rect": Rect2i(_cell_of(marker), marker.get("size_tiles")),
+				"name": String(marker.get("zone_name")), "rect": Rect2i(marker["cell"], marker.get("size_tiles")),
 				"pvp": bool(marker.get("pvp")) and not bool(marker.get("town")), "full_loot": bool(marker.get("full_loot")),
 				"town": bool(marker.get("town")), "min_level": int(marker.get("min_level")),
 				"max_level": int(marker.get("max_level")),
@@ -308,18 +278,21 @@ static func _static_init() -> void:
 				ZONES[-1]["ambient"] = marker.get("ambient")
 			if marker.get("square") is Vector2i and (marker.get("square") as Vector2i).x >= 0:
 				ZONES[-1]["square"] = marker.get("square")
-	if scene.has_node("DungeonEntrances"):
-		for marker: Node2D in scene.get_node("DungeonEntrances").get_children():
+			# Zones on the floor below (tunnels and sewers) are underground: dim, dry, no mounts.
+			if Atlas.UNDERGROUND.encloses(ZONES[-1]["rect"]):
+				ZONES[-1]["underground"] = true
+	if markers.has("DungeonEntrances"):
+		for marker: Dictionary in markers["DungeonEntrances"]:
 			var dungeon: String = String(marker.get("dungeon"))
 			if Dungeons.DUNGEONS.has(dungeon):
-				DUNGEON_ENTRANCES[_cell_of(marker)] = dungeon
-				ENTRANCE_OF[dungeon] = _cell_of(marker)
-	if scene.has_node("CaveMouths"):
-		for marker: Node2D in scene.get_node("CaveMouths").get_children():
+				DUNGEON_ENTRANCES[marker["cell"]] = dungeon
+				ENTRANCE_OF[dungeon] = marker["cell"]
+	if markers.has("CaveMouths"):
+		for marker: Dictionary in markers["CaveMouths"]:
 			var cave: String = String(marker.get("cave"))
 			if Caves.CAVES.has(cave):
-				CAVE_MOUTHS[_cell_of(marker)] = cave
-				MOUTH_OF[cave] = _cell_of(marker)
+				CAVE_MOUTHS[marker["cell"]] = cave
+				MOUTH_OF[cave] = marker["cell"]
 	# Every elite cave is an underground zone too, shared by everyone.
 	for cave: String in Caves.ORDER:
 		var definition: Dictionary = Caves.CAVES[cave]
@@ -338,23 +311,22 @@ static func _static_init() -> void:
 				"dark": definition.get("dark", false),
 				"min_level": definition["min_level"], "max_level": definition["max_level"],
 			})
-	if scene.has_node("MonsterSpawns"):
-		for marker: Node2D in scene.get_node("MonsterSpawns").get_children():
+	if markers.has("MonsterSpawns"):
+		for marker: Dictionary in markers["MonsterSpawns"]:
 			MONSTER_SPAWNS.append({
 				"monster": String(marker.get("monster")), "level": int(marker.get("level")),
-				"count": int(marker.get("count")), "radius": int(marker.get("radius")), "cell": _cell_of(marker),
+				"count": int(marker.get("count")), "radius": int(marker.get("radius")), "cell": marker["cell"],
 			})
 	# Decor markers (castles): furniture on open ground, decorations on walls. Placed before the
 	# keepers furnish their buildings, so nothing is put on top of them.
-	if scene.has_node("Decor"):
-		for marker: Node2D in scene.get_node("Decor").get_children():
+	if markers.has("Decor"):
+		for marker: Dictionary in markers["Decor"]:
 			var kind: String = String(marker.get("kind"))
-			if terrain(_cell_of(marker)) in WALLS:
-				WALL_DECOR[_cell_of(marker)] = kind
+			if terrain(marker["cell"]) in WALLS:
+				WALL_DECOR[marker["cell"]] = kind
 			else:
-				FURNITURE[_cell_of(marker)] = kind
-				DECOR_CELLS[_cell_of(marker)] = true
-	scene.free()
+				FURNITURE[marker["cell"]] = kind
+				DECOR_CELLS[marker["cell"]] = true
 	_find_buildings()
 	_place_dungeon_props()
 	for cave: String in Caves.ORDER:
@@ -364,6 +336,7 @@ static func _static_init() -> void:
 				if terrain(Vector2i(x, y)) == "^":
 					CAVE_STAIRS[cave] = Vector2i(x, y)
 	OVERWORLD = Rect2i(Vector2i.ZERO, Atlas.OVERWORLD_SIZE)
+	_pair_holes()
 	_map_regions()
 	# The terrain bytes are hashed as they are (joining every row into one string costs more).
 	var hashing := HashingContext.new()
@@ -372,6 +345,30 @@ static func _static_init() -> void:
 	hashing.update((str(GRID_SIZE) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK)
 		+ str(ZONES) + str(MONSTER_SPAWNS) + str(WALL_DECOR) + str(FURNITURE) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS) + str(CAVE_MOUTHS)).to_utf8_buffer())
 	MAP_HASH = hashing.finish().hex_encode()
+
+
+## The part of the floor below that holds its zones (tunnels and sewers): what its map shows and
+## where bots route below.
+static func underground_bounds() -> Rect2i:
+	var bounds := Rect2i()
+	for zone: Dictionary in ZONES:
+		if Atlas.UNDERGROUND.encloses(zone["rect"]):
+			bounds = zone["rect"] if bounds.size == Vector2i.ZERO else bounds.merge(zone["rect"])
+	return bounds
+
+
+## HOLES: every stairs up ("^") on the underground floor with a hole or ladder ("v") right above it
+## (found with the grid's own search: stairs are few, the floor is large).
+static func _pair_holes() -> void:
+	HOLES.clear()
+	var up: int = "^".unicode_at(0)
+	var at: int = GRID.find(up)
+	while at >= 0:
+		var cell := Vector2i(at % GRID_SIZE.x, at / GRID_SIZE.x)
+		if Atlas.UNDERGROUND.has_point(cell) and terrain(Atlas.above(cell)) == "v":
+			HOLES[cell] = Atlas.above(cell)
+			HOLES[Atlas.above(cell)] = cell
+		at = GRID.find(up, at + 1)
 
 
 ## Buildings in town zones, and the signs of the shops and banks among them.
@@ -1235,6 +1232,7 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	player["facing"] = direction
 	var pace: float = SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0
 	pace *= MOUNT_STEP if riding(player["equipment"], destination) else 1.0
+	pace *= float(GROUND_STEP.get(terrain(destination), 1.0))
 	pace *= speed_factor(player_stats(id)) / (1.0 + maxf(0.0, effect_power(player, "haste", now)))
 	player["step"] = MOVE_SECONDS * pace
 	player["next_move"] = now + player["step"]
@@ -1449,12 +1447,24 @@ static func with_items(slots: Array, items: Array) -> Array:
 	return result
 
 
-## The items a task pays besides experience and gold, for a class: its "items", then its "gear"
-## piece ([kind, 1]): the bound quest piece of its chain for that slot (Items "quest"), or else the
-## class piece at the tier of the task's level.
+## The items a task pays besides experience and gold, for a class: its "items" and its supplies
+## (Quests.supplies at the task's level: its "level", its dungeon monster's, or the lowest its
+## monsters are placed at), then its "gear" piece ([kind, 1]): the bound quest piece of its chain
+## for that slot (Items "quest"), or else the class piece at the tier of the task's level.
 static func task_items(task: String, vocation: String) -> Array:
 	var definition: Dictionary = Quests.TASKS[task]
 	var result: Array = definition.get("items", []).duplicate(true)
+	var level: int = definition.get("level", Quests.monster_level(definition["monster"]))
+	if level <= 0:
+		level = task_levels(task).x
+	for supply: Array in Quests.supplies(maxi(1, level)):
+		var merged: bool = false
+		for entry: Array in result:
+			if entry[0] == supply[0]:
+				entry[1] += supply[1]
+				merged = true
+		if not merged:
+			result.append(supply)
 	if definition.has("gear"):
 		var piece: String = quest_piece(definition.get("chain", task), definition["gear"], vocation)
 		if piece.is_empty():

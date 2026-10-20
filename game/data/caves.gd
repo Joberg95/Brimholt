@@ -6,6 +6,10 @@ extends RefCounted
 ## leads down to the stairs up, and the stairs up lead back out beside the mouth. Caves hold elites
 ## (Balance "elite": more health and damage, five times the experience) and a champion in the
 ## deepest hall: harder than the hunts above ground, and better paid.
+##
+## Caves with "below" have moved (tools/generators/caves_below.gd, docs/plan/45) from the band to the
+## floor below (Atlas.UNDERGROUND), their top-left corner at that cell, so their stairs up lie
+## right under their mouth: the same shared cave, now under the land it belongs to.
 
 const Dungeons = preload("res://game/data/dungeons.gd")
 
@@ -22,11 +26,11 @@ const ORDER: Array[String] = ["ogre_warrens", "drowned_grotto", "ember_deep", "f
 ## a pull is at most two; a party clears them faster)], shallow to deep (deeper halls hold the
 ## later rows), then the champion [monster, level] alone in the deepest hall.
 const CAVES: Dictionary = {
-	"ogre_warrens": {"name": "Ogre Warrens", "region": "Smoulder Fells", "near": Vector2i(318, 50),
+	"ogre_warrens": {"name": "Ogre Warrens", "region": "Smoulder Fells", "near": Vector2i(318, 50), "below": Vector2i(2879, 22),
 		"size": Vector2i(58, 42), "min_level": 32, "max_level": 37, "ambient": Color(0.62, 0.52, 0.42), "halls": 10,
 		"camps": [["ogre_brute", 32, 34, 2], ["ogre_shaman", 33, 35, 2], ["ogre_smasher", 35, 37, 2]],
 		"champion": ["gorvak", 37]},
-	"drowned_grotto": {"name": "Drowned Grotto", "region": "Mirewood Fen", "near": Vector2i(296, 226),
+	"drowned_grotto": {"name": "Drowned Grotto", "region": "Mirewood Fen", "near": Vector2i(296, 226), "below": Vector2i(2847, 193),
 		"size": Vector2i(58, 42), "min_level": 35, "max_level": 40, "ambient": Color(0.42, 0.56, 0.5), "halls": 10,
 		"camps": [["bog_troll", 35, 37, 2], ["grotto_leech", 36, 38, 2], ["drowned_priest", 38, 40, 2]],
 		"champion": ["drowned_abbess", 40]},
@@ -40,7 +44,7 @@ const CAVES: Dictionary = {
 	# Not an elite cave: the Rimewater Trench under the frost isles' sea ice holds normal monsters
 	# in dense camps of five, a fast level-35 farm (about 270 experience a kill) with rare
 	# level-35 gear among the fishfolk and crabs.
-	"rimewater_trench": {"name": "Rimewater Trench", "region": "Rimewater Floes", "near": Vector2i(112, 532), "elite": false,
+	"rimewater_trench": {"name": "Rimewater Trench", "region": "Rimewater Floes", "near": Vector2i(112, 812), "elite": false, "below": Vector2i(2665, 788),
 		"size": Vector2i(58, 42), "min_level": 34, "max_level": 37, "ambient": Color(0.5, 0.64, 0.78), "halls": 11,
 		"camps": [["trench_crab", 34, 35, 5], ["icetide_raider", 35, 36, 5], ["icetide_shaman", 36, 37, 5]],
 		"champion": ["grimclaw", 37]},
@@ -52,17 +56,24 @@ const CAVES: Dictionary = {
 	# Silverwood's two great farming caves (docs/plan/40-archipelago.md): far bigger than the elite
 	# caves, dense camps of normal monsters hall after hall for experience and loot. Placeholder
 	# monsters of levels 45-50 until the island's own band (50-60) is added, with a boss each.
-	"thornroot_hollows": {"name": "Thornroot Hollows", "region": "Silverwood", "near": Vector2i(690, 215), "elite": false,
-		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.52, 0.6, 0.44), "halls": 200,
+	"thornroot_hollows": {"name": "Thornroot Hollows", "region": "Silverwood", "near": Vector2i(950, 215), "elite": false, "below": Vector2i(3507, 132),
+		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.8, 0.76, 0.68), "halls": 200,
 		"camps": [["dire_bear", 45, 47, 5], ["wraith_knight", 46, 48, 5], ["behemoth", 48, 50, 5]]},
-	"moonwell_deeps": {"name": "Moonwell Deeps", "region": "Silverwood", "near": Vector2i(600, 95), "elite": false,
-		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.44, 0.52, 0.68), "halls": 200,
+	"moonwell_deeps": {"name": "Moonwell Deeps", "region": "Silverwood", "near": Vector2i(860, 95), "elite": false,
+		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.72, 0.76, 0.84), "halls": 200,
 		"camps": [["hollow_knight", 45, 47, 5], ["reedfang", 46, 48, 5], ["mire_stalker", 47, 50, 5]]},
 }
 
 
-## The cave's area, walls included.
+## The cave's area, walls included: on the floor below for a moved cave, else in the band.
 static func rect(id: String) -> Rect2i:
+	if CAVES[id].has("below"):
+		return Rect2i(CAVES[id]["below"], CAVES[id]["size"])
+	return band_rect(id)
+
+
+## Where the cave lies (or lay, before it moved below) in the band, stacked in ORDER.
+static func band_rect(id: String) -> Rect2i:
 	var y: int = 0
 	for other: String in ORDER:
 		if other == id:

@@ -47,7 +47,26 @@ func after_move(id: int, now: float) -> Array:
 		return enter_cave(id, World.CAVE_MOUTHS[cell], now)
 	if World.terrain(cell) == "^" and World.zone_at(cell).has("cave"):
 		return leave_cave(id, World.zone_at(cell)["cave"], now)
+	if World.HOLES.has(cell):
+		return climb(id, cell, now)
 	return []
+
+
+## Down a hole or ladder to the floor below, or up its stairs to the surface (World.HOLES): out
+## beside the way at the other end, so the next step does not take you back.
+func climb(id: int, cell: Vector2i, now: float) -> Array:
+	var other: Vector2i = World.HOLES[cell]
+	var events: Array = []
+	_bounce_to(id, other, now, events)
+	var place: Dictionary = World.location_at(world.players[id]["cell"])
+	var text: String
+	if World.terrain(other) == "^":
+		text = "You climb down into %s (levels %d-%d)." % [place.get("name", "the dark"), place.get("min_level", 0),
+			place.get("max_level", 0)]
+	else:
+		text = "You climb back up into %s." % place.get("name", "the open air")
+	events.append({"kind": "message", "id": id, "text": text})
+	return events
 
 
 ## Down a cave mouth to the shared cave's stairs up (game/data/caves.gd): no copies, no owner.

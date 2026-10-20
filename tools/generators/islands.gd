@@ -30,10 +30,10 @@ const ORDER: Array[String] = ["silverwood"]
 ## levels: the placeholder band; port: the mainland ferryman the harbour sails to, and the fare.
 const ISLANDS: Dictionary = {
 	"silverwood": {
-		"rect": Rect2i(500, 60, 240, 220), "seed": 4100,
-		"capital": {"name": "Aldmoor", "at": Vector2i(528, 140), "ferryman": "Ferryman Edric",
+		"rect": Rect2i(760, 60, 240, 220), "seed": 4100,
+		"capital": {"name": "Aldmoor", "at": Vector2i(788, 140), "ferryman": "Ferryman Edric",
 			"vendor": "Quartermaster Hale", "artisan": "Master Brannoc"},
-		"town": {"name": "Fernhollow", "at": Vector2i(660, 130), "vendor": "Trader Wynne", "artisan": "Woodwright Ilsa"},
+		"town": {"name": "Fernhollow", "at": Vector2i(920, 130), "vendor": "Trader Wynne", "artisan": "Woodwright Ilsa"},
 		"port": ["cinder_landing", 90],
 		"levels": Vector2i(45, 50),
 		"camps": [["dire_bear", 3], ["harpy", 3], ["wraith_knight", 2], ["hollow_knight", 2], ["behemoth", 1]],

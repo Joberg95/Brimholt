@@ -59,7 +59,7 @@ func _run() -> void:
 	_place(_camp_of("outlaw_archer"))
 	await _scene("hunt")
 	me["level"] = 35
-	_place(Vector2i(80, 466))
+	_place(Vector2i(80, 746))
 	await _scene("isles")
 	me["level"] = Balance.MAX_LEVEL
 	game.raid_local(true)

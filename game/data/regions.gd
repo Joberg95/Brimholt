@@ -24,12 +24,22 @@ const REGIONS: Array = [
 	["Mirewood Fen", Vector2i(304, 232), "Drowned forest of stalkers and reedfangs"],
 	["Gloamwood", Vector2i(196, 344), "A dusk-dark wood on the southern edge"],
 	["Lastlight Downs", Vector2i(42, 346), "Windswept downs above the southern port"],
+	# The new land east and south of the heartland, levels 1-30 (tools/generators/mainland.gd).
+	["Bracken Leas", Vector2i(560, 560), "Open leas and vole burrows round Brackenford"],
+	["Hazel Downs", Vector2i(560, 420), "Rolling downs where boars root and bandits lie in wait"],
+	["Wolfholt", Vector2i(530, 300), "A deep holt where the grey wolves den"],
+	["Grimtusk Hold", Vector2i(552, 247), "Orc country round the warlord's stone hold"],
+	["Kestrel Heights", Vector2i(520, 180), "Windy heights of outlaws, bears, and harpies"],
+	["Greycrag Peaks", Vector2i(520, 60), "Bare peaks where the stone itself walks"],
+	["Fernmere", Vector2i(330, 560), "A country of reedy meres and bog lurkers"],
+	["Barrowmoor", Vector2i(200, 540), "Old barrows on the heath, watched by archers"],
+	["Saltreed Marsh", Vector2i(90, 470), "Salt marsh on the bay where lizardfolk hunt"],
 	# The frost isles (Biomes.ISLES): their tiles only ever belong to these.
-	["Hrimfold Tundra", Vector2i(52, 476), "Snowfields and fir woods round the port of Hrimvik"],
-	["Wolfskerry", Vector2i(128, 452), "A wind-scoured skerry where wolves and walruses hunt"],
-	["Rimewater Floes", Vector2i(104, 528), "Broken sea ice over the Rimewater Trench"],
+	["Hrimfold Tundra", Vector2i(52, 756), "Snowfields and fir woods round the port of Hrimvik"],
+	["Wolfskerry", Vector2i(128, 732), "A wind-scoured skerry where wolves and walruses hunt"],
+	["Rimewater Floes", Vector2i(104, 808), "Broken sea ice over the Rimewater Trench"],
 	# The archipelago (docs/plan/40-archipelago.md, tools/generators/islands.gd).
-	["Silverwood", Vector2i(640, 170), "Old elven woods and still lakes round the castle of Aldmoor"],
+	["Silverwood", Vector2i(900, 170), "Old elven woods and still lakes round the castle of Aldmoor"],
 ]
 ## Shown for desert tiles, whatever the nearest anchor.
 const DESERT: String = "Sunscar Dunes"

@@ -46,6 +46,9 @@ const QUEST_GIVERS: Array = [
 	["cellarmaster_pell", "Cellarmaster Pell", "Cinder Crossing", Vector2i(15, 5), Vector2i.DOWN],
 	["sexton_wren", "Sexton Wren", "Ashford", Vector2i(189, 127), Vector2i.RIGHT],
 	["foreman_dagny", "Foreman Dagny", "Highmoor", Vector2i(337, 75), Vector2i.RIGHT],
+	["sergeant_brenna", "Sergeant Brenna", "Aldmoor", Vector2i(806, 156), Vector2i.LEFT],
+	# Brackenford's square: the Grimtusk Hold's tasks (tools/generators/orcs.gd).
+	["scout_rhydda", "Scout Rhydda", "Brackenford", Vector2i(520, 510), Vector2i.LEFT],
 	["trapper_maud", "Trapper Maud", "Thornfield Wilds", Vector2i(85, 165), Vector2i.LEFT],
 	# Quest hubs: one giver per hunting band, on the plaza of the town nearest its monsters.
 	["harbourmaster_ilse", "Harbourmaster Ilse", "Cinder Crossing", Vector2i(33, 48), Vector2i.UP],
@@ -65,8 +68,8 @@ const QUEST_GIVERS: Array = [
 	["tidewarden_neve", "Tidewarden Neve", "Emberfall", Vector2i(284, 192), Vector2i.DOWN],
 	["forgewarden_kel", "Forgewarden Kel", "Dunmere", Vector2i(196, 272), Vector2i.UP],
 	# The frost isles: Hrimvik's square (tools/generators/frost_isles.gd).
-	["huntswoman_eyra", "Huntswoman Eyra", "Hrimvik", Vector2i(75, 465), Vector2i.DOWN],
-	["trenchwarden_olav", "Trenchwarden Olav", "Hrimvik", Vector2i(79, 465), Vector2i.DOWN],
+	["huntswoman_eyra", "Huntswoman Eyra", "Hrimvik", Vector2i(75, 745), Vector2i.DOWN],
+	["trenchwarden_olav", "Trenchwarden Olav", "Hrimvik", Vector2i(79, 745), Vector2i.DOWN],
 	# Cinder Crossing's training hall (its old bank house): the trial master by the door, and
 	# one vocation trainer in each corner (Quests.TRAINERS).
 	["trial_master", "Master Hesk", "Cinder Crossing", Vector2i(21, 12), Vector2i.DOWN],
@@ -76,7 +79,7 @@ const QUEST_GIVERS: Array = [
 	["trainer_druid", "Elder Fenna", "Cinder Crossing", Vector2i(22, 16), Vector2i.LEFT],
 ]
 ## Ground a quest giver may stand on.
-const STANDING: String = ".,:="
+const STANDING: String = ".,:=F"
 ## Terrain patches: top-left cell and rows; a space keeps the cell as it is.
 const PATCHES: Array = [
 	# Cinder Crossing's shop in the south-west corner of the town walls, door to the east.
