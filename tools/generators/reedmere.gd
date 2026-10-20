@@ -56,15 +56,13 @@ const WAYSTONE_CELL: Vector2i = Vector2i(145, 199)
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = rebuild(scene_root)
 	var error: Error = OK
 	if changed > 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Rebuilt Reedmere: %d tiles changed in %s (%s)" % [changed, SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK and changed >= 0 else 1)
 
 

@@ -13,6 +13,7 @@ extends SceneTree
 const World = preload("res://game/core/world.gd")
 const ZONE_SCRIPT: Script = preload("res://game/maps/markers/zone.gd")
 const MONSTER_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const ZONE_NAME: String = "The Hollow Reach"
 ## Perpetual violet gloom: the zone's light multiplies the time of day.
@@ -44,13 +45,11 @@ const SPAWNS: Array = [
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	apply(scene_root)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Painted %s into %s (%s)" % [ZONE_NAME, SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

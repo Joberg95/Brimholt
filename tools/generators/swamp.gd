@@ -18,10 +18,10 @@ const POOL_CLEARANCE: int = 5
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	if scene_root.has_meta("swamp"):
 		print("The swamp is already painted into %s" % SCENE_PATH)
-		scene_root.free()
+		MapIO.free_scene(scene_root)
 		quit(0)
 		return
 	_prepare(scene_root)
@@ -55,11 +55,9 @@ func _initialize() -> void:
 					_paint(at, "b" if dx == 0 or dy == 0 else "~")
 					changed += 1
 	scene_root.set_meta("swamp", true)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Painted the swamp: %d tiles, %d pools, in %s (%s)" % [changed, pools.size(), SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

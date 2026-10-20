@@ -47,6 +47,12 @@ Match these looks closely; draw every pixel here.
   rounded grey setts with a lighter curb where they meet walls or grass; street lamps with a
   real flame, barrels, signs on brackets, flower boxes. Streets are wide and laid out on a
   grid with squares.
+- **Castles** (the owner's main reference for cities, docs/plan/40-archipelago.md). Thick
+  walls of rounded grey fieldstones a full tile tall, cream sandstone floor flags, a red carpet
+  with a gold fringe, rows of square stone pillars casting long shadows, red banners with a gold
+  crown, wall torches, knight statues, gargoyles on plinths at the gate, potted plants and flower
+  vases, light stone stairs; living rooms with bookcases, chests, a bed, table and chairs with a
+  candelabra. The keep's outline steps in and out instead of being one box.
 - **Interiors.** Stone-tile or plank floors, light-wood counters in L shapes, stairs as
   lighter steps, crates, chests, a shield or banner on the wall, a fenced garden with
   flowers. Furnished but readable: never cover every tile.

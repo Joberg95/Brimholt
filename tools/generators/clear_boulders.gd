@@ -9,15 +9,13 @@ const GROUND: String = ".,:d"
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = clear(scene_root)
 	var error: Error = OK
 	if changed > 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Cleared %d boulders from %s (%s)" % [changed, SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

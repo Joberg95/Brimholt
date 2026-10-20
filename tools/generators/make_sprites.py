@@ -35,7 +35,7 @@ ITEMS = {item["id"]: item for item in CATALOG}
 ITEM_ORDER = tuple(ITEMS)
 VISIBLE_SLOTS = ("helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand")
 # Map editor palette order; must match TERRAINS in tools/generators/make_map.gd.
-TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W", "m", "U", "s", "P")
+TERRAINS = (".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W", "m", "U", "s", "P", "F", "Y")
 
 
 def rgba(value, alpha=255):
@@ -2071,6 +2071,7 @@ import pixel_hafted  # noqa: E402
 import pixel_capes  # noqa: E402
 import pixel_packs  # noqa: E402
 import pixel_food  # noqa: E402
+import pixel_floors  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -3457,43 +3458,33 @@ def water_tile(frame):
     return image
 
 
-def edge_overlay(kind):
-    """North-edge overlay; rotated for the other sides."""
-    rng = random.Random({"shore": 400, "sand": 450}.get(kind, 500))
+def floor_tile(kind, variant=0):
+    """One hand-pixelled floor tile from pixel_floors.py as an Image."""
     image = Image(TILE, TILE)
-    if kind == "sand":
-        # Dry grass creeping onto sand: a ragged sun-bleached fringe with a few loose blades.
-        dry = (blend(GRASS[3], SAND[0], 0.35), blend(GRASS[0], SAND[1], 0.3), blend(GRASS[2], SAND[3], 0.25))
-        depth = 2
-        for x in range(TILE):
-            depth = max(1, min(4, depth + rng.choice((-1, 0, 0, 1))))
-            for y in range(depth):
-                image.set(x, y, dry[1] if y < depth - 1 else dry[2])
-            if rng.random() < 0.18:
-                for y in range(depth, depth + rng.choice((1, 2, 3))):
-                    image.set(x, y, dry[0])
-            image.set(x, depth, SAND[3][:3] + (90,))
-        return image
-    for x in range(TILE):
-        if kind == "shore":
-            image.set(x, 0, WATER[1] if rng.random() < 0.85 else WATER[2])
-            image.set(x, 1, WATER[3][:3] + (190,))
-            image.set(x, 2, WATER[3][:3] + (110,))
-            image.set(x, 3, WATER[3][:3] + (50,))
-        else:
-            depth = rng.choice((1, 2, 2, 3))
-            for y in range(depth):
-                image.set(x, y, GRASS[0] if y < depth - 1 else GRASS[2])
-            image.set(x, depth, DIRT[3][:3] + (150,))
+    image.pixels = pixel_floors.tile(kind, variant)
     return image
 
 
-def edge_set(kind):
-    north = edge_overlay(kind)
-    east = north.rotated()
-    south = east.rotated()
-    west = south.rotated()
-    return [north, east, south, west]
+def floor_tiles():
+    """tiles.png in index order (SpriteArt's *_TILE constants): grass, dirt, water frames, eight
+    blank cells, sand, cobble, horizontal and vertical planks, dusk soil, obsidian, cave floor,
+    a ladder opening, a ladder up, rock steps up, three blank cells, gravel, the cave hole, cellar floor, kerbs, bog, snow,
+    snowy cobble, castle sandstone flags, and the 16 carpet tiles by open sides. The ways down and up (ladders, rock steps, the cave hole) are overlays."""
+    def four(kind):
+        return [floor_tile(kind, variant) for variant in range(4)]
+    return (four("grass") + four("dirt") + four("water") + unused_cells(8) + four("sand") + four("cobble")
+            + four("plank") + four("dusk") + four("obsidian") + four("cave")
+            + [floor_tile("ladder_down"), floor_tile("ladder_up"), floor_tile("rock_steps")] + unused_cells(3)
+            + four("gravel")
+            + [floor_tile("cave_hole")] + four("cellar") + four("curb") + four("bog") + four("snow")
+            + four("snow_cobble") + four("flags") + [floor_tile("carpet", mask) for mask in range(16)]
+            + four("cave_earth"))
+
+
+def unused_cells(count):
+    """Blank cells where tiles.png held the dirt, shore, and dry-grass edge overlays, which the
+    terrain shader's blended edges replaced; kept so the later tiles keep their indices."""
+    return [Image(TILE, TILE) for _ in range(count)]
 
 
 SAND = (rgba("ac9c76"), rgba("9d8e6b"), rgba("c0ae86"), rgba("837759"))
@@ -4209,6 +4200,8 @@ def terrain_palette():
     fir_tile = snow_tile(1)
     fir_tile.over(snowy_fir(0).crop(16, 52, TILE, TILE))
     tiles["P"] = fir_tile
+    tiles["F"] = floor_tile("flags", 0)
+    tiles["Y"] = floor_tile("carpet", 15)
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
@@ -4870,6 +4863,126 @@ def thin_wall(mask, stone=None, height=WALL - TILE):
     return image
 
 
+def thin_wall_fill(stone=None):
+    """The top of a thin-wall block: where four walls meet in a 2 x 2 square, their bands leave a
+    gap between them, and looking down it shows the faces behind, so a thick wall read as a comb
+    of notches. This patch (in the frame of the square's north-west wall, at the walls' full
+    height) closes the gap with the same top surface, one pixel over each band's edge, so a block
+    of walls reads as one mass. SpriteArt.draw_wall draws it over that wall."""
+    top_tones = (stone or STONE)[0]
+    lo, hi = THIN_BAND
+    image = Image(TILE + HOUSE_RAISE, TILE + HOUSE_RAISE)
+    for y in range(hi - 1, TILE + lo + 1):
+        for x in range(hi - 1, TILE + lo + 1):
+            course = x // 6
+            color = top_tones[0]
+            if (x + y * 3 + course * 5) % 11 == 0:
+                color = top_tones[2]
+            elif (x * 7 + y) % 13 == 0:
+                color = top_tones[1]
+            image.set(x, y, color)
+    return image
+
+
+# Castle keeps (the owner's castle reference, docs/plan/40-archipelago.md): thick walls of rounded
+# grey fieldstones, light on top and the upper left, dark mortar between the stones.
+FIELD_TOP = (rgba("cbc8bf"), rgba("b4b1a7"), rgba("9d9a90"), rgba("86837a"))
+FIELD_SOUTH = (rgba("a29f96"), rgba("8c8980"), rgba("76736b"), rgba("5f5d56"))
+FIELD_EAST = (rgba("84817a"), rgba("6f6d66"), rgba("5b5953"), rgba("494843"))
+FIELD_MORTAR = (rgba("5b5a54"), rgba("3d3c37"), rgba("2f2e2a"))
+
+
+def _fieldstone(u, v, seed, width=8, height=6):
+    """Rubble masonry at a surface point: (stone tone 0-3 or -1 for mortar, edge) where edge is 1 on
+    a stone's lit upper-left rim and 2 on its shaded lower-right. Stones sit on a jittered grid that
+    repeats every TILE px along u, so walls join from tile to tile."""
+    columns = TILE // width
+    row = math.floor(v / height)
+    best, second, owner = 1e9, 1e9, None
+    for j in (row - 1, row, row + 1):
+        shift = (width // 2) if j % 2 else 0
+        base_i = math.floor((u - shift) / width)
+        for i in (base_i - 1, base_i, base_i + 1):
+            key = (i % columns, j)
+            jx = (_grain(key[0], key[1], seed) - 0.5) * width * 0.5
+            jy = (_grain(key[0], key[1], seed + 7) - 0.5) * height * 0.45
+            cx, cy = i * width + shift + width / 2 + jx, j * height + height / 2 + jy
+            d = ((u - cx) / width) ** 2 * 1.4 + ((v - cy) / height) ** 2
+            if d < best:
+                best, second, owner = d, best, key
+            elif d < second:
+                second = d
+    if second - best < 0.16:
+        return -1, 0
+    tone = int(_grain(owner[0], owner[1], seed + 13) * 3)
+    near = second - best
+    edge = 0
+    if near < 0.32:
+        # Which side of the stone: compare with a point a little up-left.
+        edge = 1 if (u + v) % 7 < 4 and best > 0.15 else 2
+    return tone, edge
+
+
+def _field_color(ramp, mortar, u, v, seed):
+    tone, edge = _fieldstone(u, v, seed)
+    if tone < 0:
+        return mortar
+    if edge == 1:
+        return ramp[max(0, tone - 1)]
+    if edge == 2:
+        return ramp[min(3, tone + 1)]
+    return ramp[tone]
+
+
+def fieldstone_wall(mask, height=32):
+    """A castle keep's wall: the thin wall's shape (thin_wall: a band through the tile centre
+    reaching each connected side, raised `height` px with its south and east faces showing) in
+    rounded grey fieldstones: the top lightest, the south face mid, the east face darker, dark
+    mortar between the stones and an outline along the foot."""
+    lo, hi = THIN_BAND
+    shape = set(box(lo, lo, hi - lo, hi - lo))
+    for bit, area in ((1, box(lo, 0, hi - lo, lo)), (2, box(0, lo, lo, hi - lo)),
+                      (4, box(lo, hi, hi - lo, TILE - hi)), (8, box(hi, lo, TILE - hi, hi - lo))):
+        if mask & bit:
+            shape |= set(area)
+    image = Image(TILE + height, TILE + height)
+    for k in range(height, 0, -1):
+        up = height - k
+        for x, y in shape:
+            if (x + 1, y) in shape and (x, y + 1) in shape:
+                continue
+            if (x, y + 1) not in shape:
+                color = _field_color(FIELD_SOUTH, FIELD_MORTAR[1], x, up, 31)
+            else:
+                color = _field_color(FIELD_EAST, FIELD_MORTAR[2], y, up, 37)
+            if k == height:
+                color = OUTLINE
+            image.set(x + k, y + k, color)
+    for x, y in shape:
+        color = _field_color(FIELD_TOP, FIELD_MORTAR[0], x, y * 1.2, 41)
+        edge = ((x, y - 1) not in shape and y > 0) or ((x - 1, y) not in shape and x > 0) \
+            or ((x, y + 1) not in shape and y < TILE - 1) or ((x + 1, y) not in shape and x < TILE - 1)
+        if edge:
+            color = FIELD_TOP[3]
+        image.set(x, y, color)
+    for x, y in shape:
+        for dx, dy in ((0, -1), (-1, 0)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < TILE and 0 <= ny < TILE and (nx, ny) not in shape and image.get(nx, ny) is None:
+                image.set(nx, ny, OUTLINE)
+    return image
+
+
+def fieldstone_fill():
+    """The top of a fieldstone wall block (thin_wall_fill's job for the keep's walls)."""
+    lo, hi = THIN_BAND
+    image = Image(TILE + HOUSE_RAISE, TILE + HOUSE_RAISE)
+    for y in range(hi - 1, TILE + lo + 1):
+        for x in range(hi - 1, TILE + lo + 1):
+            image.set(x, y, _field_color(FIELD_TOP, FIELD_MORTAR[0], x % TILE, y * 1.2, 41))
+    return image
+
+
 DOOR_WOOD = (rgba("b07a44"), rgba("8f6034"), rgba("6a4424"), rgba("4a2e18"))
 
 
@@ -4881,12 +4994,12 @@ HOUSE_RAISE = 32
 HOUSE_DOOR = (4, 28, 29, 21)
 
 
-def house_door(vertical):
+def house_door(vertical, base=None):
     """A doorway in a house wall, Tibia-style: the wall runs on over it at full height and its
     visible face (south for a west-east wall, east for a north-south one) is cut by a timber-framed
     opening nearly a tile wide and as tall as a person, closed by an iron-banded plank door. It
     leans with the wall like every raised face, and one frame serves doorways facing either way."""
-    image = thin_wall(5 if vertical else 10, height=HOUSE_RAISE)
+    image = base(5 if vertical else 10) if base else thin_wall(5 if vertical else 10, height=HOUSE_RAISE)
     hi = THIN_BAND[1]
     left, right, top, spring = HOUSE_DOOR
     middle, span = (left + right - 1) / 2, (right - left) / 2
@@ -4943,11 +5056,21 @@ FURNITURE_KINDS = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books
                    # Streets (World._decorate_streets): lamp posts, a well on each square, benches, stalls.
                    "lamp_post", "well", "bench", "stall",
                    # Seen from behind: a market row facing north, a bench facing the fountain.
-                   "stall_back", "bench_back"]
+                   "stall_back", "bench_back",
+                   # Castles (Decor markers, docs/plan/40-archipelago.md).
+                   "pillar", "knight_statue", "gargoyle", "bush", "flower_vase", "potted_palm", "candelabra",
+                   "fruit_table", "stove", "throne"]
 OAK = (rgba("a07a4c"), rgba("82603a"), rgba("5f4429"), rgba("3f2c1b"))
 IRON = (rgba("8c8e8c"), rgba("5d605f"), rgba("3a3c3c"))
 
 
+
+
+def wall_decor(kind):
+    """A 32x32 wall decoration (banner, torch, painting) from props.py, hung on a wall's face."""
+    image = Image(TILE, TILE)
+    image.pixels = props.wall_decor(kind)
+    return image
 
 
 def furniture(kind):
@@ -5843,26 +5966,15 @@ def main():
                                     MISSILE_FRAMES, MISSILE_SIZE),
         "rune_fx.png": sheet([rune_fx(element, frame) for element in RUNE_FX_ELEMENTS for frame in range(RUNE_FX_FRAMES)],
                              RUNE_FX_FRAMES, TILE),
-        "tiles.png": sheet([grass_tile(v) for v in range(4)] + [dirt_tile(v) for v in range(4)]
-                           + [water_tile(f) for f in range(4)] + edge_set("dirt") + edge_set("shore")
-                           + [sand_tile(v) for v in range(4)] + [cobble_tile(v) for v in range(4)]
-                           + [plank_tile(False, 0), plank_tile(False, 1), plank_tile(True, 0), plank_tile(True, 1)]
-                           + [dusk_tile(v) for v in range(4)] + [obsidian_tile(v) for v in range(4)]
-                           + [cave_tile(v) for v in range(4)] + [stairs_tile(True), stairs_tile(False)]
-                           + edge_set("sand") + [gravel_tile(v) for v in range(4)] + [cave_hole_tile()]
-                           + [cellar_floor_tile(v) for v in range(4)]
-                           + [curb_overlay(), curb_overlay().rotated(), curb_overlay().rotated().rotated(),
-                              curb_overlay().rotated().rotated().rotated()]
-                           + [bog_tile(v) for v in range(4)]
-                           + [snow_tile(v) for v in range(4)] + [snow_cobble_tile(v) for v in range(4)],
-                           4, TILE),
+        "tiles.png": sheet(floor_tiles(), 4, TILE),
         "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
                                  + [desert_plant(v) for v in range(3)] + [waystone()]
                                  + [boulder(v) for v in range(3)]),
         "mushrooms.png": sheet_row([mushroom(v) for v in range(3)]),
         "firs.png": sheet_row([snowy_fir(v) for v in range(3)]),
-        "log_walls.png": sheet([thin_wall(mask, stone=LOG_WOOD, height=HOUSE_RAISE) for mask in range(16)], 16,
+        "log_walls.png": sheet([thin_wall(mask, stone=LOG_WOOD, height=HOUSE_RAISE) for mask in range(16)]
+                               + [Image(TILE + HOUSE_RAISE, TILE + HOUSE_RAISE)] * 2 + [thin_wall_fill(LOG_WOOD)], 19,
                                TILE + HOUSE_RAISE),
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan"), sign("warden")]),
@@ -5870,8 +5982,13 @@ def main():
         "menu_icons.png": sheet_row([menu_icon(kind) for kind in MENU_ICONS]),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
         "house_walls.png": sheet([thin_wall(mask, height=HOUSE_RAISE) for mask in range(16)]
-                                  + [house_door(False), house_door(True)], 18, TILE + HOUSE_RAISE),
-        "cellar_walls.png": sheet([thin_wall(mask, stone=CELLAR_STONE, height=HOUSE_RAISE) for mask in range(16)], 16,
+                                  + [house_door(False), house_door(True), thin_wall_fill()], 19, TILE + HOUSE_RAISE),
+        "fieldstone_walls.png": sheet([fieldstone_wall(mask) for mask in range(16)]
+                                      + [house_door(False, fieldstone_wall), house_door(True, fieldstone_wall), fieldstone_fill()],
+                                      19, TILE + HOUSE_RAISE),
+        "wall_decor.png": sheet_row([wall_decor(kind) for kind in props.WALL_DECOR_KINDS]),
+        "cellar_walls.png": sheet([thin_wall(mask, stone=CELLAR_STONE, height=HOUSE_RAISE) for mask in range(16)]
+                                  + [Image(TILE + HOUSE_RAISE, TILE + HOUSE_RAISE)] * 2 + [thin_wall_fill(CELLAR_STONE)], 19,
                                   TILE + HOUSE_RAISE),
         "terrain_palette.png": terrain_palette(),
         "ores.png": sheet([ore_vein(band, glint) for glint in (False, True) for band in range(5)], 5, WALL),

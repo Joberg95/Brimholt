@@ -11,6 +11,7 @@ extends SceneTree
 
 const SIZE: Vector2i = Vector2i(384, 384)
 const TILE: int = 32
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILESET_PATH: String = "res://game/maps/terrain.tres"
 const PALETTE: String = "res://assets/sprites/terrain_palette.png"
@@ -56,7 +57,7 @@ const TOWN_DUNGEONS: Dictionary = {"ashford_crypt": ["ashford", Vector2i(-9, 10)
 ## Cinder Crossing's vendor (and a spare spot) flank the south road.
 const CINDER_TOWNSFOLK: Array[Vector2i] = [Vector2i(9, 13), Vector2i(14, 16)]
 ## Palette order in terrain_palette.png; the tile set stores each as custom data "terrain".
-const TERRAINS: Array[String] = [".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W", "m", "U", "s", "P"]
+const TERRAINS: Array[String] = [".", ",", "~", "#", "T", ":", "=", "b", "d", "o", "O", "D", "c", "C", "v", "^", "K", "R", "L", "W", "m", "U", "s", "P", "F", "Y"]
 const WALKABLE: String = ".,:=b"
 ## The great lake is the old one scaled by LAKE_SCALE around LAKE_CENTER.
 const LAKE_SCALE: float = 0.8
@@ -788,11 +789,9 @@ func _save(items: Array) -> void:
 		_add(quest_root if person[5] == "quest" else folk_root, marker, scene_root)
 	TownPainter.apply(scene_root)
 	IslandPainter.apply(scene_root)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Saved %s (%s)" % [SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 
 
 func dungeon_entrances() -> Dictionary:

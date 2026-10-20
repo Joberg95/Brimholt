@@ -17,10 +17,10 @@ const ROOM_PER_MONSTER: float = 2.0
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	if scene_root.has_meta("camp_density"):
 		print("Camp density already applied to %s" % SCENE_PATH)
-		scene_root.free()
+		MapIO.free_scene(scene_root)
 		quit(0)
 		return
 	_prepare(scene_root)
@@ -42,12 +42,10 @@ func _initialize() -> void:
 		marker.set("radius", radius)
 		changed += 1
 	scene_root.set_meta("camp_density", true)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Tightened %d camps to 5-7 monsters (%d kept a wider radius) in %s (%s)" % [changed, wide, SCENE_PATH,
 		error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

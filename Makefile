@@ -10,7 +10,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim duel-eval train-setup train export-policy bench playtest check \
-	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -139,8 +139,8 @@ void-throne: ## Build the Void Throne arena and its gateway from the Hollow Sanc
 reedmere: ## Rebuild Reedmere as an open walled town (keeps the east half; a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/reedmere.gd
 
-world-map: ## Bake the painted world map (assets/sprites/world_map.png) after editing the map
-	$(GODOT) --headless --path . --script res://tools/generators/world_map.gd
+world-map: ## Bake the painted world map pages (assets/sprites/world_map/) after editing the map; only changed pages are painted again ([FORCE=1] paints all)
+	$(GODOT) --headless --path . --script res://tools/generators/world_map.gd $(if $(FORCE),-- --force)
 
 camp-density: ## One-time pass: hunting camps from level 11 become tight packs of 5-7
 	$(GODOT) --headless --path . --script res://tools/generators/camp_density.gd
@@ -168,6 +168,15 @@ clear-walls: ## Clear stone walls that belong to no building or town wall (a re-
 
 frost-isles: ## Paint the frost isles and Hrimvik south of the mainland (then make towns town-paths caves world-map)
 	$(GODOT) --headless --path . --script res://tools/generators/frost_isles.gd
+
+islands: ## Paint the archipelago islands not yet painted (then make towns town-paths world-map; a re-run changes nothing)
+	$(GODOT) --headless --path . --script res://tools/generators/islands.gd
+
+sectors: ## Re-split the overworld terrain into sector scenes (after painting across sectors; a re-run changes nothing)
+	$(GODOT) --headless --path . --script res://tools/generators/sectors.gd
+
+move-bands: ## One-time pass: move the dungeons, the Void Throne, and the caves past the 1920-column overworld (a re-run changes nothing)
+	$(GODOT) --headless --path . --script res://tools/generators/move_bands.gd
 
 caves: ## Carve the elite caves beyond the Void Throne and open their mouths (a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/caves.gd

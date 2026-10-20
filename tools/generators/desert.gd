@@ -12,7 +12,8 @@ extends SceneTree
 const Biomes = preload("res://game/data/biomes.gd")
 ## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## A cell is desert when at least this share of the 7x7 cells around it is sand or plants.
 const SAND_SHARE: float = 0.5
@@ -21,13 +22,11 @@ const PLANTS_PER_HUNDRED: int = 55
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = apply(scene_root)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Painted the desert into %s: %d cells (%s)" % [SCENE_PATH, changed, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

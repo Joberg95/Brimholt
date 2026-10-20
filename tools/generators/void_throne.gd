@@ -15,6 +15,7 @@ const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const MONSTER_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 const FERRY_SCRIPT: Script = preload("res://game/maps/markers/ferryman.gd")
 const ZONE_SCRIPT: Script = preload("res://game/maps/markers/zone.gd")
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const ZONE_NAME: String = "The Void Throne"
 ## Beyond the dungeon band (game/data/dungeons.gd), never reachable on foot.
@@ -26,15 +27,13 @@ const AMBIENT: Color = Color(0.42, 0.32, 0.6)
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = apply(scene_root)
 	var error: Error = OK
 	if changed > 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Built %s: %d changes in %s (%s)" % [ZONE_NAME, changed, SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

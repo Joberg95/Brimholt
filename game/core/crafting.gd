@@ -45,7 +45,7 @@ static func _find_herbs() -> Dictionary:
 		for cell: Vector2i in group:
 			blocked[cell] = true
 	var ground: PackedByteArray = Professions.HERB_GROUND.to_ascii_buffer()
-	var rect: Rect2i = World.OVERWORLD
+	var rect: Rect2i = World.PAINTED
 	for y: int in range(rect.position.y, rect.end.y):
 		for x: int in range(rect.position.x, rect.end.x):
 			var code: int = World.GRID[y * World.GRID_SIZE.x + x]
@@ -60,13 +60,16 @@ static func _find_herbs() -> Dictionary:
 
 static func _find_ores() -> Dictionary:
 	var ores: Dictionary = {}
-	var rect: Rect2i = World.OVERWORLD
+	var rect: Rect2i = World.PAINTED
 	for y: int in range(rect.position.y, rect.end.y):
 		for x: int in range(rect.position.x, rect.end.x):
 			var cell := Vector2i(x, y)
-			var zone: Dictionary = World.zone_at(cell)
 			var tile: String = World.terrain(cell)
-			if tile.is_empty() or not tile in Professions.SOURCES["mining"] or zone.get("town", false) \
+			# The terrain first: it rules out nearly every cell before the zone lookup.
+			if tile.is_empty() or not tile in Professions.SOURCES["mining"]:
+				continue
+			var zone: Dictionary = World.zone_at(cell)
+			if zone.get("town", false) \
 					or zone.get("underground", false) or Professions.resting(cell) \
 					or not Professions.ore_at(cell, tile, World.walkable(cell + Vector2i.DOWN), band_at(cell)):
 				continue

@@ -11,15 +11,16 @@ extends SceneTree
 
 ## Must match World.TERRAINS (the rules check verifies it); World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const TILE_SIZE: int = 32
 const Dungeons = preload("res://game/data/dungeons.gd")
 const ENTRANCE_SCRIPT: Script = preload("res://game/maps/markers/dungeon_entrance.gd")
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var entrances: Dictionary = {}
 	if scene_root.has_node("DungeonEntrances"):
 		for marker: Node2D in scene_root.get_node("DungeonEntrances").get_children():
@@ -29,15 +30,13 @@ func _initialize() -> void:
 			entrances[id] = Dungeons.DUNGEONS[id]["entrance"]
 	if entrances.size() != Dungeons.DUNGEONS.size():
 		printerr("Every dungeon needs a DungeonEntrances marker (found %s)." % entrances.keys())
-		scene_root.free()
+		MapIO.free_scene(scene_root)
 		quit(1)
 		return
 	apply(scene_root, entrances)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Painted %d dungeons into %s (%s)" % [Dungeons.DUNGEONS.size(), SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

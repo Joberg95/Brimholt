@@ -10,7 +10,7 @@ extends "res://tools/generators/landscape.gd"
 
 const Monsters = preload("res://game/data/monsters.gd")
 const SPAWN_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
-const WALKABLE: String = ".,:=bdocv^ms"
+const WALKABLE: String = ".,:=bdocv^msFY"
 ## A camp goes wherever the nearest camp is further than GAP: past that, the game window (15 tiles
 ## across) can show nothing to hunt.
 const GAP: int = 10
@@ -22,7 +22,7 @@ const TOWN_GAP: int = 6
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	_prepare(scene_root)
 	var spawns: Node = scene_root.get_node("MonsterSpawns")
 	var reached: Dictionary = {}
@@ -64,11 +64,9 @@ func _initialize() -> void:
 		placed += 1
 	var error: Error = OK
 	if placed > 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Filled %d empty stretches with camps in %s (%s)" % [placed, SCENE_PATH, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

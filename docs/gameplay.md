@@ -29,7 +29,7 @@ damage), shows experience to the next level, and your status: gold and bank, par
 unjustified kills, town rest, your meal, and relic trophies waiting at a relic keeper. Change gear on the equipment panel; targeting, pick up, gathering (F), the professions window (P), the world map, and the
 health and mana potions (Q and E), the quest list (L), the spell book (B), and the character window (C) have their own keys. The cogwheel at the end of the micro menu opens the **game menu**: the
 connection status, everyone on the host with their class (or title) and level, settings (weather
-effects, damage numbers, fullscreen, kept between sessions), **Leave game** (save and return to
+effects, damage numbers, fullscreen, pixel-perfect scaling, kept between sessions), **Leave game** (save and return to
 the start screen), and **Controls**, where you rebind any action: click a key button, then
 press the new key. Each action has a primary and a secondary key; Backspace clears one,
 Esc cancels, and a key already in use moves to the new action. Keys follow their physical
@@ -664,8 +664,9 @@ thunderstorms with lightning, the same for everyone in the session. Weather is o
 It never rains underground or in the desert, and over Mirewood Fen low cloud and drizzle hang
 whatever the sky does elsewhere. At dusk the lamp posts along the town streets are lit.
 
-The overworld is 384×384 tiles: walking straight across takes about a minute and three
-quarters. Monster camps are dense (about 1,000 monsters, in packs of three or more), so levelling is close to town.
+The heartland, the mainland where everyone starts, is 384×384 tiles: walking straight across
+takes about a minute and three quarters. It lies in the north-west corner of a 1920×1920 overworld
+that new, higher-level regions will fill to the east and south; until then the rest is open sea. Monster camps are dense (about 1,000 monsters, in packs of three or more), so levelling is close to town.
 **Cinder Crossing**, the starting town, is a castle town: a battlemented curtain wall with towers
 runs round it from the keep (the training hall in the north-west corner, its walls castle stone
 with a tower at each corner) to the harbour, with gatehouses where the roads leave to the north,

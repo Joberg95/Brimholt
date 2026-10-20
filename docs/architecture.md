@@ -76,9 +76,11 @@ game/
     vignette.gdshader    Soft dark edge around the game window
     sprite_art.gd        Sprite-sheet regions and character layers
   maps/
-    overworld.tscn       The world, painted in Godot's TileMap editor
+    overworld.tscn       The world's markers, instancing its terrain sectors
+    sectors/             The terrain in 128x128 sectors, painted in Godot's TileMap editor
+    map_io.gd            Loads and saves the map across sectors (World and the generators)
     terrain.tres         Editor tile set (terrain custom data)
-    markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster markers
+    markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster, decor markers
 assets/sprites/          Original generated sprite sheets, imported painted outfits/ and icons/ (+ Godot .import files)
 art/outfits/             Painted outfit sources and manifest.json (imported by make outfits)
 assets/third_party/      CC0 textures and the DejaVu Sans font, with their licenses (CREDITS.md)
@@ -87,7 +89,7 @@ tests/
   integration/           Real ENet peers and the two-bot playthrough
   visual/                Offscreen rendering checks
 tools/
-  generators/            make_sprites.py, import_outfits.gd, make_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, fill_gaps.gd, clear_walls.gd, cobble_towns.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
+  generators/            make_sprites.py, import_outfits.gd, make_map.gd, sectors.gd, move_bands.gd, islands.gd, world_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, fill_gaps.gd, clear_walls.gd, cobble_towns.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
   testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd, duel_eval.gd, bench.gd
   training/              PvP policy training: duel arena and Godot RL Agents env (GDScript), train.py and export_policy.py (docs/bot-training.md)
 addons/                  LimboAI (GDExtension) and the training-only Godot RL Agents plugin
@@ -119,8 +121,8 @@ flowchart LR
 
 ## Authority and networking
 
-`game/core/world.gd` loads the map scene (terrain, spawns, items, ferrymen, zones, monster
-spawns) and owns the item catalog and authoritative movement, inventory, and travel rules.
+`game/core/world.gd` loads the map scene (terrain from its sectors, spawns, items, ferrymen,
+zones, monster spawns) and owns the item catalog and authoritative movement, inventory, and travel rules.
 `game/core/combat.gd` runs targeting, attacks, spells, monster AI, deaths, experience, loot,
 and respawns on the host; `game/data/monsters.gd` and `game/data/spells.gd` are their catalogs. `game/main.gd` handles ENet,
 sender-validated RPCs, the camera, input, and interpolation, and assembles the UI components in
@@ -175,8 +177,16 @@ cannot bind its UDP port or the supplied join address is empty.
 ## Performance and memory
 
 The map can grow without the game slowing down, because only what is near a player costs
-anything. The static map is kept whole (its terrain is a few hundred kilobytes); live entities and
-their work follow the players:
+anything. The static map is kept whole: the 1920×1920 overworld (`Atlas.OVERWORLD_SIZE`) plus the
+dungeon and cave bands right of it is one byte per cell in `World.GRID` (about 4 MB), loaded from
+128×128 sector scenes (`game/maps/map_io.gd`) in under two seconds. Live entities and their work
+follow the players:
+
+- **Painted, not whole**: passes over all the land (bot navigation's `AStarGrid2D`, gathering
+  nodes, the region grid, the checks) cover `World.PAINTED`, the bounding box of every painted
+  overworld cell, not the open sea round it; it grows as new regions are painted.
+- **World map pages**: the world map is baked per sector and the map window loads the pages it
+  looks at (at most `MAX_PAGES`), or the one-pixel-per-tile overview when zoomed far out.
 
 - **Rendering** draws only the visible cells; floors are built in 16-tile chunks near the camera.
 - **Network**: clients get monsters and effects within `main.INTEREST_RADIUS` (24 tiles) only.
@@ -190,8 +200,8 @@ their work follow the players:
   sleeping monsters before, 0.02 ms after). Bots ask `Combat.monsters_near(cell, radius)`
   instead of scanning every monster. Both keep the order monsters were made (descending ids),
   so behaviour is deterministic.
-- **Continents** (`game/data/atlas.gd`, `World.continent_at`) are the world map's sheets,
-  crossed only by boat; the HUD announces arriving on another.
+- **Continents** (`Atlas.CONTINENTS`, `World.continent_at`) are crossed only by boat; the HUD
+  announces arriving on another.
 
 Per-frame and per-tick code must still never scan every monster or ground stack:
 

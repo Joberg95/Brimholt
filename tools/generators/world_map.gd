@@ -1,21 +1,21 @@
 extends SceneTree
-## Bakes the painted world map (assets/sprites/world_map.png, SCALE pixels per map tile, laid out
-## by game/data/atlas.gd: the frost isles west of the mainland)
-## from the map scene, in the art direction's map look: deep blue sea with lighter shallows and a
-## pale line of surf, green land with soft painted variation, forests as clumps of canopy lit from
-## the top-left, grey ridges with a lit and a shaded side, sandy plains and desert, dusky purple
-## for the Hollow Reach, and towns as terracotta roofs on paved streets inside their walls. The
-## game tints PvP zones and draws the markers on top (game/ui/world_maps.gd). The terrain's hash
-## goes to world_map.json, so the rules check notices a map edited since the last bake.
+## Bakes the painted world map in pages (game/data/atlas.gd: one PNG per sector near painted land,
+## Atlas.MAP_SCALE pixels per cell, map tile = world cell) from the map, in the art direction's
+## map look: deep blue sea with lighter shallows and a pale line of surf, green land with soft
+## painted variation, forests as clumps of canopy lit from the top-left, grey ridges with a lit
+## and a shaded side, sandy plains and desert, dusky purple for the Hollow Reach, and towns as
+## terracotta roofs on paved streets inside their walls. The game tints PvP zones and draws the
+## markers on top (game/ui/world_maps.gd). Each page's terrain hash (World.page_hash) goes to
+## pages.json: only pages whose terrain changed are painted again (FORCE=1 paints them all), and
+## the rules check notices a page edited since the last bake. overview.png, the whole overworld
+## at one pixel per cell for zooming far out, is shrunk from the pages.
 ##
-##   godot --headless --path . --script res://tools/generators/world_map.gd
+##   godot --headless --path . --script res://tools/generators/world_map.gd [-- --force]
 
 const World = preload("res://game/core/world.gd")
 const Atlas = preload("res://game/data/atlas.gd")
 const Biomes = preload("res://game/data/biomes.gd")
-const SCALE: int = 4
-const PNG: String = "res://assets/sprites/world_map.png"
-const META: String = "res://assets/sprites/world_map.json"
+const SCALE: int = Atlas.MAP_SCALE
 
 const SEA_DEEP: Color = Color("#2a5680")
 const SEA_SHALLOW: Color = Color("#4a86b0")
@@ -43,23 +43,63 @@ const FIRS: Array[Color] = [Color("#f2f6fa"), Color("#4a6a58"), Color("#2c4636")
 const LOG_WALL: Color = Color("#6a4a2c")
 const SNOW_ROOF: Array[Color] = [Color("#f4f8fc"), Color("#d4dee8"), Color("#8a9aaa")]
 
+## The page being painted's first pixel on the whole map: pixel patterns run on across pages.
+var _page_pixel: Vector2i = Vector2i.ZERO
+
 
 func _initialize() -> void:
-	# The sheets of the atlas (game/data/atlas.gd): the isles west of the mainland, open sea between.
-	var image := Image.create(Atlas.SIZE.x * SCALE, Atlas.SIZE.y * SCALE, false, Image.FORMAT_RGB8)
-	image.fill(SEA_DEEP)
-	for sheet: Dictionary in Atlas.SHEETS:
-		var cells: Rect2i = sheet["cells"]
-		for y: int in range(cells.position.y, cells.end.y):
-			for x: int in range(cells.position.x, cells.end.x):
-				var cell := Vector2i(x, y)
-				_paint_tile(image, cell, (cell - cells.position + sheet["at"]) * SCALE)
-	var error: Error = image.save_png(ProjectSettings.globalize_path(PNG))
-	var meta := FileAccess.open(META, FileAccess.WRITE)
-	meta.store_string(JSON.stringify({"scale": SCALE, "terrain": World.overworld_hash()}, "  ") + "\n")
-	meta.close()
-	print("Baked %s (%dx%d, %s)" % [PNG, image.get_width(), image.get_height(), error_string(error)])
+	var force: bool = "--force" in OS.get_cmdline_user_args()
+	DirAccess.make_dir_recursive_absolute(Atlas.MAP_DIR)
+	var old: Dictionary = {}
+	if FileAccess.file_exists(Atlas.MAP_META):
+		var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(Atlas.MAP_META))
+		if typeof(meta) == TYPE_DICTIONARY and int(meta.get("scale", 0)) == SCALE and typeof(meta.get("pages")) == TYPE_DICTIONARY:
+			old = meta["pages"]
+	var pages: Dictionary = {}
+	var painted: int = 0
+	var error: Error = OK
+	for sector: Vector2i in World.map_pages():
+		var key: String = "%d_%d" % [sector.x, sector.y]
+		var digest: String = World.page_hash(sector)
+		pages[key] = digest
+		if not force and old.get(key, "") == digest and FileAccess.file_exists(Atlas.page_path(sector)):
+			continue
+		var image := Image.create(Atlas.SECTOR * SCALE, Atlas.SECTOR * SCALE, false, Image.FORMAT_RGB8)
+		var origin: Vector2i = Atlas.sector_rect(sector).position
+		_page_pixel = origin * SCALE
+		for y: int in Atlas.SECTOR:
+			for x: int in Atlas.SECTOR:
+				_paint_tile(image, origin + Vector2i(x, y), Vector2i(x, y) * SCALE)
+		var saved: Error = image.save_png(ProjectSettings.globalize_path(Atlas.page_path(sector)))
+		error = saved if saved != OK else error
+		painted += 1
+	# Pages no longer near any land go.
+	for file: String in DirAccess.get_files_at(Atlas.MAP_DIR):
+		var parts: PackedStringArray = file.get_slice(".", 0).split("_")
+		if parts.size() == 2 and file.get_extension() in ["png", "import"] and not pages.has("%s_%s" % [parts[0], parts[1]]):
+			DirAccess.remove_absolute(Atlas.MAP_DIR.path_join(file))
+	if painted > 0 or force or not FileAccess.file_exists(Atlas.MAP_OVERVIEW) or old.size() != pages.size():
+		var saved: Error = _overview(pages.keys()).save_png(ProjectSettings.globalize_path(Atlas.MAP_OVERVIEW))
+		error = saved if saved != OK else error
+	var meta_file := FileAccess.open(Atlas.MAP_META, FileAccess.WRITE)
+	meta_file.store_string(JSON.stringify({"scale": SCALE, "pages": pages}, "  ", true) + "
+")
+	meta_file.close()
+	print("Baked the world map: painted %d of %d pages into %s (%s)" % [painted, pages.size(), Atlas.MAP_DIR, error_string(error)])
 	quit(0 if error == OK else 1)
+
+
+## The whole overworld at one pixel per cell: open sea, with every page shrunk onto it.
+static func _overview(keys: Array) -> Image:
+	var image := Image.create(Atlas.OVERWORLD_SIZE.x, Atlas.OVERWORLD_SIZE.y, false, Image.FORMAT_RGB8)
+	image.fill(SEA_DEEP)
+	for key: String in keys:
+		var sector := Vector2i(int(key.get_slice("_", 0)), int(key.get_slice("_", 1)))
+		var page: Image = Image.load_from_file(ProjectSettings.globalize_path(Atlas.page_path(sector)))
+		page.convert(Image.FORMAT_RGB8)
+		page.resize(Atlas.SECTOR, Atlas.SECTOR, Image.INTERPOLATE_CUBIC)
+		image.blit_rect(page, Rect2i(Vector2i.ZERO, page.get_size()), Atlas.sector_rect(sector).position)
+	return image
 
 
 func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
@@ -67,8 +107,10 @@ func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
 	match tile:
 		"~":
 			var shore: int = _distance_to_land(cell, 3)
+			# Open sea is one flat blue, the same the map draws where no page is needed, so the
+			# pages end without a seam; shallows near land get the soft variation.
 			var water: Color = SEA_DEEP.lerp(SEA_SHALLOW, clampf(1.0 - (shore - 1) / 2.5, 0.0, 1.0)) if shore > 0 else SEA_DEEP
-			_fill(image, corner, _vary(water, cell, 0.03))
+			_fill(image, corner, _vary(water, cell, 0.03) if shore > 0 else water)
 			if shore == 1:
 				# Surf along the shore, on the side facing the land.
 				for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
@@ -119,7 +161,7 @@ func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
 func _fill(image: Image, corner: Vector2i, color: Color) -> void:
 	for y: int in SCALE:
 		for x: int in SCALE:
-			var jitter: float = float(posmod((corner.x + x) * 73 + (corner.y + y) * 151, 17)) / 17.0 - 0.5
+			var jitter: float = float(posmod((_page_pixel.x + corner.x + x) * 73 + (_page_pixel.y + corner.y + y) * 151, 17)) / 17.0 - 0.5
 			image.set_pixelv(corner + Vector2i(x, y), color.lightened(jitter * 0.05) if jitter > 0.0 else color.darkened(-jitter * 0.05))
 
 
@@ -168,7 +210,7 @@ func _roof(image: Image, corner: Vector2i, cell: Vector2i) -> void:
 	var tones: Array[Color] = SNOW_ROOF if Biomes.in_isles(cell) else ROOF
 	for y: int in SCALE:
 		for x: int in SCALE:
-			image.set_pixelv(corner + Vector2i(x, y), tones[1] if (y + corner.y) % 3 else tones[0])
+			image.set_pixelv(corner + Vector2i(x, y), tones[1] if (y + corner.y + _page_pixel.y) % 3 else tones[0])
 	for side: Vector2i in [Vector2i.RIGHT, Vector2i.DOWN]:
 		if World.ROOF_AT.get(cell + side, -1) != index:
 			_edge(image, corner, side, tones[2])

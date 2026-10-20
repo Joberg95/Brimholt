@@ -7,7 +7,8 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/silkhollow.gd
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const DUNGEON: String = "silkhollow"
 ## Trees within this many tiles of the stairway are cleared; up to GLADE_EDGE every other one.
@@ -19,13 +20,11 @@ const TILE: int = 32
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = apply(scene_root)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Opened the way to Silkhollow in %s: %d tiles repainted (%s)" % [SCENE_PATH, changed, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK and changed >= 0 else 1)
 
 

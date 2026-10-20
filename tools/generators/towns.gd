@@ -13,7 +13,8 @@ extends SceneTree
 const Buildings = preload("res://game/data/buildings.gd")
 ## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## The only town with a banker (and so the only bank and depot).
 const BANK_PLACE: String = "Reedmere"
@@ -124,15 +125,13 @@ const MARKER_GROUPS: Array[String] = ["Spawns", "Items", "Ferrymen", "QuestGiver
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = apply(scene_root)
 	var error: Error = OK
 	if changed >= 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Painted the towns into %s: %d changes (%s)" % [SCENE_PATH, changed, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK and changed >= 0 else 1)
 
 

@@ -46,9 +46,9 @@ gdscript/warnings/confusable_local_usage=2
 window/size/viewport_width=1200
 window/size/viewport_height=740
 window/size/window_width_override=1200
-window/size/window_height_override=800
+window/size/window_height_override=740
 window/stretch/mode="canvas_items"
-window/stretch/scale_mode="integer"
+window/stretch/scale_mode="fractional"
 
 [rendering]
 

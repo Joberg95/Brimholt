@@ -21,8 +21,14 @@ const Spells = preload("res://game/data/spells.gd")
 const Professions = preload("res://game/data/professions.gd")
 
 ## Version 2 added armor types; version 1 saves still load and are migrated (_migrate_armor).
-const VERSION: int = 2
-const SUPPORTED_VERSIONS: Array[int] = [1, 2]
+## Version 3 moved the dungeon and cave bands past the 1920-column overworld; older saves standing
+## in them are moved with them (BANDS_MOVED_FROM, BANDS_SHIFT).
+const VERSION: int = 3
+const SUPPORTED_VERSIONS: Array[int] = [1, 2, 3]
+## Before version 3 everything from this column east was a dungeon, the Void Throne, or a cave,
+## and tools/generators/move_bands.gd moved it this many columns east.
+const BANDS_MOVED_FROM: int = 384
+const BANDS_SHIFT: int = 1536
 const DEFAULT_DIR: String = "user://saves"
 ## The host also saves everyone this often, so a crash loses at most this much progress.
 const AUTOSAVE_SECONDS: float = 30.0
@@ -245,6 +251,8 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 	if typeof(cell) == TYPE_ARRAY and cell.size() == 2 and typeof(cell[0]) in [TYPE_INT, TYPE_FLOAT] \
 			and typeof(cell[1]) in [TYPE_INT, TYPE_FLOAT]:
 		var saved_cell := Vector2i(int(cell[0]), int(cell[1]))
+		if _int(data.get("version"), VERSION) < 3 and saved_cell.x >= BANDS_MOVED_FROM:
+			saved_cell.x += BANDS_SHIFT
 		if World.walkable(saved_cell) and not world.occupied(saved_cell, now, id):
 			player["cell"] = saved_cell
 			player["from"] = saved_cell

@@ -14,15 +14,17 @@ extends RefCounted
 ## pitch black: only a held torch lights it. "theme" "cellar" draws its walls in red-brown brick
 ## over a dark brick floor (SpriteArt). Caves are grown by tools/generators/cave_layouts.py.
 
+const Atlas = preload("res://game/data/atlas.gd")
+
 ## Prop symbols in layouts -> furniture kinds (SpriteArt.FURNITURE).
 const PROPS: Dictionary = {"B": "barrel", "X": "crate"}
 
-## First column of the dungeon band; the overworld is everything left of BAND_X - COPY_GAP.
-const BAND_X: int = 388
+const COPY_GAP: int = 4
+## First column of the dungeon band, just past the overworld (Atlas.OVERWORLD_SIZE).
+const BAND_X: int = Atlas.OVERWORLD_SIZE.x + COPY_GAP
 ## Column the band stops before; the Void Throne arena (tools/generators/void_throne.gd) lies past
 ## it, and repainting the band (tools/generators/dungeons.gd) clears only up to here.
-const BAND_END: int = 580
-const COPY_GAP: int = 4
+const BAND_END: int = BAND_X + 192
 const RESET_SECONDS: float = 60.0
 ## Band columns, left to right.
 const ORDER: Array[String] = ["cinder_cellar", "ashford_crypt", "highmoor_mine", "silkhollow"]

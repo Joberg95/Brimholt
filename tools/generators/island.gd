@@ -8,7 +8,8 @@ extends SceneTree
 ## tools/generators/make_map.gd applies the same painter to a freshly generated map.
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const ZONE_NAME: String = "Blackreed Isle"
 const KEEP_PER_HUNDRED: int = 25
@@ -16,13 +17,11 @@ const TILE: int = 32
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = apply(scene_root)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Thinned Blackreed Isle in %s: %d trees cleared (%s)" % [SCENE_PATH, changed, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK and changed >= 0 else 1)
 
 

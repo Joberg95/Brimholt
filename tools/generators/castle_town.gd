@@ -11,7 +11,8 @@ extends SceneTree
 
 ## Must match World.TERRAINS (the rules check verifies it).
 const CobbleTowns = preload("res://tools/generators/cobble_towns.gd")
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILE: int = 32
 ## Wall runs [from, to] (inclusive, straight lines) and the gaps left open in them for the gates.
@@ -67,15 +68,13 @@ const PATCHES: Array = [
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var changed: int = apply(scene_root)
 	var error: Error = OK
 	if changed >= 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Built Cinder Crossing's castle walls into %s: %d cells (%s)" % [SCENE_PATH, changed, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK and changed >= 0 else 1)
 
 

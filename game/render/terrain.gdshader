@@ -21,9 +21,9 @@ void vertex() {
 	map_pixel = VERTEX;
 }
 
-ivec4 cell_data(sampler2D data, ivec2 texel) {
-	return ivec4(round(texelFetch(data, texel, 0) * 255.0));
-}
+// A cell's data texel as 0-255 channels. A macro, not a function: passing TEXTURE to a function
+// fails to compile on some renderers (the headless host's among them).
+#define CELL_DATA(texel) ivec4(round(texelFetch(TEXTURE, texel, 0) * 255.0))
 
 vec4 tile_pixel(int index, ivec2 p) {
 	return texelFetch(tiles, ivec2(index % 4, index / 4) * TILE + (p & ivec2(31)), 0);
@@ -62,7 +62,7 @@ void fragment() {
 	ivec2 cell = px / TILE;
 	ivec2 p = px - cell * TILE;
 	ivec2 here = cell + 1;
-	ivec4 me = cell_data(TEXTURE, here);
+	ivec4 me = CELL_DATA(here);
 	if (me.r == NO_TILE) {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
 	} else {
@@ -72,9 +72,9 @@ void fragment() {
 		// Distances to the near vertical and horizontal edges, and the near corner.
 		float dx = side.x < 0 ? float(p.x) + 0.5 : 31.5 - float(p.x);
 		float dy = side.y < 0 ? float(p.y) + 0.5 : 31.5 - float(p.y);
-		ivec4 nx = cell_data(TEXTURE, here + ivec2(side.x, 0));
-		ivec4 ny = cell_data(TEXTURE, here + ivec2(0, side.y));
-		ivec4 nd = cell_data(TEXTURE, here + side);
+		ivec4 nx = CELL_DATA(here + ivec2(side.x, 0));
+		ivec4 ny = CELL_DATA(here + ivec2(0, side.y));
+		ivec4 nd = CELL_DATA(here + side);
 		// Each grid line wanders along its whole length, so a long edge stays one ragged line.
 		float seed_x = float(world_cell.x + (side.x > 0 ? 1 : 0)) * 0.37;
 		float seed_y = float(world_cell.y + (side.y > 0 ? 1 : 0)) * 0.53 + 0.29;

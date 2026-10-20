@@ -15,6 +15,7 @@ const Lighting = preload("res://game/render/lighting.gd")
 const Fx = preload("res://game/render/fx.gd")
 const FloorLayer = preload("res://game/render/floor_layer.gd")
 const Crafting = preload("res://game/core/crafting.gd")
+const Buildings = preload("res://game/data/buildings.gd")
 const FERRYMAN_GEAR: Dictionary = {"helmet": "ember_cap"}
 const NPC_NAME: Color = Color("#9fe0c8")
 ## Quest givers stand out: gold cloth, a starweave cape, and a gold name.
@@ -197,6 +198,8 @@ func _draw() -> void:
 		var tile: String = _tall.get(cell, "")
 		if tile in World.WALLS and not tile.is_empty():
 			SpriteArt.draw_wall(self, cell)
+			if World.WALL_DECOR.has(cell):
+				SpriteArt.draw_wall_decor(self, cell, World.WALL_DECOR[cell])
 			if Crafting.ORES.has(cell) and not game.node_worked(cell):
 				# Veins catch the eye: each glints for a moment every few seconds.
 				SpriteArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
@@ -243,11 +246,16 @@ func _cache_tall(area: Rect2i) -> void:
 	_tall.clear()
 	_tall_area = area
 	for y: int in range(area.position.y, area.end.y):
-		var row: String = World.ROWS[y]
 		for x: int in range(area.position.x, area.end.x):
-			var tile: String = row[x]
-			if tile in World.WALLS or tile in World.TREES:
+			var tile: String = World.terrain(Vector2i(x, y))
+			if not tile.is_empty() and (tile in World.WALLS or tile in World.TREES):
 				_tall[Vector2i(x, y)] = tile
+	# A castle keep's doorways (keeps are not buildings, see Buildings.find) get doors too.
+	for y: int in range(area.position.y, area.end.y):
+		for x: int in range(area.position.x, area.end.x):
+			var cell := Vector2i(x, y)
+			if World.terrain(cell) in ["F", "Y"] and Buildings.is_door(World.terrain, cell):
+				_tall[cell] = "door"
 	for building: Dictionary in World.BUILDINGS:
 		if building["rect"].intersects(area):
 			for cell: Vector2i in building["doors"]:

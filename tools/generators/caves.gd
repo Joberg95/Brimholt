@@ -16,7 +16,7 @@ extends "res://tools/generators/landscape.gd"
 const Caves = preload("res://game/data/caves.gd")
 const SPAWN_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 const MOUTH_SCRIPT: Script = preload("res://game/maps/markers/cave_mouth.gd")
-const WALKABLE: String = ".,:=bdocv^ms"
+const WALKABLE: String = ".,:=bdocv^msFY"
 ## Rock kept round the edge, the gap between hall centres, and the halls' half sizes.
 const MARGIN: int = 6
 const HALL_GAP: float = 11.0
@@ -24,12 +24,16 @@ const HALL_RADIUS: Vector2i = Vector2i(5, 4)
 const HALL_SPREAD: Vector2i = Vector2i(2, 1)
 ## Tunnels between halls that are not in the spanning tree, for loops.
 const LOOPS: int = 2
+## The cave band's first column when the caves were first carved: hall edges read their noise as
+## if the band still started there, so moving the band (tools/generators/move_bands.gd) keeps
+## every cave's shape.
+const NOISE_BAND_X: int = 624
 ## Cells kept clear round a mouth: open ground, and distance from camps and roads.
 const MOUTH_CLEAR: int = 4
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	_prepare(scene_root)
 	var changed: int = 0
 	var spawns: Node = scene_root.get_node("MonsterSpawns")
@@ -69,12 +73,10 @@ func _initialize() -> void:
 		mouths.add_child(marker)
 		marker.owner = scene_root
 		changed += 1
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Painted %d elite caves (%d halls, camps, and mouths) into %s (%s)%s" % [Caves.ORDER.size(), changed, SCENE_PATH, error_string(error),
 		"" if missing.is_empty() else "; no room for the mouth of " + ", ".join(missing)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK and missing.is_empty() else 1)
 
 
@@ -144,7 +146,7 @@ func _carve_hall(hall: Dictionary, area: Rect2i) -> void:
 		for dx: int in range(-radius.x - 1, radius.x + 2):
 			var cell: Vector2i = hall["centre"] + Vector2i(dx, dy)
 			var reach: float = pow(float(dx) / radius.x, 2.0) + pow(float(dy) / radius.y, 2.0)
-			if reach <= 0.85 + 0.3 * _noise(cell, 3.0, 81) and area.grow(-2).has_point(cell):
+			if reach <= 0.85 + 0.3 * _noise(cell + Vector2i(NOISE_BAND_X - Caves.BAND_X, 0), 3.0, 81) and area.grow(-2).has_point(cell):
 				_paint(cell, "c")
 
 

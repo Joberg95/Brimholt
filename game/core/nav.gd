@@ -1,5 +1,5 @@
 extends RefCounted
-## Long-range navigation for bots: Godot's AStarGrid2D over the walkable overworld (stairways
+## Long-range navigation for bots: Godot's AStarGrid2D over the painted overworld (stairways
 ## and dungeon copies excluded), built once on first use. Bots follow a planned route and step
 ## around whoever stands on it with Combat.path_step; the route is re-planned when they stray.
 
@@ -12,12 +12,12 @@ static func grid() -> AStarGrid2D:
 	if _grid != null:
 		return _grid
 	_grid = AStarGrid2D.new()
-	_grid.region = World.OVERWORLD
+	_grid.region = World.PAINTED
 	_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	_grid.default_compute_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
 	_grid.default_estimate_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
 	_grid.update()
-	var rect: Rect2i = World.OVERWORLD
+	var rect: Rect2i = World.PAINTED
 	for y: int in range(rect.position.y, rect.end.y):
 		for x: int in range(rect.position.x, rect.end.x):
 			var cell := Vector2i(x, y)

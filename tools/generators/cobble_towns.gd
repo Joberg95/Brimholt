@@ -7,6 +7,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/cobble_towns.gd
 
 const World = preload("res://game/core/world.gd")
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## Ground a town paves over, and how near a pier the shore becomes a quay instead.
 const PAVED: String = ".,:msTKU"
@@ -15,20 +16,18 @@ const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vecto
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var layer: TileMapLayer = scene_root.get_node("Terrain")
 	var changes: Dictionary = paving()
 	for cell: Vector2i in changes:
 		layer.set_cell(cell, 0, Vector2i(World.TERRAINS.find(changes[cell]), 0))
 	var error: Error = OK
 	if not changes.is_empty():
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	var quay: int = changes.values().count("b")
 	print("Paved %d town tiles with cobbles and %d with quay planks in %s (%s)" % [changes.size() - quay, quay, SCENE_PATH,
 		error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

@@ -1,31 +1,40 @@
 extends Node
 ## The minimap under the stat sheet and the full world map over the game window, drawn from
-## the painted map (assets/sprites/world_map.png, baked by tools/generators/world_map.gd; a flat
-## one-pixel-per-tile map when the bake is older than the map) with PvP zones tinted red. You are
-## an arrow pointing the way you face; gold rings mark where your tasks send you (World.task_targets),
-## and the minimap's edge points toward your first task when it lies off the minimap. The world map opens centred on you at
-## OPEN_ZOOM pixels per tile; the mouse wheel (or + and −) zooms around the cursor, dragging
-## pans, and its key, Esc, or Close closes it. Quest givers show their "!"/"?" marks.
+## the painted map pages (game/data/atlas.gd, baked by tools/generators/world_map.gd: one page per
+## sector near land, loaded as you look around; a flat one-pixel-per-tile page where the bake is
+## older than the map) with PvP zones tinted red. Far out, the world map draws the small overview
+## instead. Map tile = world cell. You are an arrow pointing the way you face; gold rings mark
+## where your tasks send you (World.task_targets), and the minimap's edge points toward your first
+## task when it lies off the minimap. The world map opens centred on you at OPEN_ZOOM pixels per
+## tile; the mouse wheel (or + and −) zooms around the cursor, dragging pans (over the painted
+## land and a margin of sea), and its key, Esc, or Close closes it. Quest givers show their
+## "!"/"?" marks.
 
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Atlas = preload("res://game/data/atlas.gd")
-const BAKED_PNG: String = "res://assets/sprites/world_map.png"
-const BAKED_META: String = "res://assets/sprites/world_map.json"
 const SELF_COLOR: Color = Color("#ffd04a")
 const GUIDE_COLOR: Color = Color("#ffd84a")
 const MINIMAP_SCALE: float = 2.0
 ## World map zoom in pixels per tile: it opens at OPEN_ZOOM; each wheel step multiplies by
-## ZOOM_STEP, between the whole map fitting the window and MAX_ZOOM.
+## ZOOM_STEP, between the whole painted world fitting the window and MAX_ZOOM. Below
+## OVERVIEW_ZOOM it draws the overview (one pixel per tile) instead of the pages.
 const OPEN_ZOOM: float = 3.0
 const MAX_ZOOM: float = 10.0
 const ZOOM_STEP: float = 1.25
+const OVERVIEW_ZOOM: float = 2.0
+## Open sea shown round the painted land, in tiles.
+const SEA_MARGIN: int = 32
+## Pages kept loaded; the ones looked at longest ago go first.
+const MAX_PAGES: int = 40
 ## Space above the map for the help line and buttons.
 const HEADER: float = 34.0
 ## Region names on the world map: muted parchment, under the brighter town and zone labels.
 const REGION_TINT: Color = Color("#d8c89a")
 const PVP_TINT: Color = Color("#c43c32")
+## The baked map's open sea (tools/generators/world_map.gd), drawn where no page is needed.
+const SEA: Color = Color("#2a5680")
 ## Map markers: ferrymen teal, quest givers gold, vendors green, bankers pale blue, artisans amber, wardens red.
 const TOWNSFOLK_COLORS: Dictionary = {"vendor": Color("#9fe07a"), "banker": Color("#a8c8ff"), "artisan": Color("#e8a85a"),
 	"warden": Color("#e0605a")}
@@ -44,70 +53,121 @@ const MAP_COLORS: Dictionary = {
 var game: Node
 var minimap: Control
 var world_map: Control
-var _texture: ImageTexture
-## The whole map, dungeon band included, one pixel per tile: the minimap underground.
+## Loaded pages: sector -> {image, texture, texel (pixels per tile)}, and the order they were
+## last drawn in (oldest first).
+var _pages: Dictionary = {}
+var _page_order: Array[Vector2i] = []
+## Sectors that need a page (World.map_pages), and each baked page's hash (pages.json).
+var _needed: Dictionary = {}
+var _baked: Dictionary = {}
+var _overview: ImageTexture
+## Off the overworld (dungeons, caves, the Void Throne): a flat map of the area you are in.
+var _flat_area: Rect2i = Rect2i()
 var _flat_texture: ImageTexture
-## Texture pixels per tile: the bake's scale, or 1 for the flat fallback.
-var _texel: float = 1.0
 ## Pixels per tile, and the tile at the centre of the map area.
 var zoom: float = OPEN_ZOOM
 var center: Vector2 = Vector2.ZERO
 var _dragging: bool = false
+var _warned: bool = false
 
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
-	var flat: Image = _flat_map()
-	_flat_texture = ImageTexture.create_from_image(flat)
-	var image: Image = _baked_map()
-	if image == null:
-		image = _atlas_layout(flat)
-	else:
-		_texel = image.get_width() / float(Atlas.SIZE.x)
-	var texel: int = int(_texel)
-	for zone: Dictionary in World.ZONES:
-		if not zone["pvp"]:
-			continue
-		var area: Rect2i = zone["rect"].intersection(World.OVERWORLD)
-		for y: int in range(area.position.y, area.end.y):
-			for x: int in range(area.position.x, area.end.x):
-				if World.terrain(Vector2i(x, y)) in ["~", " "]:
-					continue
-				var corner := Vector2i(Atlas.to_map(Vector2(x, y))) * texel
-				for py: int in texel:
-					for px: int in texel:
-						var at := corner + Vector2i(px, py)
-						image.set_pixelv(at, image.get_pixelv(at).lerp(PVP_TINT, 0.45))
-	_texture = ImageTexture.create_from_image(image)
+	for sector: Vector2i in World.map_pages():
+		_needed[sector] = true
+	if FileAccess.file_exists(Atlas.MAP_META):
+		var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(Atlas.MAP_META))
+		if typeof(meta) == TYPE_DICTIONARY and typeof(meta.get("pages")) == TYPE_DICTIONARY:
+			_baked = meta["pages"]
 	_build_controls(layer)
 
 
-## The painted map, if its bake matches the current map (World.overworld_hash), else null.
-func _baked_map() -> Image:
-	if not FileAccess.file_exists(BAKED_META) or not ResourceLoader.exists(BAKED_PNG):
+## A page: the bake if it matches the map (World.page_hash), else a flat one; PvP zones tinted.
+## {} for sectors that are open sea.
+func _page(sector: Vector2i) -> Dictionary:
+	if not _needed.has(sector):
+		return {}
+	if _pages.has(sector):
+		_page_order.erase(sector)
+		_page_order.append(sector)
+		return _pages[sector]
+	var area: Rect2i = Atlas.sector_rect(sector)
+	var image: Image = null
+	if _baked.get("%d_%d" % [sector.x, sector.y], "") == World.page_hash(sector):
+		image = _load_image(Atlas.page_path(sector))
+	if image == null:
+		_warn_stale()
+		image = _flat(area)
+	var texel: int = image.get_width() / Atlas.SECTOR
+	_tint_pvp(image, area, texel)
+	var page: Dictionary = {"image": image, "texture": ImageTexture.create_from_image(image), "texel": texel}
+	_pages[sector] = page
+	_page_order.append(sector)
+	while _page_order.size() > MAX_PAGES:
+		_pages.erase(_page_order.pop_front())
+	return page
+
+
+func _warn_stale() -> void:
+	if not _warned:
+		_warned = true
+		push_warning("The painted world map is older than the map; run make world-map. Showing flat pages.")
+
+
+## The overview: the whole overworld at one pixel per tile, from the bake (flat where it is stale).
+func _overview_texture() -> ImageTexture:
+	if _overview != null:
+		return _overview
+	var image: Image = _load_image(Atlas.MAP_OVERVIEW)
+	var stale: bool = image == null or image.get_size() != Atlas.OVERWORLD_SIZE
+	for sector: Vector2i in _needed:
+		if stale:
+			break
+		stale = _baked.get("%d_%d" % [sector.x, sector.y], "") != World.page_hash(sector)
+	if stale:
+		_warn_stale()
+		image = Image.create(Atlas.OVERWORLD_SIZE.x, Atlas.OVERWORLD_SIZE.y, false, Image.FORMAT_RGB8)
+		image.fill(SEA)
+		image.blit_rect(_flat(World.PAINTED), Rect2i(Vector2i.ZERO, World.PAINTED.size), World.PAINTED.position)
+	_tint_pvp(image, World.OVERWORLD, 1)
+	_overview = ImageTexture.create_from_image(image)
+	return _overview
+
+
+## An imported (or, before the editor imported it, raw) PNG as RGB8, or null.
+static func _load_image(path: String) -> Image:
+	var image: Image = null
+	if ResourceLoader.exists(path):
+		image = (load(path) as Texture2D).get_image()
+	elif FileAccess.file_exists(path):
+		image = Image.load_from_file(ProjectSettings.globalize_path(path))
+	if image == null:
 		return null
-	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(BAKED_META))
-	if typeof(meta) != TYPE_DICTIONARY or meta.get("terrain", "") != World.overworld_hash():
-		push_warning("The painted world map is older than the map; run make world-map. Showing the flat map.")
-		return null
-	var image: Image = (load(BAKED_PNG) as Texture2D).get_image()
 	if image.is_compressed():
 		image.decompress()
 	image.convert(Image.FORMAT_RGB8)
 	return image
 
 
-## The flat map's sheets laid out like the painted map (game/data/atlas.gd), sea between them.
-static func _atlas_layout(flat: Image) -> Image:
-	var image := Image.create(Atlas.SIZE.x, Atlas.SIZE.y, false, Image.FORMAT_RGB8)
-	image.fill(MAP_COLORS["~"])
-	for sheet: Dictionary in Atlas.SHEETS:
-		image.blit_rect(flat, sheet["cells"], sheet["at"])
-	return image
+## Reddens the land of PvP zones inside `area` on an image of it (`texel` pixels per tile).
+static func _tint_pvp(image: Image, area: Rect2i, texel: int) -> void:
+	for zone: Dictionary in World.ZONES:
+		if not zone["pvp"]:
+			continue
+		var tinted: Rect2i = zone["rect"].intersection(area).intersection(World.OVERWORLD)
+		for y: int in range(tinted.position.y, tinted.end.y):
+			for x: int in range(tinted.position.x, tinted.end.x):
+				if World.terrain(Vector2i(x, y)) in ["~", " "]:
+					continue
+				var corner := (Vector2i(x, y) - area.position) * texel
+				for py: int in texel:
+					for px: int in texel:
+						var at := corner + Vector2i(px, py)
+						image.set_pixelv(at, image.get_pixelv(at).lerp(PVP_TINT, 0.45))
 
 
-## One pixel per tile in MAP_COLORS: the fallback when the painted map is stale.
-func _flat_map() -> Image:
+## One pixel per tile in MAP_COLORS: the fallback for stale pages, and the map off the overworld.
+static func _flat(area: Rect2i) -> Image:
 	# Terrain byte -> RGB, then one pass over raw bytes (far faster than set_pixel per tile).
 	var lookup := PackedByteArray()
 	lookup.resize(128 * 3)
@@ -117,18 +177,65 @@ func _flat_map() -> Image:
 		lookup[at] = color.r8
 		lookup[at + 1] = color.g8
 		lookup[at + 2] = color.b8
-	var width: int = World.width()
+	var inside: Rect2i = area.intersection(Rect2i(Vector2i.ZERO, World.GRID_SIZE))
 	var pixels := PackedByteArray()
-	pixels.resize(width * World.height() * 3)
-	for y: int in World.height():
-		var row: PackedByteArray = World.ROWS[y].to_ascii_buffer()
-		var base: int = y * width * 3
-		for x: int in row.size():
-			var source: int = (row[x] & 127) * 3
+	pixels.resize(area.size.x * area.size.y * 3)
+	for y: int in range(inside.position.y, inside.end.y):
+		var row: int = y * World.GRID_SIZE.x
+		var base: int = ((y - area.position.y) * area.size.x - area.position.x) * 3
+		for x: int in range(inside.position.x, inside.end.x):
+			var source: int = (World.GRID[row + x] & 127) * 3
 			pixels[base + x * 3] = lookup[source]
 			pixels[base + x * 3 + 1] = lookup[source + 1]
 			pixels[base + x * 3 + 2] = lookup[source + 2]
-	return Image.create_from_data(width, World.height(), false, Image.FORMAT_RGB8, pixels)
+	return Image.create_from_data(area.size.x, area.size.y, false, Image.FORMAT_RGB8, pixels)
+
+
+## The map's colour at a (fractional) tile, as the pages draw it (the visual test reads it).
+func color_at(tile: Vector2) -> Color:
+	var sector: Vector2i = Atlas.sector_of(Vector2i(tile.floor()))
+	var page: Dictionary = _page(sector)
+	if page.is_empty():
+		return SEA
+	var local: Vector2 = tile - Vector2(Atlas.sector_rect(sector).position)
+	return (page["image"] as Image).get_pixelv(Vector2i(local * float(page["texel"])))
+
+
+## Draws the overworld's terrain inside `tiles` onto `canvas`, `origin` being where tile (0, 0)
+## lands and `scale` pixels per tile: the pages, or the overview when `far`.
+func _draw_terrain(canvas: Control, origin: Vector2, scale: float, tiles: Rect2, far: bool) -> void:
+	tiles = tiles.intersection(Rect2(World.OVERWORLD))
+	if not tiles.has_area():
+		return
+	if far:
+		canvas.draw_texture_rect_region(_overview_texture(), Rect2(origin + tiles.position * scale, tiles.size * scale), tiles)
+		return
+	var cells := Rect2i(Vector2i(tiles.position.floor()), Vector2i(tiles.end.ceil()) - Vector2i(tiles.position.floor()))
+	for sector: Vector2i in Atlas.sectors_in(cells):
+		var whole := Rect2(Atlas.sector_rect(sector))
+		var part: Rect2 = whole.intersection(tiles)
+		if not part.has_area():
+			continue
+		var target := Rect2(origin + part.position * scale, part.size * scale)
+		var page: Dictionary = _page(sector)
+		if page.is_empty():
+			canvas.draw_rect(target, SEA)
+			continue
+		var texel: float = page["texel"]
+		canvas.draw_texture_rect_region(page["texture"], target, Rect2((part.position - whole.position) * texel, part.size * texel))
+
+
+## The flat map of an area off the overworld (your dungeon copy, a cave, the arena).
+func _flat_map_of(area: Rect2i) -> ImageTexture:
+	if area != _flat_area or _flat_texture == null:
+		_flat_area = area
+		_flat_texture = ImageTexture.create_from_image(_flat(area))
+	return _flat_texture
+
+
+## What the world map shows: the painted land and a margin of sea round it.
+static func bounds() -> Rect2:
+	return Rect2(World.PAINTED.grow(SEA_MARGIN).intersection(World.OVERWORLD))
 
 
 func _build_controls(layer: CanvasLayer) -> void:
@@ -151,9 +258,9 @@ func _build_controls(layer: CanvasLayer) -> void:
 	world_map.visibility_changed.connect(func() -> void:
 		if world_map.visible:
 			zoom = maxf(OPEN_ZOOM, _fit_zoom())
-			# Underground (dungeon copies lie outside the overworld) it opens on the whole map's centre.
+			# Underground (dungeon copies lie outside the overworld) it opens on the painted world's centre.
 			var here: Vector2 = game.camera_focus() / World.TILE_SIZE
-			center = Atlas.to_map(here) if World.OVERWORLD.has_point(Vector2i(here)) else Vector2(Atlas.SIZE) / 2.0
+			center = here if World.OVERWORLD.has_point(Vector2i(here)) else bounds().get_center()
 			_clamp_view())
 	layer.add_child(world_map)
 	var buttons := HBoxContainer.new()
@@ -174,21 +281,15 @@ func _map_area() -> Rect2:
 	return Rect2(Vector2(0, HEADER), Layout.VIEW_SIZE - Vector2(0, HEADER))
 
 
-## The zoom at which the whole overworld fits the map area.
+## The zoom at which the whole painted world fits the map area.
 func _fit_zoom() -> float:
 	var area: Vector2 = _map_area().size
-	return minf(area.x / Atlas.SIZE.x, area.y / Atlas.SIZE.y)
+	return minf(area.x / bounds().size.x, area.y / bounds().size.y)
 
 
-## Where a map tile (fractional, Atlas.to_map of a cell) appears on the world map window at the
-## current zoom and pan.
+## Where a (fractional) tile appears on the world map window at the current zoom and pan.
 func map_point(tile: Vector2) -> Vector2:
 	return _map_area().get_center() + (tile - center) * zoom
-
-
-## A cell's place on `canvas`'s own grid: map tiles on the world map, cells on the minimap.
-func _on(canvas: Control, tile: Vector2) -> Vector2:
-	return Atlas.to_map(tile) if canvas == world_map else tile
 
 
 ## Zooms by `factor`, keeping the tile under `at` (a world map position) where it is.
@@ -200,15 +301,15 @@ func zoom_by(factor: float, at: Vector2) -> void:
 	world_map.queue_redraw()
 
 
-## Keeps the map on screen: centred when it is smaller than the window, else edge to edge.
+## Keeps the painted world on screen: centred when it is smaller than the window, else edge to edge.
 func _clamp_view() -> void:
 	var half: Vector2 = _map_area().size / 2.0 / zoom
-	var size := Vector2(Atlas.SIZE)
+	var shown: Rect2 = bounds()
 	for axis: int in 2:
-		if half[axis] * 2.0 >= size[axis]:
-			center[axis] = size[axis] / 2.0
+		if half[axis] * 2.0 >= shown.size[axis]:
+			center[axis] = shown.get_center()[axis]
 		else:
-			center[axis] = clampf(center[axis], half[axis], size[axis] - half[axis])
+			center[axis] = clampf(center[axis], shown.position[axis] + half[axis], shown.end[axis] - half[axis])
 
 
 func _world_map_input(event: InputEvent) -> void:
@@ -255,29 +356,29 @@ func _draw_label(font: Font, at: Vector2, text: String, size: int, color: Color,
 
 func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2) -> void:
 	for id: String in World.FERRYMEN:
-		var at: Vector2 = origin + _on(canvas, Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#7fe0d0"))
 	for id: String in World.QUEST_GIVERS:
-		var at: Vector2 = origin + _on(canvas, Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#ffcf6a"))
 	for cell: Vector2i in World.DUNGEON_ENTRANCES.keys() + World.CAVE_MOUTHS.keys():
-		var at: Vector2 = origin + _on(canvas, Vector2(cell) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#c9884a"))
 	for id: String in World.TOWNSFOLK:
-		var at: Vector2 = origin + _on(canvas, Vector2(World.TOWNSFOLK[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (Vector2(World.TOWNSFOLK[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), TOWNSFOLK_COLORS[World.TOWNSFOLK[id]["role"]])
 	var actors: Dictionary = game.actors
 	for id: int in actors:
-		var at: Vector2 = origin + _on(canvas, actors[id]["visual"] + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (actors[id]["visual"] + Vector2(0.5, 0.5)) * scale
 		if id != game.self_id and area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2.ONE * 1.5, Vector2.ONE * 3.0), Color.WHITE)
 	if actors.has(game.self_id):
 		var me: Dictionary = actors[game.self_id]
-		var at: Vector2 = origin + _on(canvas, me["visual"] + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (me["visual"] + Vector2(0.5, 0.5)) * scale
 		if area.has_point(at):
 			_draw_self(canvas, at, Vector2(me["state"].get("facing", Vector2i.DOWN)), 6.0 if canvas == world_map else 5.0)
 
@@ -307,7 +408,7 @@ func _draw_guidance(canvas: Control, origin: Vector2, scale: float, area: Rect2)
 	var first: Array[Vector2] = []
 	for index: int in tasks.size():
 		for cell: Vector2i in World.task_targets(tasks[index], state):
-			var at: Vector2 = origin + _on(canvas, Vector2(cell) + Vector2(0.5, 0.5)) * scale
+			var at: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * scale
 			if index == 0:
 				first.append(at)
 			if area.grow(radius).has_point(at):
@@ -334,41 +435,35 @@ func _draw_minimap() -> void:
 	minimap.draw_rect(view, Color.BLACK)
 	var tiles: Vector2 = minimap.size / MINIMAP_SCALE
 	var focus: Vector2 = game.camera_focus()
+	var cell := Vector2i(focus / World.TILE_SIZE)
 	var region := Rect2(focus / World.TILE_SIZE - tiles / 2.0, tiles)
-	# The painted map's sheet you are on (the mainland or the frost isles), placed by its offset.
-	var sheet: Dictionary = Atlas.sheet_of(Vector2i(focus / World.TILE_SIZE))
-	var shown := Rect2(sheet["cells"])
-	var offset := Vector2(sheet["at"] - sheet["cells"].position)
-	var place: Array = World.dungeon_at(Vector2i(focus / World.TILE_SIZE))
-	var away: bool = not World.OVERWORLD.has_point(Vector2i(focus / World.TILE_SIZE))
-	if not place.is_empty():
-		# Underground, show only your own copy, never the copies next to it.
-		shown = Rect2(Dungeons.rect(place[0], place[1]))
-	elif away:
-		# Somewhere off the overworld (the Void Throne): the flat map around you.
-		shown = Rect2(Vector2.ZERO, Vector2(World.width(), World.height()))
-	var visible := region.intersection(shown)
-	if visible.has_area():
-		# The painted map covers the overworld only; underground, the flat map shows your copy.
-		var texel: float = _texel if not away else 1.0
-		minimap.draw_texture_rect_region(_texture if not away else _flat_texture,
-			Rect2((visible.position - region.position) * MINIMAP_SCALE, visible.size * MINIMAP_SCALE),
-			Rect2((visible.position + (offset if not away else Vector2.ZERO)) * texel, visible.size * texel))
-	if not away:
-		_draw_guidance(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
-	_draw_markers(minimap, -region.position * MINIMAP_SCALE, MINIMAP_SCALE, view)
+	var origin: Vector2 = -region.position * MINIMAP_SCALE
+	var away: bool = not World.OVERWORLD.has_point(cell)
+	if away:
+		# Off the overworld (a dungeon copy, a cave, the Void Throne): the flat map of the area you
+		# are in only, never the copies next to it.
+		var area: Rect2i = World.zone_at(cell).get("rect", Rect2i(cell - Vector2i(64, 64), Vector2i(128, 128)))
+		var visible: Rect2 = region.intersection(Rect2(area))
+		if visible.has_area():
+			minimap.draw_texture_rect_region(_flat_map_of(area), Rect2(origin + visible.position * MINIMAP_SCALE,
+				visible.size * MINIMAP_SCALE), Rect2(visible.position - Vector2(area.position), visible.size))
+	else:
+		_draw_terrain(minimap, origin, MINIMAP_SCALE, region, false)
+		_draw_guidance(minimap, origin, MINIMAP_SCALE, view)
+	_draw_markers(minimap, origin, MINIMAP_SCALE, view)
 	minimap.draw_rect(view, Color("#3a4450"), false, 1.0)
 
 
 func _draw_world_map() -> void:
 	var view_size: Vector2 = Layout.VIEW_SIZE
-	# The overworld only, as the atlas lays it out: dungeon copies are reached by stairways.
-	var map_size := Vector2(Atlas.SIZE)
+	# The overworld only: dungeon copies are reached by stairways.
 	var scale: float = zoom
 	var origin: Vector2 = map_point(Vector2.ZERO).round()
 	world_map.draw_rect(Rect2(Vector2.ZERO, view_size), Color(0.03, 0.04, 0.05))
-	var shown := Rect2(origin, map_size * scale).intersection(_map_area())
-	world_map.draw_texture_rect_region(_texture, Rect2(origin, map_size * scale), Rect2(Vector2.ZERO, map_size * _texel))
+	var painted: Rect2 = bounds()
+	var shown := Rect2(origin + painted.position * scale, painted.size * scale).intersection(_map_area())
+	var tiles := Rect2((shown.position - origin) / scale, shown.size / scale)
+	_draw_terrain(world_map, origin, scale, tiles, zoom < OVERVIEW_ZOOM)
 	_draw_guidance(world_map, origin, scale, shown)
 	_draw_markers(world_map, origin, scale, shown)
 	_draw_quest_marks(origin, scale, shown)
@@ -403,11 +498,11 @@ func _draw_world_map() -> void:
 	var regions: Array = labels.filter(func(label: Array) -> bool: return label.size() > 3)
 	var fixed: Array = labels.filter(func(label: Array) -> bool: return label.size() <= 3)
 	for label: Array in fixed:
-		taken.append(_draw_label(font, origin + Atlas.to_map(label[1]) * scale, label[0], 13, label[2] if label.size() > 2 else Color("#f4ecd8"), Vector2.ZERO, true))
+		taken.append(_draw_label(font, origin + label[1] * scale, label[0], 13, label[2] if label.size() > 2 else Color("#f4ecd8"), Vector2.ZERO, true))
 	for index: int in range(0, regions.size(), 2):
 		var title: Array = regions[index]
 		var levels: Array = regions[index + 1]
-		var at: Vector2 = origin + Atlas.to_map(title[1]) * scale
+		var at: Vector2 = origin + title[1] * scale
 		var block := Rect2(at - Vector2(70, 12), Vector2(140, 28))
 		var shift := Vector2.ZERO
 		for step: Vector2 in [Vector2.ZERO, Vector2(0, -18), Vector2(0, 18), Vector2(0, -36), Vector2(0, 36), Vector2(-60, 0),
@@ -430,7 +525,7 @@ func _draw_quest_marks(origin: Vector2, scale: float, area: Rect2) -> void:
 	var font: Font = ThemeDB.fallback_font
 	for id: String in World.QUEST_GIVERS:
 		var mark: String = World.quest_mark(id, state)
-		var at: Vector2 = origin + Atlas.to_map(Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if mark.is_empty() or not area.has_point(at):
 			continue
 		var corner: Vector2 = at + Vector2(-4, -5)

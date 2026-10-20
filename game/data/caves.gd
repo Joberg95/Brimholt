@@ -7,12 +7,15 @@ extends RefCounted
 ## (Balance "elite": more health and damage, five times the experience) and a champion in the
 ## deepest hall: harder than the hunts above ground, and better paid.
 
-## First column of the cave band: past the Void Throne arena (tools/generators/void_throne.gd).
-const BAND_X: int = 624
+const Dungeons = preload("res://game/data/dungeons.gd")
+
+## First column of the cave band: past the Void Throne arena (tools/generators/void_throne.gd,
+## 36 columns with a gap of four on either side).
+const BAND_X: int = Dungeons.BAND_END + 44
 ## Rows between caves, stacked top to bottom in ORDER.
 const GAP: int = 4
 const ORDER: Array[String] = ["ogre_warrens", "drowned_grotto", "ember_deep", "frostvault", "rimewater_trench",
-	"cyclops_hollow"]
+	"cyclops_hollow", "thornroot_hollows", "moonwell_deeps"]
 ## name, region (where the mouth opens), near (the mouth is placed as close to this as fits),
 ## size, levels, ambient light, hall count, and the camps: [monster, lowest level, highest level,
 ## monsters per camp (two: an elite takes a solo player the time of four or five normal kills, so
@@ -46,6 +49,15 @@ const CAVES: Dictionary = {
 	"cyclops_hollow": {"name": "Cyclops Hollow", "region": "Smoulder Fells", "near": Vector2i(296, 26), "elite": false,
 		"size": Vector2i(58, 42), "min_level": 30, "max_level": 36, "ambient": Color(0.7, 0.58, 0.46), "halls": 11,
 		"camps": [["cyclops", 30, 33, 5], ["cyclops_smith", 33, 36, 5]]},
+	# Silverwood's two great farming caves (docs/plan/40-archipelago.md): far bigger than the elite
+	# caves, dense camps of normal monsters hall after hall for experience and loot. Placeholder
+	# monsters of levels 45-50 until the island's own band (50-60) is added, with a boss each.
+	"thornroot_hollows": {"name": "Thornroot Hollows", "region": "Silverwood", "near": Vector2i(690, 215), "elite": false,
+		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.52, 0.6, 0.44), "halls": 200,
+		"camps": [["dire_bear", 45, 47, 5], ["wraith_knight", 46, 48, 5], ["behemoth", 48, 50, 5]]},
+	"moonwell_deeps": {"name": "Moonwell Deeps", "region": "Silverwood", "near": Vector2i(600, 95), "elite": false,
+		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.44, 0.52, 0.68), "halls": 200,
+		"camps": [["hollow_knight", 45, 47, 5], ["reedfang", 46, 48, 5], ["mire_stalker", 47, 50, 5]]},
 }
 
 

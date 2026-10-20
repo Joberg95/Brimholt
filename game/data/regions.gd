@@ -28,6 +28,8 @@ const REGIONS: Array = [
 	["Hrimfold Tundra", Vector2i(52, 476), "Snowfields and fir woods round the port of Hrimvik"],
 	["Wolfskerry", Vector2i(128, 452), "A wind-scoured skerry where wolves and walruses hunt"],
 	["Rimewater Floes", Vector2i(104, 528), "Broken sea ice over the Rimewater Trench"],
+	# The archipelago (docs/plan/40-archipelago.md, tools/generators/islands.gd).
+	["Silverwood", Vector2i(640, 170), "Old elven woods and still lakes round the castle of Aldmoor"],
 ]
 ## Shown for desert tiles, whatever the nearest anchor.
 const DESERT: String = "Sunscar Dunes"

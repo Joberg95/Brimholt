@@ -24,10 +24,10 @@ const KEEP_CLEAR: String = "=,~b:#"
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	if scene_root.has_meta("cliffs"):
 		print("The cliffs are already painted into %s: nothing to do" % SCENE_PATH)
-		scene_root.free()
+		MapIO.free_scene(scene_root)
 		quit(0)
 		return
 	_prepare(scene_root)
@@ -35,11 +35,9 @@ func _initialize() -> void:
 	report["passes opened"] = _open_closed_ground(scene_root)
 	report["paths carved"] = _reconnect(scene_root)
 	scene_root.set_meta("cliffs", true)
-	var packed := PackedScene.new()
-	packed.pack(scene_root)
-	var error: Error = ResourceSaver.save(packed, SCENE_PATH)
+	var error: Error = MapIO.save_scene(scene_root)
 	print("Painted cliffs into %s: %s (%s)" % [SCENE_PATH, report, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 

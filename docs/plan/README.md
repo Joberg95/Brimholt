@@ -16,10 +16,11 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |
 | 21 | [Rare mini-bosses](21-mini-bosses.md) | L | Later, when the game is stable |
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
-| 32 | [Continents with one major and one smaller city](32-continents-and-cities.md) | XL | Which mainland towns stay |
+| 41 | [Performance: baked map, spaces, dormant camps](41-performance-spaces.md) | L | |
+| 40 | [The archipelago: biome islands with castle capitals](40-archipelago.md) | XL | Review each island |
 
 Build 26 after any plan that adds gear stats (25's runes and spells change the same sims), and 39
-family by family between other plans. 38 and 32 both repaint the world, so do 38 first.
+family by family between other plans. 38 and 40 both repaint the world; 40 is being built now (owner, 2026-10-20), island by island.
 
 Always: typed GDScript, lint clean, rules covered in `tests/unit/rules_test.gd`, a visual-test
 capture for art (the `art-direction` skill), and the docs (`docs/gameplay.md`, `docs/balance.md`,

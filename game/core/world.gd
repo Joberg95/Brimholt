@@ -6,6 +6,7 @@ const Quests = preload("res://game/data/quests.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Atlas = preload("res://game/data/atlas.gd")
+const MapIO = preload("res://game/maps/map_io.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const Regions = preload("res://game/data/regions.gd")
 const Monsters = preload("res://game/data/monsters.gd")
@@ -19,18 +20,18 @@ const MAP_SCENE: String = "res://game/maps/overworld.tscn"
 ## the Hollow Reach's dusk soil, obsidian floor, obsidian wall, and dead tree, and the
 ## dungeons' cave floor, cave wall, stairs down (a dungeon entrance), and stairs up (its exit),
 ## the desert's cacti and thorn scrub (on sand), boulders, mountain rock, and castle walls (town
-## curtain walls and towers, see SpriteArt.tower).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
-const WALKABLE: String = ".,:=bdocv^ms"
-const LAND: String = ".,:=docv^ms"
+## curtain walls and towers, see SpriteArt.tower), bog mud and giant mushrooms, snow and snowy
+## firs, and the castles' sandstone flag floor (F) and carpet (Y; its fringe follows its outline).
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
+const WALKABLE: String = ".,:=bdocv^msFY"
+const LAND: String = ".,:=docv^msFY"
 ## Drawn as oblique walls / as trees; both block movement and line of sight.
 const WALLS: String = "#OCLW"
 const TREES: String = "TDKRUP"
-## Loaded from MAP_SCENE: terrain rows (" " for unpainted cells), spawn cells, starting
-## ground items, and ferrymen {id: {name, place, cell, facing, routes: {id: fare}}}.
-static var ROWS: PackedStringArray
-## The same terrain as one byte per cell (row-major), for per-cell lookups: indexing ROWS copies
-## a whole row string, so terrain() reads GRID and returns a cached one-character string.
+## Loaded from MAP_SCENE and its sectors (MapIO): the terrain as one byte per cell (row-major;
+## "~" for unpainted overworld, " " for unpainted cells beyond it; terrain() returns a cached
+## one-character string), spawn cells, starting ground items, and ferrymen {id: {name, place,
+## cell, facing, routes: {id: fare}}}.
 static var GRID: PackedByteArray
 static var GRID_SIZE: Vector2i = Vector2i.ZERO
 static var _CHARS: Array[String] = []
@@ -58,8 +59,11 @@ static var ENTRANCE_OF: Dictionary = {}
 static var CAVE_MOUTHS: Dictionary = {}
 static var MOUTH_OF: Dictionary = {}
 static var CAVE_STAIRS: Dictionary = {}
-## The walkable world players reach on foot; dungeon copies lie right of it.
+## The walkable world players reach on foot (Atlas.OVERWORLD_SIZE); dungeon copies lie right of it.
 static var OVERWORLD: Rect2i = Rect2i()
+## The part of the overworld anyone painted: everything outside it is open deep sea, so passes
+## over all the land (bot navigation, gathering nodes, checks) only need to cover this.
+static var PAINTED: Rect2i = Rect2i()
 ## Town buildings (game/data/buildings.gd), found from the walls: {rect, interior, doors,
 ## footprint, outward}. ROOF_AT maps each footprint cell to its building's index, ROOM_AT each
 ## interior or doorway cell. Someone inside a building is only reached from inside it.
@@ -73,10 +77,16 @@ static var SIGNS: Array = []
 static var LAMPS: Array[Vector2i] = []
 ## Shop and bank furniture: cell -> kind (SpriteArt.FURNITURE). It blocks movement like an NPC.
 static var FURNITURE: Dictionary = {}
-## Named regions (game/data/regions.gd) on a grid of REGION_BLOCK x REGION_BLOCK tiles (an index
+## Decorations hung on walls (Decor markers on wall cells): cell -> kind (SpriteArt.WALL_DECOR).
+static var WALL_DECOR: Dictionary = {}
+## Cells of furniture placed by Decor markers (castles), which may stand outside buildings.
+static var DECOR_CELLS: Dictionary = {}
+## Named regions (game/data/regions.gd) on a grid of REGION_BLOCK x REGION_BLOCK tiles over PAINTED (an index
 ## into REGION_NAMES per block), and per region {min_level, max_level, centre} derived from the
 ## monster spawns and tiles inside it.
 const REGION_BLOCK: int = 4
+## Cells round a world map page that its painting looks at (shallows and surf near land).
+const MAP_PAGE_REACH: int = 3
 static var REGION_GRID: PackedByteArray
 static var REGION_NAMES: Array[String] = []
 static var REGION_INFO: Dictionary = {}
@@ -203,11 +213,12 @@ var _next_ground_sweep: float = 0.0
 
 static func _static_init() -> void:
 	var scene: Node = (load(MAP_SCENE) as PackedScene).instantiate()
-	var layer: TileMapLayer = scene.get_node("Terrain")
+	var layers: Array[TileMapLayer] = MapIO.layers(scene)
+	var tile_set: TileSet = layers[0].tile_set
 	var lookup: Dictionary = {}
-	for index: int in layer.tile_set.get_source_count():
-		var source_id: int = layer.tile_set.get_source_id(index)
-		var source: TileSetAtlasSource = layer.tile_set.get_source(source_id) as TileSetAtlasSource
+	for index: int in tile_set.get_source_count():
+		var source_id: int = tile_set.get_source_id(index)
+		var source: TileSetAtlasSource = tile_set.get_source(source_id) as TileSetAtlasSource
 		if source == null:
 			continue
 		for tile: int in source.get_tiles_count():
@@ -215,23 +226,37 @@ static func _static_init() -> void:
 			var kind: Variant = source.get_tile_data(coords, 0).get_custom_data("terrain")
 			if typeof(kind) == TYPE_STRING and kind.length() == 1 and kind in TERRAINS:
 				lookup[Vector3i(source_id, coords.x, coords.y)] = kind
-	var size: Vector2i = layer.get_used_rect().end
+	var size: Vector2i = Atlas.OVERWORLD_SIZE
+	for layer: TileMapLayer in layers:
+		size = size.max(layer.get_used_rect().end)
+	# Unpainted overworld cells are deep sea; unpainted cells beyond it (round the dungeon and
+	# cave bands) are void.
+	var sea_row := PackedByteArray()
+	sea_row.resize(size.x)
+	sea_row.fill(32)
+	for x: int in Atlas.OVERWORLD_SIZE.x:
+		sea_row[x] = 126
+	var void_row := PackedByteArray()
+	void_row.resize(size.x)
+	void_row.fill(32)
 	var grid := PackedByteArray()
-	grid.resize(size.x * size.y)
-	grid.fill(32)
-	for cell: Vector2i in layer.get_used_cells():
-		var coords: Vector2i = layer.get_cell_atlas_coords(cell)
-		var kind: String = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), " ")
-		if cell.x >= 0 and cell.y >= 0:
-			grid[cell.y * size.x + cell.x] = kind.unicode_at(0)
+	for y: int in size.y:
+		grid.append_array(sea_row if y < Atlas.OVERWORLD_SIZE.y else void_row)
+	var painted := Rect2i()
+	for layer: TileMapLayer in layers:
+		for cell: Vector2i in layer.get_used_cells():
+			var coords: Vector2i = layer.get_cell_atlas_coords(cell)
+			var kind: String = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), " ")
+			if cell.x >= 0 and cell.y >= 0:
+				grid[cell.y * size.x + cell.x] = kind.unicode_at(0)
+				if cell.x < Atlas.OVERWORLD_SIZE.x and cell.y < Atlas.OVERWORLD_SIZE.y:
+					painted = Rect2i(cell, Vector2i.ONE) if painted.size == Vector2i.ZERO else painted.expand(cell)
+	PAINTED = Rect2i(painted.position, painted.size + Vector2i.ONE)
 	GRID = grid
 	GRID_SIZE = size
 	_CHARS.clear()
 	for code: int in 256:
 		_CHARS.append(String.chr(code) if code > 0 else "")
-	ROWS = PackedStringArray()
-	for y: int in size.y:
-		ROWS.append(grid.slice(y * size.x, (y + 1) * size.x).get_string_from_ascii())
 	for marker: Node2D in scene.get_node("Spawns").get_children():
 		SPAWNS.append(_cell_of(marker))
 	for marker: Node2D in scene.get_node("Items").get_children():
@@ -281,6 +306,8 @@ static func _static_init() -> void:
 			})
 			if marker.get("ambient") is Color and marker.get("ambient") != Color.WHITE:
 				ZONES[-1]["ambient"] = marker.get("ambient")
+			if marker.get("square") is Vector2i and (marker.get("square") as Vector2i).x >= 0:
+				ZONES[-1]["square"] = marker.get("square")
 	if scene.has_node("DungeonEntrances"):
 		for marker: Node2D in scene.get_node("DungeonEntrances").get_children():
 			var dungeon: String = String(marker.get("dungeon"))
@@ -317,6 +344,16 @@ static func _static_init() -> void:
 				"monster": String(marker.get("monster")), "level": int(marker.get("level")),
 				"count": int(marker.get("count")), "radius": int(marker.get("radius")), "cell": _cell_of(marker),
 			})
+	# Decor markers (castles): furniture on open ground, decorations on walls. Placed before the
+	# keepers furnish their buildings, so nothing is put on top of them.
+	if scene.has_node("Decor"):
+		for marker: Node2D in scene.get_node("Decor").get_children():
+			var kind: String = String(marker.get("kind"))
+			if terrain(_cell_of(marker)) in WALLS:
+				WALL_DECOR[_cell_of(marker)] = kind
+			else:
+				FURNITURE[_cell_of(marker)] = kind
+				DECOR_CELLS[_cell_of(marker)] = true
 	scene.free()
 	_find_buildings()
 	_place_dungeon_props()
@@ -326,14 +363,14 @@ static func _static_init() -> void:
 			for x: int in range(area.position.x, area.end.x):
 				if terrain(Vector2i(x, y)) == "^":
 					CAVE_STAIRS[cave] = Vector2i(x, y)
-	OVERWORLD = Rect2i(0, 0, mini(size.x, Dungeons.BAND_X - Dungeons.COPY_GAP), size.y)
+	OVERWORLD = Rect2i(Vector2i.ZERO, Atlas.OVERWORLD_SIZE)
 	_map_regions()
 	# The terrain bytes are hashed as they are (joining every row into one string costs more).
 	var hashing := HashingContext.new()
 	hashing.start(HashingContext.HASH_SHA256)
 	hashing.update(GRID)
 	hashing.update((str(GRID_SIZE) + str(SPAWNS) + str(GROUND_ITEMS) + str(FERRYMEN) + str(QUEST_GIVERS) + str(TOWNSFOLK)
-		+ str(ZONES) + str(MONSTER_SPAWNS) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS) + str(CAVE_MOUTHS)).to_utf8_buffer())
+		+ str(ZONES) + str(MONSTER_SPAWNS) + str(WALL_DECOR) + str(FURNITURE) + str(DUNGEON_ENTRANCES) + str(Dungeons.DUNGEONS) + str(CAVE_MOUTHS)).to_utf8_buffer())
 	MAP_HASH = hashing.finish().hex_encode()
 
 
@@ -484,6 +521,8 @@ static func _decorate_streets() -> void:
 		var centre: Vector2i = rect.get_center()
 		var inner: Rect2i = rect.grow(-3)
 		var candidates: Array[Vector2i] = []
+		if zone.has("square"):
+			candidates.append(zone["square"])
 		for ring: int in maxi(rect.size.x, rect.size.y) / 2:
 			if candidates.size() >= SQUARE_TRIES:
 				break
@@ -628,13 +667,14 @@ static func _room_open(building: Dictionary, entrance: Vector2i, keeper: Vector2
 ## Assigns each block of the overworld to a region and derives each region's level range.
 static func _map_regions() -> void:
 	REGION_NAMES = Regions.names()
-	var blocks := Vector2i(ceili(GRID_SIZE.x / float(REGION_BLOCK)), ceili(GRID_SIZE.y / float(REGION_BLOCK)))
+	# Over the painted overworld only (from its corner); open sea beyond takes its nearest block.
+	var blocks := Vector2i(ceili(PAINTED.size.x / float(REGION_BLOCK)), ceili(PAINTED.size.y / float(REGION_BLOCK)))
 	REGION_GRID = PackedByteArray()
 	REGION_GRID.resize(blocks.x * blocks.y)
 	var sums: Dictionary = {}
 	for by: int in blocks.y:
 		for bx: int in blocks.x:
-			var centre := Vector2i(bx * REGION_BLOCK + REGION_BLOCK / 2, by * REGION_BLOCK + REGION_BLOCK / 2)
+			var centre := PAINTED.position + Vector2i(bx * REGION_BLOCK + REGION_BLOCK / 2, by * REGION_BLOCK + REGION_BLOCK / 2)
 			var name: String = Regions.name_at(centre)
 			REGION_GRID[by * blocks.x + bx] = REGION_NAMES.find(name)
 			if OVERWORLD.has_point(centre) and terrain(centre) in LAND:
@@ -655,12 +695,14 @@ static func _map_regions() -> void:
 		info["max_level"] = maxi(info["max_level"], spawn["level"])
 
 
-## The region name at an overworld tile ("" outside the overworld).
+## The region name at an overworld tile ("" outside the overworld; open sea away from the
+## painted land counts as the nearest painted tile's region).
 static func region_at(cell: Vector2i) -> String:
 	if not OVERWORLD.has_point(cell):
 		return ""
-	var columns: int = ceili(GRID_SIZE.x / float(REGION_BLOCK))
-	return REGION_NAMES[REGION_GRID[(cell.y / REGION_BLOCK) * columns + cell.x / REGION_BLOCK]]
+	var local: Vector2i = cell.clamp(PAINTED.position, PAINTED.end - Vector2i.ONE) - PAINTED.position
+	var columns: int = ceili(PAINTED.size.x / float(REGION_BLOCK))
+	return REGION_NAMES[REGION_GRID[(local.y / REGION_BLOCK) * columns + local.x / REGION_BLOCK]]
 
 
 ## Where a tile is, for the HUD: {name, kind ("town", "pvp", "dungeon", or "region"), min_level,
@@ -781,12 +823,9 @@ static func _cell_of(marker: Node2D) -> Vector2i:
 	return Vector2i((marker.position / TILE_SIZE).floor())
 
 
-## The continent (an Atlas sheet) a cell lies on, or "" off the overworld or in open sea.
+## The continent (Atlas.CONTINENTS) a cell lies on, or "" off the overworld or in open sea.
 static func continent_at(cell: Vector2i) -> String:
-	for sheet: Dictionary in Atlas.SHEETS:
-		if (sheet["cells"] as Rect2i).has_point(cell):
-			return sheet["name"]
-	return ""
+	return Atlas.continent_at(cell)
 
 
 static func width() -> int:
@@ -797,14 +836,31 @@ static func height() -> int:
 	return GRID_SIZE.y
 
 
-## The overworld's terrain and buildings, hashed: what the baked world map (tools/generators/
-## world_map.gd) was painted from, so a map edited since shows its stale bake.
-static func overworld_hash() -> String:
+## The world map pages (Atlas sectors) the overworld needs: every one near painted land. The rest
+## are open deep sea and drawn as such.
+static func map_pages() -> Array[Vector2i]:
+	return Atlas.sectors_in(PAINTED.grow(MAP_PAGE_REACH).intersection(OVERWORLD))
+
+
+## What a world map page is painted from, hashed: its terrain, the shore within MAP_PAGE_REACH
+## around it, its roofs, and its towns. The baker (tools/generators/world_map.gd) stores it, so a
+## page edited since shows its stale bake.
+static func page_hash(sector: Vector2i) -> String:
+	var area: Rect2i = Atlas.sector_rect(sector).grow(MAP_PAGE_REACH).intersection(Rect2i(Vector2i.ZERO, GRID_SIZE))
 	var hashing := HashingContext.new()
 	hashing.start(HashingContext.HASH_SHA256)
-	for y: int in OVERWORLD.size.y:
-		hashing.update(GRID.slice(y * GRID_SIZE.x, y * GRID_SIZE.x + OVERWORLD.size.x))
-	hashing.update(str(ROOF_AT.size()).to_utf8_buffer())
+	for y: int in range(area.position.y, area.end.y):
+		hashing.update(GRID.slice(y * GRID_SIZE.x + area.position.x, y * GRID_SIZE.x + area.end.x))
+	var roofs: int = 0
+	for y: int in range(area.position.y, area.end.y):
+		for x: int in range(area.position.x, area.end.x):
+			if ROOF_AT.has(Vector2i(x, y)):
+				roofs += 1
+	var towns: Array[Rect2i] = []
+	for zone: Dictionary in ZONES:
+		if zone["town"] and (zone["rect"] as Rect2i).intersects(area):
+			towns.append(zone["rect"])
+	hashing.update((str(roofs) + str(towns)).to_utf8_buffer())
 	return hashing.finish().hex_encode()
 
 

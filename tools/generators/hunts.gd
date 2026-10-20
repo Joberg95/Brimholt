@@ -38,7 +38,7 @@ const OPEN_SHARE: float = 0.7
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	_prepare(scene_root)
 	var group: Node = scene_root.get_node("MonsterSpawns")
 	var walkable: String = ".,:=bdocv^"
@@ -87,12 +87,10 @@ func _initialize() -> void:
 			placed += 1
 	var error: Error = OK
 	if placed > 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Placed %d hunting camps into %s (%s)%s" % [placed, SCENE_PATH, error_string(error),
 		"" if missing.is_empty() else "; no room for " + ", ".join(missing)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK and missing.is_empty() else 1)
 
 

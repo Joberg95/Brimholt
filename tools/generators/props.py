@@ -3,8 +3,8 @@
 tilted camera and top-left light, five-tone ramps per material (warm lights, cool shadows),
 textures (wood grain and plank seams, stone slabs, cloth), gloss on metal and glass, glowing
 flames and lantern glass, a coloured edge round the silhouette, and dark seams where a nearer
-part overlaps. make_sprites.py calls furniture(kind), sign(kind), and herb(main, light, accent,
-variant) and packs the frames into furniture.png, signs.png, and herbs.png.
+part overlaps. make_sprites.py calls furniture(kind), sign(kind), wall_decor(kind), and herb(main, light,
+accent, variant) and packs the frames into furniture.png, signs.png, wall_decor.png, and herbs.png.
 
 World units are pixels: x to the right, y away from the viewer (north), z up; the floor is z 0.
 """
@@ -64,6 +64,11 @@ LANTERN_CORE = emissive("fff4c0")
 AWNING_RED = Material("c8463a")
 AWNING_WHITE = Material("eee4cc")
 BOOKS = [Material(c) for c in ("7a3028", "2f4a74", "4f5e2c", "7a6430", "5a2a50")]
+CASTLE_STONE = Material("cdbf9c", "stone")
+CASTLE_STONE_DARK = Material("a8997a", "stone")
+BUSH_LEAF = Material("3f7a2c", "leaf")
+ROSE = Material("e88aa8")
+BANNER_RED = Material("b02a22", "cloth")
 FRUIT = [Material(c, gloss=0.5) for c in ("d84a2a", "e8b030", "6aa83a", "c83a3a")]
 
 
@@ -486,9 +491,122 @@ def _render_piece(kind, angle):
             parts.append(ell((x, -1 + (index % 2) * 2, 20), (2.0, 2.0, 2.0), FRUIT[index]))
         parts += [cyl((6, 1, 18.5), 2.4, 9, WOOL_BLUE, (1, 0, 0)), ell((-3, 3, 20.4), (2.2, 2.2, 2.0), FRUIT[1])]
         shadow = (15, 7)
+    elif kind == "pillar":
+        # A square column of dressed sandstone on a plinth, with a capital.
+        parts = [box((0, 0, 2), (8.5, 8.5, 2), CASTLE_STONE_DARK, group=1), box((0, 0, 5), (7.2, 7.2, 1.2), CASTLE_STONE, group=1),
+                 box((0, 0, 22), (6, 6, 16), CASTLE_STONE, group=2), box((0, 0, 39), (7.4, 7.4, 1.4), CASTLE_STONE, group=3),
+                 box((0, 0, 41.6), (8.4, 8.4, 1.3), CASTLE_STONE_DARK, group=3)]
+        shadow = None
+    elif kind == "knight_statue":
+        # A suit of armour on a plinth, a spear upright in its right hand.
+        ARMOUR = Material("8a929a", gloss=0.8)
+        parts = [box((0, 0, 2.5), (7.5, 6.5, 2.5), CASTLE_STONE_DARK, group=1),
+                 box((-2.4, 0, 9.5), (1.9, 1.9, 4.5), ARMOUR, group=2), box((2.4, 0, 9.5), (1.9, 1.9, 4.5), ARMOUR, group=2),
+                 box((0, 0, 17), (4.6, 3.0, 4.2), ARMOUR, group=2), ell((0, 0, 21.4), (5.6, 3.6, 2.2), ARMOUR, group=2),
+                 ell((-5.6, 0, 20.4), (2.0, 2.0, 2.0), ARMOUR, group=2), ell((5.6, 0, 20.4), (2.0, 2.0, 2.0), ARMOUR, group=2),
+                 box((-6.0, -0.5, 15.5), (1.3, 1.3, 4), ARMOUR, group=2), box((6.0, -0.5, 15.5), (1.3, 1.3, 4), ARMOUR, group=2),
+                 ell((0, 0, 26.5), (3.0, 3.2, 3.6), ARMOUR, group=3), box((0, -2.9, 26.6), (2.0, 0.3, 0.5), Material("1e2024"), group=3),
+                 box((0, 0.5, 30.6), (0.7, 2.6, 1.2), WOOL_RED, group=3),
+                 cyl((7.4, -1.2, 5), 0.6, 33, DARK_WOOD), ell((7.4, -1.2, 39), (1.2, 1.2, 2.6), ARMOUR),
+                 box((-6.6, -1.6, 13.5), (2.4, 0.8, 4.8), WOOL_RED, group=4), box((-6.6, -2.5, 13.5), (0.6, 0.2, 2.6), GOLD)]
+        shadow = (9, 5)
+    elif kind == "gargoyle":
+        # A crouching dark stone gargoyle on a plinth, wings folded, horns and glowing eyes.
+        dark = Material("4a4a4e", "stone")
+        parts = [box((0, 0, 3), (8.5, 8, 3), CASTLE_STONE, group=1), box((0, 0, 6.6), (9.2, 8.6, 0.8), CASTLE_STONE_DARK, group=1),
+                 ell((0, 1, 13), (5.2, 4.6, 6), dark, group=2), ell((-3.2, -2.6, 9), (1.8, 2.6, 2.2), dark, group=2),
+                 ell((3.2, -2.6, 9), (1.8, 2.6, 2.2), dark, group=2), ell((0, -2.2, 21), (3.6, 3.2, 3.2), dark, group=3),
+                 ell((-5.8, 2.4, 17), (2.2, 3.4, 6), dark, turn_y(0.4), group=4), ell((5.8, 2.4, 17), (2.2, 3.4, 6), dark, turn_y(-0.4), group=4),
+                 cyl((-2.0, -2.2, 23), 0.6, 3.2, dark, norm((-0.4, 0, 1))), cyl((2.0, -2.2, 23), 0.6, 3.2, dark, norm((0.4, 0, 1))),
+                 ell((-1.3, -5.0, 21.4), (0.5, 0.3, 0.4), emissive("c84a2a")), ell((1.3, -5.0, 21.4), (0.5, 0.3, 0.4), emissive("c84a2a"))]
+        shadow = (10, 5)
+    elif kind == "bush":
+        parts = [ell((x, y, z), (r, r * 0.9, r * 0.8), BUSH_LEAF, turn_z(x * 0.2), group=1)
+                 for x, y, z, r in ((0, 0, 7, 8), (-6, 2, 6, 5.4), (6, 1, 6, 5.6), (-2, -3, 11, 5), (3, -2, 12, 4.6),
+                                    (0, 2, 13, 4.4))]
+        shadow = (10, 4)
+    elif kind == "flower_vase":
+        vase = Material("c8c0b4", gloss=0.6)
+        parts = [cyl((0, 0, 0), 3.2, 1.0, Material("8a7a68"), group=1), ell((0, 0, 5), (4.0, 4.0, 4.4), vase, group=1),
+                 cyl((0, 0, 8.5), 2.0, 3.0, vase, group=1), cyl((0, 0, 11), 2.8, 0.8, Material("b0a89c"), group=1)]
+        for x, y, z in ((0, 0, 17), (-3, 1, 15), (3, -1, 15.4), (-1.5, -2, 19), (2, 2, 19)):
+            parts += [cyl((x * 0.4, y * 0.4, 11), 0.35, z - 12, LEAF, norm((x, y, 8))), ell((x, y, z), (1.9, 1.9, 1.7), ROSE)]
+        parts += [ell((-4, 0, 12.4), (2.2, 1.2, 0.8), LEAF), ell((4, 1, 13), (2.2, 1.2, 0.8), LEAF)]
+        shadow = (6, 3)
+    elif kind == "potted_palm":
+        parts = [cyl((0, 0, 0), 5.2, 8, CLAY, group=1), cyl((0, 0, 7.6), 6.0, 1.6, Material("c8784a"), group=1),
+                 cyl((0, 0, 8), 0.9, 12, DARK_WOOD, group=2)]
+        for angle_deg in range(0, 360, 60):
+            a = math.radians(angle_deg)
+            parts.append(ell((math.cos(a) * 5.5, math.sin(a) * 4, 19 - abs(math.sin(a)) * 2), (6.5, 1.6, 0.8), LEAF,
+                             turn_z(a), group=3))
+        shadow = (7, 3)
+    elif kind == "candelabra":
+        # A small table with a three-armed golden candelabra.
+        parts = [box((0, 0, 13), (9.5, 7, 1.1), OAK, grain=0, group=1)]
+        parts += _legs(((-8, -5), (8, -5), (-8, 5), (8, 5)), 12, TIMBER)
+        parts += [cyl((0, 0, 14), 2.4, 0.8, GOLD), cyl((0, 0, 14.6), 0.6, 9, GOLD), box((0, 0, 21), (5.6, 0.5, 0.5), GOLD)]
+        for x in (-5.4, 0, 5.4):
+            lift = 1.2 if x == 0 else 0.0
+            parts += [cyl((x, 0, 21.4 + lift), 0.9, 4, CANDLE), ell((x, 0, 26.6 + lift), (0.8, 0.8, 1.4), FLAME_CORE)]
+        shadow = (11, 6)
+    elif kind == "fruit_table":
+        parts = [box((0, 0, 13), (9.5, 7, 1.1), OAK, grain=0, group=1)]
+        parts += _legs(((-8, -5), (8, -5), (-8, 5), (8, 5)), 12, TIMBER)
+        parts += [ell((0, 0, 15.2), (6.4, 5, 1.6), Material("c8b090", gloss=0.4))]
+        for index, (x, y, z) in enumerate(((-3, -1, 17), (0, 1.5, 17), (3, -1, 17), (-1.5, -2, 19), (1.5, 0, 19.6), (0, -0.5, 21.5))):
+            parts.append(ell((x, y, z), (2.0, 2.0, 1.9), FRUIT[index % len(FRUIT)]))
+        shadow = (11, 6)
+    elif kind == "stove":
+        parts = [box((0, 1, 9), (9, 7, 9), DARK_IRON, group=1), box((0, 1, 18.6), (9.6, 7.6, 0.8), IRON, group=1),
+                 box((0, -6.2, 7), (5, 0.4, 3.6), EMBER, group=2), box((0, -6.4, 7), (3, 0.3, 2.0), FLAME_CORE, group=2),
+                 cyl((4, 4, 19), 1.6, 18, DARK_IRON, group=3), cyl((-3, 0, 19.2), 3.4, 2.2, IRON, group=4)]
+        shadow = (11, 6)
+    elif kind == "throne":
+        parts = [box((0, 0, 1.5), (11, 9, 1.5), CASTLE_STONE_DARK, group=1),
+                 box((0, 0, 8.5), (8, 6.5, 5.5), GOLD, group=2), box((0, -0.5, 14.6), (7.4, 6, 1.0), WOOL_RED, group=3),
+                 box((0, 5.6, 22), (8, 1.4, 13), GOLD, group=4), box((0, 4.2, 22), (6.2, 0.4, 10.4), WOOL_RED, group=5),
+                 box((-7.6, -0.5, 17), (1.0, 6, 2.6), GOLD, group=6), box((7.6, -0.5, 17), (1.0, 6, 2.6), GOLD, group=6),
+                 ell((0, 5.6, 36), (3, 1.2, 2.4), GOLD, group=4), ell((-6.5, 5.6, 35), (1.4, 1.2, 1.6), GOLD, group=4),
+                 ell((6.5, 5.6, 35), (1.4, 1.2, 1.6), GOLD, group=4), ell((0, 4.2, 36.2), (1.0, 0.6, 1.0), GLASS_RED)]
+        shadow = (12, 7)
     else:
         raise ValueError(kind)
     return render(_turned(parts, angle) if angle else parts, 32, 48, FURNITURE_ORIGIN, shadow)
+
+
+# ---------------------------------------------------------------- wall decorations (32x32, on a wall face)
+
+WALL_DECOR_KINDS = ["banner", "wall_torch", "painting"]
+
+
+def wall_decor(kind):
+    """Something hung on the visible face of a wall (SpriteArt.draw_wall_decor), leaned with the
+    wall like a sign: a red banner with a gold crown on a rod, a torch in an iron bracket with a
+    real flame, or a painting of hills in a gilded frame."""
+    face = -1.0
+    if kind == "banner":
+        parts = [cyl((-8, 0, 17.5), 0.7, 16, BRASS, (1, 0, 0), group=1), ell((-8.6, 0, 17.5), (0.9, 0.9, 0.9), GOLD, group=1),
+                 ell((8.6, 0, 17.5), (0.9, 0.9, 0.9), GOLD, group=1),
+                 box((0, 0.4, 8.5), (6.5, 0.5, 8.5), BANNER_RED, grain=2, group=2)]
+        for x in (-4.5, 0, 4.5):
+            parts.append(box((x, 0.4, -0.6), (1.6, 0.5, 1.4), BANNER_RED, turn_y(0.785), group=2))
+        parts += [box((0, face, 10.5), (3.6, 0.3, 1.2), GOLD), box((-2.7, face, 12.4), (0.6, 0.3, 1.2), GOLD),
+                  box((0, face, 12.8), (0.6, 0.3, 1.6), GOLD), box((2.7, face, 12.4), (0.6, 0.3, 1.2), GOLD),
+                  box((0, face, 6.0), (5.4, 0.3, 0.4), GOLD)]
+        return render(_lean(parts, math.radians(40)), 32, 32, (16, 28))
+    if kind == "wall_torch":
+        parts = [box((0, 0.6, 7), (2.4, 0.6, 3.6), DARK_IRON, group=1), box((0, -2.4, 10.6), (1.4, 3.4, 0.9), DARK_IRON, group=1),
+                 cyl((0, -5.0, 6), 1.5, 12, DARK_WOOD, norm((0, -0.3, 1)), group=2), cyl((0, -6.2, 16), 2.0, 2.0, DARK_IRON),
+                 ell((0, -6.6, 21), (2.8, 2.8, 4.2), FLAME), ell((0, -7.0, 21.8), (1.5, 1.5, 2.4), FLAME_CORE)]
+        return render(_lean(parts, math.radians(40)), 32, 32, (16, 26))
+    if kind == "painting":
+        sky, hill, meadow = Material("7aa6c8"), Material("5c8a44"), Material("8aa850")
+        parts = [box((0, 0.4, 11), (11, 0.5, 8.5), GOLD, group=1), box((0, face, 12.4), (9.4, 0.3, 6.4), sky, group=2),
+                 ell((-3, face - 0.1, 7.6), (7.5, 0.3, 3.8), hill, group=3), ell((5, face - 0.15, 6.6), (6, 0.3, 3.0), meadow, group=3),
+                 ell((-5, face - 0.2, 15.6), (1.6, 0.3, 1.6), Material("f4e8a0"), group=4)]
+        return render(_lean(parts, math.radians(40)), 32, 32, (16, 26))
+    raise ValueError(kind)
 
 
 # ---------------------------------------------------------------- the fountain (96x112, 3x3 tiles)

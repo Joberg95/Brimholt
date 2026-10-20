@@ -2,7 +2,9 @@ extends RefCounted
 ## Finds town buildings in a terrain grid: small rooms enclosed by walls and doors. A door is
 ## an open tile between two walls in a wall line (west and east, or north and south). Rooms are
 ## filled between walls without crossing doors; a room that stays inside the search area and
-## holds at most MAX_ROOM tiles is a building. Shared by the world (roofs, signs) and the town
+## holds at most MAX_ROOM tiles is a building. Rooms floored with a castle keep's sandstone or
+## carpet ("F", "Y") are not: a keep stands open to the sky, its halls seen from above as in Tibia.
+## Shared by the world (roofs, signs) and the town
 ## painter, so it depends on nothing: terrain comes from a Callable(cell) -> String.
 
 const WALLS: String = "#OCW"
@@ -40,10 +42,14 @@ static func find(terrain: Callable, area: Rect2i) -> Array:
 						continue
 					seen[next] = true
 					queue.append(next)
-			if open or room.size() > MAX_ROOM or doors.is_empty():
+			if open or room.size() > MAX_ROOM or doors.is_empty() or room.any(_keep_floor.bind(terrain)):
 				continue
 			found.append(_building(terrain, room, doors))
 	return found
+
+
+static func _keep_floor(cell: Vector2i, terrain: Callable) -> bool:
+	return terrain.call(cell) in ["F", "Y"]
 
 
 ## An open tile between two walls in a wall line.

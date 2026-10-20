@@ -10,7 +10,6 @@ const WorldOverlay = preload("res://game/render/world_overlay.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
-const Atlas = preload("res://game/data/atlas.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Spells = preload("res://game/data/spells.gd")
@@ -710,10 +709,9 @@ func _check_ferry_and_maps() -> bool:
 	var maps: Node = game.maps
 	var here: Vector2i = game.world.players[1]["cell"]
 	var probe: Vector2i = here + Vector2i(3, 2)
-	var pixel: Vector2 = game.VIEW_ORIGIN + maps.map_point(Atlas.to_map(Vector2(probe) + Vector2(0.5, 0.5)))
+	var pixel: Vector2 = game.VIEW_ORIGIN + maps.map_point(Vector2(probe) + Vector2(0.5, 0.5))
 	# The painted map has several texels per tile and is filtered, so compare near the tile's middle.
-	var texel: Vector2i = Vector2i(Atlas.to_map(Vector2(probe) + Vector2(0.5, 0.5)) * maps._texel)
-	var expected: Color = maps._texture.get_image().get_pixelv(texel)
+	var expected: Color = maps.color_at(Vector2(probe) + Vector2(0.5, 0.5))
 	var shown: Color = world_map.get_pixelv(Vector2i(pixel))
 	if not _expect(game._world_map.visible and maps.zoom >= maps.OPEN_ZOOM and absf(shown.r - expected.r) + absf(shown.g - expected.g)
 			+ absf(shown.b - expected.b) < 0.2, "The world map key did not open the world map zoomed in on you (zoom %s, %s vs %s)" % [

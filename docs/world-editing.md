@@ -2,15 +2,24 @@
 
 The overworld is a Godot scene; this is how to edit it safely.
 
-The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
+The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor. The overworld is
+1920×1920 tiles (`Atlas.OVERWORLD_SIZE`): today's heartland, the 384×384 mainland and the frost
+isles south of it, sits in its north-west corner, and new land grows east and south. Its terrain
+is stored in 128×128 sectors (`game/maps/sectors/<sx>_<sy>.tscn`, one per square that holds any
+painted cell), which `overworld.tscn` instances under its `Sectors` node, so the editor still
+shows one world:
 
-1. **Terrain**: select the `Terrain` node and use the TileMap panel at the bottom to paint
-   with the palette (`game/maps/terrain.tres`). Each tile's custom data `terrain` sets its
+1. **Terrain**: open the sector you want to paint (right-click it under `Sectors`, **Open in
+   Editor**) and use the TileMap panel at the bottom to paint
+   with the palette (`game/maps/terrain.tres`). Cells are in world coordinates, so a sector
+   scene shows its own square of the map; a cell painted outside it still counts, and
+   `make sectors` moves it to the sector it belongs to. Each tile's custom data `terrain` sets its
    gameplay: grass `.`, dirt road `,`, water `~`, stone wall `#`, tree `T`, sand `:`,
    cobblestone `=`, boulder `R`, mountain rock `L`, castle wall `W` (a 2×2 block of it is a tower), pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
    `o`, obsidian wall `O`, dead tree `D`, and Mirewood Fen's bog mud `m` and giant mushroom `U`. Water, walls, castle walls, trees, giant mushrooms, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
-   plank piers. Keep the map at non-negative coordinates; unpainted cells are void.
+   plank piers. Keep the map at non-negative coordinates; unpainted cells inside the overworld are
+   deep sea (`~`), and unpainted cells beyond it are void.
 2. **Spawns**: the twenty-four `Marker2D` nodes under `Spawns`, one per player, in order.
 3. **Ferrymen and waystones**: nodes under `Ferrymen` (set `vehicle` to `ferry` for a pier
    ferryman, or `waystone` for an inland standing stone, drawn as a stone with a glowing rune).
@@ -34,6 +43,12 @@ The world is the scene `game/maps/overworld.tscn`; open it in the Godot editor:
    `tools/generators/towns.gd`).
 9. **Dungeon entrances**: nodes under `DungeonEntrances`, with `dungeon` set to a
    `game/data/dungeons.gd` id. Keep them inside a town zone.
+10. **Decor**: nodes under `Decor` (`game/maps/markers/decor.gd`) with a `kind`. On open ground
+   a piece of furniture that blocks its tile (`SpriteArt.FURNITURE`: `pillar`, `knight_statue`,
+   `gargoyle`, `bush`, `flower_vase`, `potted_palm`, `candelabra`, `fruit_table`, `stove`,
+   `throne`, and the home and shop pieces); on a wall cell a decoration hung on the wall's visible
+   south face (`banner`, `wall_torch`, `painting`). The island painter furnishes castle keeps with
+   them; move or add them in Godot.
 8. **Townsfolk**: vendors and the banker, nodes under `Townsfolk` with a name, place, facing,
    and `role` (`vendor` or `banker`). Every town zone has a vendor; only Reedmere has a
    banker (`towns.gd` `BANK_PLACE`). The rules check verifies both. `make towns` moves them
@@ -51,13 +66,40 @@ it repaints only the zone rectangle in the existing scene (terrain, its monster 
 the `HollowReach` zone node) and keeps every other edit. Edit the layout constants there
 (area, gate row, Sanctum rooms, spawns) and re-run it, or paint over the zone by hand in
 Godot afterwards; once you do, the scene is the source of truth for the zone too.
-`make_map.gd` applies the same painter to a freshly generated map. The overworld is
-384×384; `make map-force` regenerates it in a few seconds.
+`make_map.gd` applies the same painter to a freshly generated map (the 384×384 heartland);
+`make map-force` regenerates it in a few seconds.
+
+**Castle keeps** stand on sandstone flags (`F`) with a carpet (`Y`, its gold fringe follows its
+outline): every house wall (`#`) beside them is drawn as rubble fieldstone, and a room floored
+with them is no building (no roof: the keep's halls are seen from above, as in Tibia), so it is
+furnished with Decor markers instead of by the keepers. A zone's `square` (a tile) tells the
+street decorator where the town's market and fountain go when its centre is not open street.
+
+**The archipelago** (`tools/generators/islands.gd`, `make islands`, docs/plan/40-archipelago.md):
+each island in `ISLANDS` (its rect, seed, capital and town, placeholder camps, and the mainland
+port its ferry sails to) is painted once into the open sea: a ragged coast with beaches, woods
+with clearings and lone trees, lakes with a grassy rim, rocky knolls, the castle capital (curtain
+walls with towers and three gates, houses, a market square, and the keep), the village, dirt roads
+from the gates out to the village and the shores, a harbour pier with the ferryman, trails cut to
+any clearing the woods wall in, and camps on open ground in sight of every meadow. The scene
+remembers each island (metadata `island_<id>`), so a re-run changes nothing; afterwards run
+`make towns town-paths cobble-towns world-map`, then edit the island by hand. Never run
+`make clear-walls` without checking it keeps the keeps (it does: walls beside `F` or `Y` stay).
+
+**Generators and sectors**: every generator loads the map with `MapIO.load_scene()`
+(`game/maps/map_io.gd`), which merges the sectors into one `Terrain` layer for it to edit, and
+writes it back with `MapIO.save_scene()`, which splits the terrain into sectors again, rewrites
+only the sectors whose cells changed, and removes the files of sectors left empty. Use the same
+pair in a new generator. `make sectors` does only the split (after painting across sectors).
+`make move-bands` was the one-time pass that moved the dungeons, the Void Throne, and the caves
+from right of the old 384-column overworld to past the new one (x ≥ 1924); a re-run changes
+nothing.
 
 **Instanced dungeons** are defined in `game/data/dungeons.gd`: an ASCII layout (walls, floor,
 one arrival `@`, one stairs up `^`, and monster symbols), its monster legend, its number of
 copies, and light. `tools/generators/dungeons.gd` (`make dungeons`) repaints every copy in
-the band right of the overworld and the stairway under each `DungeonEntrances` marker, keeping
+the band past the overworld's east edge (`Dungeons.BAND_X`, never reachable on foot) and the
+stairway under each `DungeonEntrances` marker, keeping
 other edits. Move a `DungeonEntrance` marker in Godot to move a stairway, then run
 `make dungeons` and the rules check. Never paint gameplay into the dungeon band by hand: the
 painter replaces it.
@@ -132,7 +174,8 @@ on the main street beside the old south-west one. The east quarter keeps its bui
 the trees that crowded them, and the waystone stands in an open square beside the bank. Edit its
 `LAYOUT` and run it again.
 
-**Elite caves** (`tools/generators/caves.gd`, `make caves`): the caves of `game/data/caves.gd`,
+**Elite caves** (`tools/generators/caves.gd`, `make caves`): the caves of `game/data/caves.gd`
+(the islands' great farming caves too: bigger, with many more halls of dense normal camps),
 carved into the band beyond the Void Throne (from `Caves.BAND_X`): halls joined by winding
 tunnels, the stairs up in the westmost hall, camps (`Cave_<cave>_<n>` spawn markers) deeper in,
 and the champion in the deepest hall. Each mouth is a `CaveMouths` marker on a hole (`v`) in the
@@ -141,14 +184,13 @@ places but take their monster, level, and size from the table, so edit the table
 again, or move markers in Godot.
 
 **The frost isles** (`tools/generators/frost_isles.gd`, `make frost-isles`): three snowbound isles
-(`Biomes.ISLES`) in free grid space south of the mainland, behind 40 rows of open sea, so they
+(`Biomes.ISLES`) south of the mainland, behind 40 rows of open sea, so they
 are reached only by boat (Captain Torgrim in Hrimvik sails to Lastlight and Cinder Landing, and
 their boats sail back). They are painted in snow `s`, snow-laden firs `P`, and crags, joined by
 plank bridges; Hrimvik is built from the painter's `HOUSES`, `STREETS`, and `GATES` (walls never
 stand one tile apart, or Buildings reads the gap as a doorway). In the isles `#` draws as log
 walls, roofs are snowed over, house floors are planks, and streets snowy cobble. The world map
-shows the isles west of the mainland: `game/data/atlas.gd` lays out the sheets, the baker paints
-them so, and the map window converts every cell with `Atlas.to_map`. After editing the isles, run
+shows them where they lie, like every continent (`Atlas.CONTINENTS`). After editing the isles, run
 `make towns town-paths caves world-map`.
 
 **Filling empty stretches** (`tools/generators/fill_gaps.gd`, `make fill-gaps`): every open,
@@ -182,10 +224,14 @@ clears the dungeon band first, so a layout may change size). Hand-drawn layouts 
 the crypt) may hold props: `B` a barrel and `X` a crate (`Dungeons.PROPS`), which block like
 furniture; the rules check makes sure every open tile can still be reached.
 
-**The world map** is painted from the map by `tools/generators/world_map.gd` (`make world-map`):
-four pixels per tile in `assets/sprites/world_map.png`, with the map's hash in
-`world_map.json`. After editing the terrain or buildings, bake it again; until then the game
-shows a flat one-pixel-per-tile map, and the rules check fails with a reminder.
+**The world map** is painted from the map by `tools/generators/world_map.gd` (`make world-map`)
+in pages: one PNG per sector near painted land (`assets/sprites/world_map/<sx>_<sy>.png`, four
+pixels per tile, map tile = world cell), an `overview.png` of the whole overworld at one pixel
+per tile for zooming far out, and `pages.json` with each page's terrain hash
+(`World.page_hash`). A bake paints again only the pages whose terrain changed (`FORCE=1` paints
+them all) and removes pages no longer near land; open sea needs no page. After editing the
+terrain or buildings, bake it again; until then the game shows the edited pages flat at one pixel
+per tile, and the rules check fails with a reminder.
 
 **Camp density**: `tools/generators/camp_density.gd` (`make camp-density`) made every camp of a
 normal monster from level 11 a tight pack of 5-7 within two tiles, so a 25-kill task is two or

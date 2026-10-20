@@ -19,14 +19,16 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/landscape.gd
 
 ## Must match World.TERRAINS (the rules check verifies it).
-const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsP"
+const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const Regions = preload("res://game/data/regions.gd")
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const TILE: int = 32
 ## The overworld; the dungeon band lies to its right.
 const WORLD: Rect2i = Rect2i(0, 0, 384, 384)
 ## The frost isles (Biomes.ISLES), south of WORLD behind open sea; painted by frost_isles.gd.
 const ISLES: Rect2i = Rect2i(0, 424, 160, 128)
+const OVERWORLD: Rect2i = Rect2i(0, 0, 1920, 1920)
 const CAPITAL: String = "Reedmere"
 ## [town, absorbed town]: the absorbed zone is removed, its townsfolk and quest givers take the
 ## town's name (ferrymen keep their dock name), and the ground between is built up.
@@ -98,21 +100,19 @@ var _districts: Array[String] = []
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	if scene_root.has_meta("landscape"):
 		print("The landscape is already painted into %s: nothing to do" % SCENE_PATH)
-		scene_root.free()
+		MapIO.free_scene(scene_root)
 		quit(0)
 		return
 	var report: Dictionary = apply(scene_root)
 	var error: Error = ERR_INVALID_DATA
 	if not report.is_empty():
 		scene_root.set_meta("landscape", true)
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Painted the landscape into %s: %s (%s)" % [SCENE_PATH, report, error_string(error)])
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 
@@ -263,9 +263,10 @@ func _zone(cell: Vector2i) -> Array:
 	return []
 
 
-## Open country: the mainland or the frost isles, outside every zone, not reserved.
+## Open country: the overworld (the mainland, the frost isles, the archipelago), outside every
+## zone, not reserved.
 func _countryside(cell: Vector2i) -> bool:
-	return (WORLD.has_point(cell) or ISLES.has_point(cell)) and _zone(cell).is_empty() and not _reserved.has(cell)
+	return OVERWORLD.has_point(cell) and _zone(cell).is_empty() and not _reserved.has(cell)
 
 
 func _near(cell: Vector2i, distance: int, tiles: String) -> bool:

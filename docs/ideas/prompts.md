@@ -9,7 +9,7 @@ lets add some smaller mini bosses as rare creatures from levels 10-50 anywhere i
 Outfits from quests, later thing (plan 22)
 
 
-we should redesign the map to have 1 major city per continent and 1 smaller one per continent. (plan 32)
+grow the world as Tibia-style biome islands, each with a castle capital and a smaller town, the right tiles per area, nice to roam (plan 40)
 
 
 check where we are missing the new art style compared to the old, there is a lot of mismatching around the world; a lot of the areas are missing the updated art (plan 38)

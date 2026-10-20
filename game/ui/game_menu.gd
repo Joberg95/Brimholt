@@ -5,7 +5,11 @@ extends PanelContainer
 ## the old title row above the game window, so the window sits at the top of the screen.
 ##
 ## Settings are saved to SETTINGS_PATH (unless `persistent` is off, as in tests): weather effects
-## (rain and snow over the game window), floating damage numbers, and fullscreen.
+## (rain and snow over the game window), floating damage numbers, fullscreen, and pixel-perfect
+## scaling. The game scales to fill the window or screen (project.godot: canvas_items, fractional,
+## aspect kept), so text stays sharp at any size; pixel-perfect scaling keeps to whole steps
+## (crisper pixel art, black borders on most screens). At startup the window opens at
+## WINDOW_FILL of the screen, unless the command line sets its size or place (tests, the bench).
 
 const World = preload("res://game/core/world.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -20,8 +24,11 @@ const MUTED: Color = Color("#a7b0b8")
 const SETTINGS: Dictionary = {
 	"weather": ["Weather effects", "Rain and snow falling over the game window", true],
 	"damage_numbers": ["Damage numbers", "Floating numbers for damage, healing, and experience", true],
-	"fullscreen": ["Fullscreen", "Fill the screen (the game keeps its pixel size, centred)", false],
+	"fullscreen": ["Fullscreen", "Fill the whole screen", false],
+	"pixel_perfect": ["Pixel-perfect scaling", "Scale only in whole steps: the crispest pixels, but black borders on most screens", false],
 }
+## Share of the screen the window opens at.
+const WINDOW_FILL: float = 0.85
 
 var game: Node
 var persistent: bool = true
@@ -31,6 +38,7 @@ var controls_button: Button
 var leave_button: Button
 var _players: VBoxContainer
 var _players_key: String = ""
+var _window_fitted: bool = false
 
 
 func build(game_node: Node, open_controls: Callable) -> void:
@@ -140,9 +148,32 @@ func apply_settings() -> void:
 	if game._view != null and game._view.rain != null:
 		game._view.rain.enabled = settings["weather"]
 	if DisplayServer.get_name() != "headless" and persistent:
+		get_tree().root.content_scale_stretch = Window.CONTENT_SCALE_STRETCH_INTEGER if settings["pixel_perfect"] \
+			else Window.CONTENT_SCALE_STRETCH_FRACTIONAL
 		var mode: DisplayServer.WindowMode = DisplayServer.WINDOW_MODE_FULLSCREEN if settings["fullscreen"] else DisplayServer.WINDOW_MODE_WINDOWED
 		if DisplayServer.window_get_mode() != mode:
 			DisplayServer.window_set_mode(mode)
+		if not _window_fitted and mode == DisplayServer.WINDOW_MODE_WINDOWED:
+			_window_fitted = true
+			_fit_window()
+
+
+## Opens the window at WINDOW_FILL of the screen's usable area, in the game's shape, centred
+## (not when the command line sets the window's size or place).
+func _fit_window() -> void:
+	for arg: String in OS.get_cmdline_args():
+		if arg in ["--resolution", "--position", "--maximized", "--fullscreen"]:
+			return
+	var screen: int = DisplayServer.window_get_current_screen()
+	var usable: Rect2i = DisplayServer.screen_get_usable_rect(screen)
+	var base := Vector2(ProjectSettings.get_setting("display/window/size/viewport_width"),
+		ProjectSettings.get_setting("display/window/size/viewport_height"))
+	var factor: float = minf(usable.size.x / base.x, usable.size.y / base.y) * WINDOW_FILL
+	if factor <= 1.0:
+		return
+	var window := Vector2i((base * factor).round())
+	DisplayServer.window_set_size(window)
+	DisplayServer.window_set_position(usable.position + (usable.size - window) / 2)
 
 
 func _load_settings() -> void:

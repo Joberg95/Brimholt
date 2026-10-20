@@ -9,6 +9,7 @@ extends SceneTree
 
 const World = preload("res://game/core/world.gd")
 const Buildings = preload("res://game/data/buildings.gd")
+const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## Streets a path joins, ground it may cross, and the tree it may cut as a last resort.
 const STREETS: String = "=,"
@@ -20,18 +21,16 @@ const SIDES: Array[Vector2i] = [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vecto
 
 
 func _initialize() -> void:
-	var scene_root: Node = (load(SCENE_PATH) as PackedScene).instantiate()
+	var scene_root: Node = MapIO.load_scene()
 	var result: Dictionary = apply(scene_root)
 	var error: Error = OK
 	if result["painted"] > 0:
-		var packed := PackedScene.new()
-		packed.pack(scene_root)
-		error = ResourceSaver.save(packed, SCENE_PATH)
+		error = MapIO.save_scene(scene_root)
 	print("Joined %d doors to the streets with %d cobbles; %d doors found no way (%s)" % [
 		result["doors"], result["painted"], result["stuck"].size(), error_string(error)])
 	for stuck: Vector2i in result["stuck"]:
 		print("  no street reachable from the door at %s" % stuck)
-	scene_root.free()
+	MapIO.free_scene(scene_root)
 	quit(0 if error == OK else 1)
 
 
