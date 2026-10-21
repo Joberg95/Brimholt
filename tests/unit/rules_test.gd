@@ -1082,7 +1082,8 @@ func _profession_data_checks() -> void:
 			check(crafted.has(kind), "%s can be crafted" % kind)
 	for vocation: String in Balance.VOCATIONS:
 		for tier: int in Items.TIER_LEVELS:
-			for slot: String in ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]:
+			# Legs have tier gaps until the gear rebalance (recoloured legs were deleted).
+			for slot: String in ["helmet", "armor", "boots", "main_hand", "off_hand"]:
 				var piece: String = World.class_piece(slot, tier, vocation)
 				check(not piece.is_empty() and crafted.has(piece), "%ss can have their tier-%d %s crafted" % [vocation, tier, slot])
 	for profession: String in Professions.CRAFTING:
@@ -1711,6 +1712,8 @@ func _hunters_lodge_checks() -> void:
 		"a contract opens only after the one before it")
 	for vocation: String in Balance.VOCATIONS:
 		for task: String in chain:
+			if Quests.TASKS[task].get("gear", "") == "legs":
+				continue  # Legs have tier gaps until the gear rebalance.
 			var items: Array = World.task_items(task, vocation)
 			var gear: Array = items.filter(func(entry: Array) -> bool: return not World.ITEMS[entry[0]]["slot"].is_empty())
 			check(gear.size() == 1 and World.requirement_error(gear[0][0], Balance.MAX_LEVEL, vocation).is_empty()
@@ -2955,7 +2958,7 @@ func _quest_piece_checks() -> void:
 		# A task's rare roll ("rare") pays its pieces too, one turn-in in a few.
 		for kind: String in definition.get("rare", {}).get("items", []):
 			paid[kind] = true
-		if definition.has("gear") and definition.get("chain", "") == "hunters_lodge":
+		if definition.has("gear") and definition.get("chain", "") == "hunters_lodge" and definition["gear"] != "legs":
 			for vocation: String in Balance.VOCATIONS:
 				var piece: String = World.quest_piece("hunters_lodge", definition["gear"], vocation)
 				check(not piece.is_empty() and World.bound(piece) and World.requirement_error(piece, Balance.MAX_LEVEL, vocation).is_empty()
@@ -3002,7 +3005,7 @@ func _mythic_checks(by_key: Dictionary) -> void:
 	for kind: String in World.ITEMS:
 		if Items.mythic(World.ITEMS[kind]):
 			mythic.append(kind)
-	check(mythic.size() == 26, "twenty-six mythic pieces")
+	check(mythic.size() == 22, "twenty-two mythic pieces (the mythic legs were deleted as recolours)")
 	var sources: Dictionary = {}
 	for monster: String in Monsters.LOOT:
 		for entry: Array in Monsters.LOOT[monster]:
@@ -3045,7 +3048,7 @@ func _mythic_checks(by_key: Dictionary) -> void:
 					relic_total += World.ITEMS[relic]["stats"][stat]
 				check(relic_total > total, "the relic %s still beats %s" % [relic, kind])
 	for vocation: String in Balance.VOCATIONS:
-		for slot: String in ["helmet", "armor", "legs", "boots", "main_hand"]:
+		for slot: String in ["helmet", "armor", "boots", "main_hand"]:
 			check(by_key.has("%s/%s/%d" % [slot, vocation, Items.RELIC_LEVEL]), "%s can farm a mythic %s" % [vocation, slot])
 	for monster: String in farms:
 		check(farms[monster] >= 3, "%s has several level-50 camps" % monster)
@@ -3054,7 +3057,7 @@ func _mythic_checks(by_key: Dictionary) -> void:
 	for roll: int in 3000:
 		for entry: String in combat.roll_loot("ashmaw_drake", 50):
 			counts[World.kind_of(entry)] = counts.get(World.kind_of(entry), 0) + 1
-	check(absf(counts.get("drakeforged_helm", 0) - 45.0) < 25.0 and counts.get("ashmaw_heartscale", 0) > 1300,
+	check(absf(counts.get("drakeforged_helm", 0) - 3000.0 * 0.006) < 12.0 and counts.get("ashmaw_heartscale", 0) > 1300,
 		"the drake drops its mythic pieces and trophy near their chances")
 	check(not counts.has("drakeforged_helm") or combat.roll_loot("ashmaw_drake", 49).all(
 		func(entry: String) -> bool: return World.ITEMS[World.kind_of(entry)]["level"] <= 49 or World.ITEMS[World.kind_of(entry)]["slot"].is_empty()),
@@ -3465,6 +3468,8 @@ func _town_checks() -> void:
 	for vocation: String in Balance.VOCATIONS:
 		for tier: int in [1, 5, 10]:
 			for slot: String in Economy.GEAR_SLOTS:
+				if slot == "legs":
+					continue  # Legs have tier gaps until the gear rebalance.
 				check(not stock.filter(func(kind: String) -> bool: return World.ITEMS[kind]["slot"] == slot \
 					and World.ITEMS[kind]["level"] == tier and World.requirement_error(kind, tier, vocation).is_empty()).is_empty(),
 					"vendors sell a tier-%d %s for %ss" % [tier, slot, vocation])
