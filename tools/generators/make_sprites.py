@@ -304,8 +304,8 @@ WIDEN = (29, 34)
 
 
 # Experiment (branch experiment/pack-paperdoll): the whole figure, head included, drawn THIN as wide
-# (about a third narrower), sampled about the rig's centre column instead of widened.
-THIN = 0.65
+# (a fifth narrower), sampled about the rig's centre column instead of widened.
+THIN = 0.8
 THIN_CENTRE = 31.5
 
 
@@ -1752,6 +1752,13 @@ def _coverage(icon, left, right, top, bottom):
     return tuple(round(value / weight) for value in total) + (255,), weight / area
 
 
+def _nearest(icon, left, right, top, bottom):
+    """The icon pixel at the centre of a fractional rectangle, unblended (pixel art keeps its own
+    colours and edges), with 1.0 or 0.0 for its opacity like _coverage."""
+    pixel = icon.get(math.floor((left + right) / 2), math.floor((top + bottom) / 2))
+    return (pixel, 1.0) if pixel is not None else (None, 0.0)
+
+
 def _crisp(color):
     """A little more contrast and saturation: shrunken paintings read flat at sprite size."""
     hue, light, sat = colorsys.rgb_to_hls(*(channel / 255 for channel in color[:3]))
@@ -1795,7 +1802,9 @@ def textured(build, icon, kind, cape=False):
         for x, y in solid:
             u = u_left + (x - left) * columns
             v = icon_top + (y - top) * rows
-            color, opaque = _coverage(source, u, u + columns, v, v + rows)
+            # Experiment: the pack kit samples its pixels instead of averaging them (no wash-out).
+            sample = _nearest if kind in PACK_KIT else _coverage
+            color, opaque = sample(source, u, u + columns, v, v + rows)
             if color is not None and opaque >= 0.35:
                 if behind and back_fill is not None and _luma(color) < 45:
                     color = back_fill
