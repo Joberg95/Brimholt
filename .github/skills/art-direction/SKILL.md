@@ -27,15 +27,34 @@ relics, ores, magic, and fire. The direction, its flavour pillars, and the rollo
 reed green and lake blue; the land that wakes (mossy stone with glowing seams); grey castles with warm
 interiors in a wild land; violet and obsidian only for the Hollow, more of it nearer the endgame.
 
-**Golden references.** Until `docs/art-reference/` holds our own golden sprites (plan 46 phase 2),
-the painted figures in `art/outfits/class_sets.png` are the target for characters and the
-standard for outline, saturation, and light. The builders below show construction; their
-palettes are the old muted ones, so take ramps from `palette.py`, not from them.
+**Golden references: Qasrun is the house style** (owner's decision, 2026-10-21). Sunreach's
+capital was the first region drawn after the OpenTibia sprite pack (study only, see below) and
+is the bar every new sprite, region, and repaint must meet. Put new art beside the captures in
+`docs/art-reference/` (`qasrun-castle.png`, `qasrun-street.png`, `sunreach-oasis.png`,
+`duneford-edge.png`); if it reads as a different game, older or flatter, it is not done. Its
+sheets and builders are the reference set:
+
+| Sheet | Builder | What it sets the standard for |
+| --- | --- | --- |
+| `palms.png` | `palm` | Organic standing objects: a curved, ringed trunk lit on its left, a crown of overlapping fronds drawn back to front (back fronds darker), a few accent pixels (dates), outlined in `pal.outline(ramp)` |
+| `sandstone_walls.png` | `sandstone_wall`, `sandstone_face` | Walls as a complete kit (16 masks, two doors, fill, window pieces both ways), a material drawn through a `face(side, along, height)` callback: plinth at the foot, lit cornice under a shadow line, quiet grain, and window pieces the renderer picks by noise on straight runs |
+| `sandstone_castle_walls.png`, `sandstone_castle_towers.png` | `castle_block(mask, tower, SANDSTONE_CASTLE)` | Re-skinning a shape builder with a stone tuple taken from one `palette.py` ramp, line colour included, instead of copying the builder |
+| `roofs.png` row 4 | `roof_swatches` material 4, `RoofArt` `PLASTER_MATERIAL` | A regional roof as a material row plus a pitch, not a new roof system |
+| `FLAG_TILE` floors | `floor_tile("flags", v)` | Built floors: slabs in staggered courses with a hard kerbed edge |
+
+The patterns to copy: **every tone from one `palette.py` ramp** (`pal.SANDSTONE`, `pal.OAK`,
+`pal.FOLIAGE`), named once as a module tuple (`SANDSTONE_STONE`, `SANDSTONE_CASTLE`); the
+outline from `pal.outline(ramp)`; regional variants chosen in `sprite_art.gd` by a `Biomes`
+rect (`in_sunreach`), with the world map, weather, and light following the same rect. The
+painted figures in `art/outfits/class_sets.png` stay the reference for characters. The older
+builders below show construction; their palettes are the old muted ones, so take ramps from
+`palette.py`, not from them.
 
 ## Reference builders (copy their approach)
 
 | Builder | Shows how to |
 | --- | --- |
+| `palm`, `sandstone_wall`, `castle_block(..., SANDSTONE_CASTLE)` | The house style (above): start here |
 | `mountain` + `_rock_field` | Seamless texture across tiles (`ROCK_SPAN`), top-left light from a height field, cracks, ragged open edges, cliff faces of lit/shaded columns |
 | `castle_block`, `cuboid`, `_ashlar` | Build anything boxy in the oblique view: footprint, raised top, south and east faces, ashlar courses, outlined lower edges, merlons drawn back to front |
 | `ore_vein` | A small bright accent on a dull surface: nuggets lit top-left, dark seam around them, a glint frame |
@@ -178,17 +197,18 @@ license and a `CREDITS.md` row.
 - Colours from `palette.py` ramps; saturated.
 - Full dark silhouette outline (characters, creatures, items, standing objects); softer inner lines.
 - Smooth ramps, clean anti-aliasing, no dither, no pillow shading.
-- Detail level matches the golden references.
+- Sits beside the Qasrun captures in `docs/art-reference/` as the same game: saturation, outline, light, and detail level.
 - Original pixels; no Tibia files used.
 
 ## Workflow (look once, not every tweak)
 
-1. Read the reference builder closest to what you are making and reuse its helpers; take ramps
-   from `palette.py`.
+1. Open the Qasrun captures in `docs/art-reference/`, then read the reference builder closest
+   to what you are making (the Qasrun set first) and reuse its helpers; take ramps from
+   `palette.py`.
 2. Write the builder with its frame size and anchor in the docstring, add the sheet to
    `main()` in `make_sprites.py`, and draw it in `sprite_art.gd`.
 3. Generate (`make sprites`, or `python3 tools/generators/make_sprites.py`), then `make import`.
-4. Look **once** at the result in context: a capture with a character beside it and the
+4. Look **once** at the result in context, beside a Qasrun capture: a capture with a character beside it and the
    neighbouring tiles (a visual-test capture such as `.tools/visual-roofs.png`, or a small
    throw-away scene). Check, in order: scale against the character, light direction,
    outline, palette fit with neighbours, tiling seams, then the checklist above.

@@ -41,6 +41,11 @@ every pixel is drawn here.
 
 ## Art and sprites
 
+**House style: Qasrun.** Sunreach's capital (palms, plaster walls with latticed windows,
+sandstone castle, flat plaster roofs, slab streets) is the reference look for all new and
+repainted art. Its in-game captures are in `docs/art-reference/` (not imported by Godot), and
+the builders and patterns it sets are listed in the `art-direction` skill.
+
 `assets/sprites` holds original PNG sprite sheets made by `tools/generators/make_sprites.py`
 (Python standard library only). `game/render/sprite_art.gd` draws them with nearest
 filtering:
