@@ -11,12 +11,26 @@ library only) and drawn by `game/render/sprite_art.gd`. Before inventing anythin
 
 ## The look in one paragraph
 
-Grounded classic-RPG pixel art, Tibia-like in scale, readability, and design: imitating Tibia's items and looks closely is welcome, copying its pixels is not.
-Restrained earth colours, light from the **top-left**, shading in **pixel clusters** (no
-checkerboard dithering, no pillow shading, no gradients smeared across a surface), a dark
-**coloured** outline on the lower and outer edges, and **construction you can read**: stones
-in courses, planks with grain and iron bands, slabs with cracks. Ordinary things stay modest.
-Saturated colour and glow are for relics, ores, magic, and fire only.
+**Match the style; every design is our own.** Modern Tibia (12+) is the target: put a Brimholt
+screenshot beside a modern Tibia one and nothing of ours should read as a different game or a
+different generation. That means **saturated, high-contrast colour everywhere** (lush greens, deep
+blues, warm sandstone, rich cloth), a hard light from the **top-left** with bright highlights and dark
+core shadows, a **full dark silhouette outline** in the material's own hue-tinted near-black with
+softer inner lines, smooth ramps with clean anti-aliasing on curves (no checkerboard dithering, no
+pillow shading), the **oblique 3/4 view** for everything that stands (characters and creatures too),
+and dense, readable construction: stones in courses with chipped edges and moss, planks with grain
+and iron bands, folds, rivets, flowers and pebbles in grass. Glow and animation stay reserved for
+relics, ores, magic, and fire. The direction, its flavour pillars, and the rollout are in
+`docs/plan/46-modern-tibia-direction.md`.
+
+**Brimholt's flavour on top of the style** (the pillars): runes and old stone; ember orange against
+reed green and lake blue; the land that wakes (mossy stone with glowing seams); grey castles with warm
+interiors in a wild land; violet and obsidian only for the Hollow, more of it nearer the endgame.
+
+**Golden references.** Until `docs/art-reference/` holds our own golden sprites (plan 46 phase 2),
+the painted figures in `art/outfits/class_sets.png` are the target for characters and the
+standard for outline, saturation, and light. The builders below show construction; their
+palettes are the old muted ones, so take ramps from `palette.py`, not from them.
 
 ## Reference builders (copy their approach)
 
@@ -69,53 +83,88 @@ Match these looks closely; draw every pixel here.
 
 ## Rules
 
-**Palettes.** Each material is one ramp of 4–7 tones, light to dark, defined once as a
-module constant next to its builder (`ROCK`, `CASTLE_FACE`/`CASTLE_SIDE`/`CASTLE_TOP`,
-`DOOR_WOOD`, `OAK`, `IRON`, `GRASS`, `COBBLE`, ...). Reuse an existing ramp before adding one.
-New ramps: warm lights, cooler shadows, no pure black or white, saturation kept low. Never use
-an item's catalog colours raw; `pigment()` them.
+**Palettes.** Take every ramp from the master palette, `tools/generators/palette.py` (`GRASS`,
+`FOLIAGE`, `ROCK`, `FIELDSTONE`, `OAK`, `IRON`, `GOLD`, `EMBER`, `HOLLOW`, ...): one ramp per
+material, **6–10 tones**, light to dark, saturated, warm bright lights, cooler and more saturated
+shadows, a near-black core. Add or tune a ramp there (and run it: `python3
+tools/generators/palette.py --swatch .tools/palette.png` checks it and draws a swatch), never as a
+private copy in a builder. Older builders keep their own module ramps until their family is repainted
+(plan 46 phase 4). A region's ground and accent ramps come from `palette.IDENTITY`. Never use an
+item's catalog colours raw; `pigment()` them.
 
-**Light.** Top-left. Tops are the lightest, south faces mid, east faces darker than south
+**Light.** Top-left and hard. Tops are the lightest, south faces mid, east faces darker than south
 faces (compare `CASTLE_FACE` to `CASTLE_SIDE`). Each block is lit on its left/top and shaded
-on its right/bottom. A sunlit lip where a top meets a face; shadow at a face's foot.
+on its right/bottom, with a bright highlight on the lit edge and a dark core shadow, so the form
+reads at a glance. A sunlit lip where a top meets a face; shadow at a face's foot.
 
-**Outlines.** A one-pixel dark line in the material's own darkest hue (`ROCK_LINE`,
-`CASTLE_LINE`, `OUTLINE`) along lower edges, silhouettes against the ground, and seams
-between parts. Not around every pixel cluster.
+**Outlines.** A full one-pixel silhouette outline around every character, creature, item, and
+standing object, in the material's hue-tinted near-black (`palette.outline(ramp)`; the painted
+class sets use `#100808`), never grey and never pure black. Inner lines between parts are softer:
+the darkest ramp tone, or broken where light hits (selective outline). Ground tiles have no
+outline.
+
+**Shading.** Smooth steps through the ramp with anti-aliasing on curves and diagonals (one
+in-between tone where a curve steps). No checkerboard dithering, no pillow shading (dark rims all
+round a light centre), no gradient smeared flat across a surface.
 
 **Projection.** Everything that stands up uses the oblique view: height goes **up and left**,
 one pixel each per pixel of height. Only south and east faces are visible. Frames of things
 taller than a tile are `32 + raise` square and drawn `raise` pixels up-left of their tile
 (walls 48×48 with raise 16, castle walls raise 16 + 6 pad, towers raise 32). Draw back to
-front (larger `x + y + height` is nearer).
+front (larger `x + y + height` is nearer). Characters and creatures are drawn in **3/4 view** at
+the same angle: the down-facing figure shows a little of its right side, side views a little of the
+chest. Big creatures and objects use 64×64 frames (2×2 tiles), anchored bottom-right like Tibia.
 
-**Scale.** A character is ~38 px tall (feet at frame y 53 in a 64×64 frame, so about 1.1
-tiles); a tile is 32 px; the game shows 15×11 tiles at 2×. Size anything people use against
-that: doorways at least as tall as a character (~34 px opening) and ~16 px wide, counters
+**Scale.** A tile is 32 px; the game shows 15×11 tiles at 2×. Characters keep 64×64 frames.
+Target body (plan 46): chunky outfitter proportions filling about one tile, ~26–30 px wide and
+~32–34 px tall unarmoured, head ~40% of the height, broad shoulders, short legs, big hands and
+boots, four-frame walk, a short subtle attack swing. Until that body replaces `body.png`, gear for
+the current rig (~38 px tall, feet at frame y 53) stays fitted to it. Size anything people use
+against a character: doorways at least as tall as one (~34 px opening) and ~16 px wide, counters
 waist-high (~16 px), trees about two tiles. **Check scale first**; too small reads as a toy.
 
-**Texture density.** One readable detail per ~6–8 px (a joint, a crack, a plank seam).
-Courses of 6 px, stones 10–14 px long, planks 3–4 px wide. Fine 1-px grain only at low
-contrast (`_grain`).
+**Texture density.** Dense and readable, like modern Tibia: a detail every ~4–6 px (a joint, a
+chipped edge, moss, a crack, a plank seam, a flower, a rivet), at full contrast where it is
+structure and lower contrast where it is grain (`_grain`). Courses of 6 px, stones 10–14 px long,
+planks 3–4 px wide.
+
+**Transitions.** Natural ground blends into its neighbours (the terrain shader does it; keep
+tiles seamless within their own material). Built floors (cobbles, planks, flags) meet the ground
+with a hard kerbed edge.
 
 **Tiling.** Anything repeated over many tiles needs variants or a seamless field (see
 `ROCK_SPAN`) so no grid shows. Edges that meet neighbours must match at the tile border.
 
-**Originality.** Tibia is the reference: matching its item concepts, silhouettes, and colour schemes
-closely is allowed (the owner's decision, 2026-10-16); names stay our own, never Tibia's exact names. Never trace, recolour, or import Tibia's
-or other proprietary sprite files. CC0 only for third-party files (the DejaVu Sans font is the one exception), with a license and a
-`CREDITS.md` row.
+**Originality.** Match the style; every design is our own. Tibia is the reference: matching its
+item concepts, silhouettes, and colour schemes closely is allowed (the owner's decision,
+2026-10-16); names stay our own, never Tibia's exact names. Never trace, recolour, or import
+Tibia's or other proprietary sprite files, and never give Tibia screenshots or files to an AI
+image tool: AI-assisted drafts (plan 46) are prompted in words and with our own sprites, then
+palette-snapped, outlined, and cleaned by hand. Private Tibia screenshots stay out of the
+repository. CC0 only for third-party files (the DejaVu Sans font is the one exception), with a
+license and a `CREDITS.md` row.
+
+**Checklist** (every new or changed sprite):
+- On the 32 px grid, anchored like its neighbours, correct scale next to a character.
+- Oblique or 3/4 view if it stands up.
+- Top-left light with strong highlights and core shadows.
+- Colours from `palette.py` ramps; saturated.
+- Full dark silhouette outline (characters, creatures, items, standing objects); softer inner lines.
+- Smooth ramps, clean anti-aliasing, no dither, no pillow shading.
+- Detail level matches the golden references.
+- Original pixels; no Tibia files used.
 
 ## Workflow (look once, not every tweak)
 
-1. Read the reference builder closest to what you are making and reuse its helpers and ramps.
+1. Read the reference builder closest to what you are making and reuse its helpers; take ramps
+   from `palette.py`.
 2. Write the builder with its frame size and anchor in the docstring, add the sheet to
    `main()` in `make_sprites.py`, and draw it in `sprite_art.gd`.
 3. Generate (`make sprites`, or `python3 tools/generators/make_sprites.py`), then `make import`.
 4. Look **once** at the result in context: a capture with a character beside it and the
    neighbouring tiles (a visual-test capture such as `.tools/visual-roofs.png`, or a small
    throw-away scene). Check, in order: scale against the character, light direction,
-   outline, palette fit with neighbours, tiling seams.
+   outline, palette fit with neighbours, tiling seams, then the checklist above.
 5. Fix everything you noted in one pass and look again. Two rounds should be enough; if not,
    compare against the reference builder again rather than nudging numbers.
 6. Item icons: return them from the builder unfinished; `icon_finish` (outline, rim light, contrast)

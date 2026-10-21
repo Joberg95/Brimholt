@@ -747,10 +747,13 @@ From a sprite review on 2026-10-21 (plus plan 38's audit of 2026-10-16).
 - [x] Pause plans 38 (old tiles) and 39 (icon families) so nothing gets repainted twice. Plan 40
       (archipelago, being built now) builds its layout now, art later.
 
-### Phase 1: Rewrite the rules
-- Update the art-direction skill and `docs/art.md` per the table above.
-- Define the new master palette: one ramp per material, saturated, as module constants (replacing
-  `GRASS`, `ROCK`, `COBBLE`, `OAK`, `IRON`, ...).
+### Phase 1: Rewrite the rules (done 2026-10-21)
+- [x] Update the art-direction skill and `docs/art.md` per the table above.
+- [x] Define the new master palette: `tools/generators/palette.py`, one saturated ramp of 6–10 tones
+  per material (34 ramps), `outline()` for each material's hue-tinted near-black, and `IDENTITY`
+  (each region's ground and accent ramps from the flavour pillars, checked against `regions.gd`).
+  The old module ramps (`GRASS`, `ROCK`, `COBBLE`, `OAK`, `IRON`, ...) are replaced family by family
+  in phase 4; the outfit tint palette (head/body/legs/feet) comes with the character in phase 2.
 
 ### Phase 2: Golden reference sprites (hand-made or AI-assisted, then cleaned up by hand)
 Make a small set that defines the look; everything else copies it. Start from

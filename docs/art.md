@@ -21,12 +21,23 @@ Grass, dirt, sand, cobblestone, animated water, plank piers, stone walls, trees,
 gear, and item icons are sprites too. Trees stand about two tiles tall and hide whatever
 walks behind them. Only the visible part of the map is drawn each frame.
 
-The visual direction is grounded, original classic-RPG pixel art: restrained earth colours,
-directional shading in pixel clusters rather than checkerboard borders, broken foliage
-canopies, weathered masonry, wood grain, and subdued water reflections. Item icons use
-smaller silhouettes and quieter trim; metal, leather and cloth retain distinct tier hues.
-Relic halos remain visible without bleaching out the equipment underneath. Designs may imitate
-Tibia closely, but no Tibia artwork files, maps, or client data are copied: every pixel is drawn here.
+The visual direction is **modern Tibia (12+)**, matched in style with every design our own
+(`docs/plan/46-modern-tibia-direction.md`, rules in the `art-direction` skill): saturated,
+high-contrast colour everywhere, a hard top-left light with bright highlights and dark core
+shadows, a full dark hue-tinted outline round characters, creatures, and items, smooth anti-aliased
+ramps without dithering or pillow shading, the oblique 3/4 view for everything that stands, and
+dense, readable detail. Glow and animation stay reserved for relics, ores, magic, and fire, and
+relic halos remain visible without bleaching out the equipment underneath. Every ramp comes from the
+master palette, `tools/generators/palette.py` (6–10 tones per material, `outline()` for each
+material's near-black, and `IDENTITY`: each region's ground and accent ramps, from Brimholt's flavour
+pillars); run it with `--swatch .tools/palette.png` to check the ramps and see them.
+
+The world is moving to this look family by family (plan 46, phase 4), so older sheets still use
+their builders' own muted ramps (restrained earth colours, outlines only on lower edges), and the
+character described above is the current rig, not the target: a chunkier body in 3/4 view with a
+four-frame walk, a subtle attack swing, free head/body/legs/feet colours, and 64×64 frames.
+Designs may imitate Tibia closely, but no Tibia artwork files, maps, or client data are copied:
+every pixel is drawn here.
 
 ## Art and sprites
 
@@ -219,7 +230,7 @@ The references inform construction and readability only; all pixel geometry is o
 Items should look like crafted objects, not flat badges: wood and leather remain visible
 under tier-coloured fittings; mail, overlapping scales, riveted brigandine and plate have
 different construction; a hammer has a forged head rather than a mace's round head.
-Keep ordinary equipment modest and reserve unusual ornament and restrained glow for relics.
+Keep ordinary equipment readable rather than flashy and reserve unusual ornament and glow for relics.
 Apply the same construction to inventory icons and worn layers without changing their stats.
 
 Every item is a row in `game/data/items.json`, read by both the game and the generator:

@@ -89,7 +89,7 @@ tests/
   integration/           Real ENet peers and the two-bot playthrough
   visual/                Offscreen rendering checks
 tools/
-  generators/            make_sprites.py, import_outfits.gd, make_map.gd, sectors.gd, move_bands.gd, islands.gd, world_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, fill_gaps.gd, clear_walls.gd, cobble_towns.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
+  generators/            make_sprites.py, palette.py (master colour ramps), import_outfits.gd, make_map.gd, sectors.gd, move_bands.gd, islands.gd, world_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, fill_gaps.gd, clear_walls.gd, cobble_towns.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
   testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd, duel_eval.gd, bench.gd
   training/              PvP policy training: duel arena and Godot RL Agents env (GDScript), train.py and export_policy.py (docs/bot-training.md)
 addons/                  LimboAI (GDExtension) and the training-only Godot RL Agents plugin
