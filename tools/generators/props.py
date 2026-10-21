@@ -12,6 +12,7 @@ World units are pixels: x to the right, y away from the viewer (north), z up; th
 import math
 
 import creatures as C
+import palette as pal
 from creatures import Material, ramp_material, emissive, add, sub, mul, dot, norm, basis, IDENT, _hash, _pattern
 
 UP = C.UP
@@ -32,29 +33,37 @@ def wood(base, planks=0.0):
     return material
 
 
-OAK = wood("8a5e36", 5.0)
-OAK_SOLID = wood("8a5e36")
-LIGHT_OAK = wood("a8794a")
-DARK_WOOD = wood("5c3c24")
-TIMBER = wood("6e4a2c")
-IRON = Material("6a6e74", gloss=0.7)
-DARK_IRON = Material("45474c", gloss=0.6)
-BRASS = Material("c89a3a", gloss=0.9)
-STONE = Material("8c877e", "stone")
-DARK_STONE = Material("6c6860", "stone")
-CLAY = Material("b8683c")
+def _pal(ramp, start, pattern="smooth", gloss=0.0, planks=0.0):
+    """A material on five consecutive tones of a master-palette ramp (palette.py), from `start`."""
+    tones = [ramp[min(len(ramp) - 1, start + i)] for i in range(5)]
+    material = ramp_material(["%02x%02x%02x" % tuple(t[:3]) for t in tones], pattern, gloss)
+    material.planks = planks
+    return material
+
+
+OAK = _pal(pal.OAK, 1, "wood", planks=5.0)
+OAK_SOLID = _pal(pal.OAK, 1, "wood")
+LIGHT_OAK = _pal(pal.OAK, 0, "wood")
+DARK_WOOD = _pal(pal.DARK_WOOD, 0, "wood")
+TIMBER = _pal(pal.OAK, 2, "wood")
+IRON = _pal(pal.IRON, 2, gloss=0.7)
+DARK_IRON = _pal(pal.IRON, 3, gloss=0.6)
+BRASS = _pal(pal.GOLD, 1, gloss=0.9)
+STONE = _pal(pal.ROCK, 1, "stone")
+DARK_STONE = _pal(pal.ROCK, 2, "stone")
+CLAY = _pal(pal.BRICK, 0)
 LINEN = Material("e6dec8", "cloth")
 WOOL_RED = Material("a83a2e", "cloth")
 WOOL_BLUE = Material("3c5c9c", "cloth")
 WOOL_GREEN = Material("4f7a34", "cloth")
 CANDLE = Material("ece2c4")
-LEAF = Material("4e8a34", "leaf")
-WATER = ramp_material(["4a6a7e", "34505f", "26404e", "1a2e3a", "122028"], gloss=0.9)
+LEAF = _pal(pal.FOLIAGE, 1, "leaf")
+WATER = _pal(pal.WATER, 2, gloss=0.9)
 GLASS_RED = Material("b83a30", gloss=1.0)
 GLASS_BLUE = Material("3c62b0", gloss=1.0)
 GLASS_GREEN = Material("4a9a3c", gloss=1.0)
-GOLD = Material("d4a83a", gloss=0.9)
-STEEL = Material("b4bcc2", gloss=1.0)
+GOLD = _pal(pal.GOLD, 0, gloss=0.9)
+STEEL = _pal(pal.IRON, 0, gloss=1.0)
 FLAME = emissive("ffb040")
 FLAME_CORE = emissive("fff0a0")
 EMBER = emissive("ff7a2a")
@@ -64,9 +73,9 @@ LANTERN_CORE = emissive("fff4c0")
 AWNING_RED = Material("c8463a")
 AWNING_WHITE = Material("eee4cc")
 BOOKS = [Material(c) for c in ("7a3028", "2f4a74", "4f5e2c", "7a6430", "5a2a50")]
-CASTLE_STONE = Material("cdbf9c", "stone")
-CASTLE_STONE_DARK = Material("a8997a", "stone")
-BUSH_LEAF = Material("3f7a2c", "leaf")
+CASTLE_STONE = _pal(pal.ROCK, 0, "stone")
+CASTLE_STONE_DARK = _pal(pal.ROCK, 1, "stone")
+BUSH_LEAF = _pal(pal.FOLIAGE, 2, "leaf")
 ROSE = Material("e88aa8")
 BANNER_RED = Material("b02a22", "cloth")
 FRUIT = [Material(c, gloss=0.5) for c in ("d84a2a", "e8b030", "6aa83a", "c83a3a")]
@@ -361,7 +370,7 @@ def _render_piece(kind, angle):
                  box((11.5, 3, 14), (1.4, 1.4, 14), TIMBER), box((0, 3, 21), (13, 1.2, 1.2), LIGHT_OAK)]
         parts += _sword(-6, 2, 4, 18, -0.08) + _sword(0, 2, 4, 21) + _sword(6, 2, 4, 18, 0.08)
     elif kind == "barrel":
-        parts = [cyl((0, 0, 0), 9.5, 23, wood("8a5e36", 3.4), group=1),
+        parts = [cyl((0, 0, 0), 9.5, 23, _pal(pal.OAK, 1, "wood", planks=3.4), group=1),
                  cyl((0, 0, 23), 8.6, 0.6, LIGHT_OAK, group=1)]
         for z in (3.5, 17.5):
             parts.append(cyl((0, 0, z), 9.9, 1.6, IRON, group=1))
@@ -373,7 +382,7 @@ def _render_piece(kind, angle):
                   box((10.6, -9.7, 10.5), (0.9, 0.7, 10.5), LIGHT_OAK, group=1)]
         parts += _sword(-3, 1, 15, 12, -0.25) + [cyl((5, 2, 18), 0.9, 9, DARK_WOOD), box((5, 2, 27), (3, 1.4, 1.4), IRON)]
     elif kind == "strongbox":
-        dark = wood("54473a")
+        dark = _pal(pal.DARK_WOOD, 1, "wood")
         parts = [box((0, 0, 8), (11, 8, 8), dark, group=1), box((0, 0, 16.6), (11.6, 8.6, 0.8), dark, group=1)]
         for x in (-8, 8):
             parts.append(box((x, 0, 8.6), (1.0, 8.4, 8.6), DARK_IRON, group=1))

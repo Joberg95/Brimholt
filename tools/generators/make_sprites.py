@@ -5721,12 +5721,13 @@ def herb_patch(kind, variant):
 
 # ---------------------------------------------------------------- roofs and signs
 
-# Roof materials: (light, base, dark, deep) for clay tiles, slate, and wooden shingles.
+# Roof materials: (light, base, dark, deep) for clay tiles, slate, wooden shingles, and snow, from
+# the master palette like Qasrun's plaster.
 ROOF_MATERIALS = [
-    tuple(rgba(c) for c in ("a0573b", "86472f", "673424", "46231a")),
-    tuple(rgba(c) for c in ("67707a", "525a64", "3e444d", "2a2f36")),
-    tuple(rgba(c) for c in ("8a6a45", "715436", "573f27", "3c2b1b")),
-    tuple(rgba(c) for c in ("f4f8fc", "dde6ef", "b6c4d4", "5a4630")),
+    (pal.BRICK[0], pal.BRICK[1], pal.BRICK[3], pal.BRICK[5]),
+    (pal.FIELDSTONE[3], pal.FIELDSTONE[4], pal.FIELDSTONE[5], pal.FIELDSTONE[7]),
+    (pal.OAK[2], pal.OAK[3], pal.OAK[5], pal.OAK[6]),
+    (pal.SNOW[0], pal.SNOW[1], pal.SNOW[3], pal.OAK[5]),
     # Sunreach's flat roofs of sand plaster (game/render/roof_art.gd _flat): light, base, dark, deep.
     (pal.SANDSTONE[0], pal.SANDSTONE[1], pal.SANDSTONE[3], pal.SANDSTONE[5]),
 ]
@@ -5844,8 +5845,8 @@ def roof_sheet():
     return sheet([swatch for material in range(len(ROOF_MATERIALS)) for swatch in roof_swatches(material)], 4, TILE)
 
 
-SIGN_WOOD = (rgba("9a7348"), rgba("7d5a36"), rgba("5a3f25"))
-SIGN_IRON = rgba("3b3a38")
+SIGN_WOOD = (pal.OAK[2], pal.OAK[3], pal.OAK[5])
+SIGN_IRON = pal.IRON[6]
 
 
 def sign(kind):
