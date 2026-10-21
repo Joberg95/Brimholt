@@ -190,7 +190,7 @@ relocations, then fix-ups. That doesn't scale to Tibia density.
    isn't painted in the old style and repainted later (same reason plans 38/39 pause).
 
 ### Suggested order
-1. Write the world plan (frame frozen, all regions and floors listed). No code.
+1. Write the world plan (frame frozen, all regions and floors listed). No code. Done: plan 47.
 2. Floors as z refactor (engine), with the underground plane migrated to z = below.
 3. Base/override layers + `make region` pipeline; convert one existing region (e.g. Brackenford's
    mainland ring) to prove it.

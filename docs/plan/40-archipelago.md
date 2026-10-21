@@ -48,6 +48,9 @@ Each piece is furniture (blocks like the shop furniture) or a wall decoration (d
 wall's face), so castles, houses, and shops are furnished from one catalogue.
 
 ## Layout (first wave, 1920 x 1920 overworld, heartland at 0-384 x 0-552)
+**Superseded (2026-10-21):** the bounds now come from plan 47 (`47-world-plan.md`); the cells
+below overlapped Silverwood and the frost isles after they moved. Kept for the bands and biomes.
+
 | Island | Biome | Cells (approx.) | Band (now / later) |
 | --- | --- | --- | --- |
 | Silverwood | elven forest, lakes | 500-740 x 60-280 | 45-50 / 50-60 |
