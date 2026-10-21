@@ -303,8 +303,16 @@ BODY_SQUASH = 0.8
 WIDEN = (29, 34)
 
 
+# Experiment (branch experiment/pack-paperdoll): the whole figure, head included, drawn THIN as wide
+# (about a third narrower), sampled about the rig's centre column instead of widened.
+THIN = 0.65
+THIN_CENTRE = 31.5
+
+
 def _rig_x(x):
     """The rig column drawn at frame column x (the inverse of widening about x=32)."""
+    if THIN:
+        return round(THIN_CENTRE + (x - THIN_CENTRE) / THIN)
     left, right = WIDEN
     if x < left - 1:
         return x + 1
@@ -1650,10 +1658,26 @@ PAINTED_SLOTS = ("helmet", "armor", "legs", "boots", "cape", "off_hand", "main_h
 ICON_DIRS = (ROOT / "assets" / "sprites" / "icons", ROOT / "assets" / "sprites" / "icons_derived")
 
 
+# Experiment: a full knight kit worn straight from the OpenTibia sprite pack (row, column in
+# otsp_equipment_01.png), icon and worn layers alike.
+PACK_KIT = {"iron_sallet": (29, 14), "iron_cuirass": (33, 3), "iron_legplates": (39, 13), "iron_sabatons": (41, 11),
+            "steel_longsword": (3, 0), "steel_kite_shield": (25, 11)}
+
+
+def pack_kit_icon(kind):
+    row, column = PACK_KIT[kind]
+    image = Image(TILE, TILE)
+    image.pixels = [[(c + (255,)) if c else None for c in line]
+                    for line in pack_sprites.sprite("otsp_equipment_01.png", 32 * column, 32 * row)]
+    return image
+
+
 def painted_icon(kind):
     """The painted icon, else the one derive_icons.py made from painted art, else None. Legs and
     boots drawn in pixel_legwear.py (LEGWEAR_STYLES) and helmets from pack_helmets.py (HELMET_STYLES)
     use that drawing instead, worn and in the bag."""
+    if kind in PACK_KIT:
+        return pack_kit_icon(kind)
     if ITEMS[kind].get("slot") not in PAINTED_SLOTS or kind in LEGWEAR_STYLES or kind in HELMET_STYLES:
         return None
     for folder in ICON_DIRS:
@@ -2077,6 +2101,7 @@ import pixel_food  # noqa: E402
 import pixel_floors  # noqa: E402
 import pixel_legwear  # noqa: E402
 import pack_helmets  # noqa: E402
+import pack_sprites  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
