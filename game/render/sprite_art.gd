@@ -204,12 +204,13 @@ const FIR_VARIANTS: int = 3
 const LOG_WALLS: Texture2D = preload("res://assets/sprites/log_walls.png")
 ## Sunreach, the desert island (Biomes.SUNREACH): palms for its trees (palms.png, 64x96 like the
 ## trees), cream plaster walls (sandstone_walls.png: the house wall frames, then a south- and an
-## east-facing wall with a latticed window, SANDSTONE_WINDOW), sandstone castle walls and towers,
+## east-facing wall with a latticed window, WINDOW_FRAME), sandstone castle walls and towers,
 ## and streets and floors of sandstone flags (FLAG_TILE).
 const PALMS: Texture2D = preload("res://assets/sprites/palms.png")
 const PALM_VARIANTS: int = 3
 const SANDSTONE_WALLS: Texture2D = preload("res://assets/sprites/sandstone_walls.png")
-const SANDSTONE_WINDOW: int = 19
+## Window walls follow the fill in sandstone_walls, house_walls, and log_walls (the house style).
+const WINDOW_FRAME: int = 19
 const SANDSTONE_CASTLE_WALLS: Texture2D = preload("res://assets/sprites/sandstone_castle_walls.png")
 const SANDSTONE_CASTLE_TOWERS: Texture2D = preload("res://assets/sprites/sandstone_castle_towers.png")
 ## The elite cave under the frost isles' sea ice, floored with snow (game/data/caves.gd).
@@ -581,8 +582,10 @@ static func wall_region(cell: Vector2i) -> Rect2:
 	# 4 cliffs ("L"), 5 rock outcrops ("C" on the overworld).
 	if tile_at(cell) == "#":
 		var mask: int = thin_wall_mask(cell)
-		if wall_sheet(cell) == SANDSTONE_WALLS and mask in [5, 10] and noise(cell, 17) % 3 == 0:
-			return Rect2((SANDSTONE_WINDOW + (1 if mask == 5 else 0)) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
+		# Some straight overworld walls get a window (frames WINDOW_FRAME: south, then east face).
+		if wall_sheet(cell) in [SANDSTONE_WALLS, HOUSE_WALLS, LOG_WALLS] and World.OVERWORLD.has_point(cell) \
+				and mask in [5, 10] and noise(cell, 17) % 3 == 0:
+			return Rect2((WINDOW_FRAME + (1 if mask == 5 else 0)) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
 		return Rect2(mask * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
 	var row: int = {"O": 1, "L": 4}.get(tile_at(cell), 2)
 	if row == 2 and World.OVERWORLD.has_point(cell):

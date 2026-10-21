@@ -3856,9 +3856,9 @@ def snowy_fir(variant):
 
 
 # Log walls in the frost isles: the house-wall shapes in timber courses under a cap of snow.
-LOG_WOOD = ((SNOW[0], SNOW[1], SNOW[2], SNOW[3]),
-            (rgba("7a5636"), rgba("4a321e"), rgba("98704a")),
-            (rgba("664628"), rgba("3e2a18"), rgba("80603e")))
+LOG_WOOD = ((pal.SNOW[0], pal.SNOW[1], pal.SNOW[2], pal.SNOW[4]),
+            (pal.OAK[4], pal.OAK[6], pal.OAK[3]),
+            (pal.OAK[5], pal.OAK[7], pal.OAK[4]))
 
 
 def stone_surface(image, points, palette, seed):
@@ -4287,28 +4287,32 @@ def terrain_palette():
     return sheet([tiles[terrain] for terrain in TERRAINS], len(TERRAINS), TILE)
 
 
-WALL_TOP = (rgba("797970"), rgba("939185"), rgba("64685f"), rgba("555b53"))
-WALL_SOUTH = (rgba("56594f"), rgba("42473f"), rgba("676a5d"))
-WALL_EAST = (rgba("434a43"), rgba("343b35"), rgba("545b50"))
+# Grey town stone (house walls, walls.png rows 0 and 3) from the master palette's ROCK ramp:
+# (top, lit top, dark top, top edge), (south face, mortar, lit course), (east face, mortar, lit).
+WALL_TOP = (pal.ROCK[2], pal.ROCK[1], pal.ROCK[3], pal.ROCK[4])
+WALL_SOUTH = (pal.ROCK[4], pal.ROCK[6], pal.ROCK[3])
+WALL_EAST = (pal.ROCK[5], pal.ROCK[7], pal.ROCK[4])
 STONE = (WALL_TOP, WALL_SOUTH, WALL_EAST)
+STONE_LINE = pal.outline(pal.ROCK)
 # Obsidian walls of the Hollow Sanctum: the same oblique shape in violet-black glassy stone.
-OBSIDIAN_STONE = ((rgba("3d3352"), rgba("4c4066"), rgba("2e2640"), rgba("5e4f80")),
-                  (rgba("231c31"), rgba("17121f"), rgba("33294a")),
-                  (rgba("1a1524"), rgba("110d18"), rgba("2a2238")))
+OBSIDIAN_STONE = ((pal.HOLLOW[4], pal.HOLLOW[3], pal.HOLLOW[5], pal.HOLLOW[2]),
+                  (pal.HOLLOW[5], pal.HOLLOW[6], pal.HOLLOW[4]),
+                  (pal.HOLLOW[6], pal.HOLLOW[7], pal.HOLLOW[5]))
 # Raw rock walls of the deep mine.
-CAVE_STONE = ((rgba("6e6156"), rgba("85766a"), rgba("54493f"), rgba("948476")),
-              (rgba("43392f"), rgba("2f2821"), rgba("51463b")),
-              (rgba("352d25"), rgba("251f19"), rgba("40372d")))
+CAVE_STONE = ((pal.CAVE_ROCK[2], pal.CAVE_ROCK[1], pal.CAVE_ROCK[3], pal.CAVE_ROCK[0]),
+              (pal.CAVE_ROCK[4], pal.CAVE_ROCK[5], pal.CAVE_ROCK[3]),
+              (pal.CAVE_ROCK[5], pal.CAVE_ROCK[6], pal.CAVE_ROCK[4]))
 # Cellar walls (dungeons with "theme": "cellar"): dark red-brown brick, as in Tibia's cellars.
-CELLAR_STONE = ((rgba("7a4a3a"), rgba("8e5a46"), rgba("5e3a2e"), rgba("9a6650")),
-                (rgba("5c3226"), rgba("40221a"), rgba("6e3e2e")),
-                (rgba("48271e"), rgba("321912"), rgba("583025")))
+CELLAR_STONE = ((pal.BRICK[3], pal.BRICK[2], pal.BRICK[4], pal.BRICK[1]),
+                (pal.BRICK[4], pal.BRICK[6], pal.BRICK[3]),
+                (pal.BRICK[5], pal.BRICK[7], pal.BRICK[4]))
 CELLAR_FLOOR = (rgba("3c2c26"), rgba("2e211c"), rgba("483529"), rgba("1e1512"))
 HEIGHT = 16
 
 
-def wall(mask, stone=None):
+def wall(mask, stone=None, line=None):
     WALL_TOP, WALL_SOUTH, WALL_EAST = stone or STONE
+    OUTLINE = line or STONE_LINE
     open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
     image = Image(WALL, WALL)
     if open_east:
@@ -4369,8 +4373,8 @@ def wall(mask, stone=None):
 
 
 # Mountain rock: cool greys from highlight to crevice.
-CRAG = (rgba("a4a3a2"), rgba("7c7b7c"), rgba("5d5d61"), rgba("444449"), rgba("2e2e33"))
-CRAG_LINE = rgba("1c1c20")
+CRAG = (pal.ROCK[2], pal.ROCK[3], pal.ROCK[5], pal.ROCK[6], pal.ROCK[7])
+CRAG_LINE = pal.outline(pal.ROCK)
 GRAVEL = (rgba("7c7a74"), rgba("6c6a65"), rgba("8e8c85"), rgba("5a5854"), rgba("9c9a92"))
 
 
@@ -4543,8 +4547,8 @@ def cliff(mask, rocky=False):
 # Tibia-style mountain rock ("L", and rock outcrops "C" on the overworld): an oblique block like a
 # wall, its top a lumpy mass of weathered stone and its open south and east sides rough cliff faces.
 # Seven cool greys from highlight to crevice.
-ROCK = (rgba("d2d1cc"), rgba("b1b0ab"), rgba("918f8b"), rgba("73726f"), rgba("575659"), rgba("3d3c41"), rgba("27262b"))
-ROCK_LINE = rgba("1b1a1e")
+ROCK = (pal.ROCK[0], pal.ROCK[1], pal.ROCK[2], pal.ROCK[4], pal.ROCK[5], pal.ROCK[6], pal.ROCK[7])
+ROCK_LINE = pal.outline(pal.ROCK)
 # The rock texture repeats every ROCK_SPAN tiles each way: a tile draws the variant
 # (x % ROCK_SPAN) + (y % ROCK_SPAN) * ROCK_SPAN, the matching part of one seamless 96x96 texture.
 ROCK_SPAN = 4
@@ -4611,7 +4615,7 @@ def _rock_field():
         for x in range(ROCK_PERIOD):
             f1, f2, a, b = _worley(x + 0.5, y + 0.5, broad, ROCK_PERIOD, which=True)
             g1, g2 = _worley(x + 0.5, y + 0.5, knobs, ROCK_PERIOD)
-            height = max(0.0, 1.0 - f1 / 13.0) * 0.55 + max(0.0, 1.0 - g1 / 4.5) * 0.35 + _grain(x, y, 7) * 0.12
+            height = max(0.0, 1.0 - f1 / 13.0) * 0.55 + max(0.0, 1.0 - g1 / 4.5) * 0.35 + _grain(x, y, 7) * 0.04
             # Only some slabs are split by a crack (wider in places); the rest weather into one mass.
             pair = (min(a, b) * 31 + max(a, b) * 17) % 7
             width = 0.7 + 0.5 * (0.5 + 0.5 * math.sin((x + y) * 0.35 + pair))
@@ -4622,8 +4626,9 @@ def _rock_field():
 
 # Cave rock (the owner's Tibia cave screenshots): masses of rounded light-grey boulders with dark
 # crevices between them, on the same seamless span and block layout as the mountains.
-CAVE_ROCK = (rgba("e6e3dc"), rgba("cdcac2"), rgba("b1ada5"), rgba("928e87"), rgba("726f69"), rgba("524f4b"), rgba("33312e"))
-CAVE_ROCK_LINE = rgba("1f1d1b")
+# Darker and warmer than the mountains, so caves read as moody underground (plan 46 audit).
+CAVE_ROCK = tuple(pal.CAVE_ROCK[:7])
+CAVE_ROCK_LINE = pal.outline(pal.CAVE_ROCK)
 _BOULDER_FIELD = {}
 
 
@@ -4856,10 +4861,10 @@ CASTLE_RAISE = 16
 TOWER_RAISE = 32
 CASTLE_PAD = 6
 MERLON = 5
-CASTLE_FACE = (rgba("b3aa98"), rgba("9d947f"), rgba("877e6b"), rgba("6d6555"), rgba("4f493e"))
-CASTLE_SIDE = (rgba("948b78"), rgba("7f7765"), rgba("6b6454"), rgba("554f43"), rgba("3d382f"))
-CASTLE_TOP = (rgba("c2baa8"), rgba("aca390"), rgba("968d7a"), rgba("7a725f"))
-CASTLE_LINE = rgba("2a2620")
+CASTLE_FACE = (pal.ROCK[1], pal.ROCK[2], pal.ROCK[3], pal.ROCK[4], pal.ROCK[6])
+CASTLE_SIDE = (pal.ROCK[2], pal.ROCK[3], pal.ROCK[4], pal.ROCK[5], pal.ROCK[7])
+CASTLE_TOP = (pal.ROCK[0], pal.ROCK[1], pal.ROCK[2], pal.ROCK[3])
+CASTLE_LINE = pal.outline(pal.ROCK)
 
 
 def _ashlar(along, height, tones, course=6, length=13, salt=0):
@@ -5092,6 +5097,118 @@ def sandstone_wall(mask, window=False):
     return thin_wall(mask, stone=SANDSTONE_STONE, height=HOUSE_RAISE, face=sandstone_face(window), line=SANDSTONE_LINE)
 
 
+# Window frames of the other house sheets (house_walls.png, log_walls.png), as in SANDSTONE_WINDOW.
+HOUSE_WINDOW = (19, 20)
+
+
+def _window(along, height, east, frame, glass, mullion):
+    """A small square window with a cross mullion, in the same place on every house face (the
+    Qasrun pattern): None outside it, else the colour. `frame` is (lit sill, shaded frame)."""
+    if not (11 <= along <= 20 and 14 <= height <= 25):
+        return None
+    if not (12 <= along <= 19 and 15 <= height <= 24):
+        return frame[0] if height == 14 or height == 25 else frame[1]
+    if along in (15, 16) or height == 19:
+        return mullion[1 if east else 0]
+    pane_left = 12 if along < 15 else 17
+    pane_top = 24 if height > 19 else 18
+    if (along - pane_left) + (pane_top - height) == 1:
+        return glass[0]
+    return glass[2 if east else 1]
+
+
+def stone_face(window=False):
+    """Faces of a grey town house (house_walls.png) in the house style: coursed ROCK masonry with
+    staggered joints and a fine speckle, a dark plinth at the foot, a lit cornice under a shadow
+    line at the top, and (with `window`) a glazed window with a timber cross."""
+    ramp = pal.ROCK
+
+    def color(side, along, height):
+        east = side == "east"
+        base = 5 if east else 4
+        if height < 3:
+            return ramp[base + 2]
+        if height >= HOUSE_RAISE - 3:
+            return ramp[base - 1]
+        if height == HOUSE_RAISE - 4:
+            return ramp[base + 2]
+        if window:
+            pane = _window(along, height, east, (ramp[base - 3], ramp[base - 2]),
+                           (pal.WATER[4], pal.WATER[6], pal.WATER[7]), (ramp[base - 2], ramp[base - 1]))
+            if pane is not None:
+                return pane
+        course = (height - 3) // 6
+        joint = (along + (7 if course % 2 else 0) + (5 if east else 0)) % 13
+        if (height - 3) % 6 == 5 or joint == 0:
+            return ramp[base + 2]
+        if (height - 3) % 6 == 4 and joint > 1:
+            return ramp[base - 1]
+        grain = _grain(along, height + (7 if east else 0), 91)
+        if grain < 0.1:
+            return ramp[base + 1]
+        if grain > 0.94:
+            return ramp[base - 1]
+        return ramp[base]
+    return color
+
+
+def stone_wall(mask, window=False):
+    return thin_wall(mask, height=HOUSE_RAISE, face=stone_face(window), line=STONE_LINE)
+
+
+def log_face(window=False):
+    """Faces of a frost-isle log house (log_walls.png): round OAK logs stacked 5 px apart, lit on
+    top and shaded in the seam under each, on a fieldstone footing, with snow lying on the top
+    edge and (with `window`) a frosted window."""
+    ramp = pal.OAK
+
+    def color(side, along, height):
+        east = side == "east"
+        base = 4 if east else 3
+        if height < 3:
+            return pal.FIELDSTONE[6 if east else 5] if height < 2 or (along + 1) % 6 == 0 else pal.FIELDSTONE[4 if east else 3]
+        if height >= HOUSE_RAISE - 2 - (1 if _grain(along, 3, 19) > 0.7 else 0):
+            return pal.SNOW[2 if east else 1]
+        if window:
+            pane = _window(along, height, east, (ramp[base - 2], ramp[base - 1]),
+                           (pal.ICE[1], pal.ICE[5], pal.ICE[6]), (ramp[base - 1], ramp[base]))
+            if pane is not None:
+                return pane
+        row = (height - 3) % 5
+        tone = (ramp[base + 3], ramp[base + 1], ramp[base], ramp[base], ramp[base - 1])[row]
+        if row in (2, 3) and _grain(along, height, 23) < 0.12:
+            return ramp[base + 1]
+        return tone
+    return color
+
+
+def log_wall(mask, window=False):
+    return thin_wall(mask, stone=LOG_WOOD, height=HOUSE_RAISE, face=log_face(window), line=pal.outline(pal.OAK))
+
+
+def brick_face(side, along, height):
+    """Faces of a cellar wall (cellar_walls.png): small dark BRICK bricks, 4 courses high and 8 px
+    long, staggered, with dark mortar, a lit top edge on some bricks and a sooty plinth."""
+    ramp = pal.BRICK
+    east = side == "east"
+    base = 4 if east else 3
+    if height < 2:
+        return ramp[base + 3]
+    course = (height - 2) // 4
+    joint = (along + (4 if course % 2 else 0) + (3 if east else 0)) % 8
+    if (height - 2) % 4 == 3 or joint == 0:
+        return ramp[base + 2]
+    brick = _grain(course, (along + (4 if course % 2 else 0)) // 8, 61)
+    tone = ramp[base + (1 if brick < 0.3 else 0)]
+    if (height - 2) % 4 == 2 and joint > 1 and brick > 0.5:
+        return ramp[base - 1]
+    return tone
+
+
+def cellar_wall(mask):
+    return thin_wall(mask, stone=CELLAR_STONE, height=HOUSE_RAISE, face=brick_face, line=pal.outline(pal.BRICK))
+
+
 def thin_wall_fill(stone=None):
     """The top of a thin-wall block: where four walls meet in a 2 x 2 square, their bands leave a
     gap between them, and looking down it shows the faces behind, so a thick wall read as a comb
@@ -5115,10 +5232,11 @@ def thin_wall_fill(stone=None):
 
 # Castle keeps (the owner's castle reference, docs/plan/40-archipelago.md): thick walls of rounded
 # grey fieldstones, light on top and the upper left, dark mortar between the stones.
-FIELD_TOP = (rgba("cbc8bf"), rgba("b4b1a7"), rgba("9d9a90"), rgba("86837a"))
-FIELD_SOUTH = (rgba("a29f96"), rgba("8c8980"), rgba("76736b"), rgba("5f5d56"))
-FIELD_EAST = (rgba("84817a"), rgba("6f6d66"), rgba("5b5953"), rgba("494843"))
-FIELD_MORTAR = (rgba("5b5a54"), rgba("3d3c37"), rgba("2f2e2a"))
+FIELD_TOP = tuple(pal.FIELDSTONE[0:4])
+FIELD_SOUTH = tuple(pal.FIELDSTONE[2:6])
+FIELD_EAST = tuple(pal.FIELDSTONE[3:7])
+FIELD_MORTAR = tuple(pal.FIELDSTONE[5:8])
+FIELD_LINE = pal.outline(pal.FIELDSTONE)
 
 
 def _fieldstone(u, v, seed, width=8, height=6):
@@ -5185,7 +5303,7 @@ def fieldstone_wall(mask, height=32):
             else:
                 color = _field_color(FIELD_EAST, FIELD_MORTAR[2], y, up, 37)
             if k == height:
-                color = OUTLINE
+                color = FIELD_LINE
             image.set(x + k, y + k, color)
     for x, y in shape:
         color = _field_color(FIELD_TOP, FIELD_MORTAR[0], x, y * 1.2, 41)
@@ -5198,7 +5316,7 @@ def fieldstone_wall(mask, height=32):
         for dx, dy in ((0, -1), (-1, 0)):
             nx, ny = x + dx, y + dy
             if 0 <= nx < TILE and 0 <= ny < TILE and (nx, ny) not in shape and image.get(nx, ny) is None:
-                image.set(nx, ny, OUTLINE)
+                image.set(nx, ny, FIELD_LINE)
     return image
 
 
@@ -5212,7 +5330,7 @@ def fieldstone_fill():
     return image
 
 
-DOOR_WOOD = (rgba("b07a44"), rgba("8f6034"), rgba("6a4424"), rgba("4a2e18"))
+DOOR_WOOD = (pal.OAK[2], pal.OAK[3], pal.OAK[5], pal.OAK[6])
 
 
 HOUSE_RAISE = 32
@@ -5228,7 +5346,7 @@ def house_door(vertical, base=None):
     visible face (south for a west-east wall, east for a north-south one) is cut by a timber-framed
     opening nearly a tile wide and as tall as a person, closed by an iron-banded plank door. It
     leans with the wall like every raised face, and one frame serves doorways facing either way."""
-    image = base(5 if vertical else 10) if base else thin_wall(5 if vertical else 10, height=HOUSE_RAISE)
+    image = base(5 if vertical else 10) if base else stone_wall(5 if vertical else 10)
     hi = THIN_BAND[1]
     left, right, top, spring = HOUSE_DOOR
     middle, span = (left + right - 1) / 2, (right - left) / 2
@@ -5255,7 +5373,7 @@ def house_door(vertical, base=None):
             if height in (6, 7, 21, 22):
                 color = IRON[2] if height in (7, 22) else (IRON[0] if plank == 2 else IRON[1])
             if along in (right - 7, right - 6) and height in (13, 14, 15):
-                color = rgba("e0b85a") if (along, height) == (right - 7, 15) else IRON[2]
+                color = pal.GOLD[1] if (along, height) == (right - 7, 15) else IRON[2]
             if not inside(along, height + 2) or along == right - 1:
                 color = DOOR_WOOD[3]
             image.set(*at(along, 0, height), color)
@@ -6218,22 +6336,23 @@ def main():
                                      + [house_door(False, sandstone_wall), house_door(True, sandstone_wall),
                                         thin_wall_fill(SANDSTONE_STONE), sandstone_wall(10, True), sandstone_wall(5, True)],
                                      21, TILE + HOUSE_RAISE),
-        "log_walls.png": sheet([thin_wall(mask, stone=LOG_WOOD, height=HOUSE_RAISE) for mask in range(16)]
-                               + [Image(TILE + HOUSE_RAISE, TILE + HOUSE_RAISE)] * 2 + [thin_wall_fill(LOG_WOOD)], 19,
-                               TILE + HOUSE_RAISE),
+        "log_walls.png": sheet([log_wall(mask) for mask in range(16)]
+                               + [house_door(False, log_wall), house_door(True, log_wall), thin_wall_fill(LOG_WOOD),
+                                  log_wall(10, True), log_wall(5, True)], 21, TILE + HOUSE_RAISE),
         "roofs.png": roof_sheet(),
         "signs.png": sheet_row([sign("vendor"), sign("banker"), sign("artisan"), sign("warden")]),
         "title.png": title_painting(),
         "menu_icons.png": sheet_row([menu_icon(kind) for kind in MENU_ICONS]),
         "herbs.png": sheet_row([herb_patch(kind, variant) for kind in HERB_KINDS for variant in range(2)]),
-        "house_walls.png": sheet([thin_wall(mask, height=HOUSE_RAISE) for mask in range(16)]
-                                  + [house_door(False), house_door(True), thin_wall_fill()], 19, TILE + HOUSE_RAISE),
+        "house_walls.png": sheet([stone_wall(mask) for mask in range(16)]
+                                  + [house_door(False), house_door(True), thin_wall_fill(),
+                                     stone_wall(10, True), stone_wall(5, True)], 21, TILE + HOUSE_RAISE),
         "fieldstone_walls.png": sheet([fieldstone_wall(mask) for mask in range(16)]
                                       + [house_door(False, fieldstone_wall), house_door(True, fieldstone_wall), fieldstone_fill()],
                                       19, TILE + HOUSE_RAISE),
         "wall_decor.png": sheet_row([wall_decor(kind) for kind in props.WALL_DECOR_KINDS]),
-        "cellar_walls.png": sheet([thin_wall(mask, stone=CELLAR_STONE, height=HOUSE_RAISE) for mask in range(16)]
-                                  + [Image(TILE + HOUSE_RAISE, TILE + HOUSE_RAISE)] * 2 + [thin_wall_fill(CELLAR_STONE)], 19,
+        "cellar_walls.png": sheet([cellar_wall(mask) for mask in range(16)]
+                                  + [house_door(False, cellar_wall), house_door(True, cellar_wall), thin_wall_fill(CELLAR_STONE)], 19,
                                   TILE + HOUSE_RAISE),
         "terrain_palette.png": terrain_palette(),
         "ores.png": sheet([ore_vein(band, glint) for glint in (False, True) for band in range(5)], 5, WALL),
@@ -6245,8 +6364,10 @@ def main():
                                              TILE + TOWER_RAISE + CASTLE_PAD),
         "cave_rock.png": sheet([cave_rock(mask, variant) for variant in range(MOUNTAIN_VARIANTS) for mask in range(16)], 16, WALL),
         "mountains.png": sheet([mountain(mask, variant) for variant in range(MOUNTAIN_VARIANTS) for mask in range(16)], 16, WALL),
-        "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)]
-                           + [wall(mask, CAVE_STONE) for mask in range(16)] + [thin_wall(mask) for mask in range(16)]
+        "walls.png": sheet([wall(mask) for mask in range(16)]
+                           + [wall(mask, OBSIDIAN_STONE, pal.outline(pal.HOLLOW)) for mask in range(16)]
+                           + [wall(mask, CAVE_STONE, pal.outline(pal.CAVE_ROCK)) for mask in range(16)]
+                           + [thin_wall(mask, line=STONE_LINE) for mask in range(16)]
                            + [cliff(mask) for mask in range(16)] + [cliff(mask, True) for mask in range(16)],
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
