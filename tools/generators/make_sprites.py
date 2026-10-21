@@ -2905,11 +2905,25 @@ def material_icon(image, shape, palette, accent):
 # a lit inner rim on the top-left and a shaded one on the bottom-right (the bevelled pop of
 # classic item icons), and contrast stretched when an icon came out flat.
 
-ICON_OUTLINE = rgba("181214")
+ICON_OUTLINE = rgba("181214")   # the outline next to grey or near-black parts
 OUTLINE_LUMA = 72        # edge pixels darker than this already are outline
 RIM = 0.16               # lighten / darken of the inner rim
 CONTRAST_SPAN = 150      # luma range an icon's body should cover
-SATURATION = 1.08
+SATURATION = 1.14
+
+
+def _icon_outline(colors):
+    """The master palette's outline (palette.outline) for an edge next to `colors`: the hue of the
+    part it borders at near-black, so gold reads warm and steel cool; ICON_OUTLINE beside greys."""
+    lit = [c for c in colors if c is not None and c[3] and _luma(c) >= OUTLINE_LUMA]
+    if not lit:
+        return ICON_OUTLINE
+    r, g, b = (sum(c[i] for c in lit) / len(lit) for i in range(3))
+    h, s, _ = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+    if s < 0.12:
+        return ICON_OUTLINE
+    r, g, b = colorsys.hsv_to_rgb(h, min(0.6, s + 0.1), 0.09)
+    return (round(r * 255), round(g * 255), round(b * 255), 255)
 
 
 def _hls_shift(color, light=0.0, sat=1.0):
@@ -3002,14 +3016,20 @@ def icon_finish(icon, rim=True):
     edge = {p for p in solid if any(q not in solid for q in near(*p))}
     result = Image(size, icon.height)
     result.over(icon)
-    # One outline: dark edges become the shared outline colour, bright edges get one outside.
+    inside = lambda x, y: [icon.pixels[qy][qx] for qx, qy in near(x, y) + [(x + 1, y + 1), (x - 1, y - 1),
+                           (x + 1, y - 1), (x - 1, y + 1)] if (qx, qy) in solid]
+    # One outline: dark edges become the outline, bright edges get one outside, each tinted by
+    # the part it borders (_icon_outline).
+    lines = set()
     for x, y in edge:
         if _luma(icon.pixels[y][x]) < OUTLINE_LUMA:
-            result.pixels[y][x] = ICON_OUTLINE
+            result.pixels[y][x] = _icon_outline(inside(x, y))
+            lines.add((x, y))
         else:
             for qx, qy in near(x, y):
                 if (qx, qy) not in solid and 0 <= qx < size and 0 <= qy < icon.height:
-                    result.pixels[qy][qx] = ICON_OUTLINE
+                    result.pixels[qy][qx] = _icon_outline(inside(qx, qy))
+                    lines.add((qx, qy))
     body = [p for p in solid if p not in edge or _luma(icon.pixels[p[1]][p[0]]) >= OUTLINE_LUMA]
     # Contrast: stretch a flat icon's body luma towards CONTRAST_SPAN, a little more saturated.
     lumas = sorted(_luma(icon.pixels[y][x]) for x, y in body)
@@ -3020,7 +3040,7 @@ def icon_finish(icon, rim=True):
         middle = (low + high) / 2
         for x, y in body:
             color = result.pixels[y][x]
-            if color is None or color == ICON_OUTLINE:
+            if color is None or (x, y) in lines:
                 continue
             delta = (_luma(color) - middle) * (gain - 1.0) / 255
             result.pixels[y][x] = _hls_shift(color, delta, SATURATION if rim else 1.0)
@@ -3028,10 +3048,10 @@ def icon_finish(icon, rim=True):
         # The inner rim: lit where the outside is above or to the left, shaded below and right.
         for x, y in body:
             color = result.pixels[y][x]
-            if color is None or color == ICON_OUTLINE or _luma(color) < OUTLINE_LUMA:
+            if color is None or (x, y) in lines or _luma(color) < OUTLINE_LUMA:
                 continue
             outside = [(dx, dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-                       if (x + dx, y + dy) not in solid or result.pixels[y + dy][x + dx] == ICON_OUTLINE]
+                       if (x + dx, y + dy) not in solid or (x + dx, y + dy) in lines]
             if any(d in outside for d in ((-1, 0), (0, -1))):
                 result.pixels[y][x] = _hls_shift(color, RIM)
             elif any(d in outside for d in ((1, 0), (0, 1))):
