@@ -1945,8 +1945,8 @@ func _showpiece_helmet_checks() -> void:
 		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
 			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
 				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 34,
-		"showpiece helmets, boots, axes, two backpacks, two necklaces, four gemmed swords, three glowing hafted weapons, two charms, and the torch move in the inventory")
+	check(SpriteArt.ANIMATED.size() == 28,
+		"three sheen helmets, showpiece boots, axes, two backpacks, two necklaces, four gemmed swords, three glowing hafted weapons, two charms, and the torch move in the inventory")
 	var themed: Array[String] = []
 	for kind: String in World.ITEMS:
 		if String(World.ITEMS[kind]["look"]).begins_with("backpack+"):
@@ -1999,13 +1999,13 @@ func _leech_checks() -> void:
 				shared.append("%s = %s" % [kind, pictures[key]])
 			pictures[key] = kind
 	check(shared.is_empty(), "every tier armour piece has its own icon (%s)" % ", ".join(shared))
-	# No recolour of an existing icon: two legs or boots icons with the same silhouette are one
+	# No recolour of an existing icon: two legs, boots, or helmet icons with the same silhouette are one
 	# drawing in two palettes. Every icon is its own model (docs/art.md, "No recolours").
 	var silhouettes: Dictionary = {}
 	var recolours: Array[String] = []
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
-		if item["slot"] in ["legs", "boots"] and SpriteArt.ICONS.has(kind):
+		if item["slot"] in ["legs", "boots", "helmet"] and SpriteArt.ICONS.has(kind):
 			var image: Image = SpriteArt.ICONS[kind].get_image()
 			var mask := PackedByteArray()
 			for y: int in image.get_height():
@@ -2015,7 +2015,7 @@ func _leech_checks() -> void:
 			if silhouettes.has(key):
 				recolours.append("%s = %s" % [kind, silhouettes[key]])
 			silhouettes[key] = kind
-	check(recolours.is_empty(), "no legs or boots icon is a recolour of another (%s)" % ", ".join(recolours))
+	check(recolours.is_empty(), "no legs, boots, or helmet icon is a recolour of another (%s)" % ", ".join(recolours))
 	# Wands, rods, bows, shields, and spellbooks without a painting are hand-pixelled into items.png
 	# (pixel_staves.py, pixel_bows.py, pixel_shields.py, pixel_books.py), never a recoloured copy.
 	var recoloured: Array[String] = []

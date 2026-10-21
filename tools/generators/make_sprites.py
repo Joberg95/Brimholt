@@ -1652,8 +1652,9 @@ ICON_DIRS = (ROOT / "assets" / "sprites" / "icons", ROOT / "assets" / "sprites" 
 
 def painted_icon(kind):
     """The painted icon, else the one derive_icons.py made from painted art, else None. Legs and
-    boots drawn in pixel_legwear.py (LEGWEAR_STYLES) use that drawing instead, worn and in the bag."""
-    if ITEMS[kind].get("slot") not in PAINTED_SLOTS or kind in LEGWEAR_STYLES:
+    boots drawn in pixel_legwear.py (LEGWEAR_STYLES) and helmets from pack_helmets.py (HELMET_STYLES)
+    use that drawing instead, worn and in the bag."""
+    if ITEMS[kind].get("slot") not in PAINTED_SLOTS or kind in LEGWEAR_STYLES or kind in HELMET_STYLES:
         return None
     for folder in ICON_DIRS:
         if (folder / f"{kind}.png").exists():
@@ -1850,7 +1851,7 @@ def gear_builder(kind):
     icon = painted_icon(kind)
     # Showpiece helmets wear their icon; showpiece boots are too small for that and are drawn
     # as generated boots in their colours with their own details (boots_builder).
-    if icon is None and look(kind)[0] in SHOWPIECE_STYLES and look(kind)[0] not in BOOT_WORN:
+    if icon is None and look(kind)[0] in SHOWPIECE_STYLES and look(kind)[0] not in BOOT_WORN             and kind not in HELMET_STYLES:
         icon = helm_icon(kind)
     if icon is None and look(kind)[0] in SWORD_SHAPES:
         icon = sword_icon(kind)
@@ -2075,6 +2076,7 @@ import pixel_packs  # noqa: E402
 import pixel_food  # noqa: E402
 import pixel_floors  # noqa: E402
 import pixel_legwear  # noqa: E402
+import pack_helmets  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2592,11 +2594,23 @@ def legwear_icon(kind):
     return image
 
 
+# Helmets are OpenTibia sprite pack models repainted in the item's colours (pack_helmets.py), one
+# model per item. Like legwear they are written to icons_pixel/ and worn as their icon (textured).
+HELMET_STYLES = {kind: look(kind)[0] for kind in ITEMS
+                 if ITEMS[kind].get("slot") == "helmet" and kind in pack_helmets.DESIGNS}
+
+
+def helmet_icon(kind):
+    image = Image(TILE, TILE)
+    image.pixels = pack_helmets.icon(kind, ITEMS[kind]["colors"], ITEMS[kind].get("armor"))
+    return image
+
+
 # The hand-pixelled families by item, before any generated shape (weapon_icon) is tried.
 HAND_PIXELLED = ((STAFF_STYLES, staff_icon), (BOW_STYLES, bow_icon), (SHIELD_STYLES, shield_icon),
                  (BOOK_STYLES, book_icon), (CROSSBOW_STYLES, crossbow_icon), (HAFTED_STYLES, hafted_icon),
                  (CAPE_STYLES, cape_icon), (PACK_STYLES, pack_icon), (CHARM_STYLES, charm_icon),
-                 (FOOD_STYLES, food_icon), (LEGWEAR_STYLES, legwear_icon))
+                 (FOOD_STYLES, food_icon), (LEGWEAR_STYLES, legwear_icon), (HELMET_STYLES, helmet_icon))
 
 
 def hand_pixelled_icon(kind):
@@ -2636,7 +2650,7 @@ def necklace_icon(kind, frame=0):
 
 def animated(kind):
     shape, extras = look(kind)
-    return shape in SHOWPIECE_ALIVE or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE))) \
+    return (shape in SHOWPIECE_ALIVE and kind not in HELMET_STYLES) or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE))) \
         or (shape == "necklace" and bool(extras & set(pixel_necklaces.GLOWING))) \
         or (shape in SWORD_SHAPES and painted_icon(kind) is None and sword_style(kind) in pixel_swords.GLOWING) \
         or (kind in HAFTED_STYLES and painted_icon(kind) is None and HAFTED_STYLES[kind] in pixel_hafted.GLOWING) \
@@ -2649,7 +2663,7 @@ def icon_frames(kind):
     shape, _ = look(kind)
     frames = []
     for frame in range(ANIM_FRAMES):
-        if shape in SHOWPIECE_STYLES:
+        if shape in SHOWPIECE_STYLES and kind not in HELMET_STYLES:
             icon = helm_icon(kind, frame)
         elif shape == "backpack":
             icon = backpack_icon(kind, frame)
@@ -6418,7 +6432,7 @@ def main():
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
-        **{f"icons_pixel/{kind}.png": finished_icon(kind) for kind in LEGWEAR_STYLES},
+        **{f"icons_pixel/{kind}.png": finished_icon(kind) for kind in {**LEGWEAR_STYLES, **HELMET_STYLES}},
         "coins.png": sheet_row([icon_finish(coin_stage_icon(stage)) for stage in range(len(pixel_coins.STAGES))]),
         **{f"gear/{kind}.png": character_sheet(gear_builder(kind), compact=True, columns=POSE_COLUMNS)
            for kind, item in ITEMS.items() if item.get("slot") in VISIBLE_SLOTS},

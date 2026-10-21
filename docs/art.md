@@ -220,8 +220,20 @@ its own model or drawing, differing in silhouette and construction, not just pal
 are variants of OpenTibia sprite pack leg models (CC BY 4.0, `assets/third_party/CREDITS.md`),
 each model repainted with our own materials, layout and ornament (`tools/generators/pack_legwear.py`,
 `pack_sprites.py`) and used once; the 27 legs that only recoloured a model were deleted on
-2026-10-21, so legs have gaps in the tiers until the gear rebalance. A unit check fails two legs or
-boots icons with the same silhouette.
+2026-10-21, so legs have gaps in the tiers until the gear rebalance. A unit check fails two legs,
+boots, or helmet icons with the same silhouette.
+
+**Helmets** (`tools/generators/pack_helmets.py`) start from an OpenTibia sprite pack helmet model as a
+base, one model per item (`DESIGNS`), painted whole (`pack_sprites.variant(mirror=False)`: a 3/4 view
+is not symmetric) in the item's main and accent colours with its armour class's texture, then built
+on in our own construction (`ADD`): hand-pixelled parts drawn in rows like the axes (`PARTS` on the
+sides: horns, stubs, wings, antlers, sprigs, feathers; `TOP` on the crown: crests, plumes, spikes,
+finials, flames, stars; `FRONT` on the brow: gems, a miner's lamp) and built-on trim (brow bands,
+rivets, nasal guards, a lit rim), chosen from the item's look extras. Parts are drawn on a 48x48
+canvas and the result fitted to 30x30, dropping the rows or columns most like their neighbours. Every
+helmet adds at least one part that changes its silhouette, so no icon is the pack's drawing
+recoloured. They are written to `icons_pixel/` and worn as their icon (`textured`); only the three
+`"shine": "sheen"` helmets move.
 
 **Icon volume.** Icons not already shaded with volume (`needs_volume`: everything but the 3D showpieces, axes, backpacks and necklaces) go through `icon_volume` first: each pixel's distance from the silhouette makes a dome, and the top-left light on it shifts the pixel's own colour by whole shade steps (`VOLUME_STEP`), so flat icons read as solids without gradients.
 

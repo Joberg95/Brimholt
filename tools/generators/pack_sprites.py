@@ -221,18 +221,53 @@ def fit(base):
     return out
 
 
-def variant(sheet: str, x0: int, y0: int, design: dict):
+def centre(base):
+    """Centre a model's bounding box on the icon, keeping the one-pixel border empty."""
+    cols = [x for x in range(32) if any(base[y][x] for y in range(32))]
+    rows = [y for y in range(32) if any(base[y])]
+    dx = max(1 - cols[0], min(30 - cols[-1], round(15.5 - (cols[0] + cols[-1]) / 2)))
+    dy = max(1 - rows[0], min(30 - rows[-1], round(15.5 - (rows[0] + rows[-1]) / 2)))
+    return [[(base[y - dy][x - dx] if 0 <= y - dy < 32 and 0 <= x - dx < 32 else None) for x in range(32)]
+            for y in range(32)]
+
+
+def box(base, over: dict | None = None) -> dict:
+    """Rows and columns of a whole model: top, bottom, left, right, and the thirds between."""
+    rows = [y for y in range(32) if any(base[y])]
+    cols = [x for x in range(32) if any(base[y][x] for y in range(32))]
+    top, bot, left, right = rows[0], rows[-1], cols[0], cols[-1]
+    a = dict(top=top, bot=bot, left=left, right=right, t1=top + (bot - top + 1) // 3,
+             t2=top + 2 * (bot - top + 1) // 3, mid=(top + bot) // 2, cx=(left + right) // 2)
+    a.update(over or {})
+    return a
+
+
+# Zones of a whole model (helmets, weapons, armour): thirds from the top, halves, and sides.
+BOX_ZONES = {
+    "top": lambda y, a: y < a["t1"],
+    "middle": lambda y, a: a["t1"] <= y < a["t2"],
+    "bottom": lambda y, a: y >= a["t2"],
+    "upper": lambda y, a: y <= a["mid"],
+    "lower": lambda y, a: y > a["mid"],
+}
+
+
+def variant(sheet: str, x0: int, y0: int, design: dict, mirror: bool = True):
     """design:
-      paint   [(selector, hex, texture, smooth)] in order; later rules win. A selector is
+      paint   [(selector, hex, texture, smooth)] in order; later rules win (texture "name@offset" shifts
+              the tones lighter or darker, e.g. "mail@-0.2"). A selector is
               'region:zone' (pack colour family k/n/r/o/y/g/c/b/p or *, zone from ZONES or *),
               optionally '|outer<n' / '|inner<n' / '|mid<n' (columns from the leg's edge or centre).
               smooth=True replaces the pack's light inside the painted area by a soft blur (its
               ornaments vanish; our details go on top).
       details [(kind, args...)] our own ornaments, lit by the model (see _detail).
       anatomy row overrides.
-    The left half is painted and mirrored, so both legs match."""
-    base = fit(sprite(sheet, x0, y0))
-    a = anatomy(base, design.get("anatomy"))
+    mirror=True (legwear): the left half is painted and mirrored, so both legs match. mirror=False
+    paints the whole model with BOX_ZONES (helmets, weapons): a 3/4 view is not symmetric."""
+    W = 16 if mirror else 32
+    zones = ZONES if mirror else BOX_ZONES
+    base = fit(sprite(sheet, x0, y0)) if mirror else centre(sprite(sheet, x0, y0))
+    a = anatomy(base, design.get("anatomy")) if mirror else box(base, design.get("anatomy"))
     lights = sorted(luma(c) for r in base for c in r if c and luma(c) > 0.09)
     lo, hi = lights[len(lights) // 25], lights[-max(1, len(lights) // 40)]
     V = [[None if c is None else max(0.0, min(1.0, (luma(c) - lo) / (hi - lo + 1e-6))) for c in r] for r in base]
@@ -241,12 +276,12 @@ def variant(sheet: str, x0: int, y0: int, design: dict):
         reg, _, rest = sel.partition(":")
         zone, *cols = rest.split("|")
         for y in range(32):
-            if zone != "*" and not ZONES[zone](y, a):
+            if zone != "*" and not zones[zone](y, a):
                 continue
-            xs = [x for x in range(16) if base[y][x]]
+            xs = [x for x in range(W) if base[y][x]]
             if not xs:
                 continue
-            for x in range(16):
+            for x in range(W):
                 c = base[y][x]
                 if c is None or (reg != "*" and region(c) not in reg):
                     continue
@@ -256,10 +291,10 @@ def variant(sheet: str, x0: int, y0: int, design: dict):
                     if side == "outer":
                         ok &= x - xs[0] < int(n)
                     elif side == "mid":
-                        ok &= x >= 16 - int(n)
+                        ok &= x >= W - int(n)
                     elif side == "inner":
                         run_end = x
-                        while run_end + 1 < 16 and base[y][run_end + 1]:
+                        while run_end + 1 < W and base[y][run_end + 1]:
                             run_end += 1
                         ok &= run_end - x < int(n)
                 if ok:
@@ -267,7 +302,7 @@ def variant(sheet: str, x0: int, y0: int, design: dict):
     out: list[list] = [[None] * 32 for _ in range(32)]
     ramps: dict[str, list] = {}
     for y in range(32):
-        for x in range(16):
+        for x in range(W):
             c = base[y][x]
             if c is None:
                 continue
@@ -286,16 +321,17 @@ def variant(sheet: str, x0: int, y0: int, design: dict):
                 for dy in range(-2, 3):
                     for dx in range(-2, 3):
                         yy, xx = y + dy, x + dx
-                        if 0 <= yy < 32 and 0 <= xx < 16 and V[yy][xx] is not None and mat[yy][xx] == m and luma(base[yy][xx]) > 0.09:
+                        if 0 <= yy < 32 and 0 <= xx < W and V[yy][xx] is not None and mat[yy][xx] == m and luma(base[yy][xx]) > 0.09:
                             k = math.exp(-(dx * dx + dy * dy) / 2.5)
                             s += V[yy][xx] * k
                             w += k
                 v = s / w if w else v
-            v += TEXTURES[tex](x, y)
+            name, _, offset = tex.partition("@")
+            v += TEXTURES[name](x, y) + float(offset or 0)
             out[y][x] = rp[max(0, min(len(rp) - 1, round(v * (len(rp) - 1))))]
     for d in design.get("details", []):
-        _detail(out, base, V, a, d, ramps)
-    for y in range(32):
+        _detail(out, base, V, a, d, ramps, W, zones)
+    for y in range(32 if mirror else 0):
         for x in range(16, 32):
             out[y][x] = out[y][31 - x]
     for y, x, hexcode in design.get("over", []):
@@ -303,7 +339,7 @@ def variant(sheet: str, x0: int, y0: int, design: dict):
     return out
 
 
-def _detail(out, base, V, a, d, ramps):
+def _detail(out, base, V, a, d, ramps, W=16, zones=ZONES):
     """Our ornaments on the left half; each takes the light of the pixel under it."""
     kind, *args = d
 
@@ -313,7 +349,7 @@ def _detail(out, base, V, a, d, ramps):
         return rp[max(0, min(len(rp) - 1, round(v * (len(rp) - 1))))]
 
     def inside(y, x):
-        return 0 <= y < 32 and 0 <= x < 16 and base[y][x] is not None and luma(base[y][x]) > 0.09
+        return 0 <= y < 32 and 0 <= x < W and base[y][x] is not None and luma(base[y][x]) > 0.09
 
     if kind == "gem":  # ("gem", y, x, hex): a 2x2 cut stone, lit top-left
         y, x, hexcode = args
@@ -324,7 +360,7 @@ def _detail(out, base, V, a, d, ramps):
     elif kind == "studs":  # ("studs", row_key_or_y, step, hex)
         y, step, hexcode = args
         y = a[y] if isinstance(y, str) else y
-        for x in range(16):
+        for x in range(W):
             if inside(y, x) and x % step == 0:
                 out[y][x] = lit(hexcode, y, x, 0.35)
     elif kind == "band":  # ("band", y0, y1, hex): a trim band across both legs, bevelled
@@ -332,15 +368,15 @@ def _detail(out, base, V, a, d, ramps):
         y0 = a[y0] if isinstance(y0, str) else y0
         y1 = a[y1] if isinstance(y1, str) else y1
         for y in range(y0, y1 + 1):
-            for x in range(16):
+            for x in range(W):
                 if inside(y, x):
                     out[y][x] = lit(hexcode, y, x, 0.2 if y == y0 else -0.25 if y == y1 else 0.0)
     elif kind == "stripe":  # ("stripe", side, width, hex, zone): a trim down the leg edge
         side, width, hexcode, zone = args
         for y in range(32):
-            if zone != "*" and not ZONES[zone](y, a):
+            if zone != "*" and not zones[zone](y, a):
                 continue
-            xs = [x for x in range(16) if inside(y, x)]
+            xs = [x for x in range(W) if inside(y, x)]
             if not xs:
                 continue
             cols = xs[:width] if side == "outer" else _inner(xs)[-width:]
@@ -349,9 +385,9 @@ def _detail(out, base, V, a, d, ramps):
     elif kind == "dots":  # ("dots", zone, every, hex, seed): scattered motifs (runes, leaves, spots)
         zone, every, hexcode, seed = args
         for y in range(32):
-            if zone != "*" and not ZONES[zone](y, a):
+            if zone != "*" and not zones[zone](y, a):
                 continue
-            for x in range(16):
+            for x in range(W):
                 if inside(y, x) and _noise(x, y, seed) < 1 / every:
                     out[y][x] = lit(hexcode, y, x, 0.3)
     elif kind == "pix":  # ("pix", [(y, x)], hex, bias): hand-placed lit pixels

@@ -14,7 +14,9 @@ world art; this one covers icons.
 **No recolour of existing icons** (the owner's rule, 2026-10-21). Every item gets its own model or
 drawing: never an existing icon, ours or an OpenTibia sprite pack model, repainted in new colours.
 Items of one slot must differ in silhouette and construction, not palette; a unit check fails two
-legs or boots icons with the same silhouette, and `pack_legwear.py` allows one design per pack model.
+legs, boots, or helmet icons with the same silhouette, and `pack_legwear.py` and `pack_helmets.py`
+allow one design per pack model. A pack model is a base to build on, never the finished icon: repaint
+it and add our own parts and trim (`pack_helmets.ADD`) so the silhouette and construction are ours.
 If there are not enough distinct models for every item, the item goes, not the rule.
 
 ## The look
