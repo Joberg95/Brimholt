@@ -1651,8 +1651,9 @@ ICON_DIRS = (ROOT / "assets" / "sprites" / "icons", ROOT / "assets" / "sprites" 
 
 
 def painted_icon(kind):
-    """The painted icon, else the one derive_icons.py made from painted art, else None."""
-    if ITEMS[kind].get("slot") not in PAINTED_SLOTS:
+    """The painted icon, else the one derive_icons.py made from painted art, else None. Legs and
+    boots drawn in pixel_legwear.py (LEGWEAR_STYLES) use that drawing instead, worn and in the bag."""
+    if ITEMS[kind].get("slot") not in PAINTED_SLOTS or kind in LEGWEAR_STYLES:
         return None
     for folder in ICON_DIRS:
         if (folder / f"{kind}.png").exists():
@@ -2073,6 +2074,7 @@ import pixel_capes  # noqa: E402
 import pixel_packs  # noqa: E402
 import pixel_food  # noqa: E402
 import pixel_floors  # noqa: E402
+import pixel_legwear  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
@@ -2576,11 +2578,25 @@ def food_icon(kind, frame=0):
     return image
 
 
+# Legs and boots are hand-pixelled (pixel_legwear.py) in the OpenTibia pack's item style, every item
+# its own drawing (pixel_legwear.PIECES). make_sprites also writes them to icons_pixel/, which the
+# game checks before painted and derived icons.
+LEGWEAR_STYLES = {kind: look(kind)[0] for kind in ITEMS
+                  if look(kind)[0] in pixel_legwear.STYLES and kind in pixel_legwear.PIECES}
+
+
+def legwear_icon(kind):
+    shape, extras = look(kind)
+    image = Image(TILE, TILE)
+    image.pixels = pixel_legwear.icon(shape, extras, ITEMS[kind]["colors"], kind)
+    return image
+
+
 # The hand-pixelled families by item, before any generated shape (weapon_icon) is tried.
 HAND_PIXELLED = ((STAFF_STYLES, staff_icon), (BOW_STYLES, bow_icon), (SHIELD_STYLES, shield_icon),
                  (BOOK_STYLES, book_icon), (CROSSBOW_STYLES, crossbow_icon), (HAFTED_STYLES, hafted_icon),
                  (CAPE_STYLES, cape_icon), (PACK_STYLES, pack_icon), (CHARM_STYLES, charm_icon),
-                 (FOOD_STYLES, food_icon))
+                 (FOOD_STYLES, food_icon), (LEGWEAR_STYLES, legwear_icon))
 
 
 def hand_pixelled_icon(kind):
@@ -6402,6 +6418,7 @@ def main():
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
+        **{f"icons_pixel/{kind}.png": finished_icon(kind) for kind in LEGWEAR_STYLES},
         "coins.png": sheet_row([icon_finish(coin_stage_icon(stage)) for stage in range(len(pixel_coins.STAGES))]),
         **{f"gear/{kind}.png": character_sheet(gear_builder(kind), compact=True, columns=POSE_COLUMNS)
            for kind, item in ITEMS.items() if item.get("slot") in VISIBLE_SLOTS},
