@@ -1,8 +1,9 @@
-"""Swords: a blade, a guard, a grip, and a pommel on the icon's diagonal (tip top-left, pommel bottom-
-right). Each sword is its own construction, not a recolour: a design is data naming its blade shape
-(pointed, falchion, cleaver, needle, leaf, curved, hooked) and length, its edge (double or single),
-guard (cross, flared, cup, square, crescent, collar), grip (length, wrap or bands), and pommel (ball,
-disc, ring, spike, gem, cap), with the materials of each.
+"""Swords in the OpenTibia pack's proportions: every sword runs corner to corner on the diagonal (tip
+top-left, pommel in the bottom-right corner); the blade takes about two thirds of it and is 3-4 px
+wide, the guard is a thin crossbar about 11 px across with knobbed ends, the grip a 2 px stripe, the
+pommel a small knob (measured from 115 pack swords; the pack is reference only). Swords differ in
+blade shape (pointed, falchion, needle, leaf, curved, hooked), edge, guard, grip wrap, pommel, and
+materials, never by colour alone.
 """
 import math
 
@@ -44,8 +45,6 @@ def _width(shape, w):
         return lambda s: w * (0.45 + 0.75 * math.sin(math.pi * min(0.92, s) / 0.92 * 0.85) ** 0.6) if s < 0.97 else w * 0.75
     if shape == "falchion":
         return lambda s: w * (1.3 - 0.55 * s) * min(1.0, 0.25 + s * 7)
-    if shape == "cleaver":
-        return lambda s: w * min(1.0, 0.9 + s * 10)
     if shape == "needle":
         return lambda s: w * min(1.0, 0.35 + s * 2.5)
     raise ValueError(shape)
@@ -67,120 +66,111 @@ def _bands(length_px):
 
 
 def _guard(icon, kind, at, mat, span, thick):
+    """A thin crossbar across the blade (the pack's guards are about 2 px thick and 11 across)."""
+    knob = thick + 0.45
     if kind == "cross":
         a, b = _at(at, 0, span), _at(at, 0, -span)
         icon.stroke([a, b], lambda s: thick, ROUND, mat)
         for end in (a, b):
-            icon.ball(end[0], end[1], thick + 0.6, thick + 0.6, mat)
-    elif kind == "flared":
+            icon.ball(end[0], end[1], knob, knob, mat)
+    elif kind == "drooping":  # quillons bent toward the blade
         for side in (1, -1):
-            icon.stroke([_at(at, 0.3, 0), _at(at, -0.4, side * span * 0.6), _at(at, -2.2, side * span)],
-                        lambda s: thick * (0.8 + s * 0.7), ROUND, mat)
-    elif kind == "cup":
-        cup = _at(at, -0.8)
-        icon.ball(cup[0], cup[1], span * 0.62, span * 0.62, mat, flat=0.25)
-    elif kind == "square":
-        cells = set()
-        for y in range(32):
-            for x in range(32):
-                along = (x + 0.5 - at[0]) * AXIS[0] + (y + 0.5 - at[1]) * AXIS[1]
-                across = (x + 0.5 - at[0]) * ACROSS[0] + (y + 0.5 - at[1]) * ACROSS[1]
-                if abs(along) <= thick * 0.9 and abs(across) <= span:
-                    cells.add((x, y))
-        icon.dome(cells, mat, height=1.5)
-    elif kind == "crescent":
-        icon.stroke([_at(at, -2.0, span), _at(at, 0.6, 0), _at(at, -2.0, -span)], lambda s: thick, ROUND, mat)
-    elif kind == "collar":
-        icon.stroke([_at(at, -0.6), _at(at, 0.8)], lambda s: thick + 0.9, ROUND, mat)
+            icon.stroke([_at(at, 0.4, 0), _at(at, 0.0, side * span * 0.6), _at(at, -1.8, side * span)],
+                        lambda s: thick, ROUND, mat)
+            end = _at(at, -1.8, side * span)
+            icon.ball(end[0], end[1], knob, knob, mat)
+    elif kind == "crescent":  # one curved bar, horns toward the tip
+        icon.stroke([_at(at, -2.4, span), _at(at, 0.8, 0), _at(at, -2.4, -span)], lambda s: thick, ROUND, mat)
+    elif kind == "ring":  # a small ring round the blade's root
+        for bend in (-1.6, 1.6):
+            icon.stroke([_at(at, 0, span * 0.55), _at(at, bend, 0), _at(at, 0, -span * 0.55)],
+                        lambda s: thick * 0.85, ROUND, mat)
+    elif kind == "wings":  # flat wings swept back toward the grip
+        for side in (1, -1):
+            icon.stroke([_at(at, -0.3, 0), _at(at, 1.6, side * span)], lambda s: thick * (1.4 - s * 0.6), ROUND, mat)
+    elif kind == "bar":  # a plain straight bar, squared ends
+        icon.stroke([_at(at, 0, span), _at(at, 0, -span)], lambda s: thick * 1.15, ROUND, mat)
 
 
 def _pommel(icon, kind, at, mat, size, gem=None):
-    if kind == "ball":
+    """A small knob at the corner (the pack's pommels are 2-4 px)."""
+    if kind == "knob":
         icon.ball(at[0], at[1], size, size, mat)
-    elif kind == "disc":
-        icon.ball(at[0], at[1], size * 1.2, size * 1.2, mat, flat=0.55)
     elif kind == "ring":
-        icon.stroke([_at(at, -size * 0.2, size), _at(at, size * 1.3, 0), _at(at, -size * 0.2, -size)],
-                    lambda s: 0.95, ROUND, mat)
-        icon.stroke([_at(at, -size * 0.2, size), _at(at, -size * 0.9, 0), _at(at, -size * 0.2, -size)],
-                    lambda s: 0.95, ROUND, mat)
-    elif kind == "spike":
-        icon.ball(at[0], at[1], size * 0.8, size * 0.8, mat)
-        icon.stroke([_at(at, 0.5), _at(at, size * 2.2)], lambda s: 1.2 * (1 - s) + 0.2, ROUND, mat)
+        for side in (1, -1):
+            icon.stroke([_at(at, -size, 0), _at(at, 0, side * size * 1.1), _at(at, size, 0)], lambda s: 0.7, ROUND, mat)
     elif kind == "gem":
-        icon.ball(at[0], at[1], size * 1.1, size * 1.1, mat, flat=0.4)
-        icon.ball(at[0], at[1], size * 0.6, size * 0.6, gem)
-    elif kind == "cap":
-        icon.stroke([_at(at, -0.8), _at(at, 1.0)], lambda s: size * (1.0 - s * 0.35), ROUND, mat)
+        icon.ball(at[0], at[1], size, size, mat, flat=0.3)
+        icon.ball(at[0] - 0.2, at[1] - 0.2, size * 0.55, size * 0.55, gem)
+    elif kind == "fishtail":
+        for side in (1, -1):
+            icon.stroke([_at(at, -1.0), _at(at, size, side * size)], lambda s: 0.75, ROUND, mat)
+    elif kind == "spike":
+        icon.stroke([_at(at, -1.2), _at(at, size * 1.4)], lambda s: 1.0 * (1 - s) + 0.25, ROUND, mat)
+
+
+# Every sword runs corner to corner like the pack's: tip at (1.6, 1.6), the pommel in the far corner.
+TIP = (1.6, 1.6)
+LENGTH = 39.6
 
 
 def sword(d):
     """Draws one sword design (a dict, see DESIGNS) and returns the Icon."""
     icon = Icon()
-    tip = _at((2.6, 2.6), d.get("start", 0))
-    guard = _at(tip, d["blade"])
-    grip_end = _at(guard, d["grip"])
-    # Handle first: grip, then pommel over its end.
-    pattern = {"wrap": _wrap(), "diamond": _diamond_wrap(), "bands": _bands(d["grip"]), "plain": None}[d.get("wrap", "wrap")]
-    icon.stroke([guard, grip_end], lambda s: d.get("grip_width", 1.7), ROUND, d["grip_mat"], pattern=pattern)
-    _pommel(icon, d["pommel"], _at(grip_end, d.get("pommel_size", 2.0) * 0.6), d["pommel_mat"],
-            d.get("pommel_size", 2.0), d.get("gem"))
-    # Blade, straight or curved, and its extras.
-    path = [tip, _at(_at(tip, d["blade"] / 2), 0, d["curve"]), guard] if d.get("curve") else [tip, guard]
+    blade = LENGTH * d.get("guard_at", 0.66)
+    guard = _at(TIP, blade)
+    pommel = _at(TIP, LENGTH - d.get("pommel_size", 1.3))
+    pattern = {"wrap": _wrap(), "diamond": _diamond_wrap(), "bands": _bands(LENGTH - blade),
+               "plain": None}[d.get("wrap", "wrap")]
+    icon.stroke([guard, pommel], lambda s: d.get("grip_width", 0.95), ROUND, d["grip_mat"], pattern=pattern)
+    _pommel(icon, d["pommel"], pommel, d["pommel_mat"], d.get("pommel_size", 1.3), d.get("gem"))
+    path = [TIP, _at(_at(TIP, blade / 2), 0, d["curve"]), guard] if d.get("curve") else [TIP, guard]
     edge = SINGLE if d.get("edge") == "single" else DOUBLE
     icon.stroke(path, _width(d["shape"], d["width"]), edge, d["blade_mat"], shine=0.5)
     if d.get("hook"):
-        root = _at(tip, d["blade"] * 0.38, 0)
-        icon.stroke([root, _at(root, -1.0, 4.2), _at(root, 3.2, 5.0)], lambda s: 1.5 * (1 - s * 0.7), SINGLE, d["blade_mat"])
+        root = _at(TIP, blade * 0.42, 0)
+        icon.stroke([root, _at(root, -0.6, 3.2), _at(root, 2.4, 3.8)], lambda s: 1.0 * (1 - s * 0.6), SINGLE,
+                    d["blade_mat"])
     if d.get("fuller"):
-        icon.stroke([_at(tip, d["blade"] * 0.3), _at(tip, d["blade"] - 1.0)], lambda s: 0.6, lambda u, *_: 0.2, d["blade_mat"])
+        icon.stroke([_at(TIP, blade * 0.3), _at(TIP, blade - 1.2)], lambda s: 0.45, lambda u, *_: 0.22, d["blade_mat"])
     if d.get("inlay"):
-        icon.stroke([_at(tip, d["blade"] * 0.3), _at(tip, d["blade"] - 1.5)], lambda s: 0.55, lambda u, *_: 0.95,
-                    d["inlay"])
-    if d.get("knuckle"):
-        end = _at(grip_end, 0.6)
-        icon.stroke([_at(guard, -0.4, -2.4), _at(guard, d["grip"] * 0.5, -3.6), _at(end, 0, -1.2)], lambda s: 0.85,
-                    ROUND, d["guard_mat"])
-    _guard(icon, d["guard"], guard, d["guard_mat"], d.get("guard_span", 5.0), d.get("guard_thick", 1.5))
+        icon.stroke([_at(TIP, blade * 0.28), _at(TIP, blade - 1.4)], lambda s: 0.45, lambda u, *_: 0.95, d["inlay"])
+    _guard(icon, d["guard"], guard, d["guard_mat"], d.get("guard_span", 5.4), d.get("guard_thick", 0.95))
     if d.get("guard_gem"):
-        icon.ball(guard[0], guard[1], 1.3, 1.3, d["guard_gem"])
+        icon.ball(guard[0], guard[1], 1.1, 1.1, d["guard_gem"])
     return icon
 
 
-# Each design its own sword: blade, guard, grip, and pommel all differ between them.
+# Each design its own sword within the pack's proportions: they differ in blade shape, guard, pommel,
+# wrap, and materials.
 DESIGNS = {
-    # A plain knight's sword: pointed double edge with a fuller, ball-ended cross, wrapped grip, disc pommel.
-    "arming_sword": dict(blade=22, shape="point", width=2.1, blade_mat="steel", fuller=True,
-                         guard="cross", guard_mat="iron", guard_span=4.6, grip=8, grip_mat="leather",
-                         pommel="disc", pommel_mat="iron"),
-    # A falchion: single edge widening to a clipped point, crescent guard, banded wooden grip, cap pommel.
-    "falchion": dict(blade=19, start=2, shape="falchion", width=2.4, edge="single", blade_mat="steel",
-                     guard="crescent", guard_mat="bronze", guard_span=4.4, grip=8, grip_mat="wood", wrap="bands",
-                     pommel="cap", pommel_mat="bronze", pommel_size=1.8),
-    # A cleaver: a broad squared blade with no point, a collar, a thick bone grip, a ring pommel.
-    "cleaver": dict(blade=16, start=4, shape="cleaver", width=3.4, edge="single", blade_mat="darksteel",
-                    guard="cross", guard_mat="iron", guard_span=3.0, guard_thick=1.7, grip=8, grip_mat="bone",
-                    grip_width=1.9, wrap="bands", pommel="ring", pommel_mat="iron", pommel_size=2.4),
-    # A rapier: a needle blade, a big gold cup guard, a long black cord grip, a heavy ball pommel.
-    "rapier": dict(blade=23, shape="needle", width=1.2, blade_mat="silver", guard="cup", guard_mat="gold",
-                   guard_span=5.0, grip=9, grip_mat="2a2a32", wrap="diamond", pommel="ball", pommel_mat="gold",
-                   pommel_size=2.0, knuckle=True),
-    # A moonblade: a long single-edged curve, a square guard, a long crossed-cord grip, a cap.
-    "moonblade": dict(blade=21, shape="point", width=1.8, curve=3.2, edge="single", blade_mat="silver",
-                      guard="square", guard_mat="gold", guard_span=3.8, guard_thick=1.6, grip=10,
-                      grip_mat="3a1a4a", wrap="diamond", pommel="cap", pommel_mat="darksteel", pommel_size=1.6),
-    # A gladius: a short broad leaf, a thick flared guard, a ridged bone grip, a big ball pommel.
-    "gladius": dict(blade=15, start=4, shape="leaf", width=2.7, blade_mat="bronze", guard="flared", guard_mat="wood",
-                    guard_span=4.0, guard_thick=1.4, grip=7, grip_mat="bone", grip_width=1.8, pommel="ball",
-                    pommel_mat="wood", pommel_size=2.5),
-    # The runeblade: a dark leaf blade with a glowing inlay, swept silver guard, blue wrap, gem pommel.
-    "runeblade": dict(blade=21, shape="leaf", width=2.4, blade_mat="darksteel", inlay="5ae0ff", guard="flared",
-                      guard_mat="silver", guard_span=5.0, grip=8, grip_mat="1a2a4a", pommel="gem",
-                      pommel_mat="silver", gem="5ae0ff", guard_gem="5ae0ff"),
-    # A hookblade: a black glass blade with a hook on its back, a gold cross, red wrap, spike pommel.
-    "hookblade": dict(blade=21, shape="point", width=2.0, edge="single", hook=True, blade_mat="obsidian",
-                      guard="cross", guard_mat="gold", guard_span=4.2, guard_thick=1.3, grip=8, grip_mat="7a1a14",
-                      pommel="spike", pommel_mat="gold", pommel_size=1.7),
+    # A knight's longsword: straight double edge with a fuller, knobbed cross, leather wrap, knob.
+    "longsword": dict(shape="point", width=1.6, blade_mat="steel", fuller=True, guard="cross", guard_mat="iron",
+                      grip_mat="leather", pommel="knob", pommel_mat="iron"),
+    # A falchion: a single edge widening toward a clipped point, a crescent guard, banded grip.
+    "falchion": dict(shape="falchion", width=1.55, edge="single", blade_mat="steel", guard="crescent",
+                     guard_mat="bronze", grip_mat="wood", wrap="bands", pommel="knob", pommel_mat="bronze"),
+    # A rapier: a needle blade, a ring guard, a long black cord grip, a gold knob.
+    "rapier": dict(shape="needle", width=1.1, guard_at=0.7, blade_mat="silver", guard="ring", guard_mat="gold",
+                   guard_span=4.6, grip_mat="2a2a32", wrap="diamond", pommel="knob", pommel_mat="gold", pommel_size=1.5),
+    # A moonblade: a single-edged curve, a plain bar guard, a purple cord grip, a fishtail pommel.
+    "moonblade": dict(shape="point", width=1.45, curve=2.6, edge="single", blade_mat="silver", guard="bar",
+                      guard_mat="gold", guard_span=4.2, grip_mat="3a1a4a", wrap="diamond", pommel="fishtail",
+                      pommel_mat="gold"),
+    # A broadsword: a wide straight blade, drooping quillons, a wooden grip, a ring pommel.
+    "broadsword": dict(shape="point", width=1.95, guard_at=0.64, blade_mat="steel", guard="drooping",
+                       guard_mat="darksteel", guard_span=5.8, grip_mat="wood", wrap="bands", pommel="ring",
+                       pommel_mat="darksteel", pommel_size=1.5),
+    # A bronze leaf blade: a swelling leaf, swept wings, a bone grip, a knob.
+    "leafblade": dict(shape="leaf", width=1.8, blade_mat="bronze", guard="wings", guard_mat="bronze", guard_span=4.0,
+                      grip_mat="bone", wrap="bands", pommel="knob", pommel_mat="bronze", pommel_size=1.5),
+    # The runeblade: a dark leaf blade with a glowing inlay, a knobbed silver cross with a gem, gem pommel.
+    "runeblade": dict(shape="leaf", width=1.75, blade_mat="darksteel", inlay="5ae0ff", guard="cross",
+                      guard_mat="silver", grip_mat="1a2a4a", pommel="gem", pommel_mat="silver", gem="5ae0ff",
+                      guard_gem="5ae0ff"),
+    # A hookblade: a black glass single edge with a hook off its back, gold wings, red wrap, a spike.
+    "hookblade": dict(shape="point", width=1.5, edge="single", hook=True, blade_mat="obsidian", guard="wings",
+                      guard_mat="gold", guard_span=4.4, grip_mat="7a1a14", pommel="spike", pommel_mat="gold"),
 }
 
 
