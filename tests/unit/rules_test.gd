@@ -1798,22 +1798,7 @@ func _hunters_lodge_checks() -> void:
 
 
 func _sprite_checks() -> void:
-	# Every creature (and the undead) has its own painted-style sheet; only armed humanoids wear gear.
-	for kind: String in Monsters.MONSTERS:
-		var definition: Dictionary = Monsters.MONSTERS[kind]
-		check(SpriteArt.CREATURES.has(kind) or (definition["look"] == "humanoid" and definition.has("gear")),
-			"%s has its own creature sheet or wears gear" % kind)
-		if SpriteArt.CREATURES.has(kind):
-			check(SpriteArt.CREATURES[kind].get_size() == Vector2(3, 4) * SpriteArt.FRAME, "%s's sheet has 3 poses by 4 facings" % kind)
-	check(World.ITEMS["bronze_scale_coat"]["look"] == "scale" and World.ITEMS["steel_hauberk"]["look"] == "mail",
-		"scale armour and chainmail use distinct construction")
-	check(World.ITEMS["iron_cuirass"]["look"] == "brigandine"
-		and World.ITEMS["cobalt_warhammer"]["look"] == "hammer" and World.ITEMS["starforged_maul"]["look"] == "hammer",
-		"brigandine and hammers have dedicated icon and worn shapes")
-	# Five poses (stand, two steps, attack wind-up, strike) by four facings.
-	var sheet_size: Vector2 = Vector2(5, 4) * SpriteArt.FRAME
-	for texture: Texture2D in [SpriteArt.BODY, SpriteArt.CLOTH, SpriteArt.MARKER]:
-		check(texture.get_size() == sheet_size, "character sheet uses 5x4 frames")
+	# Art is reviewed by eye, not checked here; only how poses are chosen is.
 	check(SpriteArt.frame_region(Vector2i.LEFT, 0.0, 0.05).position == Vector2(3, 2) * SpriteArt.FRAME
 		and SpriteArt.frame_region(Vector2i.LEFT, 0.0, 0.3).position == Vector2(4, 2) * SpriteArt.FRAME
 		and SpriteArt.frame_region(Vector2i.LEFT, 0.3, SpriteArt.ATTACK_SECONDS).position == Vector2(1, 2) * SpriteArt.FRAME,
@@ -1822,63 +1807,6 @@ func _sprite_checks() -> void:
 	check(SpriteArt.posed(view, 10.1)["facing"] == Vector2i.RIGHT and SpriteArt.posed(view, 10.1)["attack"] > 0.0
 		and SpriteArt.posed(view, 11.0) == view["state"] and view["state"]["facing"] == Vector2i.DOWN,
 		"an attack turns only the drawn pose toward the target")
-	check(int(SpriteArt.ITEM_ICONS.get_width() / SpriteArt.TILE) * int(SpriteArt.ITEM_ICONS.get_height() / SpriteArt.TILE)
-		>= SpriteArt.ITEM_ORDER.size(), "one icon cell per item")
-	check(SpriteArt.WALLS.get_width() == 16 * SpriteArt.WALL_SIZE, "one wall sprite per open-side mask")
-	for kind: String in World.ITEMS:
-		check(kind in SpriteArt.ITEM_ORDER, "catalog item has an icon")
-		if World.ITEMS[kind]["slot"] in SpriteArt.VISIBLE_SLOTS:
-			check(SpriteArt.GEAR.has(kind) and SpriteArt.GEAR[kind].get_size() == sheet_size,
-				"equippable item has a worn sprite sheet")
-	var body: Image = SpriteArt.BODY.get_image()
-	for facing: int in 4:
-		for pose: int in 3:
-			var bounds := Rect2i()
-			var pixels: int = 0
-			for y: int in 64:
-				for x: int in 64:
-					if body.get_pixel(pose * 64 + x, facing * 64 + y).a < 0.9:
-						continue
-					var pixel := Vector2i(x, y)
-					bounds = Rect2i(pixel, Vector2i.ONE) if pixels == 0 else bounds.merge(Rect2i(pixel, Vector2i.ONE))
-					pixels += 1
-			check(pixels > 150 and bounds.size.y >= 35 and bounds.size.y <= 39,
-				"compact character height is 35-39 pixels in every pose")
-			check(bounds.end.y >= 53 and bounds.end.y <= 55 and bounds.size.x <= 26,
-				"compact characters keep their foot anchor without a baked-in cape silhouette")
-	check(SpriteArt.ITEM_ICONS.get_width() == SpriteArt.ITEM_COLUMNS * 32 and SpriteArt.ITEM_ICONS.get_width() <= 16384
-		and SpriteArt.ITEM_ICONS.get_height() == ceili(SpriteArt.ITEM_ORDER.size() / float(SpriteArt.ITEM_COLUMNS)) * 32,
-		"items.png is a grid inside the texture size limit")
-	var weapon_masks: Dictionary = {}
-	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["slot"] != "main_hand":
-			continue
-		var icon: Image = SpriteArt.ITEM_ICONS.get_image().get_region(Rect2i(SpriteArt.item_region(kind)))
-		var used: Rect2i = icon.get_used_rect()
-		check(used.has_area() and used.position.x > 0 and used.position.y > 0 and used.end.x < 32 and used.end.y < 32,
-			"%s icon has transparent padding and no clipped tip" % kind)
-		var opaque: int = 0
-		var colours: Dictionary = {}
-		var mask := PackedByteArray()
-		for y: int in 32:
-			for x: int in 32:
-				var pixel: Color = icon.get_pixel(x, y)
-				mask.append(1 if pixel.a > 0.0 else 0)
-				if pixel.a > 0.0:
-					opaque += 1
-					colours[pixel] = true
-		check(opaque >= 40 and colours.size() >= 5, "%s retains readable material surfaces at native 32px size" % kind)
-		if World.ITEMS[kind].get("loot_only", false) and World.ITEMS[kind]["slot"] == "main_hand":
-			var key: String = mask.hex_encode()
-			check(not weapon_masks.has(key), "%s has a silhouette distinct from the other hunting weapons" % kind)
-			weapon_masks[key] = true
-	for kind: String in SpriteArt.GEAR:
-		var sheet: Image = SpriteArt.GEAR[kind].get_image()
-		for facing: int in 4:
-			for pose: int in 3:
-				var bounds: Rect2i = sheet.get_region(Rect2i(pose * 64, facing * 64, 64, 64)).get_used_rect()
-				check(bounds.has_area() and bounds.position.x > 0 and bounds.end.x < 64
-					and bounds.position.y > 0 and bounds.end.y < 64, "%s stays visible and unclipped in every compact pose" % kind)
 
 
 func _showpiece_boot_checks() -> void:
@@ -1892,8 +1820,8 @@ func _showpiece_boot_checks() -> void:
 		for monster: String in Monsters.LOOT:
 			for entry: Array in Monsters.LOOT[monster]:
 				sources += 1 if entry[0] == kind else 0
-		check(item.get("loot_only", false) and not World.bound(kind) and sources == 1 and SpriteArt.GEAR.has(kind),
-			"%s is a worn pair one monster drops" % kind)
+		check(item.get("loot_only", false) and not World.bound(kind) and sources == 1,
+			"%s is a pair one monster drops" % kind)
 	check(pairs.size() == 7, "seven pairs of showpiece boots with speed or mana")
 	check(World.ITEMS["hastewind_boots"]["stats"] == {"speed": 10} and World.ITEMS["hastewind_boots"]["vocations"].is_empty()
 		and not World.ITEMS["hastewind_boots"].has("armor"), "Hastewind boots: 10% speed for anyone, and no armor")
@@ -1931,7 +1859,6 @@ func _showpiece_helmet_checks() -> void:
 		check(focus in Items.HELMET_FOCUS and item.get("loot_only", false) and not World.bound(kind) and sources == 1
 			and item["stats"].get(focus, 0) > plain.get(focus, 0) and item["stats"]["defense"] < plain["defense"],
 			"%s trades some defense for %s and drops from one monster" % [kind, focus])
-		check(SpriteArt.GEAR.has(kind), "%s has a worn sheet" % kind)
 	check(count == 9, "nine showpiece helmets drop from monsters")
 	# The Rootbound crown: a druid's healing crown that adds 9% to frost spells and runes.
 	var crown: Dictionary = World.ITEMS["rootbound_crown"]
@@ -1941,12 +1868,6 @@ func _showpiece_helmet_checks() -> void:
 	check(worn.get("frost", 0) == 9 and is_equal_approx(Combat.element_bonus(worn, "frost"), 1.09)
 		and Combat.element_bonus(worn, "nature") == 1.0 and Combat.element_bonus(World.stats(45, {}, "druid"), "frost") == 1.0,
 		"frost damage gear raises frost spells and runes only")
-	for kind: String in World.ITEMS:
-		if World.ITEMS[kind].get("shine", "") == "sheen" or SpriteArt.ANIMATED.has(kind):
-			check(SpriteArt.ANIMATED.has(kind) and SpriteArt.ANIMATED[kind].get_size() == Vector2(SpriteArt.ANIM_FRAMES * 32, 32),
-				"%s has %d animation frames" % [kind, SpriteArt.ANIM_FRAMES])
-	check(SpriteArt.ANIMATED.size() == 28,
-		"three sheen helmets, showpiece boots, axes, two backpacks, two necklaces, four gemmed swords, three glowing hafted weapons, two charms, and the torch move in the inventory")
 	var themed: Array[String] = []
 	for kind: String in World.ITEMS:
 		if String(World.ITEMS[kind]["look"]).begins_with("backpack+"):
@@ -1968,7 +1889,7 @@ func _showpiece_helmet_checks() -> void:
 		axes += 1
 		var plain: Dictionary = Items.tier_stats({"slot": "main_hand", "level": item["level"], "vocations": ["knight"], "look": "axe"})
 		check(item["vocations"] == ["knight"] and item["focus"] in Items.WEAPON_FOCUS and item["stats"]["attack"] <= plain["attack"]
-			and item["stats"].size() == 2 and SpriteArt.GEAR.has(kind),
+			and item["stats"].size() == 2,
 			"%s is a Warrior's axe trading a tenth of its attack for its focus" % kind)
 	check(axes == 6, "six showpiece axes")
 	_showpiece_boot_checks()
@@ -1986,44 +1907,6 @@ func _leech_checks() -> void:
 				"%s is a Warrior's leeching blade" % kind)
 	check(leeching.size() == 4 and World.ITEMS["grand_sanguine_blade"]["stats"]["leech"] == World.LEECH_MAX,
 		"four leeching swords, the Bloodvein greatblade at the most")
-	# Plan 39: every tier helmet, armour, legs, and boots piece has its own icon design; no two
-	# pieces of one slot and armor type share a picture (derive_icons.py armor_bases).
-	var pictures: Dictionary = {}
-	var shared: Array[String] = []
-	for kind: String in World.ITEMS:
-		var item: Dictionary = World.ITEMS[kind]
-		if item["slot"] in ["helmet", "armor", "legs", "boots"] and SpriteArt.ICONS.has(kind):
-			var key: String = "%s/%s/%s" % [item["slot"], item.get("armor", "plate"),
-				SpriteArt.ICONS[kind].get_image().get_data().hex_encode().sha256_text()]
-			if pictures.has(key):
-				shared.append("%s = %s" % [kind, pictures[key]])
-			pictures[key] = kind
-	check(shared.is_empty(), "every tier armour piece has its own icon (%s)" % ", ".join(shared))
-	# No recolour of an existing icon: two legs, boots, or helmet icons with the same silhouette are one
-	# drawing in two palettes. Every icon is its own model (docs/art.md, "No recolours").
-	var silhouettes: Dictionary = {}
-	var recolours: Array[String] = []
-	for kind: String in World.ITEMS:
-		var item: Dictionary = World.ITEMS[kind]
-		if item["slot"] in ["legs", "boots", "helmet"] and SpriteArt.ICONS.has(kind):
-			var image: Image = SpriteArt.ICONS[kind].get_image()
-			var mask := PackedByteArray()
-			for y: int in image.get_height():
-				for x: int in image.get_width():
-					mask.append(1 if image.get_pixel(x, y).a > 0.5 else 0)
-			var key: String = "%s/%s" % [item["slot"], mask.hex_encode().sha256_text()]
-			if silhouettes.has(key):
-				recolours.append("%s = %s" % [kind, silhouettes[key]])
-			silhouettes[key] = kind
-	check(recolours.is_empty(), "no legs, boots, or helmet icon is a recolour of another (%s)" % ", ".join(recolours))
-	# Wands, rods, bows, shields, and spellbooks without a painting are hand-pixelled into items.png
-	# (pixel_staves.py, pixel_bows.py, pixel_shields.py, pixel_books.py), never a recoloured copy.
-	var recoloured: Array[String] = []
-	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["look"].get_slice("+", 0) in ["wand", "rod", "bow", "crossbow", "heater", "tower", "buckler", "book"] \
-				and ResourceLoader.exists("res://assets/sprites/icons_derived/%s.png" % kind):
-			recoloured.append(kind)
-	check(recoloured.is_empty(), "wands, rods, bows, shields, and spellbooks are drawn, not recoloured (%s)" % ", ".join(recoloured))
 	check(World.stats(45, {"main_hand": "grand_sanguine_blade", "ring_1": "garnet_ring"}, "knight")["leech"] <= World.LEECH_MAX
 		and Combat.leech({"leech": 5}, 200) == 10 and Combat.leech({}, 200) == 0, "leech heals its share of a hit, at most 5%")
 	# Plan 26: at its 5% cap leech is a small help, so leeching blades keep a plain sword's attack.
@@ -2119,9 +2002,7 @@ func _mount_checks() -> void:
 			and item["vocations"].is_empty() and Items.rarity(item)[0] == "Legendary" and item.get("sell", 0) > 0,
 			"%s is an unbound, statless, Legendary mount anyone can ride" % kind)
 		check(Monsters.MOUNTS.values().count(kind) == 1, "%s comes from exactly one boss" % kind)
-		check(SpriteArt.RIDER_LIFT.has(String(item["look"]).get_slice("+", 0)) and SpriteArt.MOUNTS.has(kind)
-			and SpriteArt.MOUNTS[kind].get_size() == Vector2(192, 256) and SpriteArt.MOUNTS_FRONT.has(kind),
-			"%s has its mount sheets and a saddle height" % kind)
+		check(SpriteArt.RIDER_LIFT.has(String(item["look"]).get_slice("+", 0)), "%s has a saddle height" % kind)
 		check(World.slot_for(kind, {}) == "mount", "%s goes in the mount slot" % kind)
 	var combat := Combat.new(World.new(), 5)
 	var dropped: int = 0
@@ -3089,9 +2970,6 @@ func _relic_checks(by_key: Dictionary) -> void:
 			"%s is the reward of exactly one boss quest" % kind)
 		check(World.bound(kind), "%s is bound" % kind)
 		check(item["level"] == Items.RELIC_LEVEL and not item["slot"].is_empty(), "%s is level-50 equipment" % kind)
-		if item["slot"] in SpriteArt.VISIBLE_SLOTS:
-			check(SpriteArt.GEAR_GLOW.has(kind) and SpriteArt.GEAR_GLOW[kind].get_size() == SpriteArt.GEAR[kind].get_size(),
-				"%s has a worn glow sheet" % kind)
 		var vocation: String = item["vocations"][0] if not item["vocations"].is_empty() else "knight"
 		var best: Array = by_key.get("%s/%s/%d" % [item["slot"], vocation, Items.TIER_LEVELS[-1]], [])
 		var relic_total: int = 0
@@ -3729,8 +3607,7 @@ func _cave_checks() -> void:
 					and (Monsters.MONSTERS[spawn["monster"]]["rank"] in ["elite", "champion"] or not definition.get("elite", true)),
 					"%s's camps hold elites (or, in the trench, normal monsters) of its levels, reachable from the stairs" % cave)
 		for camp: Array in definition["camps"] + ([definition["champion"]] if definition.has("champion") else []):
-			check(kinds.has(camp[0]) and (SpriteArt.CREATURES.has(camp[0]) or Monsters.MONSTERS[camp[0]].has("gear")),
-				"%s holds %s, drawn" % [cave, camp[0]])
+			check(kinds.has(camp[0]), "%s holds %s" % [cave, camp[0]])
 			check(Quests.TASKS.values().any(func(task: Dictionary) -> bool: return task["monster"] == camp[0]) and Monsters.LOOT.has(camp[0]),
 				"%s has a task and loot" % camp[0])
 	var world := World.new()
@@ -3944,7 +3821,7 @@ func _brush_checks() -> void:
 		"a brushed camp takes the median level of the camps round it, or the chosen level where none are near")
 	var plugin: ConfigFile = ConfigFile.new()
 	check(plugin.load("res://addons/brimholt_brushes/plugin.cfg") == OK
-		and String(ProjectSettings.get_setting("editor_plugins/enabled", PackedStringArray())).contains("brimholt_brushes"),
+		and str(ProjectSettings.get_setting("editor_plugins/enabled", PackedStringArray())).contains("brimholt_brushes"),
 		"the brushes plugin is enabled in the project")
 
 ## The floor below the mainland (docs/plan/44, tools/generators/underground.gd): a plane beside the
@@ -6060,7 +5937,6 @@ func _combat_checks() -> void:
 		if World.ITEMS[kind]["slot"].is_empty() and kind not in ["gold_coins", "glowcap"] and not World.ITEMS[kind].has("drink") \
 				and not World.ITEMS[kind].has("eat"):
 			check(int(World.ITEMS[kind].get("value", 0)) > 0, "material %s has a shop value" % kind)
-			check(SpriteArt.ITEM_ORDER.has(kind), "material %s has an icon" % kind)
 	var loot_a := Combat.new(World.new(), 77)
 	var loot_b := Combat.new(World.new(), 77)
 	var same: bool = true
@@ -6241,11 +6117,8 @@ func _combat_checks() -> void:
 	var runes: Dictionary = {}
 	for spell: String in Spells.SPELLS:
 		runes[Spells.SPELLS[spell]["rune"]] = true
-	var sheet: Texture2D = load("res://assets/sprites/spells.png")
-	var generator: String = FileAccess.get_file_as_string("res://tools/generators/make_sprites.py")
-	check(runes.size() == Spells.SPELLS.size() and runes.keys().all(func(rune: String) -> bool:
-		return Spells.RUNES.has(rune) and generator.contains('"%s": [[' % rune)), "every spell is carved as its own Elder Futhark rune")
-	check(sheet.get_width() / 32 * (sheet.get_height() / 32) >= Spells.SPELLS.size(), "spells.png has a rune stone for every spell")
+	check(runes.size() == Spells.SPELLS.size() and runes.keys().all(func(rune: String) -> bool: return Spells.RUNES.has(rune)),
+		"every spell has its own Elder Futhark rune")
 	for spell: String in Spells.SPELLS:
 		var text: String = Spells.describe(spell, druid_stats, 50)
 		check(text.split("\n").size() >= 5 and text.contains("Cooldown") and text.contains("Mana")

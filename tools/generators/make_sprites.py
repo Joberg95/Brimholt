@@ -1658,26 +1658,10 @@ PAINTED_SLOTS = ("helmet", "armor", "legs", "boots", "cape", "off_hand", "main_h
 ICON_DIRS = (ROOT / "assets" / "sprites" / "icons", ROOT / "assets" / "sprites" / "icons_derived")
 
 
-# Experiment: a full knight kit worn straight from the OpenTibia sprite pack (row, column in
-# otsp_equipment_01.png), icon and worn layers alike.
-PACK_KIT = {"iron_sallet": (29, 14), "iron_cuirass": (33, 3), "iron_legplates": (39, 13), "iron_sabatons": (41, 11),
-            "steel_longsword": (3, 0), "steel_kite_shield": (25, 11)}
-
-
-def pack_kit_icon(kind):
-    row, column = PACK_KIT[kind]
-    image = Image(TILE, TILE)
-    image.pixels = [[(c + (255,)) if c else None for c in line]
-                    for line in pack_sprites.sprite("otsp_equipment_01.png", 32 * column, 32 * row)]
-    return image
-
-
 def painted_icon(kind):
     """The painted icon, else the one derive_icons.py made from painted art, else None. Legs and
     boots drawn in pixel_legwear.py (LEGWEAR_STYLES) and helmets from pack_helmets.py (HELMET_STYLES)
     use that drawing instead, worn and in the bag."""
-    if kind in PACK_KIT:
-        return pack_kit_icon(kind)
     if ITEMS[kind].get("slot") not in PAINTED_SLOTS or kind in LEGWEAR_STYLES or kind in HELMET_STYLES:
         return None
     for folder in ICON_DIRS:
@@ -1752,13 +1736,6 @@ def _coverage(icon, left, right, top, bottom):
     return tuple(round(value / weight) for value in total) + (255,), weight / area
 
 
-def _nearest(icon, left, right, top, bottom):
-    """The icon pixel at the centre of a fractional rectangle, unblended (pixel art keeps its own
-    colours and edges), with 1.0 or 0.0 for its opacity like _coverage."""
-    pixel = icon.get(math.floor((left + right) / 2), math.floor((top + bottom) / 2))
-    return (pixel, 1.0) if pixel is not None else (None, 0.0)
-
-
 def _crisp(color):
     """A little more contrast and saturation: shrunken paintings read flat at sprite size."""
     hue, light, sat = colorsys.rgb_to_hls(*(channel / 255 for channel in color[:3]))
@@ -1802,9 +1779,7 @@ def textured(build, icon, kind, cape=False):
         for x, y in solid:
             u = u_left + (x - left) * columns
             v = icon_top + (y - top) * rows
-            # Experiment: the pack kit samples its pixels instead of averaging them (no wash-out).
-            sample = _nearest if kind in PACK_KIT else _coverage
-            color, opaque = sample(source, u, u + columns, v, v + rows)
+            color, opaque = _coverage(source, u, u + columns, v, v + rows)
             if color is not None and opaque >= 0.35:
                 if behind and back_fill is not None and _luma(color) < 45:
                     color = back_fill
@@ -1894,7 +1869,7 @@ def _body_frame(part, direction, frame):
 
 def worn_builder(kind):
     """The item's worn family look as a gear builder, or None when its look has no family."""
-    slot = ITEMS[kind]["slot"]
+    slot = ITEMS[kind].get("slot")
     shape, extras = look(kind)
     colors = ITEMS[kind]["colors"]
     known = {"helmet": pixel_worn.HELM_OF, "armor": pixel_worn.ARMOR_OF, "legs": pixel_worn.LEGS_OF,
@@ -2490,9 +2465,10 @@ SWORD_SHAPES = ("sword", "greatsword")
 
 
 def sword_style(kind):
-    """The sword's own design: the style its look names (sword+<style>, greatsword+<style>)."""
+    """The sword's own design: the style its look names (sword+<style>, greatsword+<style>), or
+    None for a look without one (drawn as a generated weapon until it gets one)."""
     _, extras = look(kind)
-    return next(style for style in extras if style in pixel_swords.STYLES)
+    return next((style for style in extras if style in pixel_swords.STYLES), None)
 
 
 def sword_icon(kind, frame=0):
@@ -2729,7 +2705,7 @@ def animated(kind):
     shape, extras = look(kind)
     return (shape in SHOWPIECE_ALIVE and kind not in HELMET_STYLES) or ITEMS[kind].get("shine") == "sheen"         or (shape == "backpack" and bool(extras & set(BACKPACK_ALIVE))) \
         or (shape == "necklace" and bool(extras & set(pixel_necklaces.GLOWING))) \
-        or (shape in SWORD_SHAPES and painted_icon(kind) is None and sword_style(kind) in pixel_swords.GLOWING) \
+        or (shape in SWORD_SHAPES and sword_style(kind) in pixel_swords.GLOWING) \
         or (kind in HAFTED_STYLES and painted_icon(kind) is None and HAFTED_STYLES[kind] in pixel_hafted.GLOWING) \
         or (kind in CHARM_STYLES and CHARM_STYLES[kind] in pixel_charms.ANIMATED) \
         or (kind in FOOD_STYLES and FOOD_STYLES[kind] in pixel_food.ANIMATED)
@@ -2746,7 +2722,7 @@ def icon_frames(kind):
             icon = backpack_icon(kind, frame)
         elif shape == "necklace":
             icon = necklace_icon(kind, frame)
-        elif shape in SWORD_SHAPES and painted_icon(kind) is None:
+        elif shape in SWORD_SHAPES and sword_style(kind) is not None:
             icon = sword_icon(kind, frame)
         elif kind in HAFTED_STYLES and painted_icon(kind) is None:
             icon = hafted_icon(kind, frame)
@@ -3170,7 +3146,7 @@ def item_icon(kind):
     palette, accent = tones(kind)
     light, main, dark = palette
     shape, extras = look(kind)
-    if shape in SWORD_SHAPES and painted_icon(kind) is None:
+    if shape in SWORD_SHAPES and sword_style(kind) is not None:
         return sword_icon(kind)
     drawn = hand_pixelled_icon(kind) if painted_icon(kind) is None else None
     if drawn is not None:
@@ -6509,16 +6485,16 @@ def main():
                            16, WALL),
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
-        **{f"icons_pixel/{kind}.png": finished_icon(kind) for kind in {**LEGWEAR_STYLES, **HELMET_STYLES}},
         "coins.png": sheet_row([icon_finish(coin_stage_icon(stage)) for stage in range(len(pixel_coins.STAGES))]),
-        **{f"gear/{kind}.png": character_sheet(gear_builder(kind), compact=True, columns=POSE_COLUMNS)
-           for kind, item in ITEMS.items() if item.get("slot") in VISIBLE_SLOTS},
+        # Worn gear exists only where a worn family is drawn (pixel_worn.py); weapons, shields, and
+        # capes show nothing on the body until theirs are.
+        **{f"gear/{kind}.png": character_sheet(worn_builder(kind), compact=True, columns=POSE_COLUMNS)
+           for kind in ITEMS if worn_builder(kind) is not None},
         **{f"gear/{kind}_glow.png": None for kind, item in ITEMS.items()
-           if item.get("glow") and item.get("slot") in VISIBLE_SLOTS},
+           if item.get("glow") and worn_builder(kind) is not None},
         "items_glow.png": None,
         **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
         **{f"creatures/{kind}.png": creature_sheet(kind) for kind in creatures.SPECIES},
-        **{f"items_anim/{kind}.png": icon_frames(kind) for kind in ITEMS if animated(kind)},
         **{f"mounts/{kind}{suffix}.png": mount_sheet(kind, part) for kind, item in ITEMS.items()
            if item.get("slot") == "mount" for part, suffix in ((0, ""), (1, "_front"))},
         **{f"creatures/{kind}_glow.png": None for kind in GLOWING_CREATURES},
@@ -6567,6 +6543,8 @@ def dressed(outputs, equipment, direction, column, tint):
     frame.rect(0, 0, FRAME, FRAME, GRASS[0])
 
     def put(name, color=None):
+        if name not in outputs:
+            return
         part = outputs[name].crop(x, y, FRAME, FRAME)
         frame.over(part.tinted(color) if color else part)
 

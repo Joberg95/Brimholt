@@ -10,7 +10,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim duel-eval train-setup train export-policy bench playtest check \
-	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands region bake-map relocate mainland orcs underground caves-below map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands region bake-map relocate mainland orcs underground caves-below map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -112,9 +112,6 @@ bot-tree: ## Save the player bots' LimboAI behavior tree to game/data/bot_behavi
 sprites: ## Regenerate the original sprite sheets in assets/sprites
 	$(PYTHON) tools/generators/make_sprites.py
 
-outfits: ## Import painted outfits and icons from art/outfits, derive icons for the rest, and repaint worn gear
-	$(GODOT) --headless --path . --script res://tools/generators/import_outfits.gd
-	$(PYTHON) tools/generators/derive_icons.py
 	$(PYTHON) tools/generators/make_sprites.py
 	$(GODOT) --headless --path . --import
 

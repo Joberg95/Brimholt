@@ -138,15 +138,9 @@ static var ITEM_ORDER: Array[String] = _item_order()
 ## Slots drawn on the character (no cape is drawn when its slot is empty). Rings, necklaces, and charms
 ## are too small to show when worn.
 const VISIBLE_SLOTS: Array[String] = ["helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand"]
-## One sheet per visible item: assets/sprites/gear/<id>.png.
+## The worn sheet of each item drawn on the body (assets/sprites/gear/<id>.png, the hand-pixelled
+## worn families of tools/generators/pixel_worn.py); items without one show nothing when worn.
 static var GEAR: Dictionary = _gear_sheets()
-## Painted full-figure outfits by armor kind (imported from art/outfits by
-## tools/generators/import_outfits.gd): worn armor with an outfit replaces the body, helmet, armor,
-## legs, boots, and cape layers; weapons and shields are still drawn. Hand-pixelled legs and boots
-## (assets/sprites/icons_pixel/<id>.png), painted item icons (assets/sprites/icons/<id>.png), and
-## icons derived from them (assets/sprites/icons_derived/<id>.png) replace generated ones, in that order.
-static var OUTFITS: Dictionary = _outfit_sheets()
-static var ICONS: Dictionary = _icon_overrides()
 ## Relics glow: white halo sheets (gear/<id>_glow.png, items_glow.png, monsters/<look>_glow.png)
 ## drawn additively in the item's "glow" colour by game/render/glow_layer.gd.
 static var GEAR_GLOW: Dictionary = _gear_sheets("_glow")
@@ -267,7 +261,9 @@ static func _gear_sheets(suffix: String = "") -> Dictionary:
 	var sheets: Dictionary = {}
 	for kind: String in World.ITEMS:
 		if VISIBLE_SLOTS.has(World.ITEMS[kind]["slot"]) and (suffix.is_empty() or World.ITEMS[kind].has("glow")):
-			sheets[kind] = load("res://assets/sprites/gear/%s%s.png" % [kind, suffix])
+			var path: String = "res://assets/sprites/gear/%s%s.png" % [kind, suffix]
+			if ResourceLoader.exists(path):
+				sheets[kind] = load(path)
 	return sheets
 
 
@@ -314,28 +310,6 @@ static func rider_lift(state: Dictionary, stride: float) -> float:
 	if not state.has("cell") or not MOUNTS.has(mount) or not World.riding(state["equipment"], state["cell"]):
 		return 0.0
 	return RIDER_LIFT.get(String(World.ITEMS[mount]["look"]).get_slice("+", 0), 8) + (1.0 if stride > 0.0 else 0.0)
-
-
-static func _outfit_sheets() -> Dictionary:
-	var sheets: Dictionary = {}
-	for kind: String in World.ITEMS:
-		var path: String = "res://assets/sprites/outfits/%s.png" % World.ITEMS[kind].get("outfit", "")
-		if World.ITEMS[kind].has("outfit") and ResourceLoader.exists(path):
-			sheets[kind] = load(path)
-	return sheets
-
-
-static func _icon_overrides() -> Dictionary:
-	var icons: Dictionary = {}
-	# Hand-pixelled legwear first (tools/generators/pixel_legwear.py), then painted icons, then icons
-	# derived from them (tools/generators/derive_icons.py).
-	for kind: String in World.ITEMS:
-		for folder: String in ["icons_pixel", "icons", "icons_derived"]:
-			var path: String = "res://assets/sprites/%s/%s.png" % [folder, kind]
-			if ResourceLoader.exists(path):
-				icons[kind] = load(path)
-				break
-	return icons
 
 
 static func tile_at(cell: Vector2i) -> String:
@@ -871,12 +845,6 @@ static func _draw_figure(canvas: CanvasItem, dest: Rect2, source: Rect2, state: 
 	if shield != null and facing.x != 0:
 		canvas.draw_texture_rect_region(shield, dest, source)
 	var cape: Texture2D = GEAR.get(equipment.get("cape", ""), null)
-	var outfit: Texture2D = OUTFITS.get(equipment.get("armor", ""), null)
-	if outfit != null:
-		# Painted outfits include their own cloak, so a worn cape is not drawn over them.
-		canvas.draw_texture_rect_region(outfit, dest, source)
-		_draw_hands(canvas, dest, source, facing, held, shield)
-		return
 	var cloth: Color = tint if tint.a > 0.0 else COLORS[int(state["id"]) % COLORS.size()]
 	canvas.draw_texture_rect_region(BODY, dest, source)
 	for slot: String in ["legs", "boots"]:
@@ -922,9 +890,6 @@ static func draw_item(canvas: CanvasItem, center: Vector2, kind: String, tint: C
 	if ANIMATED.has(kind):
 		var frame: int = int(Time.get_ticks_msec() / 1000.0 / ANIM_SECONDS) % ANIM_FRAMES
 		canvas.draw_texture_rect_region(ANIMATED[kind], dest, Rect2(frame * TILE, 0, TILE, TILE), tint)
-		return
-	if ICONS.has(kind):
-		canvas.draw_texture_rect(ICONS[kind], dest, false, tint)
 		return
 	canvas.draw_texture_rect_region(ITEM_ICONS, dest, item_region(kind), tint)
 
