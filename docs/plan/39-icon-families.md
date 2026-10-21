@@ -1,6 +1,6 @@
 # 39 - Classic-style icons for the remaining item families
 
-**Effort:** L
+**Effort:** L  **Status:** paused until plan 46 phase 2 (golden sprites), owner 2026-10-21
 
 ## Request
 (Following the icon work of 2026-10-16/17.) Bring every item icon up to the Tibia-style hand-drawn

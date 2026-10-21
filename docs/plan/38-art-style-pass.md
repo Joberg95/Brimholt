@@ -1,6 +1,6 @@
 # 38 - Bring the old tiles up to the new art style
 
-**Effort:** L
+**Effort:** L  **Status:** paused until plan 46 phase 2 (golden sprites), owner 2026-10-21
 
 ## Request
 Check where the world still uses the old art style next to the new one: a lot of it mismatches.

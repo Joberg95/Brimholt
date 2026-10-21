@@ -17,3 +17,5 @@ check where we are missing the new art style compared to the old, there is a lot
 
 bring every remaining item icon family up to the new hand-drawn Tibia-style look (plan 39)
 
+
+make Brimholt feel like modern Tibia: art style, real floors, multi-floor hunts, castle hunts, quests, loot and economy, UI (plan 46)
