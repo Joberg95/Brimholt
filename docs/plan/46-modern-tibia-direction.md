@@ -814,6 +814,11 @@ For each asset family, pick one:
 After each step: screenshot tour (`tools/testing/shot.gd`) of every town, region, cave and dungeon, and
 compare against the golden sprites and private Tibia references.
 
+Gaps the OpenTibia sprite pack showed (reference only, CC BY 4.0, never imported; lessons in the
+`art-direction` skill): ragged, shadowed border lips instead of soft shader fades (step 2), complete
+wall kits per material (step 3), four-zone outfit masks (step 1), many tree variants with seasonal
+colours, and walkable ground-cover doodads, which the doodad brush could scatter (step 6).
+
 ### Phase 5: Consistency gate
 - A checklist in the art-direction skill every new sprite must pass (outline, light, palette ramp,
   projection, scale vs character, transitions blend or kerb).

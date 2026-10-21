@@ -105,7 +105,9 @@ outline.
 
 **Shading.** Smooth steps through the ramp with anti-aliasing on curves and diagonals (one
 in-between tone where a curve steps). No checkerboard dithering, no pillow shading (dark rims all
-round a light centre), no gradient smeared flat across a surface.
+round a light centre), no gradient smeared flat across a surface. Ground grain is allowed and
+wanted: random one-pixel speckle a single ramp step either side of the base tone, never an
+ordered checkerboard.
 
 **Projection.** Everything that stands up uses the oblique view: height goes **up and left**,
 one pixel each per pixel of height. Only south and east faces are visible. Frames of things
@@ -134,6 +136,31 @@ with a hard kerbed edge.
 
 **Tiling.** Anything repeated over many tiles needs variants or a seamless field (see
 `ROCK_SPAN`) so no grid shows. Edges that meet neighbours must match at the tile border.
+
+### Lessons from the OpenTibia sprite pack (reference only)
+
+The community OpenTibia sprite pack (github.com/peonso/opentibia_sprite_pack) is CC BY 4.0, not
+CC0, and its sprites' origins can't be verified, so it is **study material only** (owner's
+decision, 2026-10-21): never import, trace, recolour, or edit its files. What it teaches:
+
+- **Ground families.** One material comes in several hue families (olive, yellow-green, and
+  bright grass; grey and red-brown earth), each seamless with low-contrast grain. A region picks
+  its family from `palette.IDENTITY` rather than one grass for the whole world.
+- **Borders belong to the higher ground.** Where two grounds meet, the higher-priority one
+  (grass over earth over sand over water) overhangs as an irregular lip 2–5 px deep, with a one-pixel
+  darker contact line on the lower ground; each pair needs edges, outer corners, and inner
+  corners. Our terrain shader should reach the same look: ragged, shadowed edges, not a soft fade.
+- **Ground cover.** Small walkable doodads (ferns, clover, flowers, pebbles, twigs, bones;
+  8–20 px, outlined, many variants, saturated one-to-three-pixel accents such as red berries
+  or blue flowers) break up open ground between trees.
+- **Trees in numbers.** Eight or more variants per species, plus colour variants (autumn gold,
+  blossom pink, dark fir), each crown built from leaf clusters lit top-left with darker gaps and
+  a darker underside over a visible trunk foot.
+- **Wall kits.** Each wall material is a complete modular set: straight pieces in both
+  directions, the corner, an end post, and window, door, and arch pieces in both directions,
+  with a light cap on top, so the map picks pieces and no gap needs a special case.
+- **Outfit masks.** One shaded grey outfit sheet plus a mask in four flat colours (head, body,
+  legs, feet) that the game tints, so any colour combination costs no art.
 
 **Originality.** Match the style; every design is our own. Tibia is the reference: matching its
 item concepts, silhouettes, and colour schemes closely is allowed (the owner's decision,
