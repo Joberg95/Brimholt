@@ -81,11 +81,12 @@ class Icon:
             self.mat[y][x] = mat
             self.tone[y][x] = tone
 
-    def stroke(self, points, width, profile, mat, shine=0.0, ends=(0.0, 0.0)):
+    def stroke(self, points, width, profile, mat, shine=0.0, ends=(0.0, 0.0), pattern=None):
         """A band along a polyline (points in pixel coordinates, at least two). width(s) is its
         half-width at s (0 at the first point, 1 at the last); profile(u) its tone across it, u from
         -1 (the side on the left of the direction of travel) to 1. shine adds a lengthwise sheen
-        toward the first point; ends darkens the first and last few pixels."""
+        toward the first point; ends darkens the first and last few pixels; pattern(length, u) adds
+        to the tone by the distance in pixels from the first point (wraps, bands, engraving)."""
         samples = _resample(points, 64)
         total = sum(_dist(a, b) for a, b in zip(samples, samples[1:]))
         cumulative = [0.0]
@@ -109,6 +110,8 @@ class Icon:
                 u = side * d / half
                 tone = profile(u) + shine * (1 - s) * 0.25
                 length = s * total
+                if pattern:
+                    tone += pattern(length, u)
                 if length < ends[0]:
                     tone -= 0.25 * (1 - length / max(ends[0], 0.01))
                 if total - length < ends[1]:
