@@ -92,6 +92,8 @@ func ambient() -> Color:
 		light = light * zone["ambient"]
 	if Biomes.in_isles(focus):
 		light = light * Biomes.ISLES_LIGHT
+	elif Biomes.in_sunreach(focus):
+		light = light * Biomes.SUNREACH_LIGHT
 	dark_zone = zone.get("dark", false)
 	weather = Weather.local(game.world_clock(), focus)
 	clear_light = Color(light.r, light.g, light.b, 1.0)

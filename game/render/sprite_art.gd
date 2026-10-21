@@ -202,6 +202,16 @@ const CAVE_EARTH_TILE: int = 95
 const FIRS: Texture2D = preload("res://assets/sprites/firs.png")
 const FIR_VARIANTS: int = 3
 const LOG_WALLS: Texture2D = preload("res://assets/sprites/log_walls.png")
+## Sunreach, the desert island (Biomes.SUNREACH): palms for its trees (palms.png, 64x96 like the
+## trees), cream plaster walls (sandstone_walls.png: the house wall frames, then a south- and an
+## east-facing wall with a latticed window, SANDSTONE_WINDOW), sandstone castle walls and towers,
+## and streets and floors of sandstone flags (FLAG_TILE).
+const PALMS: Texture2D = preload("res://assets/sprites/palms.png")
+const PALM_VARIANTS: int = 3
+const SANDSTONE_WALLS: Texture2D = preload("res://assets/sprites/sandstone_walls.png")
+const SANDSTONE_WINDOW: int = 19
+const SANDSTONE_CASTLE_WALLS: Texture2D = preload("res://assets/sprites/sandstone_castle_walls.png")
+const SANDSTONE_CASTLE_TOWERS: Texture2D = preload("res://assets/sprites/sandstone_castle_towers.png")
 ## The elite cave under the frost isles' sea ice, floored with snow (game/data/caves.gd).
 const ICE_CAVE: String = "rimewater_trench"
 ## Cellar walls: the house wall shapes (house_walls.png) in red-brown brick.
@@ -436,6 +446,8 @@ static func _floor_index(tile: String, cell: Vector2i, time: float, indoors: boo
 		index = CELLAR_FLOOR_TILE + noise(cell, 13) % 4
 	elif tile == "=" and Biomes.in_isles(cell):
 		index = PLANK_TILE + noise(cell, 6) % 2 if indoors or World.ROOM_AT.has(cell) else SNOW_COBBLE_TILE + noise(cell, 5) % 4
+	elif tile == "=" and Biomes.in_sunreach(cell):
+		index = FLAG_TILE + noise(cell, 5) % 4
 	elif tile == "s" or tile == "P":
 		index = SNOW_TILE + noise(cell, 15) % 4
 	elif tile == "=" or tile == "W":
@@ -528,6 +540,9 @@ static func draw_tree(canvas: CanvasItem, cell: Vector2i) -> void:
 	if tile_at(cell) == "P":
 		canvas.draw_texture_rect_region(FIRS, dest, Rect2(Vector2(noise(cell, 7) % FIR_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
 		return
+	if tile_at(cell) == "T" and Biomes.in_sunreach(cell):
+		canvas.draw_texture_rect_region(PALMS, dest, Rect2(Vector2(noise(cell, 7) % PALM_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
+		return
 	var variant: int = noise(cell, 7) % TREE_VARIANTS
 	if tile_at(cell) == "D":
 		variant = DEAD_TREE_FIRST + noise(cell, 7) % DEAD_TREE_VARIANTS
@@ -565,7 +580,10 @@ static func wall_region(cell: Vector2i) -> Rect2:
 	# House walls ("#"): house_walls.png. walls.png rows: 0 grey stone, 1 obsidian, 2 cave rock,
 	# 4 cliffs ("L"), 5 rock outcrops ("C" on the overworld).
 	if tile_at(cell) == "#":
-		return Rect2(thin_wall_mask(cell) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
+		var mask: int = thin_wall_mask(cell)
+		if wall_sheet(cell) == SANDSTONE_WALLS and mask in [5, 10] and noise(cell, 17) % 3 == 0:
+			return Rect2((SANDSTONE_WINDOW + (1 if mask == 5 else 0)) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
+		return Rect2(mask * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
 	var row: int = {"O": 1, "L": 4}.get(tile_at(cell), 2)
 	if row == 2 and World.OVERWORLD.has_point(cell):
 		row = 5
@@ -648,7 +666,9 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 		var high: bool = tower(cell)
 		var lift: int = (TOWER_RAISE if high else CASTLE_RAISE) + CASTLE_PAD
 		var size: float = TILE + lift
-		canvas.draw_texture_rect_region(CASTLE_TOWERS if high else CASTLE_WALLS,
+		var sand: bool = Biomes.in_sunreach(cell)
+		var sheet: Texture2D = (SANDSTONE_CASTLE_TOWERS if high else SANDSTONE_CASTLE_WALLS) if sand 			else (CASTLE_TOWERS if high else CASTLE_WALLS)
+		canvas.draw_texture_rect_region(sheet,
 			Rect2(Vector2(cell) * TILE - Vector2.ONE * lift, Vector2.ONE * size), Rect2(castle_mask(cell) * size, 0, size, size))
 		return
 	var raise: float = wall_raise(cell)
@@ -667,6 +687,8 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 static func wall_sheet(cell: Vector2i) -> Texture2D:
 	if tile_at(cell) != "#":
 		return WALLS
+	if Biomes.in_sunreach(cell):
+		return SANDSTONE_WALLS
 	if castle_stone(cell):
 		return FIELDSTONE_WALLS
 	if Biomes.in_isles(cell):
@@ -705,7 +727,8 @@ static func wall_raise(cell: Vector2i) -> float:
 ## face (south for a west-east wall, east for a north-south one), drawn like a wall in depth order.
 static func draw_door(canvas: CanvasItem, cell: Vector2i) -> void:
 	var vertical: bool = tile_at(cell + Vector2i.UP) in World.WALLS and not tile_at(cell + Vector2i.UP).is_empty()
-	canvas.draw_texture_rect_region(FIELDSTONE_WALLS if castle_stone(cell) else HOUSE_WALLS,
+	var sheet: Texture2D = SANDSTONE_WALLS if Biomes.in_sunreach(cell) else FIELDSTONE_WALLS if castle_stone(cell) else HOUSE_WALLS
+	canvas.draw_texture_rect_region(sheet,
 		Rect2(Vector2(cell) * TILE - Vector2.ONE * HOUSE_RAISE, Vector2.ONE * HOUSE_SIZE),
 		Rect2((HOUSE_DOOR + (1 if vertical else 0)) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE))
 

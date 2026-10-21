@@ -67,7 +67,7 @@ y 1920
 | The mainland | 0, 0, 640 × 640 | All the heartland's biomes, the desert, the lake | 1-50 | Cinder Crossing; Reedmere, Ashford, Dunmere, Highmoor, Lastlight, Brackenford | Ember against reed | Built |
 | The frost isles | 0, 704, 160 × 128 | Snow, firs, sea ice | As today | Hrimvik | The land that wakes | Built |
 | Silverwood | 760, 60, 240 × 220 | Elven forest, still lakes | 45-50 / 50-60 | Aldmoor; Fernhollow | Runes and old stone | Built (layout) |
-| Sunreach | 380, 740, 280 × 240 | Desert, oasis, sandstone | 45-50 / 60-70 | To name | Runes and old stone | Planned |
+| Sunreach | 380, 740, 280 × 240 | Desert, oasis, sandstone | 45-50 / 60-70 | Qasrun; Duneford | Runes and old stone | Built (layout) |
 | Verdance | 760, 400, 280 × 280 | Jungle, rivers, ruins | 45-50 / 65-75 | To name | The land that wakes | Planned |
 | Duskmarsh | 760, 860, 260 × 260 | Swamp, necropolis | 45-50 / 70-80 | To name | The Hollow creeps in | Planned |
 | Rimehold | 0, 900, 288 × 250 | Northern fjords, beside the frost isles | 45-50 / 75-85 | To name | Grey castles in a wild land | Planned |

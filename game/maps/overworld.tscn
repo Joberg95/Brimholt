@@ -46,17 +46,21 @@
 [ext_resource type="PackedScene" path="res://game/maps/sectors/3_3.tscn" id="23_ncskn"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/3_4.tscn" id="24_yeqt5"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/16_3.tscn" id="25_0feea"]
+[ext_resource type="PackedScene" path="res://game/maps/sectors/3_6.tscn" id="25_4b4h1"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/4_0.tscn" id="25_qhiic"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/16_4.tscn" id="26_0bof0"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/4_1.tscn" id="26_oq2ia"]
+[ext_resource type="PackedScene" path="res://game/maps/sectors/3_7.tscn" id="26_pelei"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/4_2.tscn" id="27_0is1r"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/16_5.tscn" id="27_diy32"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/4_3.tscn" id="28_fg6lk"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/17_3.tscn" id="29_3rgd2"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/4_4.tscn" id="29_pi4ho"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/17_4.tscn" id="31_ya5tb"]
+[ext_resource type="PackedScene" path="res://game/maps/sectors/4_6.tscn" id="32_4c6ti"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/18_3.tscn" id="33_cfn87"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/17_5.tscn" id="33_de55q"]
+[ext_resource type="PackedScene" path="res://game/maps/sectors/4_7.tscn" id="33_xkfp8"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/18_4.tscn" id="34_rd6a6"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/7_2.tscn" id="35_bhn54"]
 [ext_resource type="Script" path="res://game/maps/markers/decor.gd" id="36_y06j2"]
@@ -113,6 +117,8 @@ metadata/cave_below_drowned_grotto = true
 metadata/cave_below_rimewater_trench = true
 metadata/cave_below_thornroot_hollows = true
 metadata/region_silverwood = true
+metadata/island_sunreach = true
+metadata/region_sunreach = true
 
 [node name="Sectors" type="Node2D" parent="." unique_id=2003087866]
 
@@ -164,6 +170,10 @@ metadata/region_silverwood = true
 
 [node name="Sector_3_4" parent="Sectors" unique_id=944874195 instance=ExtResource("24_yeqt5")]
 
+[node name="Sector_3_6" parent="Sectors" unique_id=749814256 instance=ExtResource("25_4b4h1")]
+
+[node name="Sector_3_7" parent="Sectors" unique_id=788887526 instance=ExtResource("26_pelei")]
+
 [node name="Sector_4_0" parent="Sectors" unique_id=1550271261 instance=ExtResource("25_qhiic")]
 
 [node name="Sector_4_1" parent="Sectors" unique_id=462033314 instance=ExtResource("26_oq2ia")]
@@ -173,6 +183,10 @@ metadata/region_silverwood = true
 [node name="Sector_4_3" parent="Sectors" unique_id=740906781 instance=ExtResource("28_fg6lk")]
 
 [node name="Sector_4_4" parent="Sectors" unique_id=1779790423 instance=ExtResource("29_pi4ho")]
+
+[node name="Sector_4_6" parent="Sectors" unique_id=1320390041 instance=ExtResource("32_4c6ti")]
+
+[node name="Sector_4_7" parent="Sectors" unique_id=1050862126 instance=ExtResource("33_xkfp8")]
 
 [node name="Sector_6_0" parent="Sectors" unique_id=1435239114 instance=ExtResource("19_jre8o")]
 
@@ -376,7 +390,8 @@ place = "Cinder Landing"
 routes = Dictionary[String, int]({
 "hrimvik": 60,
 "lastlight": 35,
-"silverwood": 90
+"silverwood": 90,
+"sunreach": 100
 })
 facing = Vector2i(1, 0)
 
@@ -557,6 +572,17 @@ routes = Dictionary[String, int]({
 })
 facing = Vector2i(1, 0)
 metadata/region = "silverwood"
+
+[node name="sunreach" type="Marker2D" parent="Ferrymen" unique_id=727101788]
+position = Vector2(12784, 27120)
+script = ExtResource("2_vknn6")
+npc_name = "Ferryman Hassid"
+place = "Qasrun"
+routes = Dictionary[String, int]({
+"cinder_landing": 100
+})
+facing = Vector2i(1, 0)
+metadata/region = "sunreach"
 
 [node name="Items" type="Node2D" parent="." unique_id=2097775516]
 
@@ -1295,6 +1321,22 @@ zone_name = "Fernhollow"
 size_tiles = Vector2i(31, 25)
 town = true
 metadata/region = "silverwood"
+
+[node name="Qasrun" type="Node2D" parent="Zones" unique_id=1037159310]
+position = Vector2(13088, 26208)
+script = ExtResource("4_bbq1k")
+zone_name = "Qasrun"
+size_tiles = Vector2i(48, 42)
+town = true
+metadata/region = "sunreach"
+
+[node name="Duneford" type="Node2D" parent="Zones" unique_id=1904633081]
+position = Vector2(18400, 27136)
+script = ExtResource("4_bbq1k")
+zone_name = "Duneford"
+size_tiles = Vector2i(31, 25)
+town = true
+metadata/region = "sunreach"
 
 [node name="MonsterSpawns" type="Node2D" parent="." unique_id=1478444029]
 
@@ -16774,6 +16816,1140 @@ count = 7
 radius = 2
 metadata/region = "silverwood"
 
+[node name="Island_sunreach_0" type="Marker2D" parent="MonsterSpawns" unique_id=1334960534]
+position = Vector2(13616, 27984)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_1" type="Marker2D" parent="MonsterSpawns" unique_id=860330363]
+position = Vector2(13936, 28496)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_2" type="Marker2D" parent="MonsterSpawns" unique_id=541747812]
+position = Vector2(14096, 28976)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_3" type="Marker2D" parent="MonsterSpawns" unique_id=2052216817]
+position = Vector2(14384, 28400)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_4" type="Marker2D" parent="MonsterSpawns" unique_id=1743073367]
+position = Vector2(14448, 29328)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_5" type="Marker2D" parent="MonsterSpawns" unique_id=386726193]
+position = Vector2(14640, 28816)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_6" type="Marker2D" parent="MonsterSpawns" unique_id=984513468]
+position = Vector2(14704, 27920)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_7" type="Marker2D" parent="MonsterSpawns" unique_id=1741889109]
+position = Vector2(14896, 29136)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_8" type="Marker2D" parent="MonsterSpawns" unique_id=982627674]
+position = Vector2(14896, 30064)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_9" type="Marker2D" parent="MonsterSpawns" unique_id=1959876534]
+position = Vector2(14928, 28464)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_10" type="Marker2D" parent="MonsterSpawns" unique_id=1750984584]
+position = Vector2(14960, 25584)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_11" type="Marker2D" parent="MonsterSpawns" unique_id=1982451362]
+position = Vector2(14992, 26320)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_12" type="Marker2D" parent="MonsterSpawns" unique_id=1835780054]
+position = Vector2(14992, 26800)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 45
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_13" type="Marker2D" parent="MonsterSpawns" unique_id=1655650071]
+position = Vector2(15056, 27728)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 47
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_14" type="Marker2D" parent="MonsterSpawns" unique_id=1009924646]
+position = Vector2(15056, 29712)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 50
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_15" type="Marker2D" parent="MonsterSpawns" unique_id=1008946610]
+position = Vector2(15056, 30448)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_16" type="Marker2D" parent="MonsterSpawns" unique_id=647663786]
+position = Vector2(15216, 28880)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_17" type="Marker2D" parent="MonsterSpawns" unique_id=224435141]
+position = Vector2(15312, 25776)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_18" type="Marker2D" parent="MonsterSpawns" unique_id=1003497714]
+position = Vector2(15312, 27408)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 50
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_19" type="Marker2D" parent="MonsterSpawns" unique_id=1569298044]
+position = Vector2(15312, 30768)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_20" type="Marker2D" parent="MonsterSpawns" unique_id=953679028]
+position = Vector2(15440, 28336)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_21" type="Marker2D" parent="MonsterSpawns" unique_id=195374277]
+position = Vector2(15440, 29552)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_22" type="Marker2D" parent="MonsterSpawns" unique_id=1366775307]
+position = Vector2(15440, 29936)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_23" type="Marker2D" parent="MonsterSpawns" unique_id=1519789095]
+position = Vector2(15632, 28752)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 50
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_24" type="Marker2D" parent="MonsterSpawns" unique_id=361836107]
+position = Vector2(15664, 27984)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_25" type="Marker2D" parent="MonsterSpawns" unique_id=1565553417]
+position = Vector2(15664, 29168)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 50
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_26" type="Marker2D" parent="MonsterSpawns" unique_id=1978477758]
+position = Vector2(15664, 30320)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_27" type="Marker2D" parent="MonsterSpawns" unique_id=308575782]
+position = Vector2(15696, 25840)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_28" type="Marker2D" parent="MonsterSpawns" unique_id=1355535633]
+position = Vector2(15728, 25392)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 47
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_29" type="Marker2D" parent="MonsterSpawns" unique_id=227953825]
+position = Vector2(15824, 26992)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_30" type="Marker2D" parent="MonsterSpawns" unique_id=1919160557]
+position = Vector2(15824, 27472)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_31" type="Marker2D" parent="MonsterSpawns" unique_id=794492144]
+position = Vector2(15856, 26352)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_32" type="Marker2D" parent="MonsterSpawns" unique_id=336634941]
+position = Vector2(15856, 29968)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_33" type="Marker2D" parent="MonsterSpawns" unique_id=1948470744]
+position = Vector2(15952, 29552)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_34" type="Marker2D" parent="MonsterSpawns" unique_id=760927022]
+position = Vector2(16016, 30672)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 47
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_35" type="Marker2D" parent="MonsterSpawns" unique_id=1043442119]
+position = Vector2(16112, 27792)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_36" type="Marker2D" parent="MonsterSpawns" unique_id=533446282]
+position = Vector2(16112, 30256)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_37" type="Marker2D" parent="MonsterSpawns" unique_id=310295485]
+position = Vector2(16240, 26096)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_38" type="Marker2D" parent="MonsterSpawns" unique_id=1592621501]
+position = Vector2(16240, 27408)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 47
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_39" type="Marker2D" parent="MonsterSpawns" unique_id=769064719]
+position = Vector2(16272, 28336)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_40" type="Marker2D" parent="MonsterSpawns" unique_id=848432964]
+position = Vector2(16336, 26512)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_41" type="Marker2D" parent="MonsterSpawns" unique_id=1803145730]
+position = Vector2(16336, 26896)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 45
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_42" type="Marker2D" parent="MonsterSpawns" unique_id=1114023404]
+position = Vector2(16464, 27984)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_43" type="Marker2D" parent="MonsterSpawns" unique_id=975427982]
+position = Vector2(16560, 25360)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_44" type="Marker2D" parent="MonsterSpawns" unique_id=1591073630]
+position = Vector2(16560, 29680)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_45" type="Marker2D" parent="MonsterSpawns" unique_id=2073636589]
+position = Vector2(16592, 27600)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_46" type="Marker2D" parent="MonsterSpawns" unique_id=1912183847]
+position = Vector2(16688, 26128)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_47" type="Marker2D" parent="MonsterSpawns" unique_id=1598458835]
+position = Vector2(16688, 27088)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 45
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_48" type="Marker2D" parent="MonsterSpawns" unique_id=1428139108]
+position = Vector2(16688, 28464)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 47
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_49" type="Marker2D" parent="MonsterSpawns" unique_id=1183637580]
+position = Vector2(16688, 30576)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_50" type="Marker2D" parent="MonsterSpawns" unique_id=1722145262]
+position = Vector2(16720, 30960)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_51" type="Marker2D" parent="MonsterSpawns" unique_id=1521091510]
+position = Vector2(16752, 28848)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_52" type="Marker2D" parent="MonsterSpawns" unique_id=1237495838]
+position = Vector2(16784, 26512)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_53" type="Marker2D" parent="MonsterSpawns" unique_id=1864113757]
+position = Vector2(16848, 28112)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_54" type="Marker2D" parent="MonsterSpawns" unique_id=730348816]
+position = Vector2(16880, 30160)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 47
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_55" type="Marker2D" parent="MonsterSpawns" unique_id=522908455]
+position = Vector2(17008, 25456)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_56" type="Marker2D" parent="MonsterSpawns" unique_id=710549530]
+position = Vector2(17040, 29648)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_57" type="Marker2D" parent="MonsterSpawns" unique_id=64656245]
+position = Vector2(17104, 27728)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 45
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_58" type="Marker2D" parent="MonsterSpawns" unique_id=1457635784]
+position = Vector2(17136, 26064)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 47
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_59" type="Marker2D" parent="MonsterSpawns" unique_id=663328218]
+position = Vector2(17168, 27152)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 47
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_60" type="Marker2D" parent="MonsterSpawns" unique_id=1444472041]
+position = Vector2(17200, 26448)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_61" type="Marker2D" parent="MonsterSpawns" unique_id=1049803253]
+position = Vector2(17264, 30096)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 45
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_62" type="Marker2D" parent="MonsterSpawns" unique_id=1560383437]
+position = Vector2(17296, 25072)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_63" type="Marker2D" parent="MonsterSpawns" unique_id=1614278257]
+position = Vector2(17424, 25776)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_64" type="Marker2D" parent="MonsterSpawns" unique_id=677627269]
+position = Vector2(17488, 27504)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_65" type="Marker2D" parent="MonsterSpawns" unique_id=1566051946]
+position = Vector2(17520, 27888)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_66" type="Marker2D" parent="MonsterSpawns" unique_id=1315351269]
+position = Vector2(17520, 30416)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_67" type="Marker2D" parent="MonsterSpawns" unique_id=139358875]
+position = Vector2(17616, 25360)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 49
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_68" type="Marker2D" parent="MonsterSpawns" unique_id=1323348854]
+position = Vector2(17680, 26768)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_69" type="Marker2D" parent="MonsterSpawns" unique_id=476753870]
+position = Vector2(17712, 28304)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_70" type="Marker2D" parent="MonsterSpawns" unique_id=856357952]
+position = Vector2(17776, 25008)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 45
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_71" type="Marker2D" parent="MonsterSpawns" unique_id=1761324377]
+position = Vector2(17840, 27216)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_72" type="Marker2D" parent="MonsterSpawns" unique_id=1989534952]
+position = Vector2(17904, 27952)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_73" type="Marker2D" parent="MonsterSpawns" unique_id=1105393234]
+position = Vector2(18064, 28656)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 50
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_74" type="Marker2D" parent="MonsterSpawns" unique_id=605879442]
+position = Vector2(18160, 25808)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_75" type="Marker2D" parent="MonsterSpawns" unique_id=234352727]
+position = Vector2(18320, 29104)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_76" type="Marker2D" parent="MonsterSpawns" unique_id=206877028]
+position = Vector2(18480, 25296)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_77" type="Marker2D" parent="MonsterSpawns" unique_id=1103354665]
+position = Vector2(18480, 26736)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_78" type="Marker2D" parent="MonsterSpawns" unique_id=1418240532]
+position = Vector2(18512, 26288)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_79" type="Marker2D" parent="MonsterSpawns" unique_id=1851021870]
+position = Vector2(18512, 28752)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_80" type="Marker2D" parent="MonsterSpawns" unique_id=1617838716]
+position = Vector2(18672, 28368)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_81" type="Marker2D" parent="MonsterSpawns" unique_id=2110229297]
+position = Vector2(18704, 25936)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_82" type="Marker2D" parent="MonsterSpawns" unique_id=2023909852]
+position = Vector2(18864, 28944)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_83" type="Marker2D" parent="MonsterSpawns" unique_id=155694451]
+position = Vector2(19056, 28496)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_84" type="Marker2D" parent="MonsterSpawns" unique_id=67938311]
+position = Vector2(19248, 29008)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_85" type="Marker2D" parent="MonsterSpawns" unique_id=1895824132]
+position = Vector2(19504, 28496)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_86" type="Marker2D" parent="MonsterSpawns" unique_id=14103570]
+position = Vector2(19824, 26928)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_87" type="Marker2D" parent="MonsterSpawns" unique_id=783685490]
+position = Vector2(13744, 28848)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 50
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_88" type="Marker2D" parent="MonsterSpawns" unique_id=975720595]
+position = Vector2(13968, 28112)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_89" type="Marker2D" parent="MonsterSpawns" unique_id=2052828725]
+position = Vector2(14320, 29680)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_90" type="Marker2D" parent="MonsterSpawns" unique_id=1012445570]
+position = Vector2(14448, 30032)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_91" type="Marker2D" parent="MonsterSpawns" unique_id=1154148577]
+position = Vector2(14480, 25680)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_92" type="Marker2D" parent="MonsterSpawns" unique_id=1317869528]
+position = Vector2(14672, 29680)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_93" type="Marker2D" parent="MonsterSpawns" unique_id=1195484933]
+position = Vector2(15056, 28080)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 50
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_94" type="Marker2D" parent="MonsterSpawns" unique_id=1308855408]
+position = Vector2(15312, 25360)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_95" type="Marker2D" parent="MonsterSpawns" unique_id=13642924]
+position = Vector2(15344, 26128)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_96" type="Marker2D" parent="MonsterSpawns" unique_id=1223505573]
+position = Vector2(15344, 26480)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_97" type="Marker2D" parent="MonsterSpawns" unique_id=225730517]
+position = Vector2(15344, 26832)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 50
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_98" type="Marker2D" parent="MonsterSpawns" unique_id=261885566]
+position = Vector2(15664, 30672)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 45
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_99" type="Marker2D" parent="MonsterSpawns" unique_id=264926193]
+position = Vector2(15792, 28336)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_100" type="Marker2D" parent="MonsterSpawns" unique_id=562577320]
+position = Vector2(15984, 28688)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_101" type="Marker2D" parent="MonsterSpawns" unique_id=1519360742]
+position = Vector2(16016, 29040)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_102" type="Marker2D" parent="MonsterSpawns" unique_id=91252499]
+position = Vector2(16080, 25392)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_103" type="Marker2D" parent="MonsterSpawns" unique_id=1763070149]
+position = Vector2(16336, 28688)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_104" type="Marker2D" parent="MonsterSpawns" unique_id=1588994084]
+position = Vector2(16368, 29040)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_105" type="Marker2D" parent="MonsterSpawns" unique_id=878308563]
+position = Vector2(16432, 25712)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_106" type="Marker2D" parent="MonsterSpawns" unique_id=991497893]
+position = Vector2(16464, 30064)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_107" type="Marker2D" parent="MonsterSpawns" unique_id=998104656]
+position = Vector2(16912, 25072)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_108" type="Marker2D" parent="MonsterSpawns" unique_id=927677065]
+position = Vector2(17040, 30512)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_109" type="Marker2D" parent="MonsterSpawns" unique_id=1420631238]
+position = Vector2(17136, 29008)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_110" type="Marker2D" parent="MonsterSpawns" unique_id=432384389]
+position = Vector2(17168, 26800)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 45
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_111" type="Marker2D" parent="MonsterSpawns" unique_id=139116569]
+position = Vector2(17488, 29040)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 48
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_112" type="Marker2D" parent="MonsterSpawns" unique_id=1709573390]
+position = Vector2(17552, 26128)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_113" type="Marker2D" parent="MonsterSpawns" unique_id=1402134267]
+position = Vector2(17616, 29904)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_114" type="Marker2D" parent="MonsterSpawns" unique_id=301225952]
+position = Vector2(17776, 25712)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 48
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_115" type="Marker2D" parent="MonsterSpawns" unique_id=1332482191]
+position = Vector2(17872, 27568)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 50
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_116" type="Marker2D" parent="MonsterSpawns" unique_id=824159861]
+position = Vector2(17904, 26256)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 49
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_117" type="Marker2D" parent="MonsterSpawns" unique_id=146360775]
+position = Vector2(17968, 25360)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 47
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_118" type="Marker2D" parent="MonsterSpawns" unique_id=1196965496]
+position = Vector2(18032, 26608)
+script = ExtResource("5_xkg0o")
+monster = "thornscale_basilisk"
+level = 50
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_119" type="Marker2D" parent="MonsterSpawns" unique_id=1929950033]
+position = Vector2(18128, 24976)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_120" type="Marker2D" parent="MonsterSpawns" unique_id=1025050271]
+position = Vector2(18672, 29296)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 47
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_121" type="Marker2D" parent="MonsterSpawns" unique_id=609138822]
+position = Vector2(18832, 25168)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 50
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_122" type="Marker2D" parent="MonsterSpawns" unique_id=327056616]
+position = Vector2(18832, 26640)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 46
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_123" type="Marker2D" parent="MonsterSpawns" unique_id=132340249]
+position = Vector2(18864, 29648)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 49
+count = 6
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_124" type="Marker2D" parent="MonsterSpawns" unique_id=1815470374]
+position = Vector2(18992, 26288)
+script = ExtResource("5_xkg0o")
+monster = "dune_scorpion"
+level = 47
+count = 5
+radius = 2
+metadata/region = "sunreach"
+
+[node name="Island_sunreach_125" type="Marker2D" parent="MonsterSpawns" unique_id=1645149388]
+position = Vector2(19600, 28848)
+script = ExtResource("5_xkg0o")
+monster = "sand_raider"
+level = 46
+count = 7
+radius = 2
+metadata/region = "sunreach"
+
 [node name="DungeonEntrances" type="Node2D" parent="." unique_id=1083546267]
 
 [node name="CinderCellar" type="Marker2D" parent="DungeonEntrances" unique_id=1043664892]
@@ -17204,6 +18380,39 @@ role = "artisan"
 facing = Vector2i(0, -1)
 metadata/region = "silverwood"
 
+[node name="qasrun_vendor" type="Marker2D" parent="Townsfolk" unique_id=876454893]
+position = Vector2(13264, 26448)
+script = ExtResource("7_yncsc")
+npc_name = "Quartermaster Zahra"
+place = "Qasrun"
+facing = Vector2i(1, 0)
+metadata/region = "sunreach"
+
+[node name="qasrun_artisan" type="Marker2D" parent="Townsfolk" unique_id=870846906]
+position = Vector2(14416, 27344)
+script = ExtResource("7_yncsc")
+npc_name = "Master Idris"
+place = "Qasrun"
+role = "artisan"
+facing = Vector2i(0, -1)
+metadata/region = "sunreach"
+
+[node name="duneford_vendor" type="Marker2D" parent="Townsfolk" unique_id=1814831408]
+position = Vector2(18576, 27248)
+script = ExtResource("7_yncsc")
+npc_name = "Trader Nasrin"
+place = "Duneford"
+metadata/region = "sunreach"
+
+[node name="duneford_artisan" type="Marker2D" parent="Townsfolk" unique_id=394172635]
+position = Vector2(19184, 27824)
+script = ExtResource("7_yncsc")
+npc_name = "Potter Samir"
+place = "Duneford"
+role = "artisan"
+facing = Vector2i(0, -1)
+metadata/region = "sunreach"
+
 [node name="CaveMouths" type="Node2D" parent="." unique_id=1044029069]
 
 [node name="OgreWarrens" type="Marker2D" parent="CaveMouths" unique_id=1610523920]
@@ -17595,3 +18804,231 @@ position = Vector2(26032, 5264)
 script = ExtResource("36_y06j2")
 kind = "bush"
 metadata/region = "silverwood"
+
+[node name="Decor_432_829" type="Marker2D" parent="Decor" unique_id=1830959121]
+position = Vector2(13840, 26544)
+script = ExtResource("36_y06j2")
+kind = "throne"
+metadata/region = "sunreach"
+
+[node name="Decor_430_828" type="Marker2D" parent="Decor" unique_id=1058768763]
+position = Vector2(13776, 26512)
+script = ExtResource("36_y06j2")
+kind = "knight_statue"
+metadata/region = "sunreach"
+
+[node name="Decor_434_828" type="Marker2D" parent="Decor" unique_id=414768308]
+position = Vector2(13904, 26512)
+script = ExtResource("36_y06j2")
+kind = "knight_statue"
+metadata/region = "sunreach"
+
+[node name="Decor_425_830" type="Marker2D" parent="Decor" unique_id=67358526]
+position = Vector2(13616, 26576)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_439_830" type="Marker2D" parent="Decor" unique_id=1093231194]
+position = Vector2(14064, 26576)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_425_834" type="Marker2D" parent="Decor" unique_id=158570606]
+position = Vector2(13616, 26704)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_439_834" type="Marker2D" parent="Decor" unique_id=786932027]
+position = Vector2(14064, 26704)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_427_838" type="Marker2D" parent="Decor" unique_id=2107902208]
+position = Vector2(13680, 26832)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_437_838" type="Marker2D" parent="Decor" unique_id=1706604684]
+position = Vector2(14000, 26832)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_427_841" type="Marker2D" parent="Decor" unique_id=1682201008]
+position = Vector2(13680, 26928)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_437_841" type="Marker2D" parent="Decor" unique_id=886640743]
+position = Vector2(14000, 26928)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "sunreach"
+
+[node name="Decor_423_828" type="Marker2D" parent="Decor" unique_id=1028994958]
+position = Vector2(13552, 26512)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "sunreach"
+
+[node name="Decor_441_828" type="Marker2D" parent="Decor" unique_id=1261502842]
+position = Vector2(14128, 26512)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "sunreach"
+
+[node name="Decor_423_835" type="Marker2D" parent="Decor" unique_id=760620676]
+position = Vector2(13552, 26736)
+script = ExtResource("36_y06j2")
+kind = "potted_palm"
+metadata/region = "sunreach"
+
+[node name="Decor_441_835" type="Marker2D" parent="Decor" unique_id=1578591319]
+position = Vector2(14128, 26736)
+script = ExtResource("36_y06j2")
+kind = "potted_palm"
+metadata/region = "sunreach"
+
+[node name="Decor_426_842" type="Marker2D" parent="Decor" unique_id=858160775]
+position = Vector2(13648, 26960)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "sunreach"
+
+[node name="Decor_438_842" type="Marker2D" parent="Decor" unique_id=1647546638]
+position = Vector2(14032, 26960)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "sunreach"
+
+[node name="Decor_424_827" type="Marker2D" parent="Decor" unique_id=2118880469]
+position = Vector2(13584, 26480)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "sunreach"
+
+[node name="Decor_426_827" type="Marker2D" parent="Decor" unique_id=693236789]
+position = Vector2(13648, 26480)
+script = ExtResource("36_y06j2")
+kind = "wall_torch"
+metadata/region = "sunreach"
+
+[node name="Decor_429_827" type="Marker2D" parent="Decor" unique_id=1376883605]
+position = Vector2(13744, 26480)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "sunreach"
+
+[node name="Decor_435_827" type="Marker2D" parent="Decor" unique_id=1908897066]
+position = Vector2(13936, 26480)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "sunreach"
+
+[node name="Decor_438_827" type="Marker2D" parent="Decor" unique_id=499381987]
+position = Vector2(14032, 26480)
+script = ExtResource("36_y06j2")
+kind = "wall_torch"
+metadata/region = "sunreach"
+
+[node name="Decor_440_827" type="Marker2D" parent="Decor" unique_id=1401701815]
+position = Vector2(14096, 26480)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "sunreach"
+
+[node name="Decor_430_822" type="Marker2D" parent="Decor" unique_id=1940404226]
+position = Vector2(13776, 26320)
+script = ExtResource("36_y06j2")
+kind = "painting"
+metadata/region = "sunreach"
+
+[node name="Decor_434_822" type="Marker2D" parent="Decor" unique_id=2006986170]
+position = Vector2(13904, 26320)
+script = ExtResource("36_y06j2")
+kind = "wall_torch"
+metadata/region = "sunreach"
+
+[node name="Decor_428_823" type="Marker2D" parent="Decor" unique_id=2047573218]
+position = Vector2(13712, 26352)
+script = ExtResource("36_y06j2")
+kind = "shelf_books"
+metadata/region = "sunreach"
+
+[node name="Decor_430_823" type="Marker2D" parent="Decor" unique_id=2099280493]
+position = Vector2(13776, 26352)
+script = ExtResource("36_y06j2")
+kind = "chest"
+metadata/region = "sunreach"
+
+[node name="Decor_435_823" type="Marker2D" parent="Decor" unique_id=852794580]
+position = Vector2(13936, 26352)
+script = ExtResource("36_y06j2")
+kind = "bed"
+metadata/region = "sunreach"
+
+[node name="Decor_429_825" type="Marker2D" parent="Decor" unique_id=94998749]
+position = Vector2(13744, 26416)
+script = ExtResource("36_y06j2")
+kind = "chair"
+metadata/region = "sunreach"
+
+[node name="Decor_430_825" type="Marker2D" parent="Decor" unique_id=1771612729]
+position = Vector2(13776, 26416)
+script = ExtResource("36_y06j2")
+kind = "candelabra"
+metadata/region = "sunreach"
+
+[node name="Decor_434_825" type="Marker2D" parent="Decor" unique_id=873587289]
+position = Vector2(13904, 26416)
+script = ExtResource("36_y06j2")
+kind = "chair"
+metadata/region = "sunreach"
+
+[node name="Decor_435_825" type="Marker2D" parent="Decor" unique_id=1062572249]
+position = Vector2(13936, 26416)
+script = ExtResource("36_y06j2")
+kind = "fruit_table"
+metadata/region = "sunreach"
+
+[node name="Decor_436_826" type="Marker2D" parent="Decor" unique_id=2052995705]
+position = Vector2(13968, 26448)
+script = ExtResource("36_y06j2")
+kind = "stove"
+metadata/region = "sunreach"
+
+[node name="Decor_428_826" type="Marker2D" parent="Decor" unique_id=434116163]
+position = Vector2(13712, 26448)
+script = ExtResource("36_y06j2")
+kind = "crate"
+metadata/region = "sunreach"
+
+[node name="Decor_430_844" type="Marker2D" parent="Decor" unique_id=995009505]
+position = Vector2(13776, 27024)
+script = ExtResource("36_y06j2")
+kind = "gargoyle"
+metadata/region = "sunreach"
+
+[node name="Decor_434_844" type="Marker2D" parent="Decor" unique_id=517501102]
+position = Vector2(13904, 27024)
+script = ExtResource("36_y06j2")
+kind = "gargoyle"
+metadata/region = "sunreach"
+
+[node name="Decor_429_844" type="Marker2D" parent="Decor" unique_id=168020547]
+position = Vector2(13744, 27024)
+script = ExtResource("36_y06j2")
+kind = "bush"
+metadata/region = "sunreach"
+
+[node name="Decor_435_844" type="Marker2D" parent="Decor" unique_id=1282883555]
+position = Vector2(13936, 27024)
+script = ExtResource("36_y06j2")
+kind = "bush"
+metadata/region = "sunreach"

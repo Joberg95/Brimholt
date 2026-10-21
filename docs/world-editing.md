@@ -22,6 +22,9 @@ shows one world:
    plank piers. Paint in the sector's root layer: it is the hand **override**, which always
    wins over the locked `Base` child that generators and `make region NAME=<id>` repaint, so a
    region rebuild never wipes hand work (erase an override cell to show the base again).
+   Region specs live in `tools/generators/islands.gd` (`silverwood`, `sunreach`); a spec's
+   `"biome"` picks its landscape (forest by default, `"desert"` for dunes, mesas, cactus groves,
+   and palm oases), and `Biomes` rects (`in_sunreach`) pick its walls, roofs, trees, and weather.
    **Brushes**: with a sector open, tick **Brush on** in the `Brushes` dock (plugin
    `addons/brimholt_brushes`) and drag in the 2D view, with nothing selected. Modes: *Terrain*
    (a disc of one tile), *Scatter doodads* (a biome's trees and rocks over its own ground, at the

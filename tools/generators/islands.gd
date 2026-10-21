@@ -24,10 +24,12 @@ const ZONE_SCRIPT: Script = preload("res://game/maps/markers/zone.gd")
 const FERRY_SCRIPT: Script = preload("res://game/maps/markers/ferryman.gd")
 const TOWNSFOLK_SCRIPT: Script = preload("res://game/maps/markers/townsfolk.gd")
 const DECOR_SCRIPT: Script = preload("res://game/maps/markers/decor.gd")
-const ORDER: Array[String] = ["silverwood"]
+const ORDER: Array[String] = ["silverwood", "sunreach"]
 ## rect: the island's bounds; capital and town: their names, keepers, and where they stand
 ## (castle's top-left; the town's square centre); camps: placeholder monsters by weight;
-## levels: the placeholder band; port: the mainland ferryman the harbour sails to, and the fare.
+## levels: the placeholder band; port: the mainland ferryman the harbour sails to, and the fare;
+## biome: "forest" (the default: woods, meadows, lakes) or "desert" (sand, oases with palms,
+## mesas, cactus groves; _desert).
 const ISLANDS: Dictionary = {
 	"silverwood": {
 		"rect": Rect2i(760, 60, 240, 220), "seed": 4100,
@@ -37,6 +39,17 @@ const ISLANDS: Dictionary = {
 		"port": ["cinder_landing", 90],
 		"levels": Vector2i(45, 50),
 		"camps": [["dire_bear", 3], ["harpy", 3], ["wraith_knight", 2], ["hollow_knight", 2], ["behemoth", 1]],
+	},
+	# The desert island south of the mainland (docs/plan/47-world-plan.md): the sandstone castle of
+	# Qasrun by the west shore, the oasis town of Duneford to the east.
+	"sunreach": {
+		"rect": Rect2i(380, 740, 280, 240), "seed": 4200, "biome": "desert",
+		"capital": {"name": "Qasrun", "at": Vector2i(410, 820), "ferryman": "Ferryman Hassid",
+			"vendor": "Quartermaster Zahra", "artisan": "Master Idris"},
+		"town": {"name": "Duneford", "at": Vector2i(590, 860), "vendor": "Trader Nasrin", "artisan": "Potter Samir"},
+		"port": ["cinder_landing", 100],
+		"levels": Vector2i(45, 50),
+		"camps": [["dune_scorpion", 3], ["sand_raider", 3], ["thornscale_basilisk", 2], ["harpy", 2], ["behemoth", 1]],
 	},
 }
 const CASTLE_SIZE: Vector2i = Vector2i(46, 40)
@@ -50,12 +63,16 @@ const ROAD_CLEAR: int = 3
 const COAST_LIMIT: int = 12
 ## Open ground kept round each point of interest in a spec's "keep" ({cell: tile}).
 const KEEP_CLEAR: int = 4
+## Plants a road or a trail cuts through (and a camp clears).
+const CUTTABLE: String = "TKR"
 
 var _layer: TileMapLayer
 var _root: Node
 var _rng := RandomNumberGenerator.new()
 ## The current island's land cells' steps to the sea (_coast_distances).
 var _depth: Dictionary = {}
+## The current island's open ground: grass, or sand in the desert.
+var _soil: String = "."
 
 
 func _initialize() -> void:
@@ -136,6 +153,7 @@ func _island(id: String, spec: Dictionary) -> int:
 	var rect: Rect2i = spec["rect"]
 	var salt: int = spec["seed"]
 	_rng.seed = salt
+	_soil = ":" if spec.get("biome", "forest") == "desert" else "."
 	var castle := Rect2i(spec["capital"]["at"], CASTLE_SIZE)
 	var town_at: Vector2i = spec["town"]["at"]
 	# Points of interest other passes placed (cave mouths, stairways; tools/generators/region.gd):
@@ -147,7 +165,10 @@ func _island(id: String, spec: Dictionary) -> int:
 	var land: Dictionary = _coast(rect, salt, [castle.grow(5), Rect2i(town_at - Vector2i(16, 13), Vector2i(32, 26))] + kept_areas)
 	_depth = _coast_distances(land)
 	var changed: int = land.size()
-	_landscape(land, salt)
+	if spec.get("biome", "forest") == "desert":
+		_desert(land, salt)
+	else:
+		_landscape(land, salt)
 	var reserved: Dictionary = {}
 	changed += _castle(castle, spec, reserved)
 	changed += _village(town_at, spec, reserved)
@@ -157,7 +178,7 @@ func _island(id: String, spec: Dictionary) -> int:
 			for x: int in range(area.position.x, area.end.x):
 				var cell := Vector2i(x, y)
 				if land.has(cell) and not castle.has_point(cell) and not village.has_point(cell) and not reserved.has(cell):
-					_paint(cell, ".")
+					_paint(cell, _soil)
 	for cell: Vector2i in keep:
 		_paint(cell, keep[cell])
 		reserved[cell] = true
@@ -215,7 +236,7 @@ func _coast(rect: Rect2i, salt: int, keep: Array) -> Dictionary:
 		if piece.size() > best.size():
 			best = piece
 	for cell: Vector2i in best:
-		_paint(cell, ".")
+		_paint(cell, _soil)
 	return best
 
 
@@ -240,6 +261,28 @@ func _landscape(land: Dictionary, salt: int) -> void:
 	for cell: Vector2i in land:
 		if _tile(cell) in ["T", "L"] and _near(cell, 1, "~"):
 			_paint(cell, ".")
+
+
+## The desert over the land: sand, mesas of bare rock, cactus groves and lone cacti, a few
+## boulders, and oases: pools ringed with grass and palms (trees drawn as palms in Sunreach).
+func _desert(land: Dictionary, salt: int) -> void:
+	for cell: Vector2i in land:
+		var depth: int = _depth[cell]
+		if depth > 10 and _fbm(cell, 30.0, salt + 21) > 0.74:
+			_paint(cell, "~")
+		elif depth > 6 and _fbm(cell, 18.0, salt + 31) > 0.7:
+			_paint(cell, "L")
+		elif depth > 3 and _fbm(cell, 24.0, salt + 41) > 0.56 and _hash(cell, salt + 43) % 100 < 12:
+			_paint(cell, "K")
+		elif depth > 3 and _hash(cell, salt + 47) % 100 < 2:
+			_paint(cell, "K" if _hash(cell, salt + 49) % 3 > 0 else "R")
+	# Oases: grass three deep round each pool, palms on its outer ring, no rock at the water. The
+	# sea's shore stays sand (pools lie deeper than 10, so their rings deeper than 7).
+	for cell: Vector2i in land:
+		if _tile(cell) == "~" or _depth[cell] < 8 or not _near(cell, 3, "~"):
+			continue
+		var palm: bool = not _near(cell, 1, "~") and _hash(cell, salt + 51) % 100 < 28
+		_paint(cell, "T" if palm else ".")
 
 
 ## Steps from every land cell to the nearest sea (one breadth-first pass out from the shore),
@@ -284,7 +327,7 @@ func _shore(land: Dictionary, rect: Rect2i, toward: Vector2i) -> Vector2i:
 	var best := Vector2i(-1, -1)
 	var nearest: float = INF
 	for cell: Vector2i in land:
-		if _depth[cell] == 3 and _tile(cell) in [".", ":", "T"]:
+		if _depth[cell] == 3 and (_tile(cell) in [".", ":"] or _tile(cell) in CUTTABLE):
 			var d: float = Vector2(cell).distance_squared_to(Vector2(toward))
 			if d < nearest:
 				nearest = d
@@ -303,7 +346,7 @@ func _castle(castle: Rect2i, spec: Dictionary, reserved: Dictionary) -> int:
 			var cell := Vector2i(x, y)
 			var edge: bool = x == castle.position.x or y == castle.position.y or x == castle.end.x - 1 or y == castle.end.y - 1
 			var outside: bool = not castle.has_point(cell)
-			_paint(cell, "." if outside else ("W" if edge else "="))
+			_paint(cell, _soil if outside else ("W" if edge else "="))
 			reserved[cell] = true
 			changed += 1
 	var o: Vector2i = castle.position
@@ -450,8 +493,8 @@ func _village(centre: Vector2i, spec: Dictionary, reserved: Dictionary) -> int:
 		for x: int in range(area.position.x, area.end.x):
 			var cell := Vector2i(x, y)
 			reserved[cell] = true
-			if _tile(cell) in ["T", "L", "~", ":"]:
-				_paint(cell, ".")
+			if _tile(cell) in ["T", "L", "~", ":", "K", "R"]:
+				_paint(cell, _soil)
 	for y: int in range(-3, 4):
 		for x: int in range(-4, 5):
 			_paint(centre + Vector2i(x, y), "=")
@@ -502,7 +545,7 @@ func _road(from: Vector2i, to: Vector2i, land: Dictionary) -> int:
 			if not land.has(cell) or tile in ["L", "W", "#", "F", "Y"]:
 				astar.set_point_solid(cell, true)
 			else:
-				astar.set_point_weight_scale(cell, float({"T": 4.0, "~": 14.0, "=": 0.6, ",": 0.5}.get(tile, 1.0)))
+				astar.set_point_weight_scale(cell, float({"T": 4.0, "K": 4.0, "R": 4.0, "~": 14.0, "=": 0.6, ",": 0.5}.get(tile, 1.0)))
 	if not astar.is_in_boundsv(from) or not astar.is_in_boundsv(to) or astar.is_point_solid(from) or astar.is_point_solid(to):
 		return 0
 	var path: Array[Vector2i] = astar.get_id_path(from, to)
@@ -518,7 +561,7 @@ func _road(from: Vector2i, to: Vector2i, land: Dictionary) -> int:
 			var tile: String = _tile(spot)
 			if tile == "~":
 				_paint(spot, "b")
-			elif tile in [".", ":", "T"]:
+			elif tile in [".", ":"] or tile in CUTTABLE:
 				_paint(spot, ",")
 	return path.size()
 
@@ -612,15 +655,15 @@ func _connect(land: Dictionary, harbour: Vector2i) -> Dictionary:
 			for x: int in range(astar.region.position.x, astar.region.end.x):
 				var cell := Vector2i(x, y)
 				var tile: String = _tile(cell)
-				if not land.has(cell) or not (tile in WALKABLE or tile == "T"):
+				if not land.has(cell) or not (tile in WALKABLE or tile in CUTTABLE):
 					astar.set_point_solid(cell, true)
-				elif tile == "T":
+				elif tile in CUTTABLE:
 					astar.set_point_weight_scale(cell, 3.0)
 		if astar.is_point_solid(start) or astar.is_point_solid(goal):
 			continue
 		for cell: Vector2i in astar.get_id_path(start, goal):
-			if _tile(cell) == "T":
-				_paint(cell, ".")
+			if _tile(cell) in CUTTABLE:
+				_paint(cell, _soil)
 		_flood([start], land, reached)
 	for cell: Vector2i in reached.keys():
 		if not reached[cell]:
@@ -656,7 +699,7 @@ func _camps(id: String, spec: Dictionary, land: Dictionary, reached: Dictionary,
 		var blocked: bool = false
 		for area: Rect2i in keep_out:
 			blocked = blocked or area.has_point(cell)
-		if blocked or _tile(cell) != "." or not reached.has(cell) or _near(cell, ROAD_CLEAR, ",=b~L"):
+		if blocked or _tile(cell) != _soil or not reached.has(cell) or _near(cell, ROAD_CLEAR, ",=b~L"):
 			continue
 		var crowded: bool = false
 		for other: Vector2i in spots:
@@ -683,8 +726,8 @@ func _camps(id: String, spec: Dictionary, land: Dictionary, reached: Dictionary,
 		var cell: Vector2i = spots[index]
 		for dy: int in range(-2, 3):
 			for dx: int in range(-2, 3):
-				if _tile(cell + Vector2i(dx, dy)) == "T":
-					_paint(cell + Vector2i(dx, dy), ".")
+				if _tile(cell + Vector2i(dx, dy)) in CUTTABLE:
+					_paint(cell + Vector2i(dx, dy), _soil)
 		var pick: int = _hash(cell, 71) % total
 		var monster: String = ""
 		for entry: Array in weights:

@@ -12,10 +12,13 @@ const TILE: int = 32
 const SLATE_TOWN: String = "Reedmere"
 const SWATCH: int = 32
 ## Roof materials in roofs.png: clay, slate, and shingle are spread over the towns; the fourth,
-## snow over shingle, roofs every building in the frost isles (Biomes.ISLES).
-const MATERIALS: int = 4
+## snow over shingle, roofs every building in the frost isles (Biomes.ISLES); the fifth, sand
+## plaster, roofs Sunreach's (Biomes.SUNREACH) almost flat (FLAT_PITCH) and without chimneys.
+const MATERIALS: int = 5
 const TOWN_MATERIALS: int = 3
 const SNOW_MATERIAL: int = 3
+const PLASTER_MATERIAL: int = 4
+const FLAT_PITCH: float = 0.07
 ## A house wall's band top face, relative to its cell corner: centre +-5, raised RAISE px up-left
 ## (SpriteArt.HOUSE_RAISE, a full tile). The band's centre is half a tile in, so the roof is drawn
 ## RAISE - TILE / 2 px up and left of the band's place on the ground.
@@ -43,6 +46,8 @@ static func build(building: Dictionary, sheet: Texture2D) -> Dictionary:
 		material = 1
 	elif Biomes.in_isles(rect.position):
 		material = SNOW_MATERIAL
+	elif Biomes.in_sunreach(rect.position):
+		material = PLASTER_MATERIAL
 	var far: Image = _strips[material][1]
 	var gable: Image = _strips[material][2]
 	var trim: Image = _strips[material][3]
@@ -51,7 +56,7 @@ static func build(building: Dictionary, sheet: Texture2D) -> Dictionary:
 	var y_n: int = rect.position.y * TILE - BAND_HALF - OVERHANG
 	var y_s: int = (rect.end.y - 1) * TILE + BAND_HALF + OVERHANG + 1
 	var depth: int = y_s - y_n
-	var height: int = roundi(depth * PITCH)
+	var height: int = roundi(depth * (FLAT_PITCH if material == PLASTER_MATERIAL else PITCH))
 	var y_r: int = roundi((y_n + y_s) / 2.0) - height
 	var lean: int = roundi(height * LEAN)
 	var origin := Vector2i(x0 - lean - 1, mini(y_n, y_r) - 3)
@@ -90,7 +95,7 @@ static func build(building: Dictionary, sheet: Texture2D) -> Dictionary:
 	for y: int in range(y_r, y_s + 1):
 		var t: float = float(y_s - y) / float(y_s - y_r)
 		image.set_pixel(x1 - roundi(lean * t) - origin.x, y - origin.y, outline)
-	if hash(rect.position) % 2 == 0:
+	if hash(rect.position) % 2 == 0 and material != PLASTER_MATERIAL:
 		_chimney(image, trim, Vector2i(x0 + roundi((x1 - x0) * 0.68) - roundi(lean * 0.8) - origin.x, y_r + 4 - origin.y), outline)
 	for row: int in SHADOW_ROWS:
 		image.fill_rect(Rect2i(x0 + 1 - origin.x, y_s + 1 + row - origin.y, x1 - x0 - 1, 1),

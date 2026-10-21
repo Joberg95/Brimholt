@@ -73,7 +73,7 @@ static func local(clock: float, cell: Vector2i) -> Dictionary:
 		weather["rain"] = maxf(weather["rain"], 0.25)
 		weather["cloud"] = maxf(weather["cloud"], 0.35)
 		weather["flash"] = 0.0
-	if Biomes.in_desert(cell):
+	if Biomes.in_desert(cell) or Biomes.in_sunreach(cell):
 		weather["cloud"] *= 0.35
 		weather["rain"] = 0.0
 		weather["storm"] = 0.0

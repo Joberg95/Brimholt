@@ -3820,15 +3820,19 @@ func _layer_checks() -> void:
 		"a region rebuild sees only the generated base")
 	MapIO.free_scene(own)
 	map_root.free()
-	var tagged: bool = true
-	var island_camps: int = 0
 	var scene: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
-	for marker: Node in scene.get_node("MonsterSpawns").get_children():
-		if String(marker.name).begins_with("Island_silverwood_"):
-			island_camps += 1
-			tagged = tagged and String(marker.get_meta("region", "")) == "silverwood"
+	for region: String in ["silverwood", "sunreach"]:
+		var tagged: bool = true
+		var island_camps: int = 0
+		for marker: Node in scene.get_node("MonsterSpawns").get_children():
+			if String(marker.name).begins_with("Island_%s_" % region):
+				island_camps += 1
+				tagged = tagged and String(marker.get_meta("region", "")) == region
+		check(island_camps > 0 and tagged, "%s is rebuilt from its region spec, its camps tagged with the region" % region)
 	scene.free()
-	check(island_camps > 0 and tagged, "Silverwood is rebuilt from its region spec, its camps tagged with the region")
+	var qasrun: Vector2i = World.FERRYMEN["sunreach"]["cell"]
+	check(Atlas.continent_at(qasrun) == "Sunreach" and Biomes.in_sunreach(qasrun) and Regions.name_at(qasrun) == "Sunreach",
+		"Sunreach is a continent and region of its own, its harbour in the desert biome")
 	_brush_checks()
 
 ## The editor brushes (game/maps/brushes.gd, addons/brimholt_brushes): what they paint, where

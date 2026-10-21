@@ -42,6 +42,9 @@ const SNOW: Color = Color("#e2e9f0")
 const FIRS: Array[Color] = [Color("#f2f6fa"), Color("#4a6a58"), Color("#2c4636"), Color("#1a2c22")]
 const LOG_WALL: Color = Color("#6a4a2c")
 const SNOW_ROOF: Array[Color] = [Color("#f4f8fc"), Color("#d4dee8"), Color("#8a9aaa")]
+## Sunreach's (Biomes.SUNREACH) sandstone walls and flat sand-plaster roofs.
+const SAND_WALL: Color = Color("#a0825e")
+const SAND_ROOF: Array[Color] = [Color("#edd8a6"), Color("#d0b88a"), Color("#896a4c")]
 
 ## The page being painted's first pixel on the whole map: pixel patterns run on across pages.
 var _page_pixel: Vector2i = Vector2i.ZERO
@@ -122,7 +125,7 @@ func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
 		"C", "L", "R":
 			_ridge(image, corner, cell)
 		"#", "W":
-			_fill(image, corner, LOG_WALL if Biomes.in_isles(cell) else WALL)
+			_fill(image, corner, LOG_WALL if Biomes.in_isles(cell) else SAND_WALL if Biomes.in_sunreach(cell) else WALL)
 		"s":
 			_fill(image, corner, _vary(SNOW, cell, 0.04))
 		"P":
@@ -207,7 +210,7 @@ func _ridge(image: Image, corner: Vector2i, cell: Vector2i) -> void:
 ## A roof: terracotta, with a lit ridge row and a dark edge where the building ends.
 func _roof(image: Image, corner: Vector2i, cell: Vector2i) -> void:
 	var index: int = World.ROOF_AT[cell]
-	var tones: Array[Color] = SNOW_ROOF if Biomes.in_isles(cell) else ROOF
+	var tones: Array[Color] = SNOW_ROOF if Biomes.in_isles(cell) else SAND_ROOF if Biomes.in_sunreach(cell) else ROOF
 	for y: int in SCALE:
 		for x: int in SCALE:
 			image.set_pixelv(corner + Vector2i(x, y), tones[1] if (y + corner.y + _page_pixel.y) % 3 else tones[0])

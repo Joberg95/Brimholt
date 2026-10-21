@@ -2052,6 +2052,7 @@ def wraith(direction, frame):
 # Painted-style creatures (tools/generators/creatures.py): one untinted sheet per species, the
 # same 64x64 frames and rows as characters (stand, step A, step B).
 import creatures  # noqa: E402
+import palette as pal  # noqa: E402
 import props  # noqa: E402
 import gear3d  # noqa: E402
 import pixel_axes  # noqa: E402
@@ -4033,6 +4034,87 @@ def desert_plant(variant):
     return image
 
 
+# A palm's crown (the master palette's FOLIAGE) and ringed trunk (OAK).
+PALM_TOPS = ((41, 30), (23, 32), (35, 20))
+
+
+def palm(variant):
+    """A date palm (trees in Sunreach, Biomes.SUNREACH; palms.png), in the 64x96 tree cell with the
+    trunk's foot on the tile centre at (32, 80): a leaning trunk of stacked rings lit on its left,
+    a crown of long arching fronds whose leaflets hang from the spine, dark under the crown, and a
+    cluster of dates. Variants lean right, lean left, and stand tall."""
+    rng = random.Random(7700 + variant)
+    image = Image(FRAME, 96)
+    for x, y in ellipse(32, 81, 11, 3):
+        image.set(x, y, SHADOW)
+    top_x, top_y = PALM_TOPS[variant]
+    bend_x = 32 + (top_x - 32) * 0.2
+    trunk = Image(FRAME, 96)
+    wood = pal.OAK
+    steps_ = 80 - top_y
+    for i in range(steps_ + 1):
+        t = i / steps_
+        # A quadratic curve from the foot up to the crown: the lean grows toward the top.
+        cx = (1 - t) ** 2 * 32 + 2 * (1 - t) * t * bend_x + t * t * top_x
+        cy = 80 - i
+        half = 3.6 - 1.4 * t + (0.8 if i < 3 else 0.0)
+        ring = (i + variant) % 4 == 0
+        for x in range(int(cx - half - 1), int(cx + half + 2)):
+            across = (x + 0.5 - cx) / half
+            if abs(across) > 1.0:
+                continue
+            tone = 2 if across < -0.35 else 3 if across < 0.35 else 4
+            if ring:
+                tone = min(6, tone + 2)
+            elif (i + variant) % 4 == 1 and across < 0.2:
+                tone = max(1, tone - 1)  # the lit lip of each ring
+            trunk.set(x, int(cy), wood[tone])
+    image.over(trunk.outlined(pal.outline(wood)))
+    crown = Image(FRAME, 96)
+    leaf = pal.FOLIAGE
+    # Fronds: (angle in degrees, 0 = east, counter-clockwise; length). The ones reaching back
+    # (upward) are drawn first and darker; those hanging toward the viewer last.
+    fronds = [(100, 15), (60, 17), (140, 17), (20, 21), (165, 21), (-15, 20), (195, 19), (-50, 15), (230, 15)]
+    fronds.sort(key=lambda frond: math.sin(math.radians(frond[0])), reverse=True)
+    for index, (angle, length) in enumerate(fronds):
+        angle += rng.uniform(-8, 8)
+        length += rng.randrange(-1, 2)
+        dx, dy = math.cos(math.radians(angle)), -math.sin(math.radians(angle))
+        back = dy < -0.3
+        lit = dx < 0.2 and dy < 0.5
+        spine = []
+        for k in range(int(length * 2) + 1):
+            t = k / (length * 2)
+            # Out along the frond, rising a little first and then drooping under its own weight.
+            x = top_x + dx * length * t
+            y = top_y - 1 + dy * length * t * 0.7 - 4 * t + 13 * t * t
+            spine.append((x, y, t))
+        for x, y, t in spine:
+            reach = (1.0 - t) * 4.6 + 1.0
+            for side in (-1, 1):
+                for r in range(1, int(reach) + 1):
+                    # Leaflets slant toward the tip and hang down.
+                    lx = x + (-dy * side) * r * 0.7 + dx * r * 0.45
+                    ly = y + (dx * side) * r * 0.5 + r * 0.75
+                    tone = 1 if lit else 3
+                    if back:
+                        tone += 1
+                    if side == 1 and dy > -0.3:
+                        tone += 1
+                    if r == int(reach):
+                        tone += 1
+                    if _grain(int(lx), int(ly), 71 + variant) < 0.12:
+                        tone -= 1
+                    crown.set(int(round(lx)), int(round(ly)), leaf[max(0, min(6, tone))])
+            crown.set(int(round(x)), int(round(y)), leaf[0 if lit and not back else 2])
+    # Dates under the crown, and the shade it throws on the trunk's top.
+    for ox, oy in ((-2, 3), (1, 4), (3, 2), (-1, 5)):
+        for x, y in ellipse(top_x + ox, top_y + oy, 1.4, 1.4):
+            crown.set(x, y, pal.BRONZE[3] if (x + y) % 3 else pal.BRONZE[1])
+    image.over(crown.outlined(pal.outline(leaf)))
+    return image
+
+
 ROCK = (rgba("a8a294"), rgba("8a8476"), rgba("6a6458"), rgba("4a463e"))
 MOSS = (rgba("7a9050"), rgba("5a7040"))
 
@@ -4798,7 +4880,7 @@ def _ashlar(along, height, tones, course=6, length=13, salt=0):
     return tones[tone]
 
 
-def cuboid(image, x0, y0, width, depth, height, face, side, top, open_south=True, open_east=True, slits=False):
+def cuboid(image, x0, y0, width, depth, height, face, side, top, open_south=True, open_east=True, slits=False, line=CASTLE_LINE):
     """An axis-aligned block in the game's oblique view: its footprint (x0, y0, width, depth) on
     the ground plane, its top drawn `height` pixels up and left, and its south and east faces (when
     open) of ashlar between them. With `slits`, dark arrow slits in the faces."""
@@ -4807,13 +4889,13 @@ def cuboid(image, x0, y0, width, depth, height, face, side, top, open_south=True
             if open_south:
                 color = face(fx - x0, k)
                 if slits and (fx - x0) % 16 == 7 and height * 0.35 < k < height * 0.65:
-                    color = CASTLE_LINE
+                    color = line
                 image.set(fx - k, y0 + depth - 1 - k, color)
         for fy in range(y0, y0 + depth):
             if open_east:
                 color = side(fy - y0, k)
                 if slits and (fy - y0) % 16 == 7 and height * 0.35 < k < height * 0.65:
-                    color = CASTLE_LINE
+                    color = line
                 image.set(x0 + width - 1 - k, fy - k, color)
     for fy in range(y0, y0 + depth):
         for fx in range(x0, x0 + width):
@@ -4821,16 +4903,27 @@ def cuboid(image, x0, y0, width, depth, height, face, side, top, open_south=True
     # Outline the lower edges so blocks read against the ground and each other.
     if open_south:
         for fx in range(x0, x0 + width):
-            image.set(fx, y0 + depth - 1, CASTLE_LINE)
+            image.set(fx, y0 + depth - 1, line)
     if open_east:
         for fy in range(y0, y0 + depth):
-            image.set(x0 + width - 1, fy, CASTLE_LINE)
+            image.set(x0 + width - 1, fy, line)
 
 
-def castle_block(mask, tower):
+# Qasrun's curtain walls and towers (sandstone_castle_walls.png, sandstone_castle_towers.png):
+# the castle's ashlar in sandstone (face and side: four tones and the mortar; the walkway; line).
+SANDSTONE_CASTLE = ((pal.SANDSTONE[1], pal.SANDSTONE[2], pal.SANDSTONE[3], pal.SANDSTONE[4], pal.SANDSTONE[6]),
+                    (pal.SANDSTONE[2], pal.SANDSTONE[3], pal.SANDSTONE[4], pal.SANDSTONE[5], pal.SANDSTONE[7]),
+                    (pal.SANDSTONE[0], pal.SANDSTONE[1], pal.SANDSTONE[2], pal.SANDSTONE[3]),
+                    pal.outline(pal.SANDSTONE))
+
+
+def castle_block(mask, tower, stone=None):
     """A castle wall or tower block indexed by open sides (1 N, 2 W, 4 S, 8 E: sides not joined to
     more castle wall, or for a tower, to more tower): ashlar faces where open, a flagstone walkway,
-    and merlons along every open edge of the top. Towers stand twice as tall, with arrow slits."""
+    and merlons along every open edge of the top. Towers stand twice as tall, with arrow slits.
+    `stone` swaps the grey stone for another (SANDSTONE_CASTLE)."""
+    CASTLE_FACE, CASTLE_SIDE, CASTLE_TOP, CASTLE_LINE = stone or (globals()["CASTLE_FACE"], globals()["CASTLE_SIDE"],
+                                                                  globals()["CASTLE_TOP"], globals()["CASTLE_LINE"])
     open_north, open_west, open_south, open_east = (bool(mask & bit) for bit in (1, 2, 4, 8))
     raise_ = TOWER_RAISE if tower else CASTLE_RAISE
     size = TILE + raise_ + CASTLE_PAD
@@ -4855,7 +4948,7 @@ def castle_block(mask, tower):
             tone = min(3, tone + 1)
         return CASTLE_TOP[tone]
 
-    cuboid(image, base, base, TILE, TILE, raise_, face, side, flag, open_south, open_east, slits=tower)
+    cuboid(image, base, base, TILE, TILE, raise_, face, side, flag, open_south, open_east, slits=tower, line=CASTLE_LINE)
     top = CASTLE_PAD  # the walkway's top-left corner in the frame
     # Merlons stand along open edges: 6 px blocks with 4 px gaps, drawn from the back to the front.
     merlons = []
@@ -4881,18 +4974,20 @@ def castle_block(mask, tower):
         cuboid(image, x, y, width, depth, MERLON,
                lambda a, h: CASTLE_FACE[1] if h < MERLON - 1 else CASTLE_FACE[0],
                lambda a, h: CASTLE_SIDE[2],
-               lambda a, b: CASTLE_TOP[0] if a + b < 3 else CASTLE_TOP[1])
+               lambda a, b: CASTLE_TOP[0] if a + b < 3 else CASTLE_TOP[1], line=CASTLE_LINE)
     return image
 
 
 THIN_BAND = (11, 21)  # a thin wall's masonry band across its tile
 
 
-def thin_wall(mask, stone=None, height=WALL - TILE):
+def thin_wall(mask, stone=None, height=WALL - TILE, face=None, line=OUTLINE):
     """A thin wall (town houses and walls): a 10-pixel masonry band through the tile centre,
     reaching the tile edge toward each connected side (1 N, 2 W, 4 S, 8 E: a wall or a doorway
     there), raised height px (16 like the thick walls; HOUSE_RAISE for house walls) with its south
-    and east faces showing, in a TILE + height square frame."""
+    and east faces showing, in a TILE + height square frame. `face(side, along, height)`, when
+    given, colours the faces instead ("south" or "east", px along the face and up from its foot;
+    None keeps the masonry), and `line` is the outline."""
     top_tones, south, east = stone or STONE
     lo, hi = THIN_BAND
     shape = set(box(lo, lo, hi - lo, hi - lo))
@@ -4913,15 +5008,19 @@ def thin_wall(mask, stone=None, height=WALL - TILE):
                     color = south[1]
                 elif height % 8 == 6 and along % 15 > 2:
                     color = south[2]
+                if face is not None and k != raise_:
+                    color = face("south", x, height) or color
                 if k == raise_:
-                    color = OUTLINE
+                    color = line
             else:
                 along = y + (5 if (height // 8) % 2 else 0)
                 color = east[0]
                 if height % 8 == 7 or along % 12 == 0:
                     color = east[1]
+                if face is not None and k != raise_:
+                    color = face("east", y, height) or color
                 if k == raise_ or (x + 1, y) in shape:
-                    color = OUTLINE if k == raise_ else color
+                    color = line if k == raise_ else color
             if (x + 1, y) in shape and (x, y + 1) in shape:
                 continue
             image.set(px, py, color)
@@ -4941,8 +5040,56 @@ def thin_wall(mask, stone=None, height=WALL - TILE):
         for dx, dy in ((0, -1), (-1, 0)):
             nx, ny = x + dx, y + dy
             if 0 <= nx < TILE and 0 <= ny < TILE and (nx, ny) not in shape and image.get(nx, ny) is None:
-                image.set(nx, ny, OUTLINE)
+                image.set(nx, ny, line)
     return image
+
+
+# Sunreach's houses (sandstone_walls.png): cream plaster over sandstone, from the master palette.
+SANDSTONE_STONE = ((pal.SANDSTONE[1], pal.SANDSTONE[0], pal.SANDSTONE[3], pal.SANDSTONE[4]),
+                   (pal.SANDSTONE[2], pal.SANDSTONE[4], pal.SANDSTONE[1]),
+                   (pal.SANDSTONE[3], pal.SANDSTONE[5], pal.SANDSTONE[2]))
+SANDSTONE_LINE = pal.outline(pal.SANDSTONE)
+# Window frames: SANDSTONE_WINDOW columns hold the walls with a window in the south (mask 10) or
+# east (mask 5) face; SpriteArt picks them on some straight walls.
+SANDSTONE_WINDOW = (19, 20)
+
+
+def sandstone_face(window=False):
+    """Faces of a Sunreach wall, after the desert towns of the OpenTibia sprite pack (reference
+    only): smooth plaster with fine speckle and a hairline crack here and there, a dark plinth at
+    the foot, a lit cornice under a shadow line at the top, and (with `window`) a small arched
+    window closed by a latticed wooden screen."""
+    ramp = pal.SANDSTONE
+
+    def color(side, along, height):
+        east = side == "east"
+        base = 3 if east else 2
+        if height < 3:
+            return ramp[base + 2]
+        if height >= HOUSE_RAISE - 3:
+            return ramp[base - 1]
+        if height == HOUSE_RAISE - 4:
+            return ramp[base + 2]
+        if window and 11 <= along <= 20 and 14 <= height <= 25:
+            inner = 12 <= along <= 19 and 15 <= height <= 24 - (1 if along in (12, 19) else 0)
+            if not inner:
+                return ramp[base - 2] if height == 14 else ramp[base + 1]
+            if (along - 12) % 3 == 0 or (height - 15) % 3 == 0:
+                return pal.OAK[4 if east else 3]
+            return pal.DARK_WOOD[5]
+        grain = _grain(along, height + (7 if east else 0), 87)
+        if grain < 0.08:
+            return ramp[base + 1]
+        if grain > 0.95:
+            return ramp[base - 1]
+        if (along * 3 + height * 5) % 97 == 0:
+            return ramp[base + 2]
+        return ramp[base]
+    return color
+
+
+def sandstone_wall(mask, window=False):
+    return thin_wall(mask, stone=SANDSTONE_STONE, height=HOUSE_RAISE, face=sandstone_face(window), line=SANDSTONE_LINE)
 
 
 def thin_wall_fill(stone=None):
@@ -5457,6 +5604,8 @@ ROOF_MATERIALS = [
     tuple(rgba(c) for c in ("67707a", "525a64", "3e444d", "2a2f36")),
     tuple(rgba(c) for c in ("8a6a45", "715436", "573f27", "3c2b1b")),
     tuple(rgba(c) for c in ("f4f8fc", "dde6ef", "b6c4d4", "5a4630")),
+    # Sunreach's flat roofs of sand plaster (game/render/roof_art.gd _flat): light, base, dark, deep.
+    (pal.SANDSTONE[0], pal.SANDSTONE[1], pal.SANDSTONE[3], pal.SANDSTONE[5]),
 ]
 
 
@@ -5493,6 +5642,15 @@ def roof_swatches(material):
                     elif level == 0 or along == 1:
                         color = light
                     color = scale(color, 1.0 + ((hash_cell((x + (4 if course % 2 else 0)) // 8, course) % 5) - 2) * 0.04)
+                elif material == 4:  # sand plaster: smooth, fine speckle, a hairline crack now and then
+                    grain = _grain(x, y, 91)
+                    color = base
+                    if grain < 0.07:
+                        color = dark
+                    elif grain > 0.94:
+                        color = light
+                    elif (x * 5 + y * 3) % 61 == 0:
+                        color = scale(dark, 0.92)
                 elif material == 3:  # snow over shingles: soft drifts, a dark shingle edge peeking out
                     offset = 3 if course % 2 else 0
                     ragged = hash_cell((x + offset) // 8, course) % 5
@@ -6055,6 +6213,11 @@ def main():
                                  + [boulder(v) for v in range(3)]),
         "mushrooms.png": sheet_row([mushroom(v) for v in range(3)]),
         "firs.png": sheet_row([snowy_fir(v) for v in range(3)]),
+        "palms.png": sheet_row([palm(v) for v in range(3)]),
+        "sandstone_walls.png": sheet([sandstone_wall(mask) for mask in range(16)]
+                                     + [house_door(False, sandstone_wall), house_door(True, sandstone_wall),
+                                        thin_wall_fill(SANDSTONE_STONE), sandstone_wall(10, True), sandstone_wall(5, True)],
+                                     21, TILE + HOUSE_RAISE),
         "log_walls.png": sheet([thin_wall(mask, stone=LOG_WOOD, height=HOUSE_RAISE) for mask in range(16)]
                                + [Image(TILE + HOUSE_RAISE, TILE + HOUSE_RAISE)] * 2 + [thin_wall_fill(LOG_WOOD)], 19,
                                TILE + HOUSE_RAISE),
@@ -6076,6 +6239,10 @@ def main():
         "ores.png": sheet([ore_vein(band, glint) for glint in (False, True) for band in range(5)], 5, WALL),
         "castle_walls.png": sheet([castle_block(mask, False) for mask in range(16)], 16, TILE + CASTLE_RAISE + CASTLE_PAD),
         "castle_towers.png": sheet([castle_block(mask, True) for mask in range(16)], 16, TILE + TOWER_RAISE + CASTLE_PAD),
+        "sandstone_castle_walls.png": sheet([castle_block(mask, False, SANDSTONE_CASTLE) for mask in range(16)], 16,
+                                            TILE + CASTLE_RAISE + CASTLE_PAD),
+        "sandstone_castle_towers.png": sheet([castle_block(mask, True, SANDSTONE_CASTLE) for mask in range(16)], 16,
+                                             TILE + TOWER_RAISE + CASTLE_PAD),
         "cave_rock.png": sheet([cave_rock(mask, variant) for variant in range(MOUNTAIN_VARIANTS) for mask in range(16)], 16, WALL),
         "mountains.png": sheet([mountain(mask, variant) for variant in range(MOUNTAIN_VARIANTS) for mask in range(16)], 16, WALL),
         "walls.png": sheet([wall(mask) for mask in range(16)] + [wall(mask, OBSIDIAN_STONE) for mask in range(16)]

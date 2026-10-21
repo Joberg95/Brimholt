@@ -40,6 +40,7 @@ const REGIONS: Array = [
 	["Rimewater Floes", Vector2i(104, 808), "Broken sea ice over the Rimewater Trench"],
 	# The archipelago (docs/plan/40-archipelago.md, tools/generators/islands.gd).
 	["Silverwood", Vector2i(900, 170), "Old elven woods and still lakes round the castle of Aldmoor"],
+	["Sunreach", Vector2i(520, 860), "Dunes, mesas, and palm oases round the sandstone castle of Qasrun"],
 ]
 ## Shown for desert tiles, whatever the nearest anchor.
 const DESERT: String = "Sunscar Dunes"

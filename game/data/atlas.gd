@@ -38,6 +38,7 @@ const CONTINENTS: Array = [
 	{"name": "the frost isles", "cells": Biomes.ISLES},
 	# The archipelago (tools/generators/islands.gd ISLANDS).
 	{"name": "Silverwood", "cells": Rect2i(760, 60, 240, 220)},
+	{"name": "Sunreach", "cells": Biomes.SUNREACH},
 ]
 ## The baked world map: one PNG per page (<sx>_<sy>.png, MAP_SCALE pixels per cell), a small
 ## overview of the whole overworld (one pixel per cell) for zooming far out, and pages.json with

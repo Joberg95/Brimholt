@@ -36,3 +36,15 @@ const ISLES_LIGHT: Color = Color(0.9, 0.95, 1.06)
 
 static func in_isles(cell: Vector2i) -> bool:
 	return ISLES.has_point(cell)
+
+
+## Sunreach (docs/plan/47-world-plan.md), the desert island south of the mainland painted by
+## make region NAME=sunreach: palms by its oases, and the sandstone castle of Qasrun and town of
+## Duneford, whose houses have sandstone walls, flat sand-plaster roofs, and slab streets. It never
+## rains there, and the light is warmer.
+const SUNREACH: Rect2i = Rect2i(380, 740, 280, 240)
+const SUNREACH_LIGHT: Color = Color(1.06, 1.0, 0.9)
+
+
+static func in_sunreach(cell: Vector2i) -> bool:
+	return SUNREACH.has_point(cell)

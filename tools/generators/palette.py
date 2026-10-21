@@ -107,7 +107,7 @@ IDENTITY = {
     "ember": {"ground": "CAVE_EARTH", "accent": "EMBER", "regions": [
         "Smoulder Fells", "Emberwaste", "Grimtusk Hold"]},
     "hollow": {"ground": "HOLLOW", "accent": "HOLLOW_GLOW", "regions": ["Hollow March"]},
-    "desert": {"ground": "SAND", "accent": "SANDSTONE", "regions": ["Sunscar Dunes"]},
+    "desert": {"ground": "SAND", "accent": "SANDSTONE", "regions": ["Sunscar Dunes", "Sunreach"]},
     "frost": {"ground": "SNOW", "accent": "ICE", "regions": [
         "Hrimfold Tundra", "Wolfskerry", "Rimewater Floes"]},
     "castle": {"ground": "FIELDSTONE", "accent": "EMBER", "regions": []},

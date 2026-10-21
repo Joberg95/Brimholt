@@ -215,6 +215,11 @@ relocations, then fix-ups. That doesn't scale to Tibia density.
    from the camps round it). Done. Later, if wanted: painting across sectors from
    `overworld.tscn`, and furnishing stamped houses (Decor markers).
 5. Then build regions one by one from the plan (plan 40's islands become region specs).
+   Silverwood and Sunreach are built (layout). Sunreach is the first desert region spec
+   (`"biome": "desert"` in `islands.gd`: dunes, cactus groves, mesas, palm oases; Qasrun's
+   sandstone castle and Duneford), drawn in its own art after the OpenTibia sprite pack's
+   desert towns (reference only): cream plaster walls with latticed windows, flat sand-plaster
+   roofs, sandstone castle walls, slab streets, and palms. Next: Verdance.
 
 ### Floors: target
 Up to six levels; every floor is **partial** (void where nothing is built), only the surface is full:
