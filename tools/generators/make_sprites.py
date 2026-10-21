@@ -3722,10 +3722,8 @@ def mushroom(variant):
     foot, a broad cap lit from the top-left with darker spots and a shaded rim, the gills dark
     under it. Caps: dull teal, violet, and rust."""
     rng = random.Random(7100 + variant)
-    caps = ((rgba("6a9a8a"), rgba("4e7a6c"), rgba("365a50"), rgba("22403a")),
-            (rgba("8a6a9a"), rgba("6a4e7a"), rgba("4a365a"), rgba("2e2240")),
-            (rgba("a8704a"), rgba("885436"), rgba("643c26"), rgba("402418")))[variant]
-    stem = (rgba("e0d8c0"), rgba("c8bea2"), rgba("a09678"), rgba("6a6450"))
+    caps = (pal.BOG_WATER[0:4], pal.HOLLOW[1:5], pal.BRONZE[2:6])[variant]
+    stem = (pal.BONE[0], pal.BONE[1], pal.BONE[3], pal.BONE[5])
     image = Image(FRAME, 96)
     for x, y in ellipse(32, 82, 15, 4):
         image.set(x, y, SHADOW)
@@ -3759,7 +3757,7 @@ def mushroom(variant):
             for px, py in ellipse(sx, sy, 2, 1.4):
                 if (px, py) in cap:
                     body.set(px, py, stem[0] if variant == 2 else blend(caps[0], stem[0], 0.6))
-    image.over(body.outlined(caps[3]))
+    image.over(body.outlined(pal.outline((pal.BOG_WATER, pal.HOLLOW, pal.BRONZE)[variant])))
     return image
 
 
@@ -3815,8 +3813,9 @@ def snowy_fir(variant):
     tile centre at (32, 80). Tiers of dark drooping boughs, each loaded with snow on its upper face
     and lit from the top-left, the tip a narrow spire."""
     rng = random.Random(6600 + variant)
-    needles = (rgba("3e5e48"), rgba("2c4636"), rgba("1e3226"), rgba("142218"))
-    bark = (rgba("6a4a32"), rgba("4a3222"))
+    needles = (pal.FIR[3], pal.FIR[4], pal.FIR[5], pal.FIR[6])
+    bark = (pal.DARK_WOOD[1], pal.DARK_WOOD[3])
+    snow = (pal.SNOW[1], pal.SNOW[0], pal.SNOW[3])
     image = Image(FRAME, 96)
     for x, y in ellipse(32, 82, 14, 4):
         image.set(x, y, SHADOW)
@@ -3824,13 +3823,13 @@ def snowy_fir(variant):
     for y in range(70, 81):
         for x in range(30, 35):
             body.set(x, y, bark[0] if x < 32 else bark[1])
-    top = 6 + variant * 3
-    tiers = 5
+    # Variants differ in build, not just size: a full fir, a tall slender one, a squat broad one.
+    top, tiers, spread, base = ((6, 5, 4, 7), (2, 6, 3, 5), (16, 4, 5, 9))[variant]
     height = 72 - top
     for tier in range(tiers):
         t0 = top + tier * height // (tiers + 1)
         t1 = t0 + height // (tiers + 1) + 8
-        width = 7 + tier * 4 + variant
+        width = base + tier * spread + rng.randrange(-1, 2)
         for y in range(t0, t1):
             share = (y - t0) / max(1, t1 - t0)
             half = int(2 + share * width)
@@ -3846,12 +3845,12 @@ def snowy_fir(variant):
                 for x in range(32 - half, 32 + half + 1):
                     across = (x - 32) / max(1, half)
                     if across < 0.55 and (share < 0.3 or rng.random() < 0.7):
-                        body.set(x, y, SNOW[1] if across < -0.1 else SNOW[0] if across < 0.3 else SNOW[2])
+                        body.set(x, y, snow[0] if across < -0.1 else snow[1] if across < 0.3 else snow[2])
     for _ in range(6):
         x, y = rng.randrange(20, 44), rng.randrange(top + 6, 70)
         if body.get(x, y) in needles:
-            body.set(x, y, SNOW[0])
-    image.over(body.outlined(needles[3]))
+            body.set(x, y, snow[1])
+    image.over(body.outlined(pal.outline(pal.FIR)))
     return image
 
 
@@ -3912,7 +3911,7 @@ def plank_tile(vertical, variant):
     return image.rotated() if vertical else image
 
 
-DEAD_BARK = (rgba("5a4a66"), rgba("3e3249"), rgba("261e2e"))
+DEAD_BARK = (pal.HOLLOW[3], pal.HOLLOW[4], pal.HOLLOW[6])
 
 
 def dead_tree(variant):
@@ -3926,22 +3925,26 @@ def dead_tree(variant):
                 ((31, 50), (30, 18))]
     for (x0, y0), (x1, y1) in branches[: 4 + variant]:
         x1, y1 = x1 + rng.randrange(-3, 4), y1 + rng.randrange(-3, 4)
-        wood |= thick(line(x0, y0, x1, y1), ((0, 0), (1, 0)))
+        # Limbs two to three px thick, forking into twigs two px thick, so every part keeps an outline.
+        wood |= thick(line(x0, y0, x1, y1), ((0, 0), (1, 0), (0, 1)))
         for twig in range(2):
             tx, ty = x1 + rng.randrange(-6, 7), y1 - rng.randrange(3, 9)
-            wood |= line(x1, y1, tx, ty)
+            wood |= thick(line(x1, y1, tx, ty), ((0, 0), (1, 0)))
     trunk = Image(FRAME, 96)
     shade(trunk, wood, DEAD_BARK, False)
-    image.over(trunk.outlined())
+    for x, y in sorted(wood):
+        if (x * 7 + y * 3) % 11 == 0 and (x + 1, y) in wood:
+            trunk.set(x, y, DEAD_BARK[2])  # a split in the bark
+    image.over(trunk.outlined(pal.outline(pal.HOLLOW)))
     for _ in range(3):
         x, y = rng.choice(sorted(p for p in wood if p[1] < 50))
-        image.set(x, y - 1, rgba("b07aff"))
+        image.set(x, y - 1, pal.HOLLOW_GLOW[1])
     return image
 
 
-CACTUS = (rgba("8e9a64"), rgba("6b7a49"), rgba("4a5636"))
-SPINE = rgba("d4cca4")
-THORN_WOOD = (rgba("a28c6c"), rgba("7c6852"), rgba("554638"))
+CACTUS = (pal.BOG[0], pal.BOG[1], pal.BOG[3])
+SPINE = pal.BONE[1]
+THORN_WOOD = (pal.DIRT[1], pal.DIRT[3], pal.DIRT[5])
 
 
 
@@ -4014,8 +4017,8 @@ def desert_plant(variant):
                     plant.set(x, y, CACTUS[2])
                 if (x * 5 + y * 11) % 19 == 0 and (x, y - 1) not in barrel:
                     plant.set(x, y - 1, SPINE)
-        plant.set(27, 66, rgba("b4806a"))
-        plant.set(28, 66, rgba("c99a7e"))
+        plant.set(27, 66, pal.SKIN[2])
+        plant.set(28, 66, pal.SKIN[1])
     else:
         rng = random.Random(1300)
         twigs = set(box(31, 70, 2, 11))
@@ -4030,7 +4033,7 @@ def desert_plant(variant):
         for _ in range(9):
             x, y = rng.choice(sorted(p for p in twigs if p[1] < 70))
             plant.set(x + rng.choice((-1, 1)), y, CACTUS[1] if rng.random() < 0.6 else CACTUS[0])
-    image.over(plant.outlined(scale(CACTUS[2] if variant < 2 else THORN_WOOD[2], 0.75)))
+    image.over(plant.outlined(pal.outline(pal.BOG if variant < 2 else pal.DIRT)))
     return image
 
 
@@ -4115,8 +4118,8 @@ def palm(variant):
     return image
 
 
-ROCK = (rgba("a8a294"), rgba("8a8476"), rgba("6a6458"), rgba("4a463e"))
-MOSS = (rgba("7a9050"), rgba("5a7040"))
+ROCK = (pal.ROCK[1], pal.ROCK[2], pal.ROCK[4], pal.ROCK[6])
+MOSS = (pal.MOSS[1], pal.MOSS[2])
 
 
 def boulder(variant):
@@ -4144,16 +4147,16 @@ def boulder(variant):
             for x, y in sorted(points):
                 if y < cy - ry * 0.35 and (x * 7 + y * 3) % 4 != 0 and (x < cx + 2 or variant == 2):
                     stone.set(x, y, MOSS[(x + y) % 2])
-    image.over(stone.outlined(ROCK[3]))
+    image.over(stone.outlined(pal.outline(pal.ROCK)))
     return image
 
 
-TREE_LEAF = (rgba("9aa264"), rgba("7a894b"), rgba("65763f"), rgba("4c5d35"), rgba("39482c"), rgba("283422"))
-TREE_LEAF_LINE = rgba("1b2417")
-TREE_PINE = (rgba("86a06c"), rgba("648255"), rgba("4b6847"), rgba("375139"), rgba("273c2d"), rgba("1c2b22"))
-TREE_PINE_LINE = rgba("131d17")
-TREE_BARK = (rgba("907c5e"), rgba("6d5b45"), rgba("4f4233"), rgba("362d24"))
-TREE_BARK_LINE = rgba("211b15")
+TREE_LEAF = tuple(pal.FOLIAGE[1:7])
+TREE_LEAF_LINE = pal.outline(pal.FOLIAGE)
+TREE_PINE = tuple(pal.FIR[0:6])
+TREE_PINE_LINE = pal.outline(pal.FIR)
+TREE_BARK = tuple(pal.OAK[3:7])
+TREE_BARK_LINE = pal.outline(pal.OAK)
 
 
 def tree(variant):
@@ -4206,11 +4209,13 @@ def tree(variant):
             second = dist[1][0]
             radius = 7.5
             nx, ny = (x - ax) / radius, (y - ay) / radius
-            light = -(nx * 0.55 + ny * 0.75) * 0.9 + (32 - x) / 22 * 0.35 + (bottom - y) / (bottom - top) * 0.55 - 0.2
-            light += (_grain(x, y, 23 + variant) - 0.5) * 0.25
+            # The crown is lit as one mass from the top-left; each clump only adds a soft swell,
+            # and leaves show as 2 px flecks, so the crown reads as foliage, not pillows.
+            light = -(nx * 0.45 + ny * 0.6) * 0.55 + (32 - x) / 22 * 0.5 + (bottom - y) / (bottom - top) * 0.75 - 0.3
+            light += (_grain(x // 2, y // 2, 23 + variant) - 0.5) * 0.45
             tone = 0 if light > 0.75 else 1 if light > 0.35 else 2 if light > 0.0 else 3 if light > -0.4 else 4
-            if math.sqrt(second) - math.sqrt(first) < 1.1:
-                tone = min(5, max(tone + 2, 3))  # the gap between two clumps
+            if math.sqrt(second) - math.sqrt(first) < 1.1 and nx + ny > -0.3:
+                tone = min(5, max(tone + 2, 3))  # the shade a clump throws on its lower right
             crown.set(x, y, ramp[tone])
         # A leafy edge: bite a few pixels out and scatter single leaves just outside.
         for x, y in sorted(mask):
