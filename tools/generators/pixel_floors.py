@@ -22,6 +22,8 @@ make_sprites.py calls tile(kind, variant) for each cell of tiles.png and gets ro
 
 import math
 
+import palette as pal
+
 SIZE = 32
 FADE = 6
 
@@ -35,29 +37,31 @@ def _ramp(*values):
     return tuple(_hex(value) for value in values)
 
 
-# Five tones each, light to dark.
-GRASS = _ramp("9fbd5e", "80a546", "66893a", "4d6f2e", "375323")
-DIRT = _ramp("ab9370", "947c5b", "7c674a", "64533c", "4a3e2e")
+# Five tones each, light to dark: windows of the master palette (palette.py, plan 46 phase 4).
+# Sand and sandstone keep the tones Qasrun was approved in; the nail, crystal, carpet, fringe, and
+# flower tones are accents.
+GRASS = pal.GRASS[1:6]
+DIRT = pal.DIRT[1:6]
 SAND = _ramp("e6d6a4", "d6c38f", "c1ac7a", "a38f63", "82714d")
-GRAVEL = _ramp("aeaba1", "939088", "7a7870", "615f59", "474641")
-COBBLE = _ramp("b9b8ae", "9e9d93", "84837a", "6a6961", "4a4944")
-MORTAR = _hex("55534c")
-SNOW = _ramp("f6f9fb", "e5ecf2", "cfdae5", "b2c2d3", "91a5bb")
-ICE = _ramp("e4f2f6", "c4e0ea", "a2cbd9", "7fb0c4", "5e91a8")
-BOG = _ramp("75714a", "605d3d", "4d4b31", "3c3a26", "2a291b")
-BOG_WATER = _ramp("6f7d6c", "56645a", "414e47", "303b36", "212a27")
-DUSK = _ramp("806f8c", "695a75", "54475f", "40364b", "2d2536")
+GRAVEL = pal.GRAVEL[1:6]
+COBBLE = pal.COBBLE[1:6]
+MORTAR = pal.COBBLE[5]
+SNOW = pal.SNOW[0:5]
+ICE = pal.ICE[0:5]
+BOG = pal.BOG[1:6]
+BOG_WATER = pal.BOG_WATER[0:5]
+DUSK = pal.HOLLOW[2:7]
 DUSK_CRYSTAL = _ramp("d6c4f0", "a98fd6", "7a62ad", "523f80", "352a58")
-CAVE = _ramp("938a7e", "7d7469", "686056", "534c44", "3d3833")
-BRICK = _ramp("94573f", "7c4734", "663a2a", "512e21", "3a2018")
+CAVE = pal.CAVE_ROCK[0:5]
+BRICK = pal.BRICK[1:6]
 BRICK_MORTAR = _hex("241712")
-PLANK = _ramp("b48e5f", "9a774c", "7f613d", "654c2f", "473520")
+PLANK = pal.OAK[1:6]
 NAIL = _ramp("c9c6bc", "8f8c84", "55534e", "3a3935", "262523")
-OBSIDIAN = _ramp("5d4d76", "45395c", "342b47", "251e35", "171224")
-RUNE = _ramp("e4d4ff", "b597f2", "8a6ad6", "6447a8", "40307a")
-WATER = _ramp("86b6cf", "5d93b3", "437898", "33617f", "254b66")
-STONE = _ramp("aaa69a", "8f8b80", "757168", "5b5850", "403e39")
-CAVE_EARTH = _ramp("a0745a", "885f48", "714d3a", "5a3d2e", "402b21")
+OBSIDIAN = pal.HOLLOW[3:8]
+RUNE = pal.HOLLOW_GLOW[0:5]
+WATER = pal.WATER[1:6]
+STONE = pal.ROCK[2:7]
+CAVE_EARTH = pal.CAVE_EARTH[0:5]
 SANDSTONE = _ramp("ece0bf", "ddcda6", "cbb994", "b19f7c", "8e7c5e")
 FLAG_JOINT = _hex("6d5f49")
 CARPET = _ramp("dc4a30", "c43822", "a62b19", "862111", "5e170b")
