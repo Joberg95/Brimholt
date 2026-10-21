@@ -41,14 +41,18 @@ sheets and builders are the reference set:
 | `sandstone_castle_walls.png`, `sandstone_castle_towers.png` | `castle_block(mask, tower, SANDSTONE_CASTLE)` | Re-skinning a shape builder with a stone tuple taken from one `palette.py` ramp, line colour included, instead of copying the builder |
 | `roofs.png` row 4 | `roof_swatches` material 4, `RoofArt` `PLASTER_MATERIAL` | A regional roof as a material row plus a pitch, not a new roof system |
 | `FLAG_TILE` floors | `floor_tile("flags", v)` | Built floors: slabs in staggered courses with a hard kerbed edge |
+| `house_walls.png`, `log_walls.png`, `cellar_walls.png` | `stone_face`/`stone_wall`, `log_face`/`log_wall`, `brick_face`/`cellar_wall`, `_window` | The sandstone kit re-skinned for other materials: one face callback per material, the shared window piece (lit surround, mullion, dark glass, one glint) |
+| `tiles.png` | `pixel_floors.py` ramps | A floor ramp as a five-tone window of a `palette.py` ramp (`pal.GRASS[1:6]`), picked to keep the material's brightness |
+| `furniture.png`, `signs.png`, `fountain.png` | `props._pal(ramp, start, pattern)` | 3D-rendered props on five consecutive palette tones; cloth, glass, and fruit stay accents |
 
 The patterns to copy: **every tone from one `palette.py` ramp** (`pal.SANDSTONE`, `pal.OAK`,
 `pal.FOLIAGE`), named once as a module tuple (`SANDSTONE_STONE`, `SANDSTONE_CASTLE`); the
 outline from `pal.outline(ramp)`; regional variants chosen in `sprite_art.gd` by a `Biomes`
 rect (`in_sunreach`), with the world map, weather, and light following the same rect. The
-painted figures in `art/outfits/class_sets.png` stay the reference for characters. The older
-builders below show construction; their palettes are the old muted ones, so take ramps from
-`palette.py`, not from them.
+painted figures in `art/outfits/class_sets.png` stay the reference for characters. The
+environment (walls, trees, plants, roofs, props, ground) is repainted on these ramps (plan 46
+phase 4); characters, creatures, item icons, effects, and UI still use their builders' own ramps,
+so take ramps from `palette.py`, not from them.
 
 ## Reference builders (copy their approach)
 
@@ -107,8 +111,8 @@ Match these looks closely; draw every pixel here.
 material, **6–10 tones**, light to dark, saturated, warm bright lights, cooler and more saturated
 shadows, a near-black core. Add or tune a ramp there (and run it: `python3
 tools/generators/palette.py --swatch .tools/palette.png` checks it and draws a swatch), never as a
-private copy in a builder. Older builders keep their own module ramps until their family is repainted
-(plan 46 phase 4). A region's ground and accent ramps come from `palette.IDENTITY`. Never use an
+private copy in a builder. Builders not yet repainted (characters, creatures, icons, effects, UI) keep
+their own module ramps until their family's turn in plan 46 phase 4. A region's ground and accent ramps come from `palette.IDENTITY`. Never use an
 item's catalog colours raw; `pigment()` them.
 
 **Light.** Top-left and hard. Tops are the lightest, south faces mid, east faces darker than south

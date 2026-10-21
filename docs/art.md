@@ -32,8 +32,9 @@ master palette, `tools/generators/palette.py` (6–10 tones per material, `outli
 material's near-black, and `IDENTITY`: each region's ground and accent ramps, from Brimholt's flavour
 pillars); run it with `--swatch .tools/palette.png` to check the ramps and see them.
 
-The world is moving to this look family by family (plan 46, phase 4), so older sheets still use
-their builders' own muted ramps (restrained earth colours, outlines only on lower edges), and the
+The world is moving to this look family by family (plan 46, phase 4). The environment is done:
+walls, trees and plants, roofs, props, floors, and the world map use master-palette ramps. Creature,
+item-icon, effect, and UI sheets still use their builders' own muted ramps, and the
 character described above is the current rig, not the target: a chunkier body in 3/4 view with a
 four-frame walk, a subtle attack swing, free head/body/legs/feet colours, and 64×64 frames.
 Designs may imitate Tibia closely, but no Tibia artwork files, maps, or client data are copied:

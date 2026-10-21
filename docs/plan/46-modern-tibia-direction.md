@@ -748,18 +748,18 @@ From a sprite review on 2026-10-21 (plus plan 38's audit of 2026-10-16).
 | Area | Assets | Problem | Priority |
 | --- | --- | --- | --- |
 | Player character | `body.png`, `cloth.png`, `outfits/*`, `art/outfits/*`, 375 `gear/*` sheets | No outline, slim, flat front/side view, dark tunic vanishes on dark ground. Monsters already look more "finished" than players. Changing the body changes every gear sheet | **1** |
-| Ground | `tiles.png` via `tools/generators/pixel_floors.py`, blended and animated by `game/render/terrain.gdshader` / `water.gdshader` | **Mostly aligned** (floor redraw + terrain shader, 2026-10-20): hand-pixelled 32×32 floors, blended natural edges, animated water with shore foam. Remaining: the five-tone ramps are still on the muted side (e.g. `GRASS` 9fbd5e→375323); a saturation/contrast pass to the new master palette, and maybe 6–8 tones per ramp for modern-Tibia smoothness. (The black block in the sheet is blank cells 12–19, not a broken tile.) | 3 |
-| Old walls | `walls.png` rows 0–2 (grey crypt, purple obsidian, brown cave) | First-generation brick cubes | **1** |
-| Cave rock | `cave_rock.png` | Near-white boulders, too bright and contrasty in the wrong way; caves should be dark and moody | 2 |
-| Other walls | `house_walls`, `castle_walls`, `castle_towers`, `fieldstone_walls`, `cellar_walls`, `log_walls`, `mountains`, `crags` | Closest to target, but low saturation and thin detail; need a recolour/detail pass to the new palette | 2 |
+| Ground | `tiles.png` via `tools/generators/pixel_floors.py`, blended and animated by `game/render/terrain.gdshader` / `water.gdshader` | **Mostly aligned** (floor redraw + terrain shader, 2026-10-20): hand-pixelled 32×32 floors, blended natural edges, animated water with shore foam. **Palette pass done** (phase 4, `ae4e450`): every ramp but sand/sandstone (Qasrun's approved tones) is a five-tone window of the master palette. Open: 6–8 tones per ramp and ragged border lips. (The black block in the sheet is blank cells 12–19, not a broken tile.) | done |
+| Old walls | `walls.png` rows 0–2 (grey crypt, purple obsidian, brown cave) | **Done** (phase 4, `1131acf`): master-palette stone, obsidian, and cave ramps | done |
+| Cave rock | `cave_rock.png` | **Done** (`1131acf`): `CAVE_ROCK` ramp, darker caves | done |
+| Other walls | `house_walls`, `castle_walls`, `castle_towers`, `fieldstone_walls`, `cellar_walls`, `log_walls`, `mountains`, `crags` | **Done** (`1131acf`): master ramps, Qasrun-style stone/log/brick faces and windows. Open: the mountain top is still busy | done |
 | Creatures | `creatures/*` (67), `monsters/*` (12 tinted templates), `mounts/*` (30) | Best current art, but muted and some read as blobs (behemoth). Need saturation, 3/4 view, clearer silhouettes. Lizardfolk/ogre shamans are humans in hoods | 2 |
 | Item icons | `items.png`, `icons/*` (168), `icons_derived/*` (80), `items_anim/*` (34) | Two generations: rich hand-pixelled weapons/potions/food vs flat generated armour/legs/boots (plan 39) | 2 |
-| Trees and plants | `firs.png`, trees, `herbs.png`, `mushrooms.png` | Oak canopy pillow-shaded cells, snowy firs repetitive, dead purple trees are 1px lines with no outline | 2 |
-| Props and furniture | `objects.png`, `furniture.png`, `signs.png`, `wall_decor.png`, `fountain.png`, `ores.png`, `coins.png` | Several pieces drawn flat front-on instead of oblique; palette muted | 3 |
-| Roofs | `roofs.png` | Recolour to saturated palette | 3 |
+| Trees and plants | `firs.png`, trees, `herbs.png`, `mushrooms.png` | **Done** (`e16cfb4`): master ramps, no pillow shading, three distinct firs, outlined dead trees. Herbs keep their item colours. Open: more tree variants | done |
+| Props and furniture | `objects.png`, `furniture.png`, `signs.png`, `wall_decor.png`, `fountain.png`, `ores.png`, `coins.png` | **Palette done** (`2b9b2c8`): prop materials on master ramps (cloth, glass, fruit stay accents). Open: flat front-on pieces, `ores.png`, `coins.png` | 3 |
+| Roofs | `roofs.png` | **Done** (`2b9b2c8`): clay BRICK, slate FIELDSTONE, shingle OAK, snow SNOW | done |
 | Effects | `spells.png`, `spell_missiles.png`, `rune_fx.png`, `items_glow.png`, `assets/third_party/kenney_particle_pack` | Check against Tibia's bold effects; Kenney particles are a different style | 3 |
 | UI | `menu_icons.png`, `title.png`, fonts | Not reviewed yet | 3 |
-| World map | `world_map/*` (57) | Rebake after terrain changes | last |
+| World map | `world_map/*` (57) | **Rebaked** in the ground palette (`ae4e450`); rebake again after later terrain changes | last |
 
 ## Plan
 
@@ -815,6 +815,10 @@ For each asset family, pick one:
 5. Item icons (absorbs plan 39).
 6. Trees, plants, props, furniture, roofs, signs.
 7. Effects, UI, title, then rebake the world map.
+
+Progress (2026-10-21): steps 2, 3, and 6 are done for colour (walls `1131acf`, trees and plants
+`e16cfb4`, roofs and props `2b9b2c8`, ground and world map `ae4e450`); the audit table lists what is
+left in each family. Steps 1, 4, 5, and 7 are open.
 
 After each step: screenshot tour (`tools/testing/shot.gd`) of every town, region, cave and dungeon, and
 compare against the golden sprites and private Tibia references.
