@@ -3726,6 +3726,52 @@ func _cave_checks() -> void:
 	check(thirties >= 15, "the elite caves give levels 30-45 fifteen tasks (%d)" % thirties)
 
 
+## Floors (Atlas.FLOOR_X): one overworld-sized plane per floor from BOTTOM to TOP, on sector
+## boundaries, apart from each other, the overworld, and the dungeon and cave bands; a cell maps
+## to the same surface cell on every floor; the bands lie on no floor.
+func _floor_checks() -> void:
+	var planes: Array[Rect2i] = []
+	var apart: bool = true
+	for z: int in range(Atlas.BOTTOM, Atlas.TOP + 1):
+		var area: Rect2i = Atlas.plane(z)
+		apart = apart and area.position.x % Atlas.SECTOR == 0 and area.size == Atlas.OVERWORLD_SIZE
+		apart = apart and (z == 0 or area.position.x >= Caves.BAND_X)
+		for other: Rect2i in planes:
+			apart = apart and not other.grow(1).intersects(area)
+		planes.append(area)
+	check(Atlas.FLOOR_X.size() == Atlas.TOP - Atlas.BOTTOM + 1 and Atlas.plane(0) == World.OVERWORLD and Atlas.plane(-1) == Atlas.UNDERGROUND
+		and apart, "every floor is its own plane beside the overworld, on sector boundaries")
+	var surface := Vector2i(301, 77)
+	var mapped: bool = true
+	for z: int in range(Atlas.BOTTOM, Atlas.TOP + 1):
+		var cell: Vector2i = Atlas.to_floor(surface, z)
+		mapped = mapped and Atlas.floor_of(cell) == z and Atlas.on_surface(cell) == surface
+		mapped = mapped and Atlas.below_ground(cell) == (z < 0) and Atlas.above_ground(cell) == (z > 0)
+		mapped = mapped and (z == Atlas.TOP or Atlas.above(cell) == Atlas.to_floor(surface, z + 1))
+		mapped = mapped and (z == Atlas.BOTTOM or Atlas.below(cell) == Atlas.to_floor(surface, z - 1))
+	check(mapped and Atlas.above(Atlas.to_floor(surface, Atlas.TOP)) == Vector2i(-1, -1)
+		and Atlas.below(Atlas.to_floor(surface, Atlas.BOTTOM)) == Vector2i(-1, -1), "a cell keeps its place on every floor, up to TOP and down to BOTTOM")
+	var band := Vector2i(Dungeons.BAND_X + 5, 10)
+	check(Atlas.floor_of(band) == Atlas.NO_FLOOR and Atlas.floor_of(Vector2i(Caves.BAND_X + 5, 10)) == Atlas.NO_FLOOR
+		and Atlas.to_floor(band, -1) == Vector2i(-1, -1) and not Atlas.below_ground(band) and not Atlas.above_ground(band),
+		"the dungeon and cave bands lie on no floor")
+	check(Atlas.floor_name(0) == "Surface" and Atlas.floor_name(2) == "Floor +2" and Atlas.floor_name(-1) == "Floor −1",
+		"floors are named for players")
+	# Painted bounds per floor (MapIO), and every way between floors joins two neighbouring floors.
+	check(World.floor_bounds(0) == World.OVERWORLD and World.floor_bounds(-1).has_area()
+		and Atlas.UNDERGROUND.encloses(World.floor_bounds(-1)) and not World.floor_bounds(Atlas.TOP).has_area(),
+		"each floor knows its painted part")
+	var neighbours: bool = true
+	for cell: Vector2i in World.HOLES:
+		var other: Vector2i = World.HOLES[cell]
+		var step: int = Atlas.floor_of(other) - Atlas.floor_of(cell)
+		neighbours = neighbours and absi(step) == 1 and Atlas.on_surface(other) == Atlas.on_surface(cell)
+		neighbours = neighbours and World.terrain(cell if step > 0 else other) == "^" and World.terrain(other if step > 0 else cell) == "v"
+	check(not World.HOLES.is_empty() and neighbours, "ways between floors join stairs up to the hole or ladder right above them")
+	check(World.floor_of_rect(Rect2i(Atlas.UNDER_X + 4, 4, 8, 8)) == -1 and World.floor_of_rect(Rect2i(Atlas.UNDER_X - 4, 4, 8, 8)) == Atlas.NO_FLOOR,
+		"a zone lies on a floor only when it lies wholly on it")
+
+
 ## The floor below the mainland (docs/plan/44, tools/generators/underground.gd): a plane beside the
 ## overworld lined up under it, joined by holes in the wilds and ladders in town streets over stairs
 ## up right below; tunnel networks for levels 10-40 and sewers under the bigger towns, each an
@@ -3738,6 +3784,7 @@ func _underground_checks() -> void:
 	check(Atlas.UNDERGROUND.position.x > Caves.BAND_X and not Atlas.UNDERGROUND.intersects(World.OVERWORLD)
 		and Atlas.UNDERGROUND.size == World.OVERWORLD.size and Atlas.below(Vector2i(10, 20)) == Vector2i(Atlas.UNDER_X + 10, 20)
 		and Atlas.above(Atlas.below(Vector2i(7, 9))) == Vector2i(7, 9), "the floor below lies beside the overworld, cell for cell")
+	_floor_checks()
 	var wild: int = 0
 	var ladders: int = 0
 	var paired: bool = true
@@ -3809,7 +3856,7 @@ func _underground_checks() -> void:
 	instances.after_move(1, 2.0)
 	check(World.OVERWORLD.has_point(world.players[1]["cell"]) and World.chebyshev(world.players[1]["cell"], hole) <= 3
 		and World.terrain(world.players[1]["cell"]) != "v", "the stairs lead back up beside the hole")
-	check(Nav.space_of(below)[0] == "underground" and Nav.space_of(below)[1].has_point(below), "bots route underground in a space of its own")
+	check(Nav.space_of(below)[0] == "floor -1" and Nav.space_of(below)[1].has_point(below), "bots route underground in a space of its own")
 	# Caves moved below (Caves "below", caves_below.gd): stairs right under the mouth, apart from the
 	# tunnels, the sewers, and each other, their band rect left empty; a save inside follows the cave.
 	var moved: Array = Caves.ORDER.filter(func(cave: String) -> bool: return Caves.CAVES[cave].has("below"))

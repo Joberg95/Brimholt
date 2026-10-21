@@ -25,7 +25,7 @@ const TILESET_PATH: String = "res://game/maps/terrain.tres"
 const SECTORS: String = "Sectors"
 const TERRAIN: String = "Terrain"
 const BAKE_PATH: String = "res://game/maps/world.bake"
-const BAKE_VERSION: int = 1
+const BAKE_VERSION: int = 2
 ## Marker groups the bake keeps, as World reads them.
 const MARKER_GROUPS: Array[String] = ["Spawns", "Items", "Ferrymen", "QuestGivers", "Townsfolk", "Zones", "DungeonEntrances",
 	"CaveMouths", "MonsterSpawns", "Decor"]
@@ -35,7 +35,8 @@ const VOID: int = 32
 
 
 ## The map as plain data: {grid: PackedByteArray (one terrain character per cell, row-major),
-## size, painted (the painted part of the overworld), markers: {group: [records]}}, from the bake
+## size, painted (the painted part of the overworld), floors: {z: the painted part of each floor
+## other than the surface (Atlas.FLOOR_X)}, markers: {group: [records]}}, from the bake
 ## when it is current, else from the scene.
 static func read_map() -> Dictionary:
 	if FileAccess.file_exists(BAKE_PATH):
@@ -120,14 +121,23 @@ static func extract(scene_root: Node) -> Dictionary:
 	for y: int in size.y:
 		grid.append_array(sea_row if y < Atlas.OVERWORLD_SIZE.y else void_row)
 	var painted := Rect2i()
+	var floors: Dictionary = {}
 	for layer: TileMapLayer in found:
 		for cell: Vector2i in layer.get_used_cells():
 			if cell.x < 0 or cell.y < 0:
 				continue
 			var coords: Vector2i = layer.get_cell_atlas_coords(cell)
-			grid[cell.y * size.x + cell.x] = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), VOID)
+			var code: int = lookup.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), VOID)
+			grid[cell.y * size.x + cell.x] = code
 			if cell.x < Atlas.OVERWORLD_SIZE.x and cell.y < Atlas.OVERWORLD_SIZE.y:
 				painted = Rect2i(cell, Vector2i.ONE) if painted.size == Vector2i.ZERO else painted.expand(cell)
+			elif code != VOID:
+				var z: int = Atlas.floor_of(cell)
+				if z != Atlas.NO_FLOOR:
+					# Rect2i.expand reaches the cell's corner, so each floor grows by one at the end.
+					floors[z] = Rect2i(cell, Vector2i.ONE) if not floors.has(z) else (floors[z] as Rect2i).expand(cell)
+	for z: int in floors:
+		floors[z] = Rect2i(floors[z].position, floors[z].size + Vector2i.ONE)
 	var markers: Dictionary = {}
 	for group: String in MARKER_GROUPS:
 		var records: Array = []
@@ -136,7 +146,8 @@ static func extract(scene_root: Node) -> Dictionary:
 				if marker is Node2D:
 					records.append(_record(marker as Node2D))
 		markers[group] = records
-	return {"grid": grid, "size": size, "painted": Rect2i(painted.position, painted.size + Vector2i.ONE), "markers": markers}
+	return {"grid": grid, "size": size, "painted": Rect2i(painted.position, painted.size + Vector2i.ONE), "floors": floors,
+		"markers": markers}
 
 
 ## A marker as a plain record: its name, its cell, and its script's exported properties.

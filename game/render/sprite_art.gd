@@ -372,7 +372,7 @@ static func floor_texel(cell: Vector2i) -> int:
 		if outside == "." and not inside.is_empty() and not EDGES.any(func(side: Vector2i) -> bool: return tile_at(cell + side) == "."):
 			outside = inside
 		# Below ground there is no grass: a corner wall of the sewers stands on the floor beside it.
-		if outside == "." and inside.is_empty() and Atlas.UNDERGROUND.has_point(cell):
+		if outside == "." and inside.is_empty() and Atlas.below_ground(cell):
 			for corner: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
 				var floor_beside: String = tile_at(cell + corner)
 				if floor_beside in World.LAND and floor_beside not in ["v", "^"]:
@@ -488,9 +488,10 @@ static func ground_under(cell: Vector2i) -> String:
 ## crypt) a ladder opening, into a cave (rock walls) or an elite cave a hole in the ground; out of
 ## a built dungeon a ladder up, out of a cave rough steps.
 static func way_tile(cell: Vector2i) -> int:
-	if tile_at(cell) == "^" and Atlas.UNDERGROUND.has_point(cell):
-		# Up to a town (a sewer's ladder) or out of the tunnels by rough steps.
-		return STAIRS_UP_TILE if World.zone_at(Atlas.above(cell)).get("town", false) else ROCK_STEPS_TILE
+	if tile_at(cell) == "^" and World.HOLES.has(cell):
+		# Between floors: a ladder in or up to a town (a sewer's, a house's), rough steps elsewhere.
+		var town: bool = World.zone_at(cell).get("town", false) or World.zone_at(World.HOLES[cell]).get("town", false)
+		return STAIRS_UP_TILE if town else ROCK_STEPS_TILE
 	if tile_at(cell) == "^":
 		var place: Array = World.dungeon_at(cell)
 		return STAIRS_UP_TILE if not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] == "#" else ROCK_STEPS_TILE
@@ -612,7 +613,7 @@ static func natural_rock(cell: Vector2i) -> bool:
 ## A cave hewn by nature, not built: an elite or farming cave, the underground's tunnels, or a
 ## dungeon with rock walls.
 static func rock_cave(cell: Vector2i) -> bool:
-	if not Caves.at(cell).is_empty() or Atlas.UNDERGROUND.has_point(cell):
+	if not Caves.at(cell).is_empty() or Atlas.below_ground(cell):
 		return true
 	var place: Array = World.dungeon_at(cell)
 	return not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] in ["L", "C"]

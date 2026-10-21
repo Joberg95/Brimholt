@@ -8,10 +8,10 @@ extends Node
 ## task when it lies off the minimap. The world map opens centred on you at OPEN_ZOOM pixels per
 ## tile; the mouse wheel (or + and −) zooms around the cursor, dragging pans (over the painted
 ## land and a margin of sea), and its key, Esc, or Close closes it. Quest givers show their
-## "!"/"?" marks. The floor buttons (or Page Up and Page Down) switch between the surface and the
-## floor below (Atlas.UNDERGROUND), drawn in the same tiles as the land above it: one pixel per
-## tile of the tunnels and sewers (World.underground_bounds), their names, and the ways up. It opens
-## on the floor you stand on. Right-click the world map to place your own marker (an icon and a
+## "!"/"?" marks. The floor buttons (or Page Up and Page Down) step through the floors that have
+## anything painted (Atlas.FLOOR_X, World.floor_bounds), each drawn in the same tiles as the
+## surface over or under it: one pixel per tile, the zones' names, and the ways up and down. It
+## opens on the floor you stand on, and the minimap names your floor off the surface. Right-click the world map to place your own marker (an icon and a
 ## label) or remove one; markers are kept on this computer (marker_file), as Tibia keeps its
 ## minimap markers, and show on the world map and the minimap on their own floor.
 
@@ -69,9 +69,10 @@ var _overview: ImageTexture
 ## Off the overworld (dungeons, caves, the Void Throne): a flat map of the area you are in.
 var _flat_area: Rect2i = Rect2i()
 var _flat_texture: ImageTexture
-## The floor the world map shows: 0 the surface, 1 the floor below; and the floor below's map.
+## The floor the world map shows (0 the surface, -1 the floor below, 1 the one above), and the
+## map of each floor off the surface, made the first time it is shown.
 var shown_floor: int = 0
-var _under_texture: ImageTexture
+var _floor_textures: Dictionary = {}
 var _floor_label: Label
 ## Your markers: {cell (a world cell, either floor), icon (MARKER_ICONS), label}, saved to
 ## marker_file; and the menu that places or removes one.
@@ -149,7 +150,7 @@ func remove_marker(cell: Vector2i, save: bool = true) -> void:
 ## The world cell under a point of the world map window, on the floor it shows.
 func cell_at(point: Vector2) -> Vector2i:
 	var tile: Vector2 = center + (point - _map_area().get_center()) / zoom
-	return Vector2i(tile.floor()) + (Vector2i(Atlas.UNDER_X, 0) if shown_floor == 1 else Vector2i.ZERO)
+	return Vector2i(tile.floor()) + Vector2i(Atlas.FLOOR_X[shown_floor], 0)
 
 
 ## Right-click on the world map: the marker menu for the cell there (or the marker within a few
@@ -433,11 +434,11 @@ func _build_controls(layer: CanvasLayer) -> void:
 			zoom = maxf(OPEN_ZOOM, _fit_zoom())
 			# Underground (dungeon copies lie outside the overworld) it opens on the painted world's centre.
 			var here: Vector2 = game.camera_focus() / World.TILE_SIZE
-			var below: bool = Atlas.UNDERGROUND.has_point(Vector2i(here))
-			if below:
-				here -= Vector2(Atlas.UNDER_X, 0)
+			var level: int = Atlas.floor_of(Vector2i(here))
+			if level != Atlas.NO_FLOOR:
+				here -= Vector2(Atlas.FLOOR_X[level], 0)
 			center = here if World.OVERWORLD.has_point(Vector2i(here)) else bounds().get_center()
-			_show_floor(1 if below else 0)
+			_show_floor(level if level != Atlas.NO_FLOOR else 0)
 			_clamp_view())
 	layer.add_child(world_map)
 	var buttons := HBoxContainer.new()
@@ -447,7 +448,7 @@ func _build_controls(layer: CanvasLayer) -> void:
 	_floor_label.custom_minimum_size = Vector2(84, 0)
 	_floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	buttons.add_child(_floor_label)
-	for entry: Array in [["▲", func() -> void: _show_floor(0)], ["▼", func() -> void: _show_floor(1)],
+	for entry: Array in [["▲", func() -> void: _step_floor(1)], ["▼", func() -> void: _step_floor(-1)],
 			["−", func() -> void: zoom_by(1.0 / ZOOM_STEP, _map_area().get_center())],
 			["+", func() -> void: zoom_by(ZOOM_STEP, _map_area().get_center())], ["Close", world_map.hide]]:
 		var button := Button.new()
@@ -459,18 +460,38 @@ func _build_controls(layer: CanvasLayer) -> void:
 	_build_marker_menu()
 
 
-## Shows the surface (0) or the floor below (1).
+## The floors the world map can show, top first: the surface and every floor with anything painted.
+static func mapped_floors() -> Array[int]:
+	var found: Array[int] = []
+	for level: int in range(Atlas.TOP, Atlas.BOTTOM - 1, -1):
+		if level == 0 or World.floor_bounds(level).has_area():
+			found.append(level)
+	return found
+
+
+## Shows floor `level` (the nearest mapped floor to it).
 func _show_floor(level: int) -> void:
-	shown_floor = clampi(level, 0, 1)
-	_floor_label.text = "Surface" if shown_floor == 0 else "Floor below"
+	var floors: Array[int] = mapped_floors()
+	shown_floor = 0
+	for candidate: int in floors:
+		if absi(candidate - level) < absi(shown_floor - level):
+			shown_floor = candidate
+	_floor_label.text = Atlas.floor_name(shown_floor)
 	world_map.queue_redraw()
 
 
-## The floor below at one pixel per tile, over the part that holds its tunnels and sewers.
-func _floor_below_texture() -> ImageTexture:
-	if _under_texture == null and World.underground_bounds().has_area():
-		_under_texture = ImageTexture.create_from_image(_flat(World.underground_bounds()))
-	return _under_texture
+## One mapped floor up (1) or down (-1) from the one shown.
+func _step_floor(direction: int) -> void:
+	var floors: Array[int] = mapped_floors()
+	var at: int = floors.find(shown_floor)
+	_show_floor(floors[clampi(at - direction, 0, floors.size() - 1)])
+
+
+## A floor off the surface at one pixel per tile, over its painted part.
+func _floor_texture(level: int) -> ImageTexture:
+	if not _floor_textures.has(level) and World.floor_bounds(level).has_area():
+		_floor_textures[level] = ImageTexture.create_from_image(_flat(World.floor_bounds(level)))
+	return _floor_textures.get(level)
 
 
 ## The part of the world map window that shows the map (below the header).
@@ -511,7 +532,7 @@ func _clamp_view() -> void:
 
 func _world_map_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode in [KEY_PAGEUP, KEY_PAGEDOWN]:
-		_show_floor(0 if event.keycode == KEY_PAGEUP else 1)
+		_step_floor(1 if event.keycode == KEY_PAGEUP else -1)
 		world_map.accept_event()
 	elif event is InputEventMouseButton:
 		match event.button_index:
@@ -558,14 +579,13 @@ func _draw_label(font: Font, at: Vector2, text: String, size: int, color: Color,
 
 
 ## Where a cell's marker lands on a canvas. The world map (`folded`) draws each floor in the tiles
-## of the surface and leaves out what lies on the other floor (Vector2.INF, outside every area).
+## of the surface and leaves out what lies on the other floors (Vector2.INF, outside every area).
 func _marker_at(cell: Vector2, origin: Vector2, scale: float, folded: bool) -> Vector2:
 	if folded:
-		var below: bool = Atlas.UNDERGROUND.has_point(Vector2i(cell))
-		if below != (shown_floor == 1):
+		var level: int = Atlas.floor_of(Vector2i(cell))
+		if level != shown_floor:
 			return Vector2.INF
-		if below:
-			cell -= Vector2(Atlas.UNDER_X, 0)
+		cell -= Vector2(Atlas.FLOOR_X[level], 0)
 	return origin + (cell + Vector2(0.5, 0.5)) * scale
 
 
@@ -668,6 +688,11 @@ func _draw_minimap() -> void:
 		_draw_guidance(minimap, origin, MINIMAP_SCALE, view)
 	_draw_markers(minimap, origin, MINIMAP_SCALE, view)
 	_draw_player_markers(minimap, origin, MINIMAP_SCALE, view, false)
+	var level: int = Atlas.floor_of(cell)
+	if level != 0 and level != Atlas.NO_FLOOR:
+		var font: Font = ThemeDB.fallback_font
+		minimap.draw_string_outline(font, Vector2(4, 13), Atlas.floor_name(level), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color.BLACK)
+		minimap.draw_string(font, Vector2(4, 13), Atlas.floor_name(level), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#f0d070"))
 	minimap.draw_rect(view, Color("#3a4450"), false, 1.0)
 
 
@@ -681,8 +706,8 @@ func _draw_world_map() -> void:
 	var shown := Rect2(origin + painted.position * scale, painted.size * scale).intersection(_map_area())
 	var tiles := Rect2((shown.position - origin) / scale, shown.size / scale)
 	var font: Font = ThemeDB.fallback_font
-	if shown_floor == 1:
-		_draw_floor_below(origin, scale, shown, font)
+	if shown_floor != 0:
+		_draw_other_floor(origin, scale, shown, font)
 		_draw_header(font)
 		return
 	_draw_terrain(world_map, origin, scale, tiles, zoom < OVERVIEW_ZOOM)
@@ -743,15 +768,16 @@ func _draw_header(font: Font) -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dfe4ea"))
 
 
-## The floor below: black rock with the tunnels and sewers in the tiles of the land above, their
-## names and levels, the ways up, and you when you are down there.
-func _draw_floor_below(origin: Vector2, scale: float, shown: Rect2, font: Font) -> void:
+## A floor off the surface: black where nothing is painted, the rest in the tiles of the surface
+## over or under it, its zones' names and levels, the ways up and down, and you when you are there.
+func _draw_other_floor(origin: Vector2, scale: float, shown: Rect2, font: Font) -> void:
 	world_map.draw_rect(shown, Color.BLACK)
-	var texture: ImageTexture = _floor_below_texture()
+	var texture: ImageTexture = _floor_texture(shown_floor)
 	if texture == null:
 		return
-	var area: Rect2i = World.underground_bounds()
-	var above := Rect2(Vector2(area.position - Vector2i(Atlas.UNDER_X, 0)), Vector2(area.size))
+	var shift := Vector2i(Atlas.FLOOR_X[shown_floor], 0)
+	var area: Rect2i = World.floor_bounds(shown_floor)
+	var above := Rect2(Vector2(area.position - shift), Vector2(area.size))
 	var visible: Rect2 = Rect2((shown.position - origin) / scale, shown.size / scale).intersection(above)
 	if visible.has_area():
 		world_map.draw_texture_rect_region(texture, Rect2(origin + visible.position * scale, visible.size * scale),
@@ -759,9 +785,9 @@ func _draw_floor_below(origin: Vector2, scale: float, shown: Rect2, font: Font) 
 	_draw_markers(world_map, origin, scale, shown, true)
 	_draw_player_markers(world_map, origin, scale, shown, true)
 	for zone: Dictionary in World.ZONES:
-		if not Atlas.UNDERGROUND.encloses(zone["rect"]):
+		if World.floor_of_rect(zone["rect"]) != shown_floor:
 			continue
-		var at: Vector2 = origin + Vector2(zone["rect"].get_center() - Vector2i(Atlas.UNDER_X, 0)) * scale
+		var at: Vector2 = origin + Vector2(zone["rect"].get_center() - shift) * scale
 		if shown.has_point(at):
 			_draw_label(font, at, zone["name"], 13, Color("#e0a870"), Vector2.ZERO, true)
 			_draw_label(font, at, "levels %d–%d" % [zone["min_level"], zone["max_level"]], 11, REGION_TINT, Vector2(0, 13), true)

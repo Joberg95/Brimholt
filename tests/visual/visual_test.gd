@@ -752,7 +752,7 @@ func _check_ferry_and_maps() -> bool:
 	below_map.save_png("res://.tools/visual-map-below.png")
 	var earth: Color = maps.MAP_COLORS["c"]
 	var seen: Color = below_map.get_pixelv(Vector2i(game.VIEW_ORIGIN + maps.map_point(maps.center)))
-	if not _expect(tunnel.x >= 0 and maps.shown_floor == 1 and absf(seen.r - earth.r) + absf(seen.g - earth.g) + absf(seen.b - earth.b) < 0.12,
+	if not _expect(tunnel.x >= 0 and maps.shown_floor == -1 and absf(seen.r - earth.r) + absf(seen.g - earth.g) + absf(seen.b - earth.b) < 0.12,
 			"Page Down did not show the floor below (%s vs %s)" % [seen, earth]):
 		return false
 	var page_up := InputEventKey.new()

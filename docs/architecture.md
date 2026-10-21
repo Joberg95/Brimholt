@@ -27,7 +27,7 @@ game/
     quests.gd            Town, hub, and dungeon tasks, their givers and rewards, relic keepers, trainers
     dungeons.gd          Instanced dungeon layouts, copies, levels, and monsters
     caves.gd             Shared elite caves: areas, levels, camps, and champions
-    atlas.gd             How the mainland and the frost isles sit on the world map
+    atlas.gd             How the mainland and the frost isles sit on the world map; floors as z (FLOOR_X)
     bot_behavior.tres    The bots' LimboAI behavior tree (edit in the editor's LimboAI tab; `make bot-tree` rebuilds it)
     biomes.gd            Climate regions (the desert: no rain, cactus scrub)
     regions.gd           Named overworld regions (anchors and descriptions; levels derived)
@@ -123,6 +123,11 @@ flowchart LR
 
 `game/core/world.gd` loads the map scene (terrain from its sectors, spawns, items, ferrymen,
 zones, monster spawns) and owns the item catalog and authoritative movement, inventory, and travel rules.
+Floors are slots on the one 2D grid: each floor z from `Atlas.BOTTOM` (−2) to `Atlas.TOP` (+3) is an
+overworld-sized plane at x = `Atlas.FLOOR_X[z]` (the surface at 0, floor −1 at 2560), lined up so a
+cell maps to the same surface cell on every floor (`Atlas.to_floor`, `floor_of`, `below`, `above`).
+Floors are partial: `MapIO` bakes each one's painted bounds (`World.floor_bounds`), `HOLES` pairs a
+"^" with the "v" on the floor above, and the dungeon and cave bands lie on no floor (`NO_FLOOR`).
 `game/core/combat.gd` runs targeting, attacks, spells, monster AI, deaths, experience, loot,
 and respawns on the host; `game/data/monsters.gd` and `game/data/spells.gd` are their catalogs. `game/main.gd` handles ENet,
 sender-validated RPCs, the camera, input, and interpolation, and assembles the UI components in

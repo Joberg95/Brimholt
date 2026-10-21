@@ -191,7 +191,12 @@ relocations, then fix-ups. That doesn't scale to Tibia density.
 
 ### Suggested order
 1. Write the world plan (frame frozen, all regions and floors listed). No code. Done: plan 47.
-2. Floors as z refactor (engine), with the underground plane migrated to z = below.
+2. Floors as z refactor (engine), with the underground plane migrated to z = below. Done (engine):
+   floor slots, not a Vector3i migration (owner's choice): cells stay 2D and each floor from −2 to
+   +3 is a plane at `Atlas.FLOOR_X[z]`; holes pair any two neighbouring floors, zones, nav, and the
+   world map (▲/▼ through every painted floor) and minimap (floor name) know z. Drawing other floors
+   (lower floors offset and dimmed, roof and upper-floor hiding, cliff faces) waits for a painted
+   upper floor (step 2b, "Making floors feel right").
 3. Base/override layers + `make region` pipeline; convert one existing region (e.g. Brackenford's
    mainland ring) to prove it.
 4. Editor brushes.

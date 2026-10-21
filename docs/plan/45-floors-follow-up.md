@@ -11,7 +11,7 @@ dungeons stay in the band: their parallel copies cannot all lie under one stairw
 1. **World map floors:** ▲ and ▼ in the world map's header (or Page Up and Page Down) switch
    between the surface and the floor below, drawn in the same tiles as the land above it: the
    tunnels, sewers, and moved caves at one pixel per tile (`World.underground_bounds`, built once
-   from the map), their names and levels, the ways up, your markers, and you. It opens on the floor
+   from the map; since plan 46 step 2, `World.floor_bounds(z)` for every floor), their names and levels, the ways up, your markers, and you. It opens on the floor
    you stand on. No baked pages are needed below (it is mostly void).
 2. **Walking cost:** `World.GROUND_STEP`: a step onto a dirt road or a street takes 0.8 of a plain
    step, a bridge or a keep's floor 0.85, sand 1.1, snow 1.15, bog 1.3. Clients take each step's

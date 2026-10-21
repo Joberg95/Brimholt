@@ -58,9 +58,11 @@ static var ENTRANCE_OF: Dictionary = {}
 ## stairs up (its "^" cell), where players arrive and leave.
 static var CAVE_MOUTHS: Dictionary = {}
 static var MOUTH_OF: Dictionary = {}
-## Ways between the floors (Atlas.UNDERGROUND): a hole or ladder ("v") on the surface and the stairs
-## up ("^") right below it, each cell -> the other.
+## Ways between the floors (Atlas.FLOOR_X): stairs up ("^") on one floor and the hole or ladder
+## ("v") right above them on the next, each cell -> the other.
 static var HOLES: Dictionary = {}
+## The painted part of each floor other than the surface: z -> Rect2i (MapIO).
+static var FLOOR_BOUNDS: Dictionary = {}
 static var CAVE_STAIRS: Dictionary = {}
 ## The walkable world players reach on foot (Atlas.OVERWORLD_SIZE); dungeon copies lie right of it.
 static var OVERWORLD: Rect2i = Rect2i()
@@ -224,6 +226,7 @@ static func _static_init() -> void:
 	GRID = data["grid"]
 	GRID_SIZE = data["size"]
 	PAINTED = data["painted"]
+	FLOOR_BOUNDS = data.get("floors", {})
 	_CHARS.clear()
 	for code: int in 256:
 		_CHARS.append(String.chr(code) if code > 0 else "")
@@ -278,8 +281,8 @@ static func _static_init() -> void:
 				ZONES[-1]["ambient"] = marker.get("ambient")
 			if marker.get("square") is Vector2i and (marker.get("square") as Vector2i).x >= 0:
 				ZONES[-1]["square"] = marker.get("square")
-			# Zones on the floor below (tunnels and sewers) are underground: dim, dry, no mounts.
-			if Atlas.UNDERGROUND.encloses(ZONES[-1]["rect"]):
+			# Zones on a floor below (tunnels and sewers) are underground: dim, dry, no mounts.
+			if floor_of_rect(ZONES[-1]["rect"]) < 0:
 				ZONES[-1]["underground"] = true
 	if markers.has("DungeonEntrances"):
 		for marker: Dictionary in markers["DungeonEntrances"]:
@@ -347,27 +350,30 @@ static func _static_init() -> void:
 	MAP_HASH = hashing.finish().hex_encode()
 
 
-## The part of the floor below that holds its zones (tunnels and sewers): what its map shows and
-## where bots route below.
-static func underground_bounds() -> Rect2i:
-	var bounds := Rect2i()
-	for zone: Dictionary in ZONES:
-		if Atlas.UNDERGROUND.encloses(zone["rect"]):
-			bounds = zone["rect"] if bounds.size == Vector2i.ZERO else bounds.merge(zone["rect"])
-	return bounds
+## The painted part of floor z (the overworld for the surface; empty where nothing is painted):
+## what its map shows and where bots route on it.
+static func floor_bounds(z: int) -> Rect2i:
+	return OVERWORLD if z == 0 else FLOOR_BOUNDS.get(z, Rect2i())
 
 
-## HOLES: every stairs up ("^") on the underground floor with a hole or ladder ("v") right above it
-## (found with the grid's own search: stairs are few, the floor is large).
+## The floor a rectangle lies on when it lies wholly on one (Atlas.NO_FLOOR otherwise).
+static func floor_of_rect(rect: Rect2i) -> int:
+	var z: int = Atlas.floor_of(rect.position)
+	return z if z != Atlas.NO_FLOOR and Atlas.plane(z).encloses(rect) else Atlas.NO_FLOOR
+
+
+## HOLES: every stairs up ("^") on a floor with a hole or ladder ("v") right above it on the next
+## (found with the grid's own search: stairs are few, the floors are large).
 static func _pair_holes() -> void:
 	HOLES.clear()
 	var up: int = "^".unicode_at(0)
 	var at: int = GRID.find(up)
 	while at >= 0:
 		var cell := Vector2i(at % GRID_SIZE.x, at / GRID_SIZE.x)
-		if Atlas.UNDERGROUND.has_point(cell) and terrain(Atlas.above(cell)) == "v":
-			HOLES[cell] = Atlas.above(cell)
-			HOLES[Atlas.above(cell)] = cell
+		var over: Vector2i = Atlas.above(cell)
+		if over.x >= 0 and terrain(over) == "v":
+			HOLES[cell] = over
+			HOLES[over] = cell
 		at = GRID.find(up, at + 1)
 
 

@@ -10,6 +10,7 @@ const World = preload("res://game/core/world.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Caves = preload("res://game/data/caves.gd")
+const Atlas = preload("res://game/data/atlas.gd")
 const Balance = preload("res://game/data/balance.gd")
 
 var world: World
@@ -52,7 +53,7 @@ func after_move(id: int, now: float) -> Array:
 	return []
 
 
-## Down a hole or ladder to the floor below, or up its stairs to the surface (World.HOLES): out
+## Down a hole or ladder to the floor below, or up its stairs to the floor above (World.HOLES): out
 ## beside the way at the other end, so the next step does not take you back.
 func climb(id: int, cell: Vector2i, now: float) -> Array:
 	var other: Vector2i = World.HOLES[cell]
@@ -60,11 +61,16 @@ func climb(id: int, cell: Vector2i, now: float) -> Array:
 	_bounce_to(id, other, now, events)
 	var place: Dictionary = World.location_at(world.players[id]["cell"])
 	var text: String
-	if World.terrain(other) == "^":
+	var to: int = Atlas.floor_of(other)
+	if World.terrain(other) == "^" and to < 0:
 		text = "You climb down into %s (levels %d-%d)." % [place.get("name", "the dark"), place.get("min_level", 0),
 			place.get("max_level", 0)]
-	else:
+	elif World.terrain(other) == "^":
+		text = "You climb down to %s." % Atlas.floor_name(to).to_lower()
+	elif to == 0:
 		text = "You climb back up into %s." % place.get("name", "the open air")
+	else:
+		text = "You climb up to %s." % Atlas.floor_name(to).to_lower()
 	events.append({"kind": "message", "id": id, "text": text})
 	return events
 

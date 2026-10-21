@@ -18,9 +18,18 @@ const SECTOR: int = 128
 ## north-west corner, where the game began.
 const MAINLAND: Rect2i = Rect2i(0, 0, 640, 640)
 const HEARTLAND: Rect2i = Rect2i(0, 0, 384, 384)
-## The underground (docs/plan/44-underground-floor.md): a floor below the overworld, laid beside it
-## past the dungeon and cave bands and lined up under it, so the cell under surface (x, y) is
-## (x + UNDER_X, y). A hole ("v") on the surface over stairs up ("^") right below joins the two.
+## Floors (docs/plan/46 and 47): z 0 is the surface (the overworld), up to TOP above it and down
+## to BOTTOM below. Cells stay 2D: each floor is a plane the size of the overworld laid beside it
+## at a fixed x (FLOOR_X, on sector boundaries, a void gap between planes), so the cell over or
+## under surface (x, y) on floor z is (x + FLOOR_X[z], y). Only the surface is full; the other
+## floors are void wherever nothing is painted. Stairs up ("^") on floor z with a hole or ladder
+## ("v") right above them on floor z + 1 join the two (World.HOLES). The dungeon and cave bands
+## (x 1924-2560) lie on no floor: floor_of() is NO_FLOOR there.
+const TOP: int = 3
+const BOTTOM: int = -2
+const FLOOR_X: Dictionary = {0: 0, -1: 2560, -2: 4608, 1: 6656, 2: 8704, 3: 10752}
+const NO_FLOOR: int = 1000
+## The floor below the overworld (docs/plan/44-underground-floor.md): tunnels, sewers, caves.
 const UNDER_X: int = 2560
 const UNDERGROUND: Rect2i = Rect2i(UNDER_X, 0, OVERWORLD_SIZE.x, OVERWORLD_SIZE.y)
 ## Each continent is crossed to and from only by boat.
@@ -75,10 +84,53 @@ static func continent_at(cell: Vector2i) -> String:
 	return ""
 
 
-## The underground cell under a surface cell, and the surface cell over an underground one.
+## A floor's plane: its cells in world coordinates.
+static func plane(z: int) -> Rect2i:
+	return Rect2i(Vector2i(FLOOR_X[z], 0), OVERWORLD_SIZE)
+
+
+## The floor a cell lies on, or NO_FLOOR (the dungeon and cave bands, or off every plane).
+static func floor_of(cell: Vector2i) -> int:
+	if cell.y < 0 or cell.y >= OVERWORLD_SIZE.y:
+		return NO_FLOOR
+	for z: int in FLOOR_X:
+		if cell.x >= FLOOR_X[z] and cell.x < FLOOR_X[z] + OVERWORLD_SIZE.x:
+			return z
+	return NO_FLOOR
+
+
+## Below ground (a floor under the surface), or above it (a floor over the surface).
+static func below_ground(cell: Vector2i) -> bool:
+	return floor_of(cell) < 0
+
+
+static func above_ground(cell: Vector2i) -> bool:
+	var z: int = floor_of(cell)
+	return z > 0 and z != NO_FLOOR
+
+
+## The surface cell a cell lies over or under (itself on the surface); (-1, -1) off every floor.
+static func on_surface(cell: Vector2i) -> Vector2i:
+	var z: int = floor_of(cell)
+	return cell - Vector2i(FLOOR_X[z], 0) if z != NO_FLOOR else Vector2i(-1, -1)
+
+
+## The cell over or under `cell` on floor z; (-1, -1) off every floor or past TOP and BOTTOM.
+static func to_floor(cell: Vector2i, z: int) -> Vector2i:
+	if not FLOOR_X.has(z) or floor_of(cell) == NO_FLOOR:
+		return Vector2i(-1, -1)
+	return on_surface(cell) + Vector2i(FLOOR_X[z], 0)
+
+
+## The cell one floor down and one floor up.
 static func below(cell: Vector2i) -> Vector2i:
-	return cell + Vector2i(UNDER_X, 0)
+	return to_floor(cell, floor_of(cell) - 1)
 
 
 static func above(cell: Vector2i) -> Vector2i:
-	return cell - Vector2i(UNDER_X, 0)
+	return to_floor(cell, floor_of(cell) + 1)
+
+
+## A floor as players read it: "Surface", "Floor +1", "Floor −2".
+static func floor_name(z: int) -> String:
+	return "Surface" if z == 0 else "Floor %s%d" % ["+" if z > 0 else "−", absi(z)]

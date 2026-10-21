@@ -1,6 +1,6 @@
 extends RefCounted
 ## Long-range navigation for bots: Godot's AStarGrid2D per space (each continent, Atlas.CONTINENTS;
-## the rest of the painted overworld as one more), stairways and dungeon copies excluded, each
+## the rest of the painted overworld as one more; each floor off the surface), stairways and dungeon copies excluded, each
 ## built the first time a bot routes there, so startup and memory do not grow with the world.
 ## Bots follow a planned route and step around whoever stands on it with Combat.path_step; the
 ## route is re-planned when they stray. There is no way between spaces on foot (boats cross).
@@ -11,10 +11,12 @@ const Atlas = preload("res://game/data/atlas.gd")
 static var _grids: Dictionary = {}
 
 
-## The space a cell lies in: [name, cells] of its continent, or ["", the painted overworld].
+## The space a cell lies in: [name, cells] of its continent, ["", the painted overworld], or
+## ["floor <z>", the painted part of that floor] off the surface (Atlas.floor_of).
 static func space_of(cell: Vector2i) -> Array:
-	if Atlas.UNDERGROUND.has_point(cell):
-		return ["underground", World.underground_bounds()]
+	var z: int = Atlas.floor_of(cell)
+	if z != 0 and z != Atlas.NO_FLOOR:
+		return ["floor %d" % z, World.floor_bounds(z)]
 	for continent: Dictionary in Atlas.CONTINENTS:
 		if (continent["cells"] as Rect2i).has_point(cell):
 			return [continent["name"], continent["cells"]]
