@@ -3889,6 +3889,31 @@ func _brush_checks() -> void:
 		"a brush reads a sector's override over its base, open sea where neither is painted")
 	sector.free()
 	base.free()
+	var stamp: Dictionary = Brushes.house(Vector2i(4, 4), Brushes.HOUSE_MAX, Vector2i.DOWN)
+	var stamped: Callable = func(cell: Vector2i) -> String: return stamp.get(cell, ".")
+	var houses: Array = Brushes.Buildings.find(stamped, Rect2i(0, 0, 20, 20))
+	check(houses.size() == 1 and (houses[0]["doors"] as Array) == [Vector2i(9, 11)] and stamp[Vector2i(9, 11)] == "=",
+		"the largest house stamp is still a roofed building, its door in the middle of the chosen side")
+	var gates: Array[Vector2i] = [Vector2i.DOWN, Vector2i.UP]
+	var keep: Dictionary = Brushes.castle(Vector2i(0, 0), Vector2i(40, 30), gates)
+	var ward: Callable = func(cell: Vector2i) -> String: return keep.get(cell, ".")
+	var open: bool = true
+	for x: int in range(19, 22):
+		open = open and ward.call(Vector2i(x, 29)) == "=" and ward.call(Vector2i(x, 0)) == "="
+	var towers: int = 0
+	for cell: Vector2i in keep:
+		if keep[cell] == "W" and ward.call(cell + Vector2i.RIGHT) == "W" and ward.call(cell + Vector2i.DOWN) == "W" and ward.call(cell + Vector2i.ONE) == "W":
+			towers += 1
+	check(open and ward.call(Vector2i(0, 15)) == "W" and ward.call(Vector2i(39, 15)) == "W" and towers >= 8
+		and Brushes.Buildings.find(ward, Rect2i(-2, -2, 44, 34)).is_empty(),
+		"a castle stamp is a towered curtain wall open at its gates, a ward rather than a roofed house")
+	var campers: Array[String] = Brushes.camp_monsters()
+	check(campers.size() > 20 and campers.all(func(id: String) -> bool: return Monsters.MONSTERS[id]["rank"] in ["normal", "elite"]),
+		"the camp brush offers every normal and elite monster, never bosses or champions")
+	var near: Array = [{"cell": Vector2i(10, 10), "level": 12}, {"cell": Vector2i(20, 10), "level": 14},
+		{"cell": Vector2i(30, 10), "level": 30}, {"cell": Vector2i(500, 10), "level": 50}]
+	check(Brushes.camp_level(Vector2i(15, 12), near, 1) == 14 and Brushes.camp_level(Vector2i(300, 300), near, 7) == 7,
+		"a brushed camp takes the median level of the camps round it, or the chosen level where none are near")
 	var plugin: ConfigFile = ConfigFile.new()
 	check(plugin.load("res://addons/brimholt_brushes/plugin.cfg") == OK
 		and String(ProjectSettings.get_setting("editor_plugins/enabled", PackedStringArray())).contains("brimholt_brushes"),

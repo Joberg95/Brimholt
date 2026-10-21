@@ -26,7 +26,15 @@ shows one world:
    `addons/brimholt_brushes`) and drag in the 2D view, with nothing selected. Modes: *Terrain*
    (a disc of one tile), *Scatter doodads* (a biome's trees and rocks over its own ground, at the
    chosen density, never beside a road, pier, or stairway), *Clear doodads* (back to that ground),
-   and *Erase override*. Each stroke is one undo step and stays inside the open sector.
+   *Erase override*, *House* (a click stamps stone walls round a cobbled floor with a door on the
+   chosen side; at most 10×8, so the game still roofs it), and *Castle* (castle walls round a
+   cobbled ward, towers at the corners and every dozen tiles, 3-wide gates on the chosen sides).
+   Each stroke is one undo step and stays inside the open sector (a stamp that would cross its
+   edge is refused). Houses get no furniture; add Decor markers in `overworld.tscn`.
+   With `overworld.tscn` open, *Monster camp* adds a `MonsterSpawns` marker (normal and elite
+   monsters; count and spread as chosen; with *Level from nearby camps* its level is the median
+   of the camps within 48 tiles, so it fits the region's band) and *Remove camp* deletes the camp
+   under the cursor.
    Keep the map at non-negative coordinates; unpainted cells inside the overworld are
    deep sea (`~`), and unpainted cells beyond it are void.
 2. **Spawns**: the twenty-four `Marker2D` nodes under `Spawns`, one per player, in order.

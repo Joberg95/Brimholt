@@ -1,11 +1,14 @@
 extends RefCounted
 ## The map brushes behind the editor plugin (addons/brimholt_brushes): a terrain brush that paints
 ## one tile in a disc, a doodad brush that scatters a biome's trees and rocks over its ground, a
-## clear brush that takes them away again, and an eraser that drops the hand override so the
-## generated base shows through. Pure functions over cells and terrain letters, so the rules check
-## runs them without the editor; the plugin writes the result into a sector's override layer.
+## clear brush that takes them away again, an eraser that drops the hand override so the
+## generated base shows through, house and castle stamps, and monster camps. Pure functions over
+## cells and terrain letters, so the rules check runs them without the editor; the plugin writes
+## terrain into a sector's override layer and camps as MonsterSpawns markers in overworld.tscn.
 
 const Atlas = preload("res://game/data/atlas.gd")
+const Buildings = preload("res://game/data/buildings.gd")
+const Monsters = preload("res://game/data/monsters.gd")
 
 ## Terrains the terrain brush paints, in palette order (stairs pair with holes and markers, so
 ## they are left to the generators).
@@ -118,3 +121,108 @@ static func letter_at(override: TileMapLayer, base: TileMapLayer, cell: Vector2i
 			var coords: Vector2i = layer.get_cell_atlas_coords(cell)
 			return letters.get(Vector3i(layer.get_cell_source_id(cell), coords.x, coords.y), "~")
 	return "~"
+
+
+## House stamp sizes (walls included): the room inside stays within Buildings.MAX_ROOM, so the
+## world finds it as a building and roofs it.
+const HOUSE_MIN: Vector2i = Vector2i(4, 4)
+const HOUSE_MAX: Vector2i = Vector2i(10, 8)
+const CASTLE_MIN: int = 12
+const CASTLE_MAX: int = 60
+## Castle towers (2 x 2 blocks of castle wall) stand at the corners and about this far apart.
+const TOWER_GAP: int = 12
+const GATE: int = 3
+## Camps: ranks a camp may hold (bosses and champions are placed by hand), and how far the level
+## suggestion looks for neighbouring camps.
+const CAMP_RANKS: Array[String] = ["normal", "elite"]
+const CAMP_REACH: int = 48
+
+
+## {cell: letter} for a house (as the island painter's): stone walls round a cobbled floor, a
+## doorway in the middle of the side facing `door`. `at` is its top-left corner.
+static func house(at: Vector2i, size: Vector2i, door: Vector2i) -> Dictionary:
+	size = size.clamp(HOUSE_MIN, HOUSE_MAX)
+	var changes: Dictionary = {}
+	for y: int in size.y:
+		for x: int in size.x:
+			var edge: bool = x == 0 or y == 0 or x == size.x - 1 or y == size.y - 1
+			changes[at + Vector2i(x, y)] = "#" if edge else "="
+	changes[_middle(at, size, door, 0)] = "="
+	return changes
+
+
+## {cell: letter} for a curtain wall: castle wall ("W") round a cobbled ward, 2 x 2 towers at the
+## corners and along the walls, and a gate GATE wide in the middle of each side in `gates`.
+static func castle(at: Vector2i, size: Vector2i, gates: Array[Vector2i]) -> Dictionary:
+	size = size.clamp(Vector2i(CASTLE_MIN, CASTLE_MIN), Vector2i(CASTLE_MAX, CASTLE_MAX))
+	var changes: Dictionary = {}
+	for y: int in size.y:
+		for x: int in size.x:
+			var edge: bool = x == 0 or y == 0 or x == size.x - 1 or y == size.y - 1
+			changes[at + Vector2i(x, y)] = "W" if edge else "="
+	var openings: Array[Vector2i] = []
+	for side: Vector2i in gates:
+		for step: int in range(-(GATE / 2), GATE - GATE / 2):
+			openings.append(_middle(at, size, side, step))
+	var towers: Array[Vector2i] = []
+	for x: int in _spread(size.x):
+		towers.append(at + Vector2i(x, 0))
+		towers.append(at + Vector2i(x, size.y - 2))
+	for y: int in _spread(size.y):
+		towers.append(at + Vector2i(0, y))
+		towers.append(at + Vector2i(size.x - 2, y))
+	for tower: Vector2i in towers:
+		var block: Array[Vector2i] = [tower, tower + Vector2i.RIGHT, tower + Vector2i.DOWN, tower + Vector2i.ONE]
+		if block.any(func(cell: Vector2i) -> bool: return openings.any(func(gap: Vector2i) -> bool: return gap.distance_squared_to(cell) <= 1)):
+			continue
+		for cell: Vector2i in block:
+			changes[cell] = "W"
+	for gap: Vector2i in openings:
+		changes[gap] = "="
+	return changes
+
+
+## Tower offsets along a wall of `length`: both ends and evenly between, about TOWER_GAP apart.
+static func _spread(length: int) -> Array[int]:
+	var last: int = length - 2
+	var parts: int = maxi(1, roundi(float(last) / TOWER_GAP))
+	var offsets: Array[int] = []
+	for index: int in parts + 1:
+		offsets.append(roundi(float(last) * index / parts))
+	return offsets
+
+
+## The cell `step` along from the middle of a rectangle's side facing `side`.
+static func _middle(at: Vector2i, size: Vector2i, side: Vector2i, step: int) -> Vector2i:
+	match side:
+		Vector2i.RIGHT:
+			return at + Vector2i(size.x - 1, size.y / 2 + step)
+		Vector2i.LEFT:
+			return at + Vector2i(0, size.y / 2 + step)
+		Vector2i.UP:
+			return at + Vector2i(size.x / 2 + step, 0)
+	return at + Vector2i(size.x / 2 + step, size.y - 1)
+
+
+## Monster ids a camp may hold, by name.
+static func camp_monsters() -> Array[String]:
+	var ids: Array[String] = []
+	for id: String in Monsters.MONSTERS:
+		if String(Monsters.MONSTERS[id].get("rank", "normal")) in CAMP_RANKS:
+			ids.append(id)
+	ids.sort_custom(func(a: String, b: String) -> bool: return String(Monsters.MONSTERS[a]["name"]) < String(Monsters.MONSTERS[b]["name"]))
+	return ids
+
+
+## A new camp's level from the camps round it (the median within CAMP_REACH tiles, so a brushed
+## camp fits its region's band), or `fallback` when none is near. camps: [{cell, level}].
+static func camp_level(cell: Vector2i, camps: Array, fallback: int) -> int:
+	var levels: Array[int] = []
+	for camp: Dictionary in camps:
+		var at: Vector2i = camp["cell"]
+		if maxi(absi(at.x - cell.x), absi(at.y - cell.y)) <= CAMP_REACH:
+			levels.append(int(camp["level"]))
+	if levels.is_empty():
+		return fallback
+	levels.sort()
+	return levels[levels.size() / 2]

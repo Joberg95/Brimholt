@@ -210,8 +210,10 @@ relocations, then fix-ups. That doesn't scale to Tibia density.
 4. Editor brushes. Started: the `Brimholt brushes` editor plugin (`addons/brimholt_brushes`, logic
    in `game/maps/brushes.gd`) paints a terrain disc, scatters or clears doodad sets (forest, rocks,
    desert, fen, snow, wastes; kept off road verges), and erases overrides, into an open sector's
-   override layer, one undo per stroke. Still to come: house/castle and spawn-camp brushes, and
-   painting across sectors from `overworld.tscn`.
+   override layer, one undo per stroke; stamps houses (roofed, door side chosen) and castle
+   curtain walls (towers, gates); and adds or removes monster camps in `overworld.tscn` (level
+   from the camps round it). Done. Later, if wanted: painting across sectors from
+   `overworld.tscn`, and furnishing stamped houses (Decor markers).
 5. Then build regions one by one from the plan (plan 40's islands become region specs).
 
 ### Floors: target

@@ -79,7 +79,7 @@ game/
     overworld.tscn       The world's markers, instancing its terrain sectors
     sectors/             The terrain in 128x128 sectors: hand overrides at the root over a generated Base
     map_io.gd            Loads and saves the map across sectors (World and the generators)
-    brushes.gd           Terrain and doodad brushes behind the editor plugin
+    brushes.gd           Terrain, doodad, house, castle, and camp brushes behind the editor plugin
     terrain.tres         Editor tile set (terrain custom data)
     markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster, decor markers
 assets/sprites/          Original generated sprite sheets, imported painted outfits/ and icons/ (+ Godot .import files)
