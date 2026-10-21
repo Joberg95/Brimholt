@@ -754,15 +754,23 @@ func _world_layout_checks() -> void:
 			if World.terrain(Vector2i(x, y)) in ["c", "C", "o", "O"]:
 				empty = false
 	check(empty, "no dungeon or cave was left behind in the overworld when the bands moved")
-	# The terrain lives in sector scenes (MapIO), each holding only its own cells.
+	# The terrain lives in sector scenes (MapIO), each holding only its own cells: a hand-painted
+	# override (the root) over its generated base (a locked child drawn behind it).
 	var scene: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
 	var tidy: bool = not scene.has_node(MapIO.TERRAIN) and scene.has_node(MapIO.SECTORS)
-	for layer: TileMapLayer in MapIO.layers(scene):
+	var layered: bool = true
+	for layer: TileMapLayer in MapIO.sectors(scene):
 		var parts: PackedStringArray = String(layer.name).split("_")
 		var sector := Vector2i(int(parts[1]), int(parts[2])) if parts.size() == 3 else Vector2i(-1, -1)
-		tidy = tidy and layer.scene_file_path == MapIO.sector_path(sector) 			and Atlas.sector_rect(sector).encloses(layer.get_used_rect())
+		var base: TileMapLayer = MapIO.base_of(layer)
+		for part: TileMapLayer in [layer, base]:
+			tidy = tidy and (part.get_used_cells().is_empty() or Atlas.sector_rect(sector).encloses(part.get_used_rect()))
+		tidy = tidy and layer.scene_file_path == MapIO.sector_path(sector)
+		layered = layered and base != layer and base.show_behind_parent and bool(base.get_meta("_edit_lock_", false))
 	scene.free()
 	check(tidy, "every terrain sector holds only its own cells (make sectors re-splits them)")
+	check(layered, "every sector paints by hand over a locked generated base (make sectors adds it)")
+	_layer_checks()
 	check(MapIO.bake_current(), "the baked map matches the map (run make bake-map after painting in Godot)")
 	# A version-2 save standing in a cave comes back in the same cave after the bands moved.
 	var world := World.new()
@@ -3771,6 +3779,55 @@ func _floor_checks() -> void:
 	check(World.floor_of_rect(Rect2i(Atlas.UNDER_X + 4, 4, 8, 8)) == -1 and World.floor_of_rect(Rect2i(Atlas.UNDER_X - 4, 4, 8, 8)) == Atlas.NO_FLOOR,
 		"a zone lies on a floor only when it lies wholly on it")
 
+
+
+## Generated base and hand override (MapIO): the override wins wherever it is painted, in the
+## map the game reads and in what a generator sees; a base-only load shows the generator just
+## its own layer. Regions rebuilt from their spec (tools/generators/region.gd) tag their markers.
+func _layer_checks() -> void:
+	var tiles: TileSet = load(MapIO.TILESET_PATH)
+	var map_root := Node2D.new()
+	var holder := Node2D.new()
+	holder.name = MapIO.SECTORS
+	map_root.add_child(holder)
+	var sector := TileMapLayer.new()
+	sector.name = "Sector_0_0"
+	sector.tile_set = tiles
+	var base := TileMapLayer.new()
+	base.name = MapIO.BASE
+	base.tile_set = tiles
+	sector.add_child(base)
+	holder.add_child(sector)
+	var grass: Vector2i = Vector2i(World.TERRAINS.find("."), 0)
+	var tree: Vector2i = Vector2i(World.TERRAINS.find("T"), 0)
+	base.set_cell(Vector2i(2, 2), 0, grass)
+	base.set_cell(Vector2i(3, 2), 0, grass)
+	sector.set_cell(Vector2i(2, 2), 0, tree)
+	var grid: PackedByteArray = MapIO.extract(map_root)["grid"]
+	var width: int = Atlas.OVERWORLD_SIZE.x
+	check(grid[2 * width + 2] == "T".unicode_at(0) and grid[2 * width + 3] == ".".unicode_at(0),
+		"a painted override covers the generated base in the map the game reads")
+	var seen: Node = map_root.duplicate()
+	MapIO.merge(seen)
+	var merged: TileMapLayer = seen.get_node(MapIO.TERRAIN)
+	check(merged.get_cell_atlas_coords(Vector2i(2, 2)) == tree and MapIO.overrides(seen).get_cell_atlas_coords(Vector2i(2, 2)) == tree,
+		"a generator sees the overrides over the base, and the hand layer apart")
+	MapIO.free_scene(seen)
+	var own: Node = map_root.duplicate()
+	MapIO.merge(own, true)
+	check((own.get_node(MapIO.TERRAIN) as TileMapLayer).get_cell_atlas_coords(Vector2i(2, 2)) == grass,
+		"a region rebuild sees only the generated base")
+	MapIO.free_scene(own)
+	map_root.free()
+	var tagged: bool = true
+	var island_camps: int = 0
+	var scene: Node = (load(World.MAP_SCENE) as PackedScene).instantiate()
+	for marker: Node in scene.get_node("MonsterSpawns").get_children():
+		if String(marker.name).begins_with("Island_silverwood_"):
+			island_camps += 1
+			tagged = tagged and String(marker.get_meta("region", "")) == "silverwood"
+	scene.free()
+	check(island_camps > 0 and tagged, "Silverwood is rebuilt from its region spec, its camps tagged with the region")
 
 ## The floor below the mainland (docs/plan/44, tools/generators/underground.gd): a plane beside the
 ## overworld lined up under it, joined by holes in the wilds and ladders in town streets over stairs

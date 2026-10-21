@@ -10,7 +10,7 @@ GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
 .PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim duel-eval train-setup train export-policy bench playtest check \
-	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands bake-map relocate mainland orcs underground caves-below map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
+	sprites outfits landscape cliffs hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands region bake-map relocate mainland orcs underground caves-below map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -186,6 +186,10 @@ relocate: ## One-time pass: move the frost isles south and Silverwood east for t
 
 bake-map: ## Bake the map (game/maps/world.bake) the game loads, after painting in Godot (generators bake it themselves)
 	$(GODOT) --headless --path . --script res://tools/generators/bake_map.gd
+
+region: ## Rebuild one region of the world plan from its spec, keeping hand edits (NAME=<id>, e.g. silverwood; then the world map pages)
+	$(GODOT) --headless --path . --script res://tools/generators/region.gd -- $(NAME)
+	$(GODOT) --headless --path . --script res://tools/generators/world_map.gd
 
 islands: ## Paint the archipelago islands not yet painted (then make towns town-paths world-map; a re-run changes nothing)
 	$(GODOT) --headless --path . --script res://tools/generators/islands.gd

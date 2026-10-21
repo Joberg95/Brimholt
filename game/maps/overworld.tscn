@@ -58,6 +58,7 @@
 [ext_resource type="PackedScene" path="res://game/maps/sectors/18_3.tscn" id="33_cfn87"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/17_5.tscn" id="33_de55q"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/18_4.tscn" id="34_rd6a6"]
+[ext_resource type="PackedScene" path="res://game/maps/sectors/7_2.tscn" id="35_bhn54"]
 [ext_resource type="Script" path="res://game/maps/markers/decor.gd" id="36_y06j2"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/18_5.tscn" id="37_epsby"]
 [ext_resource type="PackedScene" path="res://game/maps/sectors/19_3.tscn" id="39_l7w5o"]
@@ -111,182 +112,185 @@ metadata/cave_below_ogre_warrens = true
 metadata/cave_below_drowned_grotto = true
 metadata/cave_below_rimewater_trench = true
 metadata/cave_below_thornroot_hollows = true
+metadata/region_silverwood = true
 
 [node name="Sectors" type="Node2D" parent="." unique_id=2003087866]
 
-[node name="Sector_0_0" parent="Sectors" unique_id=1694261617 instance=ExtResource("1_pcknd")]
+[node name="Sector_0_0" parent="Sectors" unique_id=1597694699 instance=ExtResource("1_pcknd")]
 
-[node name="Sector_0_1" parent="Sectors" unique_id=5921905 instance=ExtResource("2_7u13y")]
+[node name="Sector_0_1" parent="Sectors" unique_id=820883860 instance=ExtResource("2_7u13y")]
 
-[node name="Sector_0_2" parent="Sectors" unique_id=1219501092 instance=ExtResource("3_j1712")]
+[node name="Sector_0_2" parent="Sectors" unique_id=1545210083 instance=ExtResource("3_j1712")]
 
-[node name="Sector_0_3" parent="Sectors" unique_id=1823524706 instance=ExtResource("4_q0lg1")]
+[node name="Sector_0_3" parent="Sectors" unique_id=301404153 instance=ExtResource("4_q0lg1")]
 
-[node name="Sector_0_4" parent="Sectors" unique_id=701290793 instance=ExtResource("5_dfish")]
+[node name="Sector_0_4" parent="Sectors" unique_id=653036425 instance=ExtResource("5_dfish")]
 
-[node name="Sector_0_5" parent="Sectors" unique_id=1150689530 instance=ExtResource("6_l7w5o")]
+[node name="Sector_0_5" parent="Sectors" unique_id=1786654722 instance=ExtResource("6_l7w5o")]
 
-[node name="Sector_0_6" parent="Sectors" unique_id=194571754 instance=ExtResource("7_7or3e")]
+[node name="Sector_0_6" parent="Sectors" unique_id=229945941 instance=ExtResource("7_7or3e")]
 
-[node name="Sector_1_0" parent="Sectors" unique_id=148353379 instance=ExtResource("6_827vx")]
+[node name="Sector_1_0" parent="Sectors" unique_id=1434658270 instance=ExtResource("6_827vx")]
 
-[node name="Sector_1_1" parent="Sectors" unique_id=1043557584 instance=ExtResource("7_nu51i")]
+[node name="Sector_1_1" parent="Sectors" unique_id=1160618892 instance=ExtResource("7_nu51i")]
 
-[node name="Sector_1_2" parent="Sectors" unique_id=1242800263 instance=ExtResource("8_vhqwq")]
+[node name="Sector_1_2" parent="Sectors" unique_id=1710042512 instance=ExtResource("8_vhqwq")]
 
-[node name="Sector_1_3" parent="Sectors" unique_id=712647494 instance=ExtResource("9_0feea")]
+[node name="Sector_1_3" parent="Sectors" unique_id=1980316262 instance=ExtResource("9_0feea")]
 
-[node name="Sector_1_4" parent="Sectors" unique_id=629869327 instance=ExtResource("10_3rgd2")]
+[node name="Sector_1_4" parent="Sectors" unique_id=2129330596 instance=ExtResource("10_3rgd2")]
 
-[node name="Sector_1_5" parent="Sectors" unique_id=2139604232 instance=ExtResource("13_fmebg")]
+[node name="Sector_1_5" parent="Sectors" unique_id=94138827 instance=ExtResource("13_fmebg")]
 
-[node name="Sector_1_6" parent="Sectors" unique_id=1588567966 instance=ExtResource("14_neb46")]
+[node name="Sector_1_6" parent="Sectors" unique_id=1957129184 instance=ExtResource("14_neb46")]
 
-[node name="Sector_2_0" parent="Sectors" unique_id=389932423 instance=ExtResource("11_vy3hr")]
+[node name="Sector_2_0" parent="Sectors" unique_id=1588682514 instance=ExtResource("11_vy3hr")]
 
-[node name="Sector_2_1" parent="Sectors" unique_id=343646177 instance=ExtResource("12_y06j2")]
+[node name="Sector_2_1" parent="Sectors" unique_id=858624060 instance=ExtResource("12_y06j2")]
 
-[node name="Sector_2_2" parent="Sectors" unique_id=1188435795 instance=ExtResource("13_icv6c")]
+[node name="Sector_2_2" parent="Sectors" unique_id=1331673158 instance=ExtResource("13_icv6c")]
 
-[node name="Sector_2_3" parent="Sectors" unique_id=516397169 instance=ExtResource("14_0bof0")]
+[node name="Sector_2_3" parent="Sectors" unique_id=626444354 instance=ExtResource("14_0bof0")]
 
-[node name="Sector_2_4" parent="Sectors" unique_id=175178463 instance=ExtResource("19_s0ikt")]
+[node name="Sector_2_4" parent="Sectors" unique_id=195036973 instance=ExtResource("19_s0ikt")]
 
-[node name="Sector_3_0" parent="Sectors" unique_id=639843712 instance=ExtResource("20_kd3gj")]
+[node name="Sector_3_0" parent="Sectors" unique_id=1775927459 instance=ExtResource("20_kd3gj")]
 
-[node name="Sector_3_1" parent="Sectors" unique_id=1230787256 instance=ExtResource("21_57m7n")]
+[node name="Sector_3_1" parent="Sectors" unique_id=2058018807 instance=ExtResource("21_57m7n")]
 
-[node name="Sector_3_2" parent="Sectors" unique_id=1842958574 instance=ExtResource("22_7bpcm")]
+[node name="Sector_3_2" parent="Sectors" unique_id=1619439754 instance=ExtResource("22_7bpcm")]
 
-[node name="Sector_3_3" parent="Sectors" unique_id=1269113384 instance=ExtResource("23_ncskn")]
+[node name="Sector_3_3" parent="Sectors" unique_id=651148402 instance=ExtResource("23_ncskn")]
 
-[node name="Sector_3_4" parent="Sectors" unique_id=961099660 instance=ExtResource("24_yeqt5")]
+[node name="Sector_3_4" parent="Sectors" unique_id=944874195 instance=ExtResource("24_yeqt5")]
 
-[node name="Sector_4_0" parent="Sectors" unique_id=1854653378 instance=ExtResource("25_qhiic")]
+[node name="Sector_4_0" parent="Sectors" unique_id=1550271261 instance=ExtResource("25_qhiic")]
 
-[node name="Sector_4_1" parent="Sectors" unique_id=2132028455 instance=ExtResource("26_oq2ia")]
+[node name="Sector_4_1" parent="Sectors" unique_id=462033314 instance=ExtResource("26_oq2ia")]
 
-[node name="Sector_4_2" parent="Sectors" unique_id=378101834 instance=ExtResource("27_0is1r")]
+[node name="Sector_4_2" parent="Sectors" unique_id=679034457 instance=ExtResource("27_0is1r")]
 
-[node name="Sector_4_3" parent="Sectors" unique_id=1482818154 instance=ExtResource("28_fg6lk")]
+[node name="Sector_4_3" parent="Sectors" unique_id=740906781 instance=ExtResource("28_fg6lk")]
 
-[node name="Sector_4_4" parent="Sectors" unique_id=1328216915 instance=ExtResource("29_pi4ho")]
+[node name="Sector_4_4" parent="Sectors" unique_id=1779790423 instance=ExtResource("29_pi4ho")]
 
-[node name="Sector_6_0" parent="Sectors" unique_id=609733601 instance=ExtResource("19_jre8o")]
+[node name="Sector_6_0" parent="Sectors" unique_id=1435239114 instance=ExtResource("19_jre8o")]
 
-[node name="Sector_6_1" parent="Sectors" unique_id=314089831 instance=ExtResource("20_0sou3")]
+[node name="Sector_6_1" parent="Sectors" unique_id=1900550622 instance=ExtResource("20_0sou3")]
 
-[node name="Sector_6_2" parent="Sectors" unique_id=1725420003 instance=ExtResource("21_oj10t")]
+[node name="Sector_6_2" parent="Sectors" unique_id=1949263058 instance=ExtResource("21_oj10t")]
 
-[node name="Sector_7_0" parent="Sectors" unique_id=1469973945 instance=ExtResource("22_fv3fk")]
+[node name="Sector_7_0" parent="Sectors" unique_id=822369378 instance=ExtResource("22_fv3fk")]
 
-[node name="Sector_7_1" parent="Sectors" unique_id=2112053062 instance=ExtResource("23_md8a2")]
+[node name="Sector_7_1" parent="Sectors" unique_id=1638280359 instance=ExtResource("23_md8a2")]
 
-[node name="Sector_15_0" parent="Sectors" unique_id=841245364 instance=ExtResource("15_ya5tb")]
+[node name="Sector_7_2" parent="Sectors" unique_id=1891000672 instance=ExtResource("35_bhn54")]
 
-[node name="Sector_15_1" parent="Sectors" unique_id=1992203865 instance=ExtResource("16_dm771")]
+[node name="Sector_15_0" parent="Sectors" unique_id=957820792 instance=ExtResource("15_ya5tb")]
 
-[node name="Sector_16_0" parent="Sectors" unique_id=1143889195 instance=ExtResource("17_cfn87")]
+[node name="Sector_15_1" parent="Sectors" unique_id=455225040 instance=ExtResource("16_dm771")]
 
-[node name="Sector_16_1" parent="Sectors" unique_id=1907300001 instance=ExtResource("18_rd6a6")]
+[node name="Sector_16_0" parent="Sectors" unique_id=1595303802 instance=ExtResource("17_cfn87")]
 
-[node name="Sector_16_2" parent="Sectors" unique_id=98434306 instance=ExtResource("19_878fg")]
+[node name="Sector_16_1" parent="Sectors" unique_id=204355524 instance=ExtResource("18_rd6a6")]
 
-[node name="Sector_16_3" parent="Sectors" unique_id=924891470 instance=ExtResource("25_0feea")]
+[node name="Sector_16_2" parent="Sectors" unique_id=1201256959 instance=ExtResource("19_878fg")]
 
-[node name="Sector_16_4" parent="Sectors" unique_id=1833335719 instance=ExtResource("26_0bof0")]
+[node name="Sector_16_3" parent="Sectors" unique_id=236297622 instance=ExtResource("25_0feea")]
 
-[node name="Sector_16_5" parent="Sectors" unique_id=1581958413 instance=ExtResource("27_diy32")]
+[node name="Sector_16_4" parent="Sectors" unique_id=241768703 instance=ExtResource("26_0bof0")]
 
-[node name="Sector_17_0" parent="Sectors" unique_id=408700697 instance=ExtResource("20_8bcdd")]
+[node name="Sector_16_5" parent="Sectors" unique_id=2008552555 instance=ExtResource("27_diy32")]
 
-[node name="Sector_17_1" parent="Sectors" unique_id=177673766 instance=ExtResource("21_diy32")]
+[node name="Sector_17_0" parent="Sectors" unique_id=1242393913 instance=ExtResource("20_8bcdd")]
 
-[node name="Sector_17_2" parent="Sectors" unique_id=2086119102 instance=ExtResource("22_de55q")]
+[node name="Sector_17_1" parent="Sectors" unique_id=1180700224 instance=ExtResource("21_diy32")]
 
-[node name="Sector_17_3" parent="Sectors" unique_id=1588304718 instance=ExtResource("29_3rgd2")]
+[node name="Sector_17_2" parent="Sectors" unique_id=1948723516 instance=ExtResource("22_de55q")]
 
-[node name="Sector_17_4" parent="Sectors" unique_id=10265533 instance=ExtResource("31_ya5tb")]
+[node name="Sector_17_3" parent="Sectors" unique_id=128574001 instance=ExtResource("29_3rgd2")]
 
-[node name="Sector_17_5" parent="Sectors" unique_id=1203866714 instance=ExtResource("33_de55q")]
+[node name="Sector_17_4" parent="Sectors" unique_id=1494781142 instance=ExtResource("31_ya5tb")]
 
-[node name="Sector_18_3" parent="Sectors" unique_id=1955259278 instance=ExtResource("33_cfn87")]
+[node name="Sector_17_5" parent="Sectors" unique_id=1403189678 instance=ExtResource("33_de55q")]
 
-[node name="Sector_18_4" parent="Sectors" unique_id=1385542710 instance=ExtResource("34_rd6a6")]
+[node name="Sector_18_3" parent="Sectors" unique_id=1426135606 instance=ExtResource("33_cfn87")]
 
-[node name="Sector_18_5" parent="Sectors" unique_id=1943153629 instance=ExtResource("37_epsby")]
+[node name="Sector_18_4" parent="Sectors" unique_id=548942288 instance=ExtResource("34_rd6a6")]
 
-[node name="Sector_19_3" parent="Sectors" unique_id=84464104 instance=ExtResource("39_l7w5o")]
+[node name="Sector_18_5" parent="Sectors" unique_id=1956413477 instance=ExtResource("37_epsby")]
 
-[node name="Sector_19_4" parent="Sectors" unique_id=1656015367 instance=ExtResource("40_7or3e")]
+[node name="Sector_19_3" parent="Sectors" unique_id=1509824146 instance=ExtResource("39_l7w5o")]
 
-[node name="Sector_19_5" parent="Sectors" unique_id=1954852613 instance=ExtResource("41_fmebg")]
+[node name="Sector_19_4" parent="Sectors" unique_id=1816829511 instance=ExtResource("40_7or3e")]
 
-[node name="Sector_20_0" parent="Sectors" unique_id=1093274456 instance=ExtResource("57_ml7wo")]
+[node name="Sector_19_5" parent="Sectors" unique_id=1580328833 instance=ExtResource("41_fmebg")]
 
-[node name="Sector_20_1" parent="Sectors" unique_id=1613415346 instance=ExtResource("58_oeurh")]
+[node name="Sector_20_0" parent="Sectors" unique_id=1260424343 instance=ExtResource("57_ml7wo")]
 
-[node name="Sector_20_2" parent="Sectors" unique_id=861306679 instance=ExtResource("59_ivx6i")]
+[node name="Sector_20_1" parent="Sectors" unique_id=1012070531 instance=ExtResource("58_oeurh")]
 
-[node name="Sector_20_3" parent="Sectors" unique_id=1450574361 instance=ExtResource("60_7k83g")]
+[node name="Sector_20_2" parent="Sectors" unique_id=1512108773 instance=ExtResource("59_ivx6i")]
 
-[node name="Sector_20_4" parent="Sectors" unique_id=752864552 instance=ExtResource("61_x8xqv")]
+[node name="Sector_20_3" parent="Sectors" unique_id=651577049 instance=ExtResource("60_7k83g")]
 
-[node name="Sector_20_6" parent="Sectors" unique_id=1365019336 instance=ExtResource("60_pv48k")]
+[node name="Sector_20_4" parent="Sectors" unique_id=1994176318 instance=ExtResource("61_x8xqv")]
 
-[node name="Sector_21_0" parent="Sectors" unique_id=510144657 instance=ExtResource("62_nnw86")]
+[node name="Sector_20_6" parent="Sectors" unique_id=195297859 instance=ExtResource("60_pv48k")]
 
-[node name="Sector_21_1" parent="Sectors" unique_id=1855549647 instance=ExtResource("63_5ad4u")]
+[node name="Sector_21_0" parent="Sectors" unique_id=1027529008 instance=ExtResource("62_nnw86")]
 
-[node name="Sector_21_2" parent="Sectors" unique_id=1783541881 instance=ExtResource("64_pv48k")]
+[node name="Sector_21_1" parent="Sectors" unique_id=627250339 instance=ExtResource("63_5ad4u")]
 
-[node name="Sector_21_3" parent="Sectors" unique_id=513439891 instance=ExtResource("65_bhn54")]
+[node name="Sector_21_2" parent="Sectors" unique_id=1316485905 instance=ExtResource("64_pv48k")]
 
-[node name="Sector_21_4" parent="Sectors" unique_id=1955000442 instance=ExtResource("66_0bn6b")]
+[node name="Sector_21_3" parent="Sectors" unique_id=1499900427 instance=ExtResource("65_bhn54")]
 
-[node name="Sector_21_6" parent="Sectors" unique_id=281705532 instance=ExtResource("66_bhn54")]
+[node name="Sector_21_4" parent="Sectors" unique_id=919416613 instance=ExtResource("66_0bn6b")]
 
-[node name="Sector_22_0" parent="Sectors" unique_id=47305467 instance=ExtResource("67_c4uos")]
+[node name="Sector_21_6" parent="Sectors" unique_id=621053368 instance=ExtResource("66_bhn54")]
 
-[node name="Sector_22_1" parent="Sectors" unique_id=77312492 instance=ExtResource("68_0bn6b")]
+[node name="Sector_22_0" parent="Sectors" unique_id=139627859 instance=ExtResource("67_c4uos")]
 
-[node name="Sector_22_2" parent="Sectors" unique_id=1281470093 instance=ExtResource("68_27oyw")]
+[node name="Sector_22_1" parent="Sectors" unique_id=1242829801 instance=ExtResource("68_0bn6b")]
 
-[node name="Sector_22_3" parent="Sectors" unique_id=1705603130 instance=ExtResource("69_4b4h1")]
+[node name="Sector_22_2" parent="Sectors" unique_id=28482978 instance=ExtResource("68_27oyw")]
 
-[node name="Sector_22_4" parent="Sectors" unique_id=1290127205 instance=ExtResource("70_pelei")]
+[node name="Sector_22_3" parent="Sectors" unique_id=375423462 instance=ExtResource("69_4b4h1")]
 
-[node name="Sector_23_0" parent="Sectors" unique_id=1175929525 instance=ExtResource("71_4c6ti")]
+[node name="Sector_22_4" parent="Sectors" unique_id=321426107 instance=ExtResource("70_pelei")]
 
-[node name="Sector_23_1" parent="Sectors" unique_id=1477078092 instance=ExtResource("72_xkfp8")]
+[node name="Sector_23_0" parent="Sectors" unique_id=797027997 instance=ExtResource("71_4c6ti")]
 
-[node name="Sector_23_2" parent="Sectors" unique_id=1734156216 instance=ExtResource("73_mwxcm")]
+[node name="Sector_23_1" parent="Sectors" unique_id=590695829 instance=ExtResource("72_xkfp8")]
 
-[node name="Sector_23_3" parent="Sectors" unique_id=834618556 instance=ExtResource("74_f4pcx")]
+[node name="Sector_23_2" parent="Sectors" unique_id=688570375 instance=ExtResource("73_mwxcm")]
 
-[node name="Sector_23_4" parent="Sectors" unique_id=1701449482 instance=ExtResource("75_aaauk")]
+[node name="Sector_23_3" parent="Sectors" unique_id=1754600562 instance=ExtResource("74_f4pcx")]
 
-[node name="Sector_24_0" parent="Sectors" unique_id=1442755702 instance=ExtResource("76_y416g")]
+[node name="Sector_23_4" parent="Sectors" unique_id=1530490206 instance=ExtResource("75_aaauk")]
 
-[node name="Sector_24_1" parent="Sectors" unique_id=907442004 instance=ExtResource("77_oq22a")]
+[node name="Sector_24_0" parent="Sectors" unique_id=630438291 instance=ExtResource("76_y416g")]
 
-[node name="Sector_24_2" parent="Sectors" unique_id=227272261 instance=ExtResource("78_cvv5s")]
+[node name="Sector_24_1" parent="Sectors" unique_id=208463879 instance=ExtResource("77_oq22a")]
 
-[node name="Sector_24_3" parent="Sectors" unique_id=527695225 instance=ExtResource("79_vn4wr")]
+[node name="Sector_24_2" parent="Sectors" unique_id=1842783840 instance=ExtResource("78_cvv5s")]
 
-[node name="Sector_24_4" parent="Sectors" unique_id=203042365 instance=ExtResource("80_7lcti")]
+[node name="Sector_24_3" parent="Sectors" unique_id=1289458528 instance=ExtResource("79_vn4wr")]
 
-[node name="Sector_27_1" parent="Sectors" unique_id=132159391 instance=ExtResource("82_c4uos")]
+[node name="Sector_24_4" parent="Sectors" unique_id=1564183859 instance=ExtResource("80_7lcti")]
 
-[node name="Sector_27_2" parent="Sectors" unique_id=903540093 instance=ExtResource("83_27oyw")]
+[node name="Sector_27_1" parent="Sectors" unique_id=1855608431 instance=ExtResource("82_c4uos")]
 
-[node name="Sector_28_1" parent="Sectors" unique_id=1317543351 instance=ExtResource("84_4b4h1")]
+[node name="Sector_27_2" parent="Sectors" unique_id=1987823129 instance=ExtResource("83_27oyw")]
 
-[node name="Sector_28_2" parent="Sectors" unique_id=1824423141 instance=ExtResource("85_pelei")]
+[node name="Sector_28_1" parent="Sectors" unique_id=1711344924 instance=ExtResource("84_4b4h1")]
 
-[node name="Sector_29_1" parent="Sectors" unique_id=1256303298 instance=ExtResource("86_4c6ti")]
+[node name="Sector_28_2" parent="Sectors" unique_id=987936701 instance=ExtResource("85_pelei")]
 
-[node name="Sector_29_2" parent="Sectors" unique_id=1476555239 instance=ExtResource("87_xkfp8")]
+[node name="Sector_29_1" parent="Sectors" unique_id=194077454 instance=ExtResource("86_4c6ti")]
+
+[node name="Sector_29_2" parent="Sectors" unique_id=2096181816 instance=ExtResource("87_xkfp8")]
 
 [node name="Spawns" type="Node2D" parent="." unique_id=665512128]
 
@@ -528,16 +532,6 @@ routes = Dictionary[String, int]({
 })
 facing = Vector2i(-1, 0)
 
-[node name="silverwood" type="Marker2D" parent="Ferrymen" unique_id=261636222]
-position = Vector2(24880, 5360)
-script = ExtResource("2_vknn6")
-npc_name = "Ferryman Edric"
-place = "Aldmoor"
-routes = Dictionary[String, int]({
-"cinder_landing": 90
-})
-facing = Vector2i(1, 0)
-
 [node name="brackenford" type="Marker2D" parent="Ferrymen" unique_id=656226398]
 position = Vector2(16368, 16272)
 script = ExtResource("2_vknn6")
@@ -552,6 +546,17 @@ routes = Dictionary[String, int]({
 "reedmere_coach": 30
 })
 vehicle = "waystone"
+
+[node name="silverwood" type="Marker2D" parent="Ferrymen" unique_id=382071329]
+position = Vector2(24880, 5360)
+script = ExtResource("2_vknn6")
+npc_name = "Ferryman Edric"
+place = "Aldmoor"
+routes = Dictionary[String, int]({
+"cinder_landing": 90
+})
+facing = Vector2i(1, 0)
+metadata/region = "silverwood"
 
 [node name="Items" type="Node2D" parent="." unique_id=2097775516]
 
@@ -1115,20 +1120,6 @@ zone_name = "Hrimvik"
 size_tiles = Vector2i(46, 36)
 town = true
 
-[node name="Aldmoor" type="Node2D" parent="Zones" unique_id=999250876]
-position = Vector2(25184, 4448)
-script = ExtResource("4_bbq1k")
-zone_name = "Aldmoor"
-size_tiles = Vector2i(48, 42)
-town = true
-
-[node name="Fernhollow" type="Node2D" parent="Zones" unique_id=1290715902]
-position = Vector2(28960, 3776)
-script = ExtResource("4_bbq1k")
-zone_name = "Fernhollow"
-size_tiles = Vector2i(31, 25)
-town = true
-
 [node name="Brackenford" type="Node2D" parent="Zones" unique_id=829674597]
 position = Vector2(15776, 15776)
 script = ExtResource("4_bbq1k")
@@ -1288,6 +1279,22 @@ size_tiles = Vector2i(47, 35)
 ambient = Color(0.6, 0.66, 0.72, 1)
 min_level = 3
 max_level = 7
+
+[node name="Aldmoor" type="Node2D" parent="Zones" unique_id=278680180]
+position = Vector2(25184, 4448)
+script = ExtResource("4_bbq1k")
+zone_name = "Aldmoor"
+size_tiles = Vector2i(48, 42)
+town = true
+metadata/region = "silverwood"
+
+[node name="Fernhollow" type="Node2D" parent="Zones" unique_id=265656650]
+position = Vector2(28960, 3776)
+script = ExtResource("4_bbq1k")
+zone_name = "Fernhollow"
+size_tiles = Vector2i(31, 25)
+town = true
+metadata/region = "silverwood"
 
 [node name="MonsterSpawns" type="Node2D" parent="." unique_id=1478444029]
 
@@ -5475,750 +5482,6 @@ script = ExtResource("5_xkg0o")
 monster = "cyclops_smith"
 level = 36
 count = 5
-
-[node name="Island_silverwood_0" type="Marker2D" parent="MonsterSpawns" unique_id=2142680039]
-position = Vector2(26192, 6448)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 47
-count = 6
-radius = 2
-
-[node name="Island_silverwood_1" type="Marker2D" parent="MonsterSpawns" unique_id=1282357964]
-position = Vector2(26512, 6224)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 47
-count = 5
-radius = 2
-
-[node name="Island_silverwood_2" type="Marker2D" parent="MonsterSpawns" unique_id=497865309]
-position = Vector2(26640, 6704)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_3" type="Marker2D" parent="MonsterSpawns" unique_id=590056724]
-position = Vector2(26928, 7024)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_4" type="Marker2D" parent="MonsterSpawns" unique_id=1786077077]
-position = Vector2(26992, 6256)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 47
-count = 5
-radius = 2
-
-[node name="Island_silverwood_5" type="Marker2D" parent="MonsterSpawns" unique_id=1958260590]
-position = Vector2(27056, 3312)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_6" type="Marker2D" parent="MonsterSpawns" unique_id=1133737799]
-position = Vector2(27088, 5680)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_7" type="Marker2D" parent="MonsterSpawns" unique_id=424987025]
-position = Vector2(27120, 5200)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_8" type="Marker2D" parent="MonsterSpawns" unique_id=950406496]
-position = Vector2(27216, 6704)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_9" type="Marker2D" parent="MonsterSpawns" unique_id=2001302575]
-position = Vector2(27216, 7440)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 45
-count = 6
-radius = 2
-
-[node name="Island_silverwood_10" type="Marker2D" parent="MonsterSpawns" unique_id=376120166]
-position = Vector2(27408, 6256)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_11" type="Marker2D" parent="MonsterSpawns" unique_id=718233439]
-position = Vector2(27440, 3344)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 49
-count = 5
-radius = 2
-
-[node name="Island_silverwood_12" type="Marker2D" parent="MonsterSpawns" unique_id=1820324118]
-position = Vector2(27440, 4592)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_13" type="Marker2D" parent="MonsterSpawns" unique_id=1093405512]
-position = Vector2(27504, 4976)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 50
-count = 6
-radius = 2
-
-[node name="Island_silverwood_14" type="Marker2D" parent="MonsterSpawns" unique_id=1133302675]
-position = Vector2(27536, 3920)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 47
-count = 7
-radius = 2
-
-[node name="Island_silverwood_15" type="Marker2D" parent="MonsterSpawns" unique_id=1204489021]
-position = Vector2(27568, 7024)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 45
-count = 5
-radius = 2
-
-[node name="Island_silverwood_16" type="Marker2D" parent="MonsterSpawns" unique_id=337965157]
-position = Vector2(27664, 3024)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_17" type="Marker2D" parent="MonsterSpawns" unique_id=486835944]
-position = Vector2(27664, 5776)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 47
-count = 7
-radius = 2
-
-[node name="Island_silverwood_18" type="Marker2D" parent="MonsterSpawns" unique_id=90070231]
-position = Vector2(27696, 2576)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 46
-count = 5
-radius = 2
-
-[node name="Island_silverwood_19" type="Marker2D" parent="MonsterSpawns" unique_id=757334074]
-position = Vector2(27728, 6544)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 47
-count = 6
-radius = 2
-
-[node name="Island_silverwood_20" type="Marker2D" parent="MonsterSpawns" unique_id=1035496530]
-position = Vector2(27760, 3600)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 45
-count = 5
-radius = 2
-
-[node name="Island_silverwood_21" type="Marker2D" parent="MonsterSpawns" unique_id=1833658557]
-position = Vector2(27760, 7472)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 47
-count = 6
-radius = 2
-
-[node name="Island_silverwood_22" type="Marker2D" parent="MonsterSpawns" unique_id=115473590]
-position = Vector2(27920, 5040)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_23" type="Marker2D" parent="MonsterSpawns" unique_id=1854197320]
-position = Vector2(27984, 3248)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 50
-count = 7
-radius = 2
-
-[node name="Island_silverwood_24" type="Marker2D" parent="MonsterSpawns" unique_id=82537825]
-position = Vector2(27984, 7056)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_25" type="Marker2D" parent="MonsterSpawns" unique_id=706471627]
-position = Vector2(28016, 7952)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 49
-count = 6
-radius = 2
-
-[node name="Island_silverwood_26" type="Marker2D" parent="MonsterSpawns" unique_id=1755248912]
-position = Vector2(28080, 6000)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 50
-count = 7
-radius = 2
-
-[node name="Island_silverwood_27" type="Marker2D" parent="MonsterSpawns" unique_id=2106795700]
-position = Vector2(28112, 6544)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 45
-count = 6
-radius = 2
-
-[node name="Island_silverwood_28" type="Marker2D" parent="MonsterSpawns" unique_id=1371524676]
-position = Vector2(28240, 3664)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_29" type="Marker2D" parent="MonsterSpawns" unique_id=1279396880]
-position = Vector2(28336, 4208)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 47
-count = 6
-radius = 2
-
-[node name="Island_silverwood_30" type="Marker2D" parent="MonsterSpawns" unique_id=774824053]
-position = Vector2(28400, 6224)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 47
-count = 7
-radius = 2
-
-[node name="Island_silverwood_31" type="Marker2D" parent="MonsterSpawns" unique_id=18471894]
-position = Vector2(28400, 6800)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 46
-count = 5
-radius = 2
-
-[node name="Island_silverwood_32" type="Marker2D" parent="MonsterSpawns" unique_id=1775221410]
-position = Vector2(28464, 7728)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 49
-count = 5
-radius = 2
-
-[node name="Island_silverwood_33" type="Marker2D" parent="MonsterSpawns" unique_id=555242344]
-position = Vector2(28560, 2832)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_34" type="Marker2D" parent="MonsterSpawns" unique_id=536573702]
-position = Vector2(28720, 7440)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_35" type="Marker2D" parent="MonsterSpawns" unique_id=52350002]
-position = Vector2(28816, 5968)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_36" type="Marker2D" parent="MonsterSpawns" unique_id=1935328889]
-position = Vector2(28816, 6800)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 50
-count = 5
-radius = 2
-
-[node name="Island_silverwood_37" type="Marker2D" parent="MonsterSpawns" unique_id=2028072004]
-position = Vector2(29008, 3024)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_38" type="Marker2D" parent="MonsterSpawns" unique_id=1694917998]
-position = Vector2(29168, 7152)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 50
-count = 5
-radius = 2
-
-[node name="Island_silverwood_39" type="Marker2D" parent="MonsterSpawns" unique_id=1888694527]
-position = Vector2(29168, 7696)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 46
-count = 7
-radius = 2
-
-[node name="Island_silverwood_40" type="Marker2D" parent="MonsterSpawns" unique_id=882309720]
-position = Vector2(29328, 6000)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 46
-count = 7
-radius = 2
-
-[node name="Island_silverwood_41" type="Marker2D" parent="MonsterSpawns" unique_id=1729897356]
-position = Vector2(29392, 6672)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 45
-count = 6
-radius = 2
-
-[node name="Island_silverwood_42" type="Marker2D" parent="MonsterSpawns" unique_id=461229930]
-position = Vector2(29488, 3088)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 47
-count = 6
-radius = 2
-
-[node name="Island_silverwood_43" type="Marker2D" parent="MonsterSpawns" unique_id=1032846671]
-position = Vector2(29552, 7184)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 49
-count = 5
-radius = 2
-
-[node name="Island_silverwood_44" type="Marker2D" parent="MonsterSpawns" unique_id=1027056741]
-position = Vector2(29680, 6352)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_45" type="Marker2D" parent="MonsterSpawns" unique_id=813248224]
-position = Vector2(29744, 5936)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 50
-count = 7
-radius = 2
-
-[node name="Island_silverwood_46" type="Marker2D" parent="MonsterSpawns" unique_id=769918636]
-position = Vector2(29808, 7504)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 46
-count = 5
-radius = 2
-
-[node name="Island_silverwood_47" type="Marker2D" parent="MonsterSpawns" unique_id=1822060584]
-position = Vector2(30064, 5264)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 49
-count = 7
-radius = 2
-
-[node name="Island_silverwood_48" type="Marker2D" parent="MonsterSpawns" unique_id=569005836]
-position = Vector2(30128, 5840)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 50
-count = 6
-radius = 2
-
-[node name="Island_silverwood_49" type="Marker2D" parent="MonsterSpawns" unique_id=1559046425]
-position = Vector2(30256, 7504)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_50" type="Marker2D" parent="MonsterSpawns" unique_id=959953170]
-position = Vector2(30480, 4944)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 50
-count = 6
-radius = 2
-
-[node name="Island_silverwood_51" type="Marker2D" parent="MonsterSpawns" unique_id=623668871]
-position = Vector2(31024, 5040)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 49
-count = 7
-radius = 2
-
-[node name="Island_silverwood_52" type="Marker2D" parent="MonsterSpawns" unique_id=1415727262]
-position = Vector2(31280, 5328)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_53" type="Marker2D" parent="MonsterSpawns" unique_id=1336343403]
-position = Vector2(25744, 4080)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 49
-count = 7
-radius = 2
-
-[node name="Island_silverwood_54" type="Marker2D" parent="MonsterSpawns" unique_id=377117753]
-position = Vector2(25808, 3280)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 46
-count = 5
-radius = 2
-
-[node name="Island_silverwood_55" type="Marker2D" parent="MonsterSpawns" unique_id=1213571695]
-position = Vector2(25808, 3632)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 45
-count = 5
-radius = 2
-
-[node name="Island_silverwood_56" type="Marker2D" parent="MonsterSpawns" unique_id=323475851]
-position = Vector2(26128, 4048)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 50
-count = 5
-radius = 2
-
-[node name="Island_silverwood_57" type="Marker2D" parent="MonsterSpawns" unique_id=1279785336]
-position = Vector2(26160, 3440)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 46
-count = 6
-radius = 2
-
-[node name="Island_silverwood_58" type="Marker2D" parent="MonsterSpawns" unique_id=1113360136]
-position = Vector2(26416, 2864)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_59" type="Marker2D" parent="MonsterSpawns" unique_id=195294043]
-position = Vector2(26512, 3312)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 49
-count = 7
-radius = 2
-
-[node name="Island_silverwood_60" type="Marker2D" parent="MonsterSpawns" unique_id=443422119]
-position = Vector2(26672, 7600)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 47
-count = 7
-radius = 2
-
-[node name="Island_silverwood_61" type="Marker2D" parent="MonsterSpawns" unique_id=742727889]
-position = Vector2(26768, 2864)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_62" type="Marker2D" parent="MonsterSpawns" unique_id=1986183457]
-position = Vector2(27088, 4816)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 46
-count = 7
-radius = 2
-
-[node name="Island_silverwood_63" type="Marker2D" parent="MonsterSpawns" unique_id=340748696]
-position = Vector2(27120, 2864)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 50
-count = 7
-radius = 2
-
-[node name="Island_silverwood_64" type="Marker2D" parent="MonsterSpawns" unique_id=2077993510]
-position = Vector2(27376, 8144)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 49
-count = 5
-radius = 2
-
-[node name="Island_silverwood_65" type="Marker2D" parent="MonsterSpawns" unique_id=842980455]
-position = Vector2(27472, 5328)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 47
-count = 6
-radius = 2
-
-[node name="Island_silverwood_66" type="Marker2D" parent="MonsterSpawns" unique_id=487042322]
-position = Vector2(27760, 8304)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 50
-count = 6
-radius = 2
-
-[node name="Island_silverwood_67" type="Marker2D" parent="MonsterSpawns" unique_id=192637763]
-position = Vector2(28048, 2352)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_68" type="Marker2D" parent="MonsterSpawns" unique_id=1196015555]
-position = Vector2(28336, 3184)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 47
-count = 7
-radius = 2
-
-[node name="Island_silverwood_69" type="Marker2D" parent="MonsterSpawns" unique_id=2080089713]
-position = Vector2(28400, 2288)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 50
-count = 7
-radius = 2
-
-[node name="Island_silverwood_70" type="Marker2D" parent="MonsterSpawns" unique_id=1843725446]
-position = Vector2(28400, 4592)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 47
-count = 6
-radius = 2
-
-[node name="Island_silverwood_71" type="Marker2D" parent="MonsterSpawns" unique_id=473631037]
-position = Vector2(28752, 2448)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 47
-count = 7
-radius = 2
-
-[node name="Island_silverwood_72" type="Marker2D" parent="MonsterSpawns" unique_id=1056198485]
-position = Vector2(28752, 6320)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 48
-count = 6
-radius = 2
-
-[node name="Island_silverwood_73" type="Marker2D" parent="MonsterSpawns" unique_id=1755007874]
-position = Vector2(28976, 3376)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 46
-count = 6
-radius = 2
-
-[node name="Island_silverwood_74" type="Marker2D" parent="MonsterSpawns" unique_id=1964034845]
-position = Vector2(29360, 5008)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_75" type="Marker2D" parent="MonsterSpawns" unique_id=266248724]
-position = Vector2(29520, 7856)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 50
-count = 5
-radius = 2
-
-[node name="Island_silverwood_76" type="Marker2D" parent="MonsterSpawns" unique_id=179872018]
-position = Vector2(29744, 6704)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 46
-count = 6
-radius = 2
-
-[node name="Island_silverwood_77" type="Marker2D" parent="MonsterSpawns" unique_id=1077078896]
-position = Vector2(30256, 6192)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 45
-count = 6
-radius = 2
-
-[node name="Island_silverwood_78" type="Marker2D" parent="MonsterSpawns" unique_id=1753937393]
-position = Vector2(30256, 6928)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_79" type="Marker2D" parent="MonsterSpawns" unique_id=1256585335]
-position = Vector2(30352, 4176)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 46
-count = 7
-radius = 2
-
-[node name="Island_silverwood_80" type="Marker2D" parent="MonsterSpawns" unique_id=300521712]
-position = Vector2(30416, 4560)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 46
-count = 7
-radius = 2
-
-[node name="Island_silverwood_81" type="Marker2D" parent="MonsterSpawns" unique_id=808237435]
-position = Vector2(30448, 5296)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_82" type="Marker2D" parent="MonsterSpawns" unique_id=1423362936]
-position = Vector2(30608, 5648)
-script = ExtResource("5_xkg0o")
-monster = "wraith_knight"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_83" type="Marker2D" parent="MonsterSpawns" unique_id=834868321]
-position = Vector2(30608, 6608)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 50
-count = 7
-radius = 2
-
-[node name="Island_silverwood_84" type="Marker2D" parent="MonsterSpawns" unique_id=249622122]
-position = Vector2(30672, 3824)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_85" type="Marker2D" parent="MonsterSpawns" unique_id=162033597]
-position = Vector2(30736, 6128)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_86" type="Marker2D" parent="MonsterSpawns" unique_id=1600155718]
-position = Vector2(30832, 4656)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_87" type="Marker2D" parent="MonsterSpawns" unique_id=1052409436]
-position = Vector2(31024, 3984)
-script = ExtResource("5_xkg0o")
-monster = "dire_bear"
-level = 45
-count = 6
-radius = 2
-
-[node name="Island_silverwood_88" type="Marker2D" parent="MonsterSpawns" unique_id=1569436854]
-position = Vector2(31088, 5776)
-script = ExtResource("5_xkg0o")
-monster = "hollow_knight"
-level = 45
-count = 7
-radius = 2
-
-[node name="Island_silverwood_89" type="Marker2D" parent="MonsterSpawns" unique_id=880144295]
-position = Vector2(31088, 6128)
-script = ExtResource("5_xkg0o")
-monster = "behemoth"
-level = 46
-count = 7
-radius = 2
-
-[node name="Island_silverwood_90" type="Marker2D" parent="MonsterSpawns" unique_id=1860369044]
-position = Vector2(31184, 4592)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 5
-radius = 2
-
-[node name="Island_silverwood_91" type="Marker2D" parent="MonsterSpawns" unique_id=359887116]
-position = Vector2(31280, 6480)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 7
-radius = 2
-
-[node name="Island_silverwood_92" type="Marker2D" parent="MonsterSpawns" unique_id=278582017]
-position = Vector2(31376, 3952)
-script = ExtResource("5_xkg0o")
-monster = "harpy"
-level = 48
-count = 7
-radius = 2
 
 [node name="Cave_thornroot_hollows_1" type="Marker2D" parent="MonsterSpawns" unique_id=1028111710]
 position = Vector2(112816, 7280)
@@ -16701,6 +15964,816 @@ level = 6
 count = 5
 radius = 2
 
+[node name="Island_silverwood_0" type="Marker2D" parent="MonsterSpawns" unique_id=616196004]
+position = Vector2(25904, 6480)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 47
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_1" type="Marker2D" parent="MonsterSpawns" unique_id=535778160]
+position = Vector2(26320, 6640)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 48
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_2" type="Marker2D" parent="MonsterSpawns" unique_id=572329431]
+position = Vector2(26384, 6160)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 45
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_3" type="Marker2D" parent="MonsterSpawns" unique_id=1921288496]
+position = Vector2(26416, 3312)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 45
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_4" type="Marker2D" parent="MonsterSpawns" unique_id=1514818849]
+position = Vector2(26576, 3664)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 45
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_5" type="Marker2D" parent="MonsterSpawns" unique_id=1278066402]
+position = Vector2(26832, 3376)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_6" type="Marker2D" parent="MonsterSpawns" unique_id=186193680]
+position = Vector2(27056, 6736)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 47
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_7" type="Marker2D" parent="MonsterSpawns" unique_id=612252368]
+position = Vector2(27216, 6384)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 49
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_8" type="Marker2D" parent="MonsterSpawns" unique_id=1270834013]
+position = Vector2(27376, 4208)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_9" type="Marker2D" parent="MonsterSpawns" unique_id=46216365]
+position = Vector2(27408, 4816)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_10" type="Marker2D" parent="MonsterSpawns" unique_id=1119380505]
+position = Vector2(27440, 6704)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_11" type="Marker2D" parent="MonsterSpawns" unique_id=128783945]
+position = Vector2(27440, 7280)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 47
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_12" type="Marker2D" parent="MonsterSpawns" unique_id=1344992191]
+position = Vector2(27568, 6128)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_13" type="Marker2D" parent="MonsterSpawns" unique_id=1791093859]
+position = Vector2(27600, 5200)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 49
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_14" type="Marker2D" parent="MonsterSpawns" unique_id=197207359]
+position = Vector2(27664, 2960)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 48
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_15" type="Marker2D" parent="MonsterSpawns" unique_id=1536279165]
+position = Vector2(27824, 6896)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 47
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_16" type="Marker2D" parent="MonsterSpawns" unique_id=1609220720]
+position = Vector2(28016, 4176)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 48
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_17" type="Marker2D" parent="MonsterSpawns" unique_id=619594736]
+position = Vector2(28016, 6320)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 45
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_18" type="Marker2D" parent="MonsterSpawns" unique_id=1063177678]
+position = Vector2(28016, 7824)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 48
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_19" type="Marker2D" parent="MonsterSpawns" unique_id=198536906]
+position = Vector2(28176, 2896)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 45
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_20" type="Marker2D" parent="MonsterSpawns" unique_id=471380899]
+position = Vector2(28272, 7536)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 45
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_21" type="Marker2D" parent="MonsterSpawns" unique_id=1736699735]
+position = Vector2(28400, 3952)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_22" type="Marker2D" parent="MonsterSpawns" unique_id=1599587940]
+position = Vector2(28400, 7920)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 49
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_23" type="Marker2D" parent="MonsterSpawns" unique_id=204619646]
+position = Vector2(28528, 3344)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_24" type="Marker2D" parent="MonsterSpawns" unique_id=932118483]
+position = Vector2(28720, 7632)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_25" type="Marker2D" parent="MonsterSpawns" unique_id=129087263]
+position = Vector2(28816, 6448)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 47
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_26" type="Marker2D" parent="MonsterSpawns" unique_id=392855234]
+position = Vector2(28848, 8048)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_27" type="Marker2D" parent="MonsterSpawns" unique_id=116815637]
+position = Vector2(29072, 6160)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 47
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_28" type="Marker2D" parent="MonsterSpawns" unique_id=630706562]
+position = Vector2(29104, 7568)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_29" type="Marker2D" parent="MonsterSpawns" unique_id=1068848129]
+position = Vector2(29200, 5456)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_30" type="Marker2D" parent="MonsterSpawns" unique_id=1757283489]
+position = Vector2(29200, 6704)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 45
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_31" type="Marker2D" parent="MonsterSpawns" unique_id=328730584]
+position = Vector2(29296, 5008)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 49
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_32" type="Marker2D" parent="MonsterSpawns" unique_id=1503989383]
+position = Vector2(29392, 5872)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_33" type="Marker2D" parent="MonsterSpawns" unique_id=1570721454]
+position = Vector2(29424, 6320)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_34" type="Marker2D" parent="MonsterSpawns" unique_id=1154302232]
+position = Vector2(29424, 7024)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 47
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_35" type="Marker2D" parent="MonsterSpawns" unique_id=1917884824]
+position = Vector2(29680, 5232)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 46
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_36" type="Marker2D" parent="MonsterSpawns" unique_id=1524260737]
+position = Vector2(29744, 6608)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_37" type="Marker2D" parent="MonsterSpawns" unique_id=433899552]
+position = Vector2(29744, 7344)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_38" type="Marker2D" parent="MonsterSpawns" unique_id=1164451013]
+position = Vector2(29776, 6128)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_39" type="Marker2D" parent="MonsterSpawns" unique_id=964789968]
+position = Vector2(30032, 5552)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_40" type="Marker2D" parent="MonsterSpawns" unique_id=751181650]
+position = Vector2(30096, 6448)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 48
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_41" type="Marker2D" parent="MonsterSpawns" unique_id=1861540670]
+position = Vector2(30160, 6928)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_42" type="Marker2D" parent="MonsterSpawns" unique_id=51849518]
+position = Vector2(30448, 4080)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_43" type="Marker2D" parent="MonsterSpawns" unique_id=1476292942]
+position = Vector2(30736, 5648)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_44" type="Marker2D" parent="MonsterSpawns" unique_id=179494090]
+position = Vector2(30960, 6480)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 50
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_45" type="Marker2D" parent="MonsterSpawns" unique_id=61123046]
+position = Vector2(31088, 5936)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 50
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_46" type="Marker2D" parent="MonsterSpawns" unique_id=1350637531]
+position = Vector2(31376, 6416)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_47" type="Marker2D" parent="MonsterSpawns" unique_id=776632508]
+position = Vector2(25392, 6160)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_48" type="Marker2D" parent="MonsterSpawns" unique_id=375502028]
+position = Vector2(25552, 6512)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 47
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_49" type="Marker2D" parent="MonsterSpawns" unique_id=779366712]
+position = Vector2(25936, 4080)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_50" type="Marker2D" parent="MonsterSpawns" unique_id=514314061]
+position = Vector2(26288, 4016)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 50
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_51" type="Marker2D" parent="MonsterSpawns" unique_id=911141269]
+position = Vector2(26288, 6992)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_52" type="Marker2D" parent="MonsterSpawns" unique_id=1077177968]
+position = Vector2(26544, 7440)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 50
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_53" type="Marker2D" parent="MonsterSpawns" unique_id=1912904800]
+position = Vector2(26736, 6224)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 45
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_54" type="Marker2D" parent="MonsterSpawns" unique_id=1530756868]
+position = Vector2(26768, 7792)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 45
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_55" type="Marker2D" parent="MonsterSpawns" unique_id=1873956196]
+position = Vector2(26928, 3728)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_56" type="Marker2D" parent="MonsterSpawns" unique_id=923766986]
+position = Vector2(26928, 8272)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 45
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_57" type="Marker2D" parent="MonsterSpawns" unique_id=1168012418]
+position = Vector2(27024, 7216)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_58" type="Marker2D" parent="MonsterSpawns" unique_id=1137217196]
+position = Vector2(27088, 5872)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 50
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_59" type="Marker2D" parent="MonsterSpawns" unique_id=1679120749]
+position = Vector2(27120, 7728)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 49
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_60" type="Marker2D" parent="MonsterSpawns" unique_id=1471329161]
+position = Vector2(27184, 3088)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 47
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_61" type="Marker2D" parent="MonsterSpawns" unique_id=399603053]
+position = Vector2(27280, 8112)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 47
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_62" type="Marker2D" parent="MonsterSpawns" unique_id=1633484827]
+position = Vector2(27440, 5552)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 45
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_63" type="Marker2D" parent="MonsterSpawns" unique_id=1824515483]
+position = Vector2(27632, 8144)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 47
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_64" type="Marker2D" parent="MonsterSpawns" unique_id=1838381030]
+position = Vector2(27760, 4592)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 48
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_65" type="Marker2D" parent="MonsterSpawns" unique_id=46440038]
+position = Vector2(27792, 5552)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 48
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_66" type="Marker2D" parent="MonsterSpawns" unique_id=353065632]
+position = Vector2(27792, 7248)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 49
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_67" type="Marker2D" parent="MonsterSpawns" unique_id=745159609]
+position = Vector2(27984, 8240)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 47
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_68" type="Marker2D" parent="MonsterSpawns" unique_id=1879070417]
+position = Vector2(28112, 4528)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_69" type="Marker2D" parent="MonsterSpawns" unique_id=1628814382]
+position = Vector2(28464, 4304)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 45
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_70" type="Marker2D" parent="MonsterSpawns" unique_id=925699588]
+position = Vector2(28528, 2832)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 46
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_71" type="Marker2D" parent="MonsterSpawns" unique_id=1744197146]
+position = Vector2(28880, 3056)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 50
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_72" type="Marker2D" parent="MonsterSpawns" unique_id=1390971904]
+position = Vector2(29200, 7920)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_73" type="Marker2D" parent="MonsterSpawns" unique_id=1205910028]
+position = Vector2(29552, 8016)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 47
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_74" type="Marker2D" parent="MonsterSpawns" unique_id=1364984350]
+position = Vector2(29776, 6960)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_75" type="Marker2D" parent="MonsterSpawns" unique_id=275623740]
+position = Vector2(29904, 7696)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 48
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_76" type="Marker2D" parent="MonsterSpawns" unique_id=166146163]
+position = Vector2(30032, 5168)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_77" type="Marker2D" parent="MonsterSpawns" unique_id=2067664927]
+position = Vector2(30128, 5904)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_78" type="Marker2D" parent="MonsterSpawns" unique_id=1345417591]
+position = Vector2(30128, 7344)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 45
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_79" type="Marker2D" parent="MonsterSpawns" unique_id=1013989860]
+position = Vector2(30352, 3504)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 46
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_80" type="Marker2D" parent="MonsterSpawns" unique_id=1862746182]
+position = Vector2(30352, 4656)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 49
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_81" type="Marker2D" parent="MonsterSpawns" unique_id=1528035001]
+position = Vector2(30384, 5104)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 45
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_82" type="Marker2D" parent="MonsterSpawns" unique_id=161473355]
+position = Vector2(30384, 5456)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 50
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_83" type="Marker2D" parent="MonsterSpawns" unique_id=857815477]
+position = Vector2(30480, 6000)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 48
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_84" type="Marker2D" parent="MonsterSpawns" unique_id=183946159]
+position = Vector2(30672, 6832)
+script = ExtResource("5_xkg0o")
+monster = "behemoth"
+level = 50
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_85" type="Marker2D" parent="MonsterSpawns" unique_id=1772684711]
+position = Vector2(30704, 3728)
+script = ExtResource("5_xkg0o")
+monster = "hollow_knight"
+level = 49
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_86" type="Marker2D" parent="MonsterSpawns" unique_id=1846962665]
+position = Vector2(30832, 4336)
+script = ExtResource("5_xkg0o")
+monster = "wraith_knight"
+level = 48
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_87" type="Marker2D" parent="MonsterSpawns" unique_id=1333370924]
+position = Vector2(30864, 4848)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 47
+count = 5
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_88" type="Marker2D" parent="MonsterSpawns" unique_id=445418696]
+position = Vector2(30928, 5200)
+script = ExtResource("5_xkg0o")
+monster = "dire_bear"
+level = 50
+count = 6
+radius = 2
+metadata/region = "silverwood"
+
+[node name="Island_silverwood_89" type="Marker2D" parent="MonsterSpawns" unique_id=1453095979]
+position = Vector2(31440, 6032)
+script = ExtResource("5_xkg0o")
+monster = "harpy"
+level = 49
+count = 7
+radius = 2
+metadata/region = "silverwood"
+
 [node name="DungeonEntrances" type="Node2D" parent="." unique_id=1083546267]
 
 [node name="CinderCellar" type="Marker2D" parent="DungeonEntrances" unique_id=1043664892]
@@ -17084,35 +17157,6 @@ place = "Hrimvik"
 role = "artisan"
 facing = Vector2i(0, -1)
 
-[node name="aldmoor_vendor" type="Marker2D" parent="Townsfolk" unique_id=1668234934]
-position = Vector2(25360, 4688)
-script = ExtResource("7_yncsc")
-npc_name = "Quartermaster Hale"
-place = "Aldmoor"
-facing = Vector2i(1, 0)
-
-[node name="aldmoor_artisan" type="Marker2D" parent="Townsfolk" unique_id=1679170839]
-position = Vector2(26512, 5584)
-script = ExtResource("7_yncsc")
-npc_name = "Master Brannoc"
-place = "Aldmoor"
-role = "artisan"
-facing = Vector2i(0, -1)
-
-[node name="fernhollow_vendor" type="Marker2D" parent="Townsfolk" unique_id=572670323]
-position = Vector2(29136, 3888)
-script = ExtResource("7_yncsc")
-npc_name = "Trader Wynne"
-place = "Fernhollow"
-
-[node name="fernhollow_artisan" type="Marker2D" parent="Townsfolk" unique_id=609720565]
-position = Vector2(29744, 4464)
-script = ExtResource("7_yncsc")
-npc_name = "Woodwright Ilsa"
-place = "Fernhollow"
-role = "artisan"
-facing = Vector2i(0, -1)
-
 [node name="brackenford_vendor" type="Marker2D" parent="Townsfolk" unique_id=1409384824]
 position = Vector2(16016, 15952)
 script = ExtResource("7_yncsc")
@@ -17126,6 +17170,39 @@ npc_name = "Artisan Wenna"
 place = "Brackenford"
 role = "artisan"
 facing = Vector2i(0, -1)
+
+[node name="aldmoor_vendor" type="Marker2D" parent="Townsfolk" unique_id=588513702]
+position = Vector2(25360, 4688)
+script = ExtResource("7_yncsc")
+npc_name = "Quartermaster Hale"
+place = "Aldmoor"
+facing = Vector2i(1, 0)
+metadata/region = "silverwood"
+
+[node name="aldmoor_artisan" type="Marker2D" parent="Townsfolk" unique_id=2062159484]
+position = Vector2(26512, 5584)
+script = ExtResource("7_yncsc")
+npc_name = "Master Brannoc"
+place = "Aldmoor"
+role = "artisan"
+facing = Vector2i(0, -1)
+metadata/region = "silverwood"
+
+[node name="fernhollow_vendor" type="Marker2D" parent="Townsfolk" unique_id=2117940243]
+position = Vector2(29136, 3888)
+script = ExtResource("7_yncsc")
+npc_name = "Trader Wynne"
+place = "Fernhollow"
+metadata/region = "silverwood"
+
+[node name="fernhollow_artisan" type="Marker2D" parent="Townsfolk" unique_id=789625892]
+position = Vector2(29744, 4464)
+script = ExtResource("7_yncsc")
+npc_name = "Woodwright Ilsa"
+place = "Fernhollow"
+role = "artisan"
+facing = Vector2i(0, -1)
+metadata/region = "silverwood"
 
 [node name="CaveMouths" type="Node2D" parent="." unique_id=1044029069]
 
@@ -17170,196 +17247,6 @@ script = ExtResource("9_xkg0o")
 cave = "moonwell_deeps"
 
 [node name="Decor" type="Node2D" parent="." unique_id=20156548]
-
-[node name="Decor_550_149" type="Marker2D" parent="Decor" unique_id=11466415]
-position = Vector2(25936, 4784)
-script = ExtResource("36_y06j2")
-kind = "throne"
-
-[node name="Decor_548_148" type="Marker2D" parent="Decor" unique_id=730533469]
-position = Vector2(25872, 4752)
-script = ExtResource("36_y06j2")
-kind = "knight_statue"
-
-[node name="Decor_552_148" type="Marker2D" parent="Decor" unique_id=773327268]
-position = Vector2(26000, 4752)
-script = ExtResource("36_y06j2")
-kind = "knight_statue"
-
-[node name="Decor_543_150" type="Marker2D" parent="Decor" unique_id=747694862]
-position = Vector2(25712, 4816)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_557_150" type="Marker2D" parent="Decor" unique_id=1649853335]
-position = Vector2(26160, 4816)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_543_154" type="Marker2D" parent="Decor" unique_id=429414091]
-position = Vector2(25712, 4944)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_557_154" type="Marker2D" parent="Decor" unique_id=1465759666]
-position = Vector2(26160, 4944)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_545_158" type="Marker2D" parent="Decor" unique_id=1561575138]
-position = Vector2(25776, 5072)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_555_158" type="Marker2D" parent="Decor" unique_id=1095541434]
-position = Vector2(26096, 5072)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_545_161" type="Marker2D" parent="Decor" unique_id=1872460493]
-position = Vector2(25776, 5168)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_555_161" type="Marker2D" parent="Decor" unique_id=1530216176]
-position = Vector2(26096, 5168)
-script = ExtResource("36_y06j2")
-kind = "pillar"
-
-[node name="Decor_541_148" type="Marker2D" parent="Decor" unique_id=163270274]
-position = Vector2(25648, 4752)
-script = ExtResource("36_y06j2")
-kind = "flower_vase"
-
-[node name="Decor_559_148" type="Marker2D" parent="Decor" unique_id=1320503093]
-position = Vector2(26224, 4752)
-script = ExtResource("36_y06j2")
-kind = "flower_vase"
-
-[node name="Decor_541_155" type="Marker2D" parent="Decor" unique_id=1835879271]
-position = Vector2(25648, 4976)
-script = ExtResource("36_y06j2")
-kind = "potted_palm"
-
-[node name="Decor_559_155" type="Marker2D" parent="Decor" unique_id=1173083431]
-position = Vector2(26224, 4976)
-script = ExtResource("36_y06j2")
-kind = "potted_palm"
-
-[node name="Decor_544_162" type="Marker2D" parent="Decor" unique_id=517072375]
-position = Vector2(25744, 5200)
-script = ExtResource("36_y06j2")
-kind = "flower_vase"
-
-[node name="Decor_556_162" type="Marker2D" parent="Decor" unique_id=1146007515]
-position = Vector2(26128, 5200)
-script = ExtResource("36_y06j2")
-kind = "flower_vase"
-
-[node name="Decor_542_147" type="Marker2D" parent="Decor" unique_id=471841758]
-position = Vector2(25680, 4720)
-script = ExtResource("36_y06j2")
-kind = "banner"
-
-[node name="Decor_544_147" type="Marker2D" parent="Decor" unique_id=1868060885]
-position = Vector2(25744, 4720)
-script = ExtResource("36_y06j2")
-kind = "wall_torch"
-
-[node name="Decor_547_147" type="Marker2D" parent="Decor" unique_id=2095173273]
-position = Vector2(25840, 4720)
-script = ExtResource("36_y06j2")
-kind = "banner"
-
-[node name="Decor_553_147" type="Marker2D" parent="Decor" unique_id=2112455742]
-position = Vector2(26032, 4720)
-script = ExtResource("36_y06j2")
-kind = "banner"
-
-[node name="Decor_556_147" type="Marker2D" parent="Decor" unique_id=553392356]
-position = Vector2(26128, 4720)
-script = ExtResource("36_y06j2")
-kind = "wall_torch"
-
-[node name="Decor_558_147" type="Marker2D" parent="Decor" unique_id=290663630]
-position = Vector2(26192, 4720)
-script = ExtResource("36_y06j2")
-kind = "banner"
-
-[node name="Decor_548_142" type="Marker2D" parent="Decor" unique_id=1882742591]
-position = Vector2(25872, 4560)
-script = ExtResource("36_y06j2")
-kind = "painting"
-
-[node name="Decor_552_142" type="Marker2D" parent="Decor" unique_id=596402245]
-position = Vector2(26000, 4560)
-script = ExtResource("36_y06j2")
-kind = "wall_torch"
-
-[node name="Decor_546_143" type="Marker2D" parent="Decor" unique_id=1221173676]
-position = Vector2(25808, 4592)
-script = ExtResource("36_y06j2")
-kind = "shelf_books"
-
-[node name="Decor_548_143" type="Marker2D" parent="Decor" unique_id=945053259]
-position = Vector2(25872, 4592)
-script = ExtResource("36_y06j2")
-kind = "chest"
-
-[node name="Decor_553_143" type="Marker2D" parent="Decor" unique_id=514816355]
-position = Vector2(26032, 4592)
-script = ExtResource("36_y06j2")
-kind = "bed"
-
-[node name="Decor_547_145" type="Marker2D" parent="Decor" unique_id=229906142]
-position = Vector2(25840, 4656)
-script = ExtResource("36_y06j2")
-kind = "chair"
-
-[node name="Decor_548_145" type="Marker2D" parent="Decor" unique_id=2092673188]
-position = Vector2(25872, 4656)
-script = ExtResource("36_y06j2")
-kind = "candelabra"
-
-[node name="Decor_552_145" type="Marker2D" parent="Decor" unique_id=1530008489]
-position = Vector2(26000, 4656)
-script = ExtResource("36_y06j2")
-kind = "chair"
-
-[node name="Decor_553_145" type="Marker2D" parent="Decor" unique_id=340255491]
-position = Vector2(26032, 4656)
-script = ExtResource("36_y06j2")
-kind = "fruit_table"
-
-[node name="Decor_554_146" type="Marker2D" parent="Decor" unique_id=1259991098]
-position = Vector2(26064, 4688)
-script = ExtResource("36_y06j2")
-kind = "stove"
-
-[node name="Decor_546_146" type="Marker2D" parent="Decor" unique_id=949070059]
-position = Vector2(25808, 4688)
-script = ExtResource("36_y06j2")
-kind = "crate"
-
-[node name="Decor_548_164" type="Marker2D" parent="Decor" unique_id=202731125]
-position = Vector2(25872, 5264)
-script = ExtResource("36_y06j2")
-kind = "gargoyle"
-
-[node name="Decor_552_164" type="Marker2D" parent="Decor" unique_id=790183136]
-position = Vector2(26000, 5264)
-script = ExtResource("36_y06j2")
-kind = "gargoyle"
-
-[node name="Decor_547_164" type="Marker2D" parent="Decor" unique_id=1068222023]
-position = Vector2(25840, 5264)
-script = ExtResource("36_y06j2")
-kind = "bush"
-
-[node name="Decor_553_164" type="Marker2D" parent="Decor" unique_id=1496512247]
-position = Vector2(26032, 5264)
-script = ExtResource("36_y06j2")
-kind = "bush"
 
 [node name="Decor_510_507" type="Marker2D" parent="Decor" unique_id=608060561]
 position = Vector2(16336, 16240)
@@ -17480,3 +17367,231 @@ kind = "wall_torch"
 position = Vector2(17168, 7984)
 script = ExtResource("36_y06j2")
 kind = "wall_torch"
+
+[node name="Decor_810_149" type="Marker2D" parent="Decor" unique_id=1239688037]
+position = Vector2(25936, 4784)
+script = ExtResource("36_y06j2")
+kind = "throne"
+metadata/region = "silverwood"
+
+[node name="Decor_808_148" type="Marker2D" parent="Decor" unique_id=618858981]
+position = Vector2(25872, 4752)
+script = ExtResource("36_y06j2")
+kind = "knight_statue"
+metadata/region = "silverwood"
+
+[node name="Decor_812_148" type="Marker2D" parent="Decor" unique_id=227882183]
+position = Vector2(26000, 4752)
+script = ExtResource("36_y06j2")
+kind = "knight_statue"
+metadata/region = "silverwood"
+
+[node name="Decor_803_150" type="Marker2D" parent="Decor" unique_id=917222705]
+position = Vector2(25712, 4816)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_817_150" type="Marker2D" parent="Decor" unique_id=1029864766]
+position = Vector2(26160, 4816)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_803_154" type="Marker2D" parent="Decor" unique_id=974155645]
+position = Vector2(25712, 4944)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_817_154" type="Marker2D" parent="Decor" unique_id=1210061268]
+position = Vector2(26160, 4944)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_805_158" type="Marker2D" parent="Decor" unique_id=1280935069]
+position = Vector2(25776, 5072)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_815_158" type="Marker2D" parent="Decor" unique_id=163087859]
+position = Vector2(26096, 5072)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_805_161" type="Marker2D" parent="Decor" unique_id=589356209]
+position = Vector2(25776, 5168)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_815_161" type="Marker2D" parent="Decor" unique_id=280669967]
+position = Vector2(26096, 5168)
+script = ExtResource("36_y06j2")
+kind = "pillar"
+metadata/region = "silverwood"
+
+[node name="Decor_801_148" type="Marker2D" parent="Decor" unique_id=1058844208]
+position = Vector2(25648, 4752)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "silverwood"
+
+[node name="Decor_819_148" type="Marker2D" parent="Decor" unique_id=1314740015]
+position = Vector2(26224, 4752)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "silverwood"
+
+[node name="Decor_801_155" type="Marker2D" parent="Decor" unique_id=1219746279]
+position = Vector2(25648, 4976)
+script = ExtResource("36_y06j2")
+kind = "potted_palm"
+metadata/region = "silverwood"
+
+[node name="Decor_819_155" type="Marker2D" parent="Decor" unique_id=1987072774]
+position = Vector2(26224, 4976)
+script = ExtResource("36_y06j2")
+kind = "potted_palm"
+metadata/region = "silverwood"
+
+[node name="Decor_804_162" type="Marker2D" parent="Decor" unique_id=1430749927]
+position = Vector2(25744, 5200)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "silverwood"
+
+[node name="Decor_816_162" type="Marker2D" parent="Decor" unique_id=1876152838]
+position = Vector2(26128, 5200)
+script = ExtResource("36_y06j2")
+kind = "flower_vase"
+metadata/region = "silverwood"
+
+[node name="Decor_802_147" type="Marker2D" parent="Decor" unique_id=164810344]
+position = Vector2(25680, 4720)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "silverwood"
+
+[node name="Decor_804_147" type="Marker2D" parent="Decor" unique_id=1698237290]
+position = Vector2(25744, 4720)
+script = ExtResource("36_y06j2")
+kind = "wall_torch"
+metadata/region = "silverwood"
+
+[node name="Decor_807_147" type="Marker2D" parent="Decor" unique_id=1150399264]
+position = Vector2(25840, 4720)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "silverwood"
+
+[node name="Decor_813_147" type="Marker2D" parent="Decor" unique_id=1286425339]
+position = Vector2(26032, 4720)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "silverwood"
+
+[node name="Decor_816_147" type="Marker2D" parent="Decor" unique_id=2088607451]
+position = Vector2(26128, 4720)
+script = ExtResource("36_y06j2")
+kind = "wall_torch"
+metadata/region = "silverwood"
+
+[node name="Decor_818_147" type="Marker2D" parent="Decor" unique_id=2098532201]
+position = Vector2(26192, 4720)
+script = ExtResource("36_y06j2")
+kind = "banner"
+metadata/region = "silverwood"
+
+[node name="Decor_808_142" type="Marker2D" parent="Decor" unique_id=2109682708]
+position = Vector2(25872, 4560)
+script = ExtResource("36_y06j2")
+kind = "painting"
+metadata/region = "silverwood"
+
+[node name="Decor_812_142" type="Marker2D" parent="Decor" unique_id=1342921451]
+position = Vector2(26000, 4560)
+script = ExtResource("36_y06j2")
+kind = "wall_torch"
+metadata/region = "silverwood"
+
+[node name="Decor_806_143" type="Marker2D" parent="Decor" unique_id=604943511]
+position = Vector2(25808, 4592)
+script = ExtResource("36_y06j2")
+kind = "shelf_books"
+metadata/region = "silverwood"
+
+[node name="Decor_808_143" type="Marker2D" parent="Decor" unique_id=1794521570]
+position = Vector2(25872, 4592)
+script = ExtResource("36_y06j2")
+kind = "chest"
+metadata/region = "silverwood"
+
+[node name="Decor_813_143" type="Marker2D" parent="Decor" unique_id=1913340383]
+position = Vector2(26032, 4592)
+script = ExtResource("36_y06j2")
+kind = "bed"
+metadata/region = "silverwood"
+
+[node name="Decor_807_145" type="Marker2D" parent="Decor" unique_id=1623147825]
+position = Vector2(25840, 4656)
+script = ExtResource("36_y06j2")
+kind = "chair"
+metadata/region = "silverwood"
+
+[node name="Decor_808_145" type="Marker2D" parent="Decor" unique_id=2044558408]
+position = Vector2(25872, 4656)
+script = ExtResource("36_y06j2")
+kind = "candelabra"
+metadata/region = "silverwood"
+
+[node name="Decor_812_145" type="Marker2D" parent="Decor" unique_id=1756625382]
+position = Vector2(26000, 4656)
+script = ExtResource("36_y06j2")
+kind = "chair"
+metadata/region = "silverwood"
+
+[node name="Decor_813_145" type="Marker2D" parent="Decor" unique_id=665063558]
+position = Vector2(26032, 4656)
+script = ExtResource("36_y06j2")
+kind = "fruit_table"
+metadata/region = "silverwood"
+
+[node name="Decor_814_146" type="Marker2D" parent="Decor" unique_id=990695480]
+position = Vector2(26064, 4688)
+script = ExtResource("36_y06j2")
+kind = "stove"
+metadata/region = "silverwood"
+
+[node name="Decor_806_146" type="Marker2D" parent="Decor" unique_id=386160315]
+position = Vector2(25808, 4688)
+script = ExtResource("36_y06j2")
+kind = "crate"
+metadata/region = "silverwood"
+
+[node name="Decor_808_164" type="Marker2D" parent="Decor" unique_id=306341209]
+position = Vector2(25872, 5264)
+script = ExtResource("36_y06j2")
+kind = "gargoyle"
+metadata/region = "silverwood"
+
+[node name="Decor_812_164" type="Marker2D" parent="Decor" unique_id=356651885]
+position = Vector2(26000, 5264)
+script = ExtResource("36_y06j2")
+kind = "gargoyle"
+metadata/region = "silverwood"
+
+[node name="Decor_807_164" type="Marker2D" parent="Decor" unique_id=313938841]
+position = Vector2(25840, 5264)
+script = ExtResource("36_y06j2")
+kind = "bush"
+metadata/region = "silverwood"
+
+[node name="Decor_813_164" type="Marker2D" parent="Decor" unique_id=1384617404]
+position = Vector2(26032, 5264)
+script = ExtResource("36_y06j2")
+kind = "bush"
+metadata/region = "silverwood"

@@ -198,7 +198,15 @@ relocations, then fix-ups. That doesn't scale to Tibia density.
    (lower floors offset and dimmed, roof and upper-floor hiding, cliff faces) waits for a painted
    upper floor (step 2b, "Making floors feel right").
 3. Base/override layers + `make region` pipeline; convert one existing region (e.g. Brackenford's
-   mainland ring) to prove it.
+   mainland ring) to prove it. Done: every sector scene's root is the hand **override** and its
+   locked child `Base` the generated layer (`MapIO`; overrides always win, generators write the
+   base). `make region NAME=<id>` (`tools/generators/region.gd`) rebuilds an island spec from
+   `islands.gd` in place: it keeps cave mouths and dungeon entrances in its rect, clears its base,
+   paints coast, landscape, towns, roads, harbour, and camps, furnishes and paves the towns, tags its
+   markers with `region=<id>`, and re-bakes the world map; a re-run is a no-op. Silverwood was
+   converted with a fresh rebuild (owner's choice: today's painter, empty overrides). Not done:
+   a "keep today's look" conversion for hand-shaped regions such as Brackenford (copy their
+   current cells into overrides first), and hunt/cave specs.
 4. Editor brushes.
 5. Then build regions one by one from the plan (plan 40's islands become region specs).
 

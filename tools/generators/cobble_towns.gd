@@ -31,8 +31,10 @@ func _initialize() -> void:
 	quit(0 if error == OK else 1)
 
 
-## {cell: new terrain} for every town tile still unpaved.
-static func paving() -> Dictionary:
+## {cell: new terrain} for every town tile still unpaved, read from the baked map or from
+## terrain_of (cell -> terrain letter; a region rebuild reads its scene).
+static func paving(terrain_of: Callable = Callable()) -> Dictionary:
+	var terrain: Callable = terrain_of if terrain_of.is_valid() else func(cell: Vector2i) -> String: return World.terrain(cell)
 	var changes: Dictionary = {}
 	for zone: Dictionary in World.ZONES:
 		if not zone["town"]:
@@ -41,15 +43,15 @@ static func paving() -> Dictionary:
 		var piers: Array[Vector2i] = []
 		for y: int in range(rect.position.y, rect.end.y):
 			for x: int in range(rect.position.x, rect.end.x):
-				if World.terrain(Vector2i(x, y)) == "b":
+				if terrain.call(Vector2i(x, y)) == "b":
 					piers.append(Vector2i(x, y))
 		for y: int in range(rect.position.y, rect.end.y):
 			for x: int in range(rect.position.x, rect.end.x):
 				var cell := Vector2i(x, y)
-				var tile: String = World.terrain(cell)
+				var tile: String = terrain.call(cell)
 				if tile.is_empty() or not tile in PAVED:
 					continue
-				changes[cell] = "b" if _quay(cell, piers) else "="
+				changes[cell] = "b" if _quay(cell, piers, terrain) else "="
 	return changes
 
 
@@ -59,7 +61,7 @@ static func in_town(cell: Vector2i) -> bool:
 
 
 ## Whether a town tile is shore beside water within QUAY_REACH of one of the town's piers.
-static func _quay(cell: Vector2i, piers: Array[Vector2i]) -> bool:
-	if not SIDES.any(func(side: Vector2i) -> bool: return World.terrain(cell + side) == "~"):
+static func _quay(cell: Vector2i, piers: Array[Vector2i], terrain: Callable) -> bool:
+	if not SIDES.any(func(side: Vector2i) -> bool: return terrain.call(cell + side) == "~"):
 		return false
 	return piers.any(func(pier: Vector2i) -> bool: return World.chebyshev(pier, cell) <= QUAY_REACH)

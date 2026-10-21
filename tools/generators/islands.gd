@@ -48,6 +48,8 @@ const WALKABLE: String = ".,:=bdocv^msFY"
 const TOWN_CLEAR: int = 12
 const ROAD_CLEAR: int = 3
 const COAST_LIMIT: int = 12
+## Open ground kept round each point of interest in a spec's "keep" ({cell: tile}).
+const KEEP_CLEAR: int = 4
 
 var _layer: TileMapLayer
 var _root: Node
@@ -136,13 +138,29 @@ func _island(id: String, spec: Dictionary) -> int:
 	_rng.seed = salt
 	var castle := Rect2i(spec["capital"]["at"], CASTLE_SIZE)
 	var town_at: Vector2i = spec["town"]["at"]
-	var land: Dictionary = _coast(rect, salt, [castle.grow(5), Rect2i(town_at - Vector2i(16, 13), Vector2i(32, 26))])
+	# Points of interest other passes placed (cave mouths, stairways; tools/generators/region.gd):
+	# land with open ground round them, their own tile kept, and no camp on them.
+	var keep: Dictionary = spec.get("keep", {})
+	var kept_areas: Array = []
+	for cell: Vector2i in keep:
+		kept_areas.append(Rect2i(cell - Vector2i.ONE * KEEP_CLEAR, Vector2i.ONE * (KEEP_CLEAR * 2 + 1)))
+	var land: Dictionary = _coast(rect, salt, [castle.grow(5), Rect2i(town_at - Vector2i(16, 13), Vector2i(32, 26))] + kept_areas)
 	_depth = _coast_distances(land)
 	var changed: int = land.size()
 	_landscape(land, salt)
 	var reserved: Dictionary = {}
 	changed += _castle(castle, spec, reserved)
 	changed += _village(town_at, spec, reserved)
+	var village := Rect2i(town_at - Vector2i(15, 12), Vector2i(31, 25))
+	for area: Rect2i in kept_areas:
+		for y: int in range(area.position.y, area.end.y):
+			for x: int in range(area.position.x, area.end.x):
+				var cell := Vector2i(x, y)
+				if land.has(cell) and not castle.has_point(cell) and not village.has_point(cell) and not reserved.has(cell):
+					_paint(cell, ".")
+	for cell: Vector2i in keep:
+		_paint(cell, keep[cell])
+		reserved[cell] = true
 	var harbour: Vector2i = _harbour(castle, land)
 	# Roads: the castle's gates to the village, the village out to the north shore, and the south
 	# gate down to the south shore, so every part of the island is a walk from a gate.
@@ -157,7 +175,7 @@ func _island(id: String, spec: Dictionary) -> int:
 	changed += _ferry(id, spec, harbour)
 	var reached: Dictionary = _connect(land, harbour)
 	changed += _camps(id, spec, land, reached, [castle.grow(TOWN_CLEAR), Rect2i(town_at - Vector2i(15 + TOWN_CLEAR, 12 + TOWN_CLEAR),
-		Vector2i(31 + TOWN_CLEAR * 2, 25 + TOWN_CLEAR * 2))])
+		Vector2i(31 + TOWN_CLEAR * 2, 25 + TOWN_CLEAR * 2))] + kept_areas)
 	return changed
 
 
