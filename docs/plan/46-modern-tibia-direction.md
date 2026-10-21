@@ -752,7 +752,7 @@ From a sprite review on 2026-10-21 (plus plan 38's audit of 2026-10-16).
 | Old walls | `walls.png` rows 0–2 (grey crypt, purple obsidian, brown cave) | **Done** (phase 4, `1131acf`): master-palette stone, obsidian, and cave ramps | done |
 | Cave rock | `cave_rock.png` | **Done** (`1131acf`): `CAVE_ROCK` ramp, darker caves | done |
 | Other walls | `house_walls`, `castle_walls`, `castle_towers`, `fieldstone_walls`, `cellar_walls`, `log_walls`, `mountains`, `crags` | **Done** (`1131acf`): master ramps, Qasrun-style stone/log/brick faces and windows. Open: the mountain top is still busy | done |
-| Creatures | `creatures/*` (67), `monsters/*` (12 tinted templates), `mounts/*` (30) | Best current art, but muted and some read as blobs (behemoth). Need saturation, 3/4 view, clearer silhouettes. Lizardfolk/ogre shamans are humans in hoods | 2 |
+| Creatures | `creatures/*` (67), `monsters/*` (12 tinted templates), `mounts/*` (30) | **Colour done** (this step): `creatures.STYLE` pushes every material's ramp to more saturation and contrast and outlines it in its own hue-tinted near-black; mounts get a wider tone spread and `palette.outline`. Open: some read as blobs (behemoth), 3/4 view, clearer silhouettes, mounts are flat side-on pixel art, 20 humanoid kinds (lizardfolk/ogre shamans, bandits, witches) still use the tinted `monsters/*` templates | 2 |
 | Item icons | `items.png`, `icons/*` (168), `icons_derived/*` (80), `items_anim/*` (34) | Two generations: rich hand-pixelled weapons/potions/food vs flat generated armour/legs/boots (plan 39) | 2 |
 | Trees and plants | `firs.png`, trees, `herbs.png`, `mushrooms.png` | **Done** (`e16cfb4`): master ramps, no pillow shading, three distinct firs, outlined dead trees. Herbs keep their item colours. Open: more tree variants | done |
 | Props and furniture | `objects.png`, `furniture.png`, `signs.png`, `wall_decor.png`, `fountain.png`, `ores.png`, `coins.png` | **Palette done** (`2b9b2c8`): prop materials on master ramps (cloth, glass, fruit stay accents). Open: flat front-on pieces, `ores.png`, `coins.png` | 3 |
@@ -816,9 +816,9 @@ For each asset family, pick one:
 6. Trees, plants, props, furniture, roofs, signs.
 7. Effects, UI, title, then rebake the world map.
 
-Progress (2026-10-21): steps 2, 3, and 6 are done for colour (walls `1131acf`, trees and plants
-`e16cfb4`, roofs and props `2b9b2c8`, ground and world map `ae4e450`); the audit table lists what is
-left in each family. Steps 1, 4, 5, and 7 are open.
+Progress (2026-10-21): steps 2, 3, 4, and 6 are done for colour (walls `1131acf`, trees and plants
+`e16cfb4`, roofs and props `2b9b2c8`, ground and world map `ae4e450`, creatures and mounts); the audit
+table lists what is left in each family. Steps 1, 5, and 7 are open.
 
 After each step: screenshot tour (`tools/testing/shot.gd`) of every town, region, cave and dungeon, and
 compare against the golden sprites and private Tibia references.

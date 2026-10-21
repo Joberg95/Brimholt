@@ -2112,8 +2112,12 @@ PINK = (rgba("e8b8b0"), rgba("c8908a"), rgba("9a6a66"))
 def mount_frames(kind, direction, frame):
     """(back, front) layers of one mount frame, each outlined."""
     palette, accent = tones(kind)
+    # The master palette's look (plan 46 phase 4): a wider light-to-shadow spread and a
+    # hue-tinted near-black outline (palette.outline) instead of the flat grey one.
+    palette = (scale(palette[1], 1.4), palette[1], scale(palette[1], 0.55))
+    edge = pal.outline(palette)
     light, main, dark = palette
-    trim = (scale(accent, 1.15), accent, scale(accent, 0.7))
+    trim = (scale(accent, 1.2), accent, scale(accent, 0.6))
     shape, extras = look(kind)
     back, front = Image(FRAME, FRAME), Image(FRAME, FRAME)
     rise = 0 if frame == 0 else 1
@@ -2302,7 +2306,7 @@ def mount_frames(kind, direction, frame):
     for x, y in ellipse(32, 53.5, 13, 3):
         if back.get(x, y) is None:
             back.set(x, y, SHADOW)
-    return back.outlined(), front.outlined()
+    return back.outlined(edge), front.outlined(edge)
 
 
 def mount_sheet(kind, part):

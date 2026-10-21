@@ -111,7 +111,8 @@ Match these looks closely; draw every pixel here.
 material, **6–10 tones**, light to dark, saturated, warm bright lights, cooler and more saturated
 shadows, a near-black core. Add or tune a ramp there (and run it: `python3
 tools/generators/palette.py --swatch .tools/palette.png` checks it and draws a swatch), never as a
-private copy in a builder. Builders not yet repainted (characters, creatures, icons, effects, UI) keep
+private copy in a builder. Creatures pass through `creatures.STYLE` (saturation, contrast, `palette.outline`-style edge) and mounts
+use `palette.outline`. Builders not yet repainted (characters, icons, effects, UI) keep
 their own module ramps until their family's turn in plan 46 phase 4. A region's ground and accent ramps come from `palette.IDENTITY`. Never use an
 item's catalog colours raw; `pigment()` them.
 

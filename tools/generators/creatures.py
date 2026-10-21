@@ -195,6 +195,36 @@ def _pattern(material, u, n, p):
     return 0.0, None
 
 
+# The master palette's look (palette.py, plan 46 phase 4): every material's ramp is pushed to more
+# saturation and contrast round its base, and outlined in its own hue-tinted near-black
+# (palette.outline), instead of the muted ramp and soft edge Material builds.
+STYLE = True
+SATURATION = 1.3
+CONTRAST = 1.25
+_STYLED = {}
+
+
+def _punch(rgb, base_value):
+    h, s, v = colorsys.rgb_to_hsv(*(c / 255 for c in rgb))
+    s = min(0.95, s * SATURATION + 0.03)
+    v = max(0.0, min(1.0, base_value + (v - base_value) * CONTRAST))
+    return tuple(round(c * 255) for c in colorsys.hsv_to_rgb(h, s, v))
+
+
+def _styled(material):
+    """(ramp, edge) for `material` in the master palette's look; emissive materials keep theirs."""
+    if not STYLE or material.pattern == "emissive":
+        return material.ramp, material.edge
+    key = id(material)
+    if key not in _STYLED:
+        base_value = max(material.ramp[2]) / 255
+        ramp = [_punch(tone, base_value) for tone in material.ramp]
+        h, s, _ = colorsys.rgb_to_hsv(*(c / 255 for c in ramp[4]))
+        edge = tuple(round(c * 255) for c in colorsys.hsv_to_rgb(h, min(0.6, s + 0.1), 0.08))
+        _STYLED[key] = (material, ramp, edge)
+    return _STYLED[key][1], _STYLED[key][2]
+
+
 def render(parts, direction, shadow=(10.0, 3.5), zoom=1.0):
     """Rows of RGBA tuples or None for one 64x64 frame; the ground origin lands on (32, 53).
     `zoom` scales the creature on screen (anatomy is authored at a common scale)."""
@@ -250,9 +280,10 @@ def render(parts, direction, shadow=(10.0, 3.5), zoom=1.0):
                 continue
             value += change
             band = 0 if value > 0.86 else 1 if value > 0.66 else 2 if value > 0.46 else 3 if value > 0.3 else 4
-            color = material.ramp[band]
+            ramp = _styled(material)[0]
+            color = ramp[band]
             if material.gloss and max(0.0, dot(n, HALF)) ** 28 * material.gloss > 0.45:
-                color = tuple(round(c + (255 - c) * 0.55) for c in material.ramp[0])
+                color = tuple(round(c + (255 - c) * 0.55) for c in ramp[0])
             pixels[y][x] = color + (255,)
     # Outlines: a coloured edge round the silhouette, and dark seams where a nearer part overlaps.
     result = [row[:] for row in pixels]
@@ -267,10 +298,10 @@ def render(parts, direction, shadow=(10.0, 3.5), zoom=1.0):
                 other = depth[ny][nx] if 0 <= nx < FRAME and 0 <= ny < FRAME else None
                 if other is None:
                     if material.pattern != "emissive":
-                        result[y][x] = material.edge + (255,)
+                        result[y][x] = _styled(material)[1] + (255,)
                     break
                 if other[5] != group and other[0] < hit[0] - 2.2 and material.pattern != "emissive":
-                    result[y][x] = material.ramp[4] + (255,)
+                    result[y][x] = _styled(material)[0][4] + (255,)
                     break
     frame = [[None] * FRAME for _ in range(FRAME)]
     rx, ry = shadow[0] * zoom, shadow[1] * zoom
