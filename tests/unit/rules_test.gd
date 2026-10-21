@@ -709,9 +709,11 @@ func _armor_type_checks() -> void:
 		var tiers: Dictionary = {}
 		for kind: String in World.ITEMS:
 			var item: Dictionary = World.ITEMS[kind]
-			if item.get("armor", "") == type and not item.get("loot_only", false) and not Items.mythic(item):
+			# Legs are exempt until the gear rebalance: their recoloured duplicates were deleted.
+			if item.get("armor", "") == type and item["slot"] != "legs" and not item.get("loot_only", false) \
+					and not Items.mythic(item):
 				tiers["%s/%d" % [item["slot"], item["level"]]] = true
-		check(tiers.size() == Items.TIER_LEVELS.size() * 4, "%s has a helmet, armor, legs, and boots of every tier" % type)
+		check(tiers.size() == Items.TIER_LEVELS.size() * 3, "%s has a helmet, armor, and boots of every tier" % type)
 	# Trainers hand over the class's armor; old saves swap shared pieces for the player's own type.
 	var world := World.new()
 	world.add_player(1, 0.0, Balance.ADVENTURER)
@@ -1994,6 +1996,23 @@ func _leech_checks() -> void:
 				shared.append("%s = %s" % [kind, pictures[key]])
 			pictures[key] = kind
 	check(shared.is_empty(), "every tier armour piece has its own icon (%s)" % ", ".join(shared))
+	# No recolour of an existing icon: two legs or boots icons with the same silhouette are one
+	# drawing in two palettes. Every icon is its own model (docs/art.md, "No recolours").
+	var silhouettes: Dictionary = {}
+	var recolours: Array[String] = []
+	for kind: String in World.ITEMS:
+		var item: Dictionary = World.ITEMS[kind]
+		if item["slot"] in ["legs", "boots"] and SpriteArt.ICONS.has(kind):
+			var image: Image = SpriteArt.ICONS[kind].get_image()
+			var mask := PackedByteArray()
+			for y: int in image.get_height():
+				for x: int in image.get_width():
+					mask.append(1 if image.get_pixel(x, y).a > 0.5 else 0)
+			var key: String = "%s/%s" % [item["slot"], mask.hex_encode().sha256_text()]
+			if silhouettes.has(key):
+				recolours.append("%s = %s" % [kind, silhouettes[key]])
+			silhouettes[key] = kind
+	check(recolours.is_empty(), "no legs or boots icon is a recolour of another (%s)" % ", ".join(recolours))
 	# Wands, rods, bows, shields, and spellbooks without a painting are hand-pixelled into items.png
 	# (pixel_staves.py, pixel_bows.py, pixel_shields.py, pixel_books.py), never a recoloured copy.
 	var recoloured: Array[String] = []

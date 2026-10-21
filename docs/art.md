@@ -215,6 +215,14 @@ shields). Add the set to `manifest.json` with `"layout": "grid"` and run `make o
 
 ## Items and gear
 
+**No recolours.** No item icon is a recolour of an existing icon (ours or a pack model's): each is
+its own model or drawing, differing in silhouette and construction, not just palette. Legwear icons
+are variants of OpenTibia sprite pack leg models (CC BY 4.0, `assets/third_party/CREDITS.md`),
+each model repainted with our own materials, layout and ornament (`tools/generators/pack_legwear.py`,
+`pack_sprites.py`) and used once; the 27 legs that only recoloured a model were deleted on
+2026-10-21, so legs have gaps in the tiers until the gear rebalance. A unit check fails two legs or
+boots icons with the same silhouette.
+
 **Icon volume.** Icons not already shaded with volume (`needs_volume`: everything but the 3D showpieces, axes, backpacks and necklaces) go through `icon_volume` first: each pixel's distance from the silhouette makes a dome, and the top-left light on it shifts the pixel's own colour by whole shade steps (`VOLUME_STEP`), so flat icons read as solids without gradients.
 
 **Icon finishing.** Every icon goes through `icon_finish` in `make_sprites.py` on its way out:
@@ -369,5 +377,7 @@ Original art is generated; the only third-party assets are CC0 textures in
 lights and particles) and the game font. All text draws with DejaVu Sans
 (`assets/third_party/fonts/dejavu/`, the project font `gui/theme/custom_font`, so
 `ThemeDB.fallback_font` is DejaVu too), a free Verdana-like font under the Bitstream Vera licence:
-the one non-CC0 asset, allowed by the owner. Add a CC0 pack only with its original license file beside it and a row
+allowed by the owner. The other non-CC0 asset is the OpenTibia sprite pack sheet
+(`assets/third_party/opentibia_sprite_pack/`, CC BY 4.0, allowed on 2026-10-21), read only by the
+icon generators as models for our own repainted variants, never shipped as-is. Add a CC0 pack only with its original license file beside it and a row
 in `assets/third_party/CREDITS.md`; never import ripped or proprietary art files (Tibia's included).
