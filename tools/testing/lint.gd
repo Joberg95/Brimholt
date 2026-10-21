@@ -7,7 +7,7 @@ extends SceneTree
 func _init() -> void:
 	var failed: int = 0
 	var count: int = 0
-	for root_dir: String in ["res://game", "res://tests", "res://tools"]:
+	for root_dir: String in ["res://game", "res://tests", "res://tools", "res://addons/brimholt_brushes"]:
 		for path: String in _scripts(root_dir):
 			count += 1
 			var script: GDScript = GDScript.new()

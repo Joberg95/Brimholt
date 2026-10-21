@@ -27,6 +27,7 @@ const Landscape = preload("res://tools/generators/landscape.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Atlas = preload("res://game/data/atlas.gd")
 const MapIO = preload("res://game/maps/map_io.gd")
+const Brushes = preload("res://game/maps/brushes.gd")
 const Titles = preload("res://game/data/titles.gd")
 const VoidThrone = preload("res://tools/generators/void_throne.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
@@ -3828,6 +3829,70 @@ func _layer_checks() -> void:
 			tagged = tagged and String(marker.get_meta("region", "")) == "silverwood"
 	scene.free()
 	check(island_camps > 0 and tagged, "Silverwood is rebuilt from its region spec, its camps tagged with the region")
+	_brush_checks()
+
+## The editor brushes (game/maps/brushes.gd, addons/brimholt_brushes): what they paint, where
+## doodads may grow, and that the plugin's tiles and names match the terrain palette.
+func _brush_checks() -> void:
+	var tiles: Dictionary = Brushes.tiles(load(MapIO.TILESET_PATH))
+	var named: bool = true
+	for letter: String in Brushes.NAMES:
+		named = named and tiles.has(letter) and World.TERRAINS.contains(letter)
+	for kind: String in Brushes.SCATTERS:
+		var spec: Dictionary = Brushes.SCATTERS[kind]
+		named = named and String(spec["ground"]).contains(spec["clear"])
+		for piece: String in spec["pieces"]:
+			named = named and Brushes.NAMES.has(piece) and not World.WALKABLE.contains(piece)
+		for ground: String in String(spec["ground"]):
+			named = named and World.WALKABLE.contains(ground)
+	check(named and not Brushes.NAMES.has("^") and not Brushes.NAMES.has("v"),
+		"every brush terrain is a palette tile, doodads block and grow on walkable ground, stairs stay the generators'")
+	check(Brushes.disc(Vector2i(5, 5), 0) == [Vector2i(5, 5)] and Brushes.disc(Vector2i(5, 5), 1).size() == 9
+		and Brushes.disc(Vector2i(5, 5), 2).size() == 21, "a brush covers a disc of its radius")
+	var ground: Dictionary = {}
+	var area: Array[Vector2i] = []
+	for y: int in 20:
+		for x: int in 20:
+			area.append(Vector2i(x, y))
+			ground[Vector2i(x, y)] = "," if x == 10 else ("~" if y == 0 else ".")
+	var terrain_of: Callable = func(cell: Vector2i) -> String: return ground.get(cell, "~")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var forest: Dictionary = Brushes.scatter(area, "forest", 1.0, terrain_of, rng)
+	var kept: bool = true
+	for cell: Vector2i in forest:
+		kept = kept and ground[cell] == "." and absi(cell.x - 10) > 1 and forest[cell] in ["T", "R"]
+	check(kept and forest.size() == 17 * 19 and Brushes.scatter(area, "forest", 0.0, terrain_of, rng).is_empty(),
+		"a full forest brush covers every grass cell but the water and the road and its verges")
+	for cell: Vector2i in forest:
+		ground[cell] = forest[cell]
+	var cleared: Dictionary = Brushes.clear(area, "forest", terrain_of)
+	check(cleared.size() == forest.size() and cleared.values().all(func(letter: String) -> bool: return letter == "."),
+		"clearing a forest turns its trees and boulders back to grass")
+	var sector := TileMapLayer.new()
+	sector.name = "Sector_6_1"
+	var base := TileMapLayer.new()
+	sector.tile_set = load(MapIO.TILESET_PATH)
+	base.tile_set = sector.tile_set
+	var letters: Dictionary = {}
+	for letter: String in tiles:
+		letters[tiles[letter]] = letter
+	var sand: Vector3i = tiles[":"]
+	var tree: Vector3i = tiles["T"]
+	base.set_cell(Vector2i(800, 140), sand.x, Vector2i(sand.y, sand.z))
+	base.set_cell(Vector2i(801, 140), sand.x, Vector2i(sand.y, sand.z))
+	sector.set_cell(Vector2i(800, 140), tree.x, Vector2i(tree.y, tree.z))
+	check(Brushes.sector_of(sector) == Vector2i(6, 1) and Brushes.sector_of(base) == Vector2i(-1, -1)
+		and Brushes.letter_at(sector, base, Vector2i(800, 140), letters) == "T"
+		and Brushes.letter_at(sector, base, Vector2i(801, 140), letters) == ":"
+		and Brushes.letter_at(sector, base, Vector2i(802, 140), letters) == "~",
+		"a brush reads a sector's override over its base, open sea where neither is painted")
+	sector.free()
+	base.free()
+	var plugin: ConfigFile = ConfigFile.new()
+	check(plugin.load("res://addons/brimholt_brushes/plugin.cfg") == OK
+		and String(ProjectSettings.get_setting("editor_plugins/enabled", PackedStringArray())).contains("brimholt_brushes"),
+		"the brushes plugin is enabled in the project")
 
 ## The floor below the mainland (docs/plan/44, tools/generators/underground.gd): a plane beside the
 ## overworld lined up under it, joined by holes in the wilds and ladders in town streets over stairs

@@ -63,3 +63,7 @@ environment/defaults/default_clear_color=Color(0.055, 0.067, 0.082, 1)
 
 theme/custom_font="res://assets/third_party/fonts/dejavu/DejaVuSans.ttf"
 
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/brimholt_brushes/plugin.cfg")

@@ -207,7 +207,11 @@ relocations, then fix-ups. That doesn't scale to Tibia density.
    converted with a fresh rebuild (owner's choice: today's painter, empty overrides). Not done:
    a "keep today's look" conversion for hand-shaped regions such as Brackenford (copy their
    current cells into overrides first), and hunt/cave specs.
-4. Editor brushes.
+4. Editor brushes. Started: the `Brimholt brushes` editor plugin (`addons/brimholt_brushes`, logic
+   in `game/maps/brushes.gd`) paints a terrain disc, scatters or clears doodad sets (forest, rocks,
+   desert, fen, snow, wastes; kept off road verges), and erases overrides, into an open sector's
+   override layer, one undo per stroke. Still to come: house/castle and spawn-camp brushes, and
+   painting across sectors from `overworld.tscn`.
 5. Then build regions one by one from the plan (plan 40's islands become region specs).
 
 ### Floors: target

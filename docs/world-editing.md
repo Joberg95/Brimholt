@@ -19,7 +19,15 @@ shows one world:
    cobblestone `=`, boulder `R`, mountain rock `L`, castle wall `W` (a 2×2 block of it is a tower), pier/bridge `b`, and the Hollow Reach's dusk soil `d`, obsidian floor
    `o`, obsidian wall `O`, dead tree `D`, and Mirewood Fen's bog mud `m` and giant mushroom `U`. Water, walls, castle walls, trees, giant mushrooms, boulders, and mountain rock block movement; cave rock `C` on the overworld is a rock outcrop. The editor
    shows flat palette tiles; in game they become oblique walls, tall trees, shorelines, and
-   plank piers. Keep the map at non-negative coordinates; unpainted cells inside the overworld are
+   plank piers. Paint in the sector's root layer: it is the hand **override**, which always
+   wins over the locked `Base` child that generators and `make region NAME=<id>` repaint, so a
+   region rebuild never wipes hand work (erase an override cell to show the base again).
+   **Brushes**: with a sector open, tick **Brush on** in the `Brushes` dock (plugin
+   `addons/brimholt_brushes`) and drag in the 2D view, with nothing selected. Modes: *Terrain*
+   (a disc of one tile), *Scatter doodads* (a biome's trees and rocks over its own ground, at the
+   chosen density, never beside a road, pier, or stairway), *Clear doodads* (back to that ground),
+   and *Erase override*. Each stroke is one undo step and stays inside the open sector.
+   Keep the map at non-negative coordinates; unpainted cells inside the overworld are
    deep sea (`~`), and unpainted cells beyond it are void.
 2. **Spawns**: the twenty-four `Marker2D` nodes under `Spawns`, one per player, in order.
 3. **Ferrymen and waystones**: nodes under `Ferrymen` (set `vehicle` to `ferry` for a pier

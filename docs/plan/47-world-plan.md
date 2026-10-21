@@ -121,7 +121,7 @@ cell. Towns and dungeons count apart.
 2. ~~Floors as z refactor (engine)~~, with the underground plane moved to floor −1 (floor slots at
    `Atlas.FLOOR_X`; drawing across floors is plan 46 step 2b).
 3. ~~Base and override layers plus `make region`~~; Silverwood converted (plan 46 step 3).
-4. Editor brushes.
+4. Editor brushes: terrain and doodad brushes done (plan 46 step 4); house and spawn brushes next.
 5. Build the landmasses above one at a time from their rows (plan 40's islands as region specs).
 
 ## Open
