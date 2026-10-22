@@ -13,6 +13,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2] / "assets/third_party/opentib
 # Flag byte -> the size in bytes of the data that follows it (protocol 10.10+ metadata).
 FLAG_DATA = {0x00: 2, 0x08: 2, 0x09: 2, 0x16: 4, 0x19: 4, 0x1A: 2, 0x1D: 2, 0x1E: 2, 0x21: 2, 0x23: 2}
 MARKET = 0x22
+# How far up and left a thing is drawn from its tile (creatures and outfits: usually 8, 8).
+DISPLACEMENT = 0x19
 
 
 class Thing:
@@ -23,6 +25,7 @@ class Thing:
         self.layers = self.px = self.py = self.pz = self.frames = 1
         self.sprites = []
         self.market_name = ""
+        self.displacement = (0, 0)
 
     def sprite_index(self, x, y, layer=0, px=0, py=0, pz=0, frame=0):
         """The index into `sprites` of one 32x32 tile of one frame (x, y counted from the bottom right)."""
@@ -52,6 +55,8 @@ def _things(data):
                     thing.market_name = data[pos:pos + name_len].decode("latin-1")
                     pos += name_len + 4
                 else:
+                    if flag == DISPLACEMENT:
+                        thing.displacement = struct.unpack_from("<2H", data, pos)
                     pos += FLAG_DATA.get(flag, 0)
             thing.width, thing.height = data[pos], data[pos + 1]
             pos += 2

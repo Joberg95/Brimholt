@@ -2536,8 +2536,6 @@ func _gear_tier_checks() -> void:
 				and (Crafting.RECIPES.has(kind) or item.get("loot_only", false)) and Economy.sell_price(kind) > 0,
 				"%s is an unbound bag, crafted or a rare drop" % kind)
 			continue
-		if item["slot"] == "mount":
-			continue
 		if item["look"] == "torch":
 			check(item["slot"] == "off_hand" and item["stats"].is_empty() and item["vocations"].is_empty()
 				and kind in Economy.stock(), "%s is a statless off-hand light every vocation can buy" % kind)
@@ -3796,7 +3794,6 @@ func _underground_checks() -> void:
 	var instances := Instances.new(world, combat)
 	world.monsters.clear()
 	world.add_player(1, 0.0, "knight")
-	world.players[1]["equipment"]["mount"] = "dire_wolf_mount"
 	var hole: Vector2i = World.HOLES.keys().filter(func(cell: Vector2i) -> bool:
 		return World.terrain(cell) == "v" and not World.zone_at(cell).get("town", false))[0]
 	_place(world, 1, hole)
@@ -3805,7 +3802,6 @@ func _underground_checks() -> void:
 	check(World.chebyshev(below, Atlas.below(hole)) <= 3 and World.terrain(below) != "^" and World.zone_at(below).get("underground", false)
 		and down.any(func(event: Dictionary) -> bool: return event["kind"] == "message" and String(event["text"]).begins_with("You climb down")),
 		"a hole leads down beside the stairs right below it")
-	check(not World.riding(world.players[1]["equipment"], below), "nobody rides underground")
 	_place(world, 1, Atlas.below(hole))
 	instances.after_move(1, 2.0)
 	check(World.OVERWORLD.has_point(world.players[1]["cell"]) and World.chebyshev(world.players[1]["cell"], hole) <= 3

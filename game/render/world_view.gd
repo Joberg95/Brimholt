@@ -16,19 +16,14 @@ const Fx = preload("res://game/render/fx.gd")
 const FloorLayer = preload("res://game/render/floor_layer.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Buildings = preload("res://game/data/buildings.gd")
-const FERRYMAN_GEAR: Dictionary = {"helmet": "ember_cap"}
 const NPC_NAME: Color = Color("#9fe0c8")
 ## Quest givers stand out: gold cloth and a gold name.
-const QUEST_GIVER_GEAR: Dictionary = {}
 const QUEST_GIVER_TINT: Color = Color("#a8843a")
 const QUEST_GIVER_NAME: Color = Color("#ffcf6a")
 const WAYSTONE_NAME: Color = Color("#8fe8f0")
-## Vendors wear a cap and coat, bankers a bronze coat.
-const TOWNSFOLK_LOOKS: Dictionary = {
-	"vendor": [{"helmet": "ember_cap", "armor": "moss_coat"}, Color("#8a6a3a")],
-	"banker": [{"armor": "bronze_scale_coat"}, Color("#4a4a6a")],
-	"artisan": [{"armor": "hide_jerkin", "helmet": "hide_hood"}, Color("#7a5a3a")],
-	"warden": [{"armor": "bronze_scale_coat", "helmet": "ember_cap"}, Color("#7a3a3a")],
+## Townsfolk wear SpriteArt.TOWNSFOLK_OUTFIT, its body in their trade's colour.
+const TOWNSFOLK_TINTS: Dictionary = {
+	"vendor": Color("#8a6a3a"), "banker": Color("#4a4a6a"), "artisan": Color("#7a5a3a"), "warden": Color("#7a3a3a"),
 }
 ## Extra tiles drawn around the view: tall sprites below the view reach up into it.
 const MARGIN: Rect2i = Rect2i(-2, -2, 4, 6)
@@ -221,9 +216,8 @@ func _draw() -> void:
 			var npc: Dictionary = World.npc(World.NPC_CELLS[cell])
 			var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
 			var keeper: bool = "quests" in npc["services"] or "vocation" in npc["services"]
-			var look: Array = TOWNSFOLK_LOOKS.get(npc.get("role", ""),
-				[QUEST_GIVER_GEAR, QUEST_GIVER_TINT] if keeper else [FERRYMAN_GEAR, SpriteArt.NPC_TINT])
-			SpriteArt.draw_actor(self, center, {"id": 0, "facing": npc["facing"], "equipment": look[0]}, false, 0.0, look[1])
+			var tint: Color = TOWNSFOLK_TINTS.get(npc.get("role", ""), QUEST_GIVER_TINT if keeper else SpriteArt.NPC_TINT)
+			SpriteArt.draw_actor(self, center, {"facing": npc["facing"], "outfit": SpriteArt.TOWNSFOLK_OUTFIT}, false, 0.0, tint)
 			if not covered(cell):
 				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME, World.NPC_CELLS[cell]])
 		_draw_occupants(cell)

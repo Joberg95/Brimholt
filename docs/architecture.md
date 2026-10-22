@@ -82,15 +82,14 @@ game/
     brushes.gd           Terrain, doodad, house, castle, and camp brushes behind the editor plugin
     terrain.tres         Editor tile set (terrain custom data)
     markers/             Inspector scripts for spawn, item, ferryman, quest giver, townsfolk, dungeon entrance, zone, monster, decor markers
-assets/sprites/          Original generated sprite sheets, imported painted outfits/ and icons/ (+ Godot .import files)
-art/outfits/             Painted outfit sources and manifest.json (imported by make outfits)
+assets/sprites/          Sprite sheets: generated ones, and items.png and outfits/ from the OpenTibia pack (+ Godot .import files)
 assets/third_party/      CC0 textures and the DejaVu Sans font, with their licenses (CREDITS.md)
 tests/
   unit/                  Deterministic rule checks (no networking, no rendering)
   integration/           Real ENet peers and the two-bot playthrough
   visual/                Offscreen rendering checks
 tools/
-  generators/            make_sprites.py, palette.py (master colour ramps), import_outfits.gd, make_map.gd, sectors.gd, move_bands.gd, islands.gd, region.gd (make region NAME=<id>), world_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, fill_gaps.gd, clear_walls.gd, cobble_towns.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
+  generators/            make_sprites.py, palette.py (master colour ramps), otsp.py and otsp_export.py (the OpenTibia pack), make_map.gd, sectors.gd, move_bands.gd, islands.gd, region.gd (make region NAME=<id>), world_map.gd, endgame_zone.gd, dungeons.gd, caves.gd, frost_isles.gd, fill_gaps.gd, clear_walls.gd, cobble_towns.gd, desert.gd, swamp.gd, town_paths.gd, towns.gd, balance_table.gd, gear_table.gd
   testing/               Python runners that supervise Godot processes and write reports; lint.gd, fight_sim.gd, duel_sim.gd, duel_eval.gd, bench.gd
   training/              PvP policy training: duel arena and Godot RL Agents env (GDScript), train.py and export_policy.py (docs/bot-training.md)
 addons/                  LimboAI (GDExtension), the training-only Godot RL Agents plugin, and brimholt_brushes (our map brush editor plugin)

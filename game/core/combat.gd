@@ -1428,8 +1428,6 @@ func roll_loot(kind: String, level: int) -> Array[String]:
 	var definition: Dictionary = Monsters.MONSTERS[kind]
 	if level > HOMEWARD_LEVEL and rng.randf() < HOMEWARD_CHANCE:
 		loot.append("homeward_rune")
-	if Monsters.MOUNTS.has(kind) and rng.randf() < Monsters.MOUNT_CHANCE:
-		loot.append(Monsters.MOUNTS[kind])
 	if rng.randf() < float(definition.get("gear_chance", GEAR_DROP_CHANCE.get(definition["rank"], 0.0))):
 		loot.append(gear_drop(level))
 	loot.append_array(roll_valuables(level, definition["rank"]))
@@ -1673,7 +1671,7 @@ func _drop_belongings(id: int, events: Array) -> Array[String]:
 	player["gold"] = 0
 	for slot: String in World.SLOTS:
 		# The mount being ridden carries its rider off and is never lost.
-		if slot != "mount" and player["equipment"].has(slot) and not World.bound(player["equipment"][slot]) \
+		if player["equipment"].has(slot) and not World.bound(player["equipment"][slot]) \
 				and (player["skull"] == "red" or full_loot or rng.randf() < EQUIPMENT_LOSS_CHANCE):
 			dropped.append(player["equipment"][slot])
 			lost_worn.append(World.ITEMS[player["equipment"][slot]]["name"])

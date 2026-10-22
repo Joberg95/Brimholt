@@ -357,8 +357,6 @@ static func boss_drops() -> Dictionary:
 				boss[entry[0]] = true
 			else:
 				common[entry[0]] = true
-	for kind: String in Monsters.MOUNTS:
-		boss[Monsters.MOUNTS[kind]] = true
 	for id: String in common:
 		boss.erase(id)
 	return boss

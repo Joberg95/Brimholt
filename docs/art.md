@@ -10,15 +10,10 @@ The game window shows 15×11 tiles at 2× zoom and follows your character smooth
 Tibia-style; the dedicated-server window centres the whole map. Walls are oblique:
 their tops are raised up and to the left, and the world is drawn row by row so
 walls nearer the camera (south/east) cover characters and items behind them.
-Characters have stocky outfitter proportions (the Tibia outfitter is the reference for the feel,
-nothing is copied): an unarmoured silhouette is about 38 pixels tall and 22 wide, the head
-a full-size third of it with lit hair, a fringe, ears and a shaded jaw. They wear a tinted
-collar and a tinted tunic with short sleeves, a belt, linen forearms, trousers, and boots, and
-walk in two steps.
-**There is no default cape.** A cape is drawn only when an item occupies the cape slot,
-including on NPCs and humanoid monsters.
-Grass, dirt, sand, cobblestone, animated water, plank piers, stone walls, trees, worn
-gear, and item icons are sprites too. Trees stand about two tiles tall and hide whatever
+Characters wear the OpenTibia sprite pack's player outfits as in Tibia (see Characters below); worn
+gear is not drawn on them.
+Grass, dirt, sand, cobblestone, animated water, plank piers, stone walls, trees, and item icons are
+sprites too. Trees stand about two tiles tall and hide whatever
 walks behind them. Only the visible part of the map is drawn each frame.
 
 The visual direction is **modern Tibia (12+)**, matched in style with every design our own
@@ -55,7 +50,8 @@ filtering:
 
 | Sheet | Layout |
 | --- | --- |
-| `body.png`, `cloth.png`, `marker.png` | 64×64 frames; columns stand / step A / step B / attack wind-up / strike; rows down / up / left / right; tile centre at frame pixel (32, 40). Monster sheets have only the first three columns |
+| `outfits/<looktype>.png` | The pack's player outfits (see Characters below) |
+| `marker.png` | 64×64 frames; columns stand / step A / step B / attack wind-up / strike; rows down / up / left / right; tile centre at frame pixel (32, 40). Monster sheets have only the first three columns |
 | `coins.png` | Gold coin stacks, one 32×32 frame per size stage (`pixel_coins.STAGES`, matching `SpriteArt.COIN_STAGES`): one, two and three hand-drawn coins, a small heap, a heap with a second mound, and a big heap with loose coins (`tools/generators/pixel_coins.py`) |
 | `items.png` | 32×32 icons in `SpriteArt.ITEM_ORDER`, 64 to a row (`ITEM_COLUMNS`, `item_cell`; one long row would pass the 16384-pixel texture limit): the OpenTibia sprite pack's item sprites, written by `tools/generators/otsp_export.py items` (see Items and gear). `items_glow.png` is blank for now |
 | `spells.png` | 32×32 rune stones, eight per row in `Spells.SPELLS` order: a weathered stone (its outline varies per spell) with the spell's Elder Futhark rune (`Spells.RUNES`, strokes in `RUNE_STROKES`; two Anglo-Saxon runes, Ear and Yr, past the twenty-four) carved in and glowing in the spell's colour |
@@ -89,19 +85,19 @@ filtering:
 | `objects.png` | 64×96 trees (three living, drawn like the mountain rock: two broadleaf crowns of leaf clumps lit from the top-left with dark gaps between them and a ragged leafy edge, and a pine of drooping tiers shaded under the tier above, all on six-tone ramps with a dark outline (`tree`); two dead for the Hollow Reach, then three desert plants: a columnar cactus, a barrel-cactus clump, and a thorn shrub for terrain `K`, then the waystone, a carved standing stone with a cyan rune); trunk base on the tile centre at cell pixel (32, 80) |
 | `terrain_palette.png` | 32×32 map-editor palette, one tile per terrain |
 
-A character is drawn as the body and the tinted `cloth.png`; worn gear is not drawn on it (plan 49:
-the OpenTibia pack's outfits replace the body in phase 3).
-
-The rig is authored tall and slim: a 10-pixel head, a 12-pixel torso, 3-pixel arms (`ARM_W`)
-hanging at x 23–25 and 38–40, and 3-pixel legs (`leg_parts` is shared by the body and by
-worn legs and boots so they line up). The generator applies `compact_humanoid` to every body, cloth and worn-item frame using
-the same integer pixel mapping: rows below the neck (`NECK`) are squashed to 80% towards the
-feet at frame y=53 while the head and headgear keep full size, and rig columns 29 and 34
-(`WIDEN`) are drawn twice, so head, chest and hips are two pixels wider and outlines stay one
-pixel thick. Rig rows 25, 31, 35, 41, 45 and 51 fall out in the squash; put details elsewhere.
-This is baked into the PNGs, not a runtime stretch. It keeps grips, masks, capes and
-walk poses registered without altering the 64×64 frame or gameplay collision footprint.
-Monster bodies keep their own proportions; humanoid monsters use the compact character rig.
+**Characters.** Players, townsfolk, and humanoid monsters wear the OpenTibia sprite pack's player
+outfits (plan 49), drawn by `SpriteArt.draw_actor`; worn gear is not drawn on the body, as in Tibia.
+`python tools/generators/otsp_export.py outfits` writes `outfits/<looktype>.png` from the pack's client
+files: the pack's 64×64 frames as it draws them (the figure's tile is the bottom-right quarter, shifted
+8 pixels up and left, so the tile centre is `SpriteArt.OUTFIT_ANCHOR` (56, 56)), five columns (stand,
+step A, step B, and stand and step A again for the attack wind-up and strike, which the pack has no
+frames for) by four rows (down, up, left, right). Each sheet stacks five such blocks: the untinted
+outfit, then the parts the pack's colour mask marks as head, body, legs, and feet, which the game
+multiplies by colours like Tibia's outfit colours. Each vocation has its looktype and colours
+(`SpriteArt.OUTFITS`, `OUTFIT_COLORS`): Adventurer 17, Warrior 18 (the helmet sits in the "feet" part),
+Hunter 45, Sorcerer 20 and Druid 21 (robes whose mask only covers the hair, so they differ by hair
+colour). Townsfolk wear 16 with their trade's body colour, humanoid monsters 18 in their own colour.
+There are no mounts.
 Creatures have one sheet each, `creatures/<monster>.png` (untinted; stand, step A, step B by
 four facings), made by `tools/generators/creatures.py`: each species is built from simple 3D
 anatomy (ellipsoid body, head, jointed limbs, tails, horns, crowns ...) and rendered for every

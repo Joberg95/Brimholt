@@ -48,8 +48,7 @@ sheets and builders are the reference set:
 The patterns to copy: **every tone from one `palette.py` ramp** (`pal.SANDSTONE`, `pal.OAK`,
 `pal.FOLIAGE`), named once as a module tuple (`SANDSTONE_STONE`, `SANDSTONE_CASTLE`); the
 outline from `pal.outline(ramp)`; regional variants chosen in `sprite_art.gd` by a `Biomes`
-rect (`in_sunreach`), with the world map, weather, and light following the same rect. The
-painted figures in `art/outfits/class_sets.png` stay the reference for characters. The
+rect (`in_sunreach`), with the world map, weather, and light following the same rect. Characters wear the OpenTibia pack's outfits (plan 49). The
 environment (walls, trees, plants, roofs, props, ground) is repainted on these ramps (plan 46
 phase 4); characters, creatures, item icons, effects, and UI still use their builders' own ramps,
 so take ramps from `palette.py`, not from them.
@@ -141,11 +140,8 @@ front (larger `x + y + height` is nearer). Characters and creatures are drawn in
 the same angle: the down-facing figure shows a little of its right side, side views a little of the
 chest. Big creatures and objects use 64×64 frames (2×2 tiles), anchored bottom-right like Tibia.
 
-**Scale.** A tile is 32 px; the game shows 15×11 tiles at 2×. Characters keep 64×64 frames.
-Target body (plan 46): chunky outfitter proportions filling about one tile, ~26–30 px wide and
-~32–34 px tall unarmoured, head ~40% of the height, broad shoulders, short legs, big hands and
-boots, four-frame walk, a short subtle attack swing. Until that body replaces `body.png`, gear for
-the current rig (~38 px tall, feet at frame y 53) stays fitted to it. Size anything people use
+**Scale.** A tile is 32 px; the game shows 15×11 tiles at 2×. Characters are the OpenTibia
+pack's outfits in 64×64 frames, about one tile tall. Size anything people use
 against a character: doorways at least as tall as one (~34 px opening) and ~16 px wide, counters
 waist-high (~16 px), trees about two tiles. **Check scale first**; too small reads as a toy.
 
@@ -219,8 +215,7 @@ license and a `CREDITS.md` row.
    outline, palette fit with neighbours, tiling seams, then the checklist above.
 5. Fix everything you noted in one pass and look again. Two rounds should be enough; if not,
    compare against the reference builder again rather than nudging numbers.
-6. Item icons: return them from the builder unfinished; `icon_finish` (outline, rim light, contrast)
-   is applied to every icon in `main()` and `derive_icons.py`. Icons are shown at 32 px, never smaller.
+6. Item icons and character outfits come from the OpenTibia pack (`otsp_export.py`), not from here.
 7. Update the sheet's row in `docs/art.md` (size, layout, anchor, builder name).
 
 `make sprites` regenerates **every** sheet, and some (castle, mountains, objects, ores,

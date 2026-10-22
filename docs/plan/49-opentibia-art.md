@@ -66,3 +66,8 @@ Each phase: review renders by eye (art is never tested), functional tests, docs,
   `otsp_export.py items` writes `items.png`; `make_sprites.py` no longer writes item or mount sheets.
   Tier gaps: legs, boots, druid and sorcerer weapons and off-hands at some tiers; Sylvaine has no
   relics; dungeon champions lost their trophies. Phase 4 re-seeds loot and bosses.
+- **Phase 3 (done):** players, townsfolk, and humanoid monsters wear pack outfits (`otsp_export.py
+  outfits`, `SpriteArt.draw_actor`): Adventurer 17, Warrior 18, Hunter 45, Sorcerer 20, Druid 21,
+  townsfolk 16, humanoid monsters 18, tinted through the pack's colour masks. The body, cloth, worn-gear,
+  and mount code is gone (riding and its 25% step bonus too), along with the item-icon modules and about
+  2,700 lines of `make_sprites.py`. The pack has no attack frames; the robes only tint hair.

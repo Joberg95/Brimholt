@@ -9,6 +9,7 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Monsters = preload("res://game/data/monsters.gd")
+const Balance = preload("res://game/data/balance.gd")
 const Atlas = preload("res://game/data/atlas.gd")
 const FRAME: float = 64.0
 const FRAME_ANCHOR: Vector2 = Vector2(32, 40)
@@ -18,9 +19,27 @@ const WALL_RAISE: float = 16.0
 const DIRECTIONS: Array[Vector2i] = [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]
 const OUTLINE: Color = Color("#1a1612")
 ## Player hood/tabard tints; the cloth sheet is greyscale. Capes are equipped items only.
-const COLORS: Array[Color] = [Color("#97735b"), Color("#71848e"), Color("#827483"), Color("#998b68")]
-const BODY: Texture2D = preload("res://assets/sprites/body.png")
-const CLOTH: Texture2D = preload("res://assets/sprites/cloth.png")
+## Characters wear the OpenTibia pack's player outfits (plan 49; otsp_export.py outfits): one sheet per
+## looktype, five blocks of FRAME frames stacked (the untinted outfit, then its head, body, legs, and feet
+## parts, tinted like Tibia's outfit colours). The pack draws a figure 8 pixels up and left of its tile,
+## the bottom-right quarter of the frame, so the tile centre sits at OUTFIT_ANCHOR.
+const OUTFIT_ANCHOR: Vector2 = Vector2(56, 56)
+const OUTFIT_PARTS: int = 5
+const OUTFITS: Dictionary = {"adventurer": 17, "knight": 18, "paladin": 45, "sorcerer": 20, "druid": 21}
+## Head, body, legs, and feet colours by vocation (a tint replaces the body colour). The pack's masks
+## differ by outfit: the Warrior's helmet is in its "feet" part, and the robes (Sorcerer, Druid) only
+## tint the hair, so those two differ by hair colour.
+const OUTFIT_COLORS: Dictionary = {
+	"adventurer": [Color("#c89a50"), Color("#8a7a5a"), Color("#5a4a3a"), Color("#4a3a2a")],
+	"knight": [Color("#a8aeb6"), Color("#8a2a2a"), Color("#5a5a62"), Color("#c0c8d0")],
+	"paladin": [Color("#c89a50"), Color("#3a6a3a"), Color("#6a4a2a"), Color("#4a3a2a")],
+	"sorcerer": [Color("#e0e0e8"), Color("#3a3a8a"), Color("#2a2a5a"), Color("#4a3a2a")],
+	"druid": [Color("#b0602a"), Color("#3a7a3a"), Color("#2a4a2a"), Color("#4a3a2a")],
+}
+## Townsfolk and humanoid monsters wear these looktypes (the pack's other player outfits).
+const TOWNSFOLK_OUTFIT: int = 16
+const HUMANOID_OUTFIT: int = 18
+static var OUTFIT_SHEETS: Dictionary = _outfit_sheets()
 const MARKER: Texture2D = preload("res://assets/sprites/marker.png")
 const ITEM_ICONS: Texture2D = preload("res://assets/sprites/items.png")
 const TILES: Texture2D = preload("res://assets/sprites/tiles.png")
@@ -109,11 +128,6 @@ const MONSTER_DETAILS: Dictionary = {
 ## Painted-style creature sheets (tools/generators/creatures.py), one per monster kind, drawn
 ## untinted; kinds without one fall back to the tinted generic sheets above.
 static var CREATURES: Dictionary = _creature_sheets()
-## Mount sheets by mount item (assets/sprites/mounts/<id>.png under the rider, <id>_front.png over
-## it): stand, step A, step B by down/up/left/right. The rider sits RIDER_LIFT pixels up by the
-## mount's shape and, facing toward or away from you, shows only frame rows above RIDER_CUT.
-## Both match tools/generators/make_sprites.py.
-static var MOUNTS: Dictionary = _mount_sheets()
 ## Items whose icon moves (assets/sprites/items_anim/<id>.png, ANIM_FRAMES 32x32 frames in a row,
 ## from make_sprites.py icon_frames): flames flicker, halos and eyes glow, sheen sweeps across.
 static var ANIMATED: Dictionary = _anim_sheets()
@@ -123,9 +137,6 @@ const COINS: Texture2D = preload("res://assets/sprites/coins.png")
 const COIN_STAGES: Array[int] = [1, 2, 3, 4, 10, 30]
 const ANIM_FRAMES: int = 12
 const ANIM_SECONDS: float = 0.1
-static var MOUNTS_FRONT: Dictionary = _mount_sheets("_front")
-const RIDER_LIFT: Dictionary = {"steed": 10, "wolf": 6, "spider": 9, "lizard": 6}
-const RIDER_CUT: float = 45.0
 static var CREATURE_GLOW: Dictionary = _creature_sheets("_glow")
 ## Characters' feet sit this far below the tile centre; monsters scale around that point.
 const FEET: Vector2 = Vector2(0, 13.5)
@@ -135,14 +146,8 @@ static var TILE_REGIONS: Array[Rect2] = _tile_regions()
 ## (make_sprites.py ITEM_COLUMNS; one long row would pass the 16384-pixel texture limit).
 const ITEM_COLUMNS: int = 64
 static var ITEM_ORDER: Array[String] = _item_order()
-## Slots drawn on the character. Rings and necklaces are too small to show when worn.
-const VISIBLE_SLOTS: Array[String] = ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]
-## The worn sheet of each item drawn on the body (assets/sprites/gear/<id>.png, the hand-pixelled
-## worn families of tools/generators/pixel_worn.py); items without one show nothing when worn.
-static var GEAR: Dictionary = _gear_sheets()
-## Relics glow: white halo sheets (gear/<id>_glow.png, items_glow.png, monsters/<look>_glow.png)
-## drawn additively in the item's "glow" colour by game/render/glow_layer.gd.
-static var GEAR_GLOW: Dictionary = _gear_sheets("_glow")
+## Relics glow: white halo sheets (items_glow.png, monsters/<look>_glow.png) drawn additively in the
+## item's "glow" colour by game/render/glow_layer.gd.
 const ITEM_GLOW: Texture2D = preload("res://assets/sprites/items_glow.png")
 const MONSTER_GLOW: Dictionary = {
 	"golem": preload("res://assets/sprites/monsters/golem_glow.png"),
@@ -256,13 +261,10 @@ static func _item_order() -> Array[String]:
 	return order
 
 
-static func _gear_sheets(suffix: String = "") -> Dictionary:
+static func _outfit_sheets() -> Dictionary:
 	var sheets: Dictionary = {}
-	for kind: String in World.ITEMS:
-		if VISIBLE_SLOTS.has(World.ITEMS[kind]["slot"]) and (suffix.is_empty() or World.ITEMS[kind].has("glow")):
-			var path: String = "res://assets/sprites/gear/%s%s.png" % [kind, suffix]
-			if ResourceLoader.exists(path):
-				sheets[kind] = load(path)
+	for looktype: int in OUTFITS.values() + [TOWNSFOLK_OUTFIT, HUMANOID_OUTFIT]:
+		sheets[looktype] = load("res://assets/sprites/outfits/%d.png" % looktype)
 	return sheets
 
 
@@ -291,24 +293,6 @@ static func _anim_sheets() -> Dictionary:
 		if ResourceLoader.exists(path):
 			sheets[kind] = load(path)
 	return sheets
-
-
-static func _mount_sheets(suffix: String = "") -> Dictionary:
-	var sheets: Dictionary = {}
-	for kind: String in World.ITEMS:
-		var path: String = "res://assets/sprites/mounts/%s%s.png" % [kind, suffix]
-		if World.ITEMS[kind]["slot"] == "mount" and ResourceLoader.exists(path):
-			sheets[kind] = load(path)
-	return sheets
-
-
-## How far up the rider of `state` sits this frame (0 when walking): the mount's saddle height,
-## one more pixel on its step frames. Only above ground (World.riding) and with a mount sheet.
-static func rider_lift(state: Dictionary, stride: float) -> float:
-	var mount: String = String(state.get("equipment", {}).get("mount", ""))
-	if not state.has("cell") or not MOUNTS.has(mount) or not World.riding(state["equipment"], state["cell"]):
-		return 0.0
-	return RIDER_LIFT.get(String(World.ITEMS[mount]["look"]).get_slice("+", 0), 8) + (1.0 if stride > 0.0 else 0.0)
 
 
 static func tile_at(cell: Vector2i) -> String:
@@ -807,70 +791,23 @@ static func frame_region(facing: Vector2i, stride: float, attack: float = -1.0) 
 	return Rect2(column * FRAME, maxi(0, DIRECTIONS.find(facing)) * FRAME, FRAME, FRAME)
 
 
-## stride is the 0..1 progress of the current step, or 0 when standing still.
+## stride is the 0..1 progress of the current step, or 0 when standing still. The look is the
+## vocation's outfit (state "vocation"), or state "outfit" (a looktype) for townsfolk and monsters;
+## a tint colours its body. Worn gear is not drawn (plan 49).
 static func draw_actor(canvas: CanvasItem, center: Vector2, state: Dictionary, local: bool, stride: float = 0.0,
 		tint: Color = Color.TRANSPARENT) -> void:
-	var facing: Vector2i = state["facing"]
-	var equipment: Dictionary = state["equipment"]
-	var source: Rect2 = frame_region(facing, stride, state.get("attack", -1.0))
-	var dest: Rect2 = Rect2(center - FRAME_ANCHOR, Vector2.ONE * FRAME)
+	var source: Rect2 = frame_region(state["facing"], stride, state.get("attack", -1.0))
 	if local:
-		canvas.draw_texture_rect_region(MARKER, dest, source)
-	var lift: float = rider_lift(state, stride)
-	if lift <= 0.0:
-		_draw_figure(canvas, dest, source, state, tint)
-		return
-	# Riding: the mount walks (attack frames show it standing), the rider sits still on top.
-	var mount: String = equipment["mount"]
-	var gait := Rect2(frame_region(facing, stride).position, Vector2.ONE * FRAME)
-	canvas.draw_texture_rect_region(MOUNTS[mount], dest, gait)
-	var seated: Rect2 = frame_region(facing, 0.0, state.get("attack", -1.0))
-	var raised := Rect2(dest.position - Vector2(0, lift), dest.size)
-	if facing.x == 0:
-		seated.size.y = RIDER_CUT
-		raised.size.y = RIDER_CUT
-	_draw_figure(canvas, raised, seated, state, tint)
-	canvas.draw_texture_rect_region(MOUNTS_FRONT[mount], dest, gait)
-
-
-## The character itself (no ground marker or mount) into dest from the sheets' source frame.
-static func _draw_figure(canvas: CanvasItem, dest: Rect2, source: Rect2, state: Dictionary, tint: Color) -> void:
-	var facing: Vector2i = state["facing"]
-	var equipment: Dictionary = state["equipment"]
-	var held: Texture2D = GEAR.get(equipment.get("main_hand", ""), null)
-	var shield: Texture2D = GEAR.get(equipment.get("off_hand", ""), null)
-	if held != null and facing == Vector2i.UP:
-		canvas.draw_texture_rect_region(held, dest, source)
-	if shield != null and facing.x != 0:
-		canvas.draw_texture_rect_region(shield, dest, source)
-	var cape: Texture2D = GEAR.get(equipment.get("cape", ""), null)
-	var cloth: Color = tint if tint.a > 0.0 else COLORS[int(state["id"]) % COLORS.size()]
-	canvas.draw_texture_rect_region(BODY, dest, source)
-	for slot: String in ["legs", "boots"]:
-		var worn: Texture2D = GEAR.get(equipment.get(slot, ""), null)
-		if worn != null:
-			canvas.draw_texture_rect_region(worn, dest, source)
-	canvas.draw_texture_rect_region(CLOTH, dest, source, cloth)
-	if cape != null and facing != Vector2i.UP:
-		canvas.draw_texture_rect_region(cape, dest, source)
-	var armor: Texture2D = GEAR.get(equipment.get("armor", ""), null)
-	if armor != null:
-		canvas.draw_texture_rect_region(armor, dest, source)
-	if cape != null and facing == Vector2i.UP:
-		canvas.draw_texture_rect_region(cape, dest, source)
-	var helmet: Texture2D = GEAR.get(equipment.get("helmet", ""), null)
-	if helmet != null:
-		canvas.draw_texture_rect_region(helmet, dest, source)
-	_draw_hands(canvas, dest, source, facing, held, shield)
-
-
-## Front-held shields and weapons (weapons held behind when facing up are drawn first).
-static func _draw_hands(canvas: CanvasItem, dest: Rect2, source: Rect2, facing: Vector2i, held: Texture2D,
-		shield: Texture2D) -> void:
-	if shield != null and facing.x == 0:
-		canvas.draw_texture_rect_region(shield, dest, source)
-	if held != null and facing != Vector2i.UP:
-		canvas.draw_texture_rect_region(held, dest, source)
+		canvas.draw_texture_rect_region(MARKER, Rect2(center - FRAME_ANCHOR, Vector2.ONE * FRAME), source)
+	var vocation: String = String(state.get("vocation", ""))
+	var colors: Array = OUTFIT_COLORS.get(vocation, OUTFIT_COLORS[Balance.ADVENTURER])
+	var sheet: Texture2D = OUTFIT_SHEETS[int(state.get("outfit", OUTFITS.get(vocation, OUTFITS[Balance.ADVENTURER])))]
+	var dest := Rect2(center - OUTFIT_ANCHOR, Vector2.ONE * FRAME)
+	for part: int in OUTFIT_PARTS:
+		var color: Color = Color.WHITE if part == 0 else colors[part - 1]
+		if part == 2 and tint.a > 0.0:
+			color = tint
+		canvas.draw_texture_rect_region(sheet, dest, Rect2(source.position + Vector2(0, part * 4 * FRAME), source.size), color)
 
 
 static func item_region(kind: String) -> Rect2:
@@ -909,7 +846,7 @@ static func draw_slot_hint(canvas: CanvasItem, center: Vector2, slot: String, si
 			return
 
 
-## Draws a monster from game/data/monsters.gd; humanoids reuse the character layers and gear.
+## Draws a monster from game/data/monsters.gd; humanoids wear HUMANOID_OUTFIT in their colour.
 static func draw_monster(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float) -> void:
 	var definition: Dictionary = Monsters.MONSTERS.get(state["kind"], {})
 	if definition.is_empty():
@@ -919,8 +856,8 @@ static func draw_monster(canvas: CanvasItem, center: Vector2, state: Dictionary,
 		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
 		canvas.draw_texture_rect_region(CREATURES[state["kind"]], dest, frame_region(state["facing"], stride))
 	elif definition["look"] == "humanoid":
-		draw_actor(canvas, -FEET, {"id": 0, "facing": state["facing"], "equipment": definition.get("gear", {}),
-			"attack": state.get("attack", -1.0)}, false, stride, definition["color"])
+		draw_actor(canvas, -FEET, {"facing": state["facing"], "outfit": HUMANOID_OUTFIT, "attack": state.get("attack", -1.0)},
+			false, stride, definition["color"])
 	else:
 		var source: Rect2 = frame_region(state["facing"], stride)
 		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
@@ -999,34 +936,14 @@ static func draw_skull(canvas: CanvasItem, at: Vector2, skull: String) -> void:
 
 # ---------------------------------------------------------------- glow (additive pass)
 
-## Halos of worn relics; call on an additive canvas with the same centre as draw_actor.
-static func draw_actor_glow(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float, strength: float) -> bool:
-	var lift: float = rider_lift(state, stride)
-	var source: Rect2 = frame_region(state["facing"], 0.0 if lift > 0.0 else stride, state.get("attack", -1.0))
-	var dest: Rect2 = Rect2(center - FRAME_ANCHOR - Vector2(0, lift), Vector2.ONE * FRAME)
-	if lift > 0.0 and state["facing"].x == 0:
-		source.size.y = RIDER_CUT
-		dest.size.y = RIDER_CUT
-	var glowing: bool = false
-	for slot: String in VISIBLE_SLOTS:
-		var kind: String = String(state["equipment"].get(slot, ""))
-		if GEAR_GLOW.has(kind):
-			canvas.draw_texture_rect_region(GEAR_GLOW[kind], dest, source, Color(World.ITEMS[kind]["glow"], strength))
-			glowing = true
-	return glowing
-
-
-## Boss halos: glowing relic gear on humanoids, or the creature's own "glow" colour.
+## Boss halos: the creature's own "glow" colour.
 static func draw_monster_glow(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float, strength: float) -> bool:
 	var definition: Dictionary = Monsters.MONSTERS.get(state["kind"], {})
 	if definition.is_empty():
 		return false
 	var glowing: bool = false
 	canvas.draw_set_transform(center + FEET, 0.0, Vector2.ONE * definition["size"])
-	if definition["look"] == "humanoid":
-		glowing = draw_actor_glow(canvas, -FEET, {"facing": state["facing"], "equipment": definition.get("gear", {}),
-			"attack": state.get("attack", -1.0)}, stride, strength)
-	elif definition.has("glow") and CREATURE_GLOW.has(state["kind"]):
+	if definition.has("glow") and CREATURE_GLOW.has(state["kind"]):
 		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
 		canvas.draw_texture_rect_region(CREATURE_GLOW[state["kind"]], dest, frame_region(state["facing"], stride),
 			Color(definition["glow"], strength))

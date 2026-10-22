@@ -22,9 +22,6 @@ const CARD_HOVER: Color = Color("#232c36f0")
 ## Where the hero stands on the painting's ledge (screen pixels) and how large.
 const HERO_FEET: Vector2 = Vector2(612, 676)
 const HERO_SCALE: float = 3.0
-## What a character with no saved look wears in the menu.
-const DEFAULT_LOOK: Dictionary = {"helmet": "ember_cap", "armor": "moss_coat", "legs": "moss_breeches", "boots": "moss_boots",
-	"main_hand": "copper_blade", "off_hand": "oak_buckler"}
 
 var game: Node
 var characters: Array = []
@@ -299,7 +296,7 @@ func _draw_card(card: Control, entry: Dictionary) -> void:
 	card.draw_rect(area, CARD_HOVER if card.get_rect().has_point(card.get_parent_control().get_local_mouse_position()) else CARD)
 	card.draw_rect(area, GOLD if chosen else Color("#3a4450"), false, 2.0 if chosen else 1.0)
 	card.draw_set_transform(Vector2(30, 58), 0.0, Vector2.ONE * 0.9)
-	SpriteArt.draw_actor(card, Vector2.ZERO - SpriteArt.FEET, {"id": 0, "facing": Vector2i.DOWN, "equipment": _look(entry)}, false)
+	SpriteArt.draw_actor(card, Vector2.ZERO - SpriteArt.FEET, {"facing": Vector2i.DOWN, "vocation": entry["vocation"]}, false)
 	card.draw_set_transform(Vector2.ZERO)
 	var font: Font = ThemeDB.fallback_font
 	card.draw_string(font, Vector2(64, 24), entry["name"], HORIZONTAL_ALIGNMENT_LEFT, 280, 17, GOLD if chosen else TEXT)
@@ -337,20 +334,11 @@ func _draw_hero() -> void:
 	for step: int in 16:
 		shadow.append(Vector2(cos(step * TAU / 16.0) * 11.0, sin(step * TAU / 16.0) * 3.5))
 	_hero.draw_colored_polygon(shadow, Color(0, 0, 0, 0.35))
-	SpriteArt.draw_actor(_hero, Vector2.ZERO - SpriteArt.FEET, {"id": 0, "facing": Vector2i.UP, "equipment": _look(entry)}, false)
+	SpriteArt.draw_actor(_hero, Vector2.ZERO - SpriteArt.FEET, {"facing": Vector2i.UP, "vocation": entry["vocation"]}, false)
 	_hero.draw_set_transform(Vector2.ZERO)
 
 
 ## The character's saved look, keeping only items the catalog still knows.
-func _look(entry: Dictionary) -> Dictionary:
-	var look: Dictionary = {}
-	for slot: Variant in entry["equipment"]:
-		var kind: Variant = entry["equipment"][slot]
-		if typeof(slot) == TYPE_STRING and typeof(kind) == TYPE_STRING and World.ITEMS.has(kind) and World.fits(kind, slot):
-			look[slot] = kind
-	return look if entry["level"] > 0 else DEFAULT_LOOK
-
-
 static func _played(when: int) -> String:
 	var days: int = int((Time.get_unix_time_from_system() - when) / 86400.0)
 	if when <= 0:

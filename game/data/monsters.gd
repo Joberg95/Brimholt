@@ -219,10 +219,6 @@ const MONSTERS: Dictionary = {
 	"sylvaine": {"relics": [], "name": "Sylvaine the Hollow Bloom", "look": "wraith", "color": Color("#7a5aa8"), "size": 1.8,
 		"rank": "boss", "range": 4, "step": 0.5, "respawn": 1800.0, "glow": Color("#c890ff")},
 }
-## Mounts (items.json, slot "mount"): every champion and final boss has its own, dropped at
-## MOUNT_CHANCE per kill on top of its loot table.
-const MOUNT_CHANCE: float = 0.01
-const MOUNTS: Dictionary = {}  # the OpenTibia pack has no mount art, so there are no mounts (plan 49)
 ## Valuables (Combat.roll_loot, worth Balance.valuables_per_kill on average): every kill may drop a
 ## small gem, the best one the monster's level allows or the one below it, and from level 35 a
 ## rare great gem carries GREAT_SHARE of that worth. [item, lowest monster level].

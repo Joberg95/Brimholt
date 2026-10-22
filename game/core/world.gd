@@ -140,8 +140,6 @@ static var MAP_HASH: String = ""
 const MOVE_SECONDS: float = 0.18
 ## A slowed creature's steps take this many times longer (Combat.restrain).
 const SLOWED_STEP: float = 2.0
-## A rider's steps take this share of a walker's (25% faster). Mounts carry you only above ground.
-const MOUNT_STEP: float = 0.8
 ## The ground's walking cost, as in Tibia: a step onto a dirt road, a street, or a bridge is quicker,
 ## onto sand, snow, or bog slower (a share of a plain step; anything else is 1). Nav routes by it.
 const GROUND_STEP: Dictionary = {",": 0.8, "=": 0.8, "b": 0.85, "F": 0.85, "Y": 0.85, ":": 1.1, "s": 1.15, "m": 1.3}
@@ -809,11 +807,6 @@ static func dungeon_at(cell: Vector2i) -> Array:
 	return [zone["dungeon"], zone["copy"]] if zone.has("dungeon") else []
 
 
-## Whether a character wearing `equipment` rides at `cell`: a mount in the mount slot, above ground.
-static func riding(equipment: Dictionary, cell: Vector2i) -> bool:
-	return not String(equipment.get("mount", "")).is_empty() and not zone_at(cell).get("underground", false)
-
-
 static func zone_at(cell: Vector2i) -> Dictionary:
 	for zone: Dictionary in ZONES:
 		if zone["rect"].has_point(cell):
@@ -1236,7 +1229,6 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	player["cell"] = destination
 	player["facing"] = direction
 	var pace: float = SLOWED_STEP if now < player.get("slowed_until", -INF) else 1.0
-	pace *= MOUNT_STEP if riding(player["equipment"], destination) else 1.0
 	pace *= float(GROUND_STEP.get(terrain(destination), 1.0))
 	pace *= speed_factor(player_stats(id)) / (1.0 + maxf(0.0, effect_power(player, "haste", now)))
 	player["step"] = MOVE_SECONDS * pace

@@ -26,20 +26,12 @@ func _draw() -> void:
 	var time: float = Time.get_ticks_msec() / 1000.0
 	var area: Rect2i = view.visible_cells()
 	var shown := Rect2(Vector2(area.position) * World.TILE_SIZE, Vector2(area.size) * World.TILE_SIZE)
-	for id: int in game.actors:
-		var actor: Dictionary = game.actors[id]
-		var center: Vector2 = (actor["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
-		if view.covered(Vector2i(actor["visual"].round())):
-			continue
-		if shown.has_point(center) and SpriteArt.draw_actor_glow(self, center, SpriteArt.posed(actor, time), _stride(actor), _pulse(time, id)):
-			_sparks(center, _glow_of(actor["state"]["equipment"]), time, id, 1.0)
 	for id: int in game.monsters_in(area):
 		var monster: Dictionary = game.monsters[id]
 		var center: Vector2 = (monster["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 		if shown.has_point(center) and SpriteArt.draw_monster_glow(self, center, SpriteArt.posed(monster, time), _stride(monster), _pulse(time, id)):
 			var definition: Dictionary = Monsters.MONSTERS[monster["state"]["kind"]]
-			var color: Color = definition.get("glow", _glow_of(definition.get("gear", {})))
-			_sparks(center, color, time, id, definition["size"])
+			_sparks(center, definition["glow"], time, id, definition["size"])
 	for cell: Vector2i in game.ground_in(area):
 		var stack: Array = game.ground_view[cell]
 		var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
@@ -55,15 +47,6 @@ func _stride(view_state: Dictionary) -> float:
 
 static func _pulse(time: float, seed_value: int) -> float:
 	return 0.42 + 0.18 * sin(time * 2.6 + seed_value * 0.7)
-
-
-## The first glowing item's colour among worn gear.
-static func _glow_of(equipment: Dictionary) -> Color:
-	for slot: String in SpriteArt.VISIBLE_SLOTS:
-		var kind: String = String(equipment.get(slot, ""))
-		if World.ITEMS.has(kind) and World.ITEMS[kind].has("glow"):
-			return World.ITEMS[kind]["glow"]
-	return Color.WHITE
 
 
 ## Small sparks drifting up from the item and fading, a few per glowing thing.

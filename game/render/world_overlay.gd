@@ -90,7 +90,7 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 			if state.has("name"):
 				# Named bots (solo companions and rivals): the name and level; their look shows the class.
 				title = "%s %d" % [String(state["name"]).get_slice(" of ", 0), state.get("level", 1)]
-			SpriteArt.draw_nameplate(self, center - Vector2(0, SpriteArt.rider_lift(state, 0.0)), title, state["health"],
+			SpriteArt.draw_nameplate(self, center, title, state["health"],
 				state["max_health"], 1.0, state.get("skull", ""), Color.TRANSPARENT, _party_mark(id, state), true)
 			if state.has("gathering"):
 				var left: float = float(state["gathering"][1]) - (game._now() - float(actor.get("received", game._now())))

@@ -16,6 +16,8 @@ const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
+## Slots the checks equip and unequip (shown in the paperdoll; gear is not drawn on the body).
+const WORN_SLOTS: Array[String] = ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]
 var game: Node2D
 ## The game renders offscreen into this buffer; the real window only needs to exist.
 var screen: SubViewport
@@ -83,8 +85,8 @@ func _run() -> void:
 			return
 		game.world.players[id]["facing"] = directions[id - 1]
 		game.world.players[id]["next_item"] = 0.0
-		for slot: String in SpriteArt.VISIBLE_SLOTS:
-			var toggled: Dictionary = game.world.toggle_equipment(id, slot, float(id) + SpriteArt.VISIBLE_SLOTS.find(slot))
+		for slot: String in WORN_SLOTS:
+			var toggled: Dictionary = game.world.toggle_equipment(id, slot, float(id) + WORN_SLOTS.find(slot))
 			if not toggled["ok"]:
 				push_error("Visual test equipment setup failed")
 				quit(1)
@@ -108,8 +110,8 @@ func _run() -> void:
 		return
 	print("BRIMHOLT_VISUAL_CAPTURE res://.tools/visual.png")
 	for id: int in range(1, 5):
-		for slot: String in SpriteArt.VISIBLE_SLOTS:
-			var unequip_result: Dictionary = game.world.toggle_equipment(id, slot, 20.0 + SpriteArt.VISIBLE_SLOTS.find(slot))
+		for slot: String in WORN_SLOTS:
+			var unequip_result: Dictionary = game.world.toggle_equipment(id, slot, 20.0 + WORN_SLOTS.find(slot))
 			if not unequip_result["ok"]:
 				push_error("Visual test unequip failed: " + unequip_result["reason"])
 				quit(1)
@@ -123,7 +125,7 @@ func _run() -> void:
 		quit(1)
 		return
 	# Worn gear is not drawn on the character (plan 49), so only the panel slots change.
-	for slot: String in SpriteArt.VISIBLE_SLOTS:
+	for slot: String in WORN_SLOTS:
 		var slot_region: Rect2i = Rect2i(Vector2i(game.slot_position({"type": "equipment", "slot": slot})),
 			Vector2i(32, 32))
 		if image.get_region(slot_region).get_data() == unequipped.get_region(slot_region).get_data():
