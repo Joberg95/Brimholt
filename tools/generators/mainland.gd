@@ -40,11 +40,11 @@ const AREAS: Array = [
 ## Camp monsters: id, the level band its heartland camps already have (so its tasks' bands,
 ## World.task_levels, stay as they are), and the ground it favours ("open", "wood", "wet", "rock").
 const MONSTERS: Array = [
-	["field_vole", 1, 1, "open"], ["marsh_toad", 3, 4, "wet"], ["thornback_boar", 5, 7, "wood"],
-	["road_bandit", 8, 10, "open"], ["grey_wolf", 11, 14, "wood"], ["bog_lurker", 15, 18, "wet"],
-	["outlaw_archer", 19, 23, "open"], ["dire_bear", 20, 22, "wood"], ["lizard_warrior", 21, 24, "wet"],
-	["lizard_shaman", 23, 25, "wet"], ["harpy", 24, 27, "rock"], ["stone_golem", 24, 28, "rock"],
-	["stone_troll", 25, 28, "rock"], ["cyclops", 29, 30, "rock"],
+	["black_cat", 1, 1, "open"], ["mud_grub", 3, 4, "wet"], ["wild_hog", 5, 7, "wood"],
+	["brigand", 8, 10, "open"], ["giant_wasp", 11, 14, "wood"], ["bog_grub", 15, 18, "wet"],
+	["star_mage", 19, 23, "open"], ["giant_bat", 20, 22, "wood"], ["blue_gargoyle", 21, 24, "wet"],
+	["tide_mage", 23, 25, "wet"], ["harpy", 24, 27, "rock"], ["stone_gargoyle", 24, 28, "rock"],
+	["stone_gargoyle", 25, 28, "rock"], ["stone_gargoyle", 29, 30, "rock"],
 ]
 ## Brackenford's coach fares to the other coach stations.
 const COACHES: Dictionary = {"cinder_coach": 35, "ashford": 30, "highmoor": 25, "emberfall": 25, "dunmere": 25,

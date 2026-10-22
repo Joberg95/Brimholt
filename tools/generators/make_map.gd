@@ -121,9 +121,9 @@ const ISLAND_FARE: int = 40
 ## distance from Cinder Crossing (STARTER_RADIUS tiles of levels 1-4, then about one level
 ## per LEVEL_TILES), reaching 35 in the far east and south.
 const MAINLAND_MONSTERS: Array = [
-	[2, "field_vole"], [4, "marsh_toad"], [7, "thornback_boar"], [10, "road_bandit"], [14, "grey_wolf"],
-	[18, "bog_lurker"], [23, "outlaw_archer"], [28, "stone_golem"], [32, "cinder_wraith"], [35, "hollow_knight"],
-	[39, "mire_stalker"], [42, "reedfang"], [45, "bog_hulk"],
+	[2, "black_cat"], [4, "mud_grub"], [7, "wild_hog"], [10, "brigand"], [14, "giant_wasp"],
+	[18, "bog_grub"], [23, "star_mage"], [28, "stone_gargoyle"], [32, "fire_mage"], [35, "skeleton_warrior"],
+	[39, "mire_ghost"], [42, "fen_dragon"], [45, "fen_dragon"],
 ]
 ## Spawns are dense on the compact overworld and at least SPAWN_SPACING tiles
 ## apart (STARTER_SPACING near Cinder Crossing).
@@ -139,8 +139,8 @@ const ROAD_CLEARANCE: int = 5
 const ISLAND_ZONE: Dictionary = {"name": "Blackreed Isle", "pvp": true, "min_level": 40, "max_level": 50}
 ## Placeholder high-level monsters for the island: id, level.
 const ISLAND_MONSTERS: Array = [
-	["mire_stalker", 40], ["reedfang", 42], ["bog_hulk", 45], ["mire_stalker", 44],
-	["reedfang", 47], ["bog_hulk", 48], ["blackreed_warden", 50],
+	["mire_ghost", 40], ["fen_dragon", 42], ["fen_dragon", 45], ["mire_ghost", 44],
+	["fen_dragon", 47], ["fen_dragon", 48], ["blackreed_warden", 50],
 ]
 
 ## Vendors (and Reedmere's banker) and the hunting-task givers, on open plaza tiles: in a

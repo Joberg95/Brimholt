@@ -58,11 +58,11 @@ const GATES: Array[Vector2i] = [Vector2i(0, 16), Vector2i(0, 17), Vector2i(45, 1
 const ROUTES: Dictionary = {"lastlight": 45, "cinder_landing": 60}
 ## Tundra camps: [monster, level, count, wander radius, cell].
 const CAMPS: Array = [
-	["snow_wolf", 28, 5, 3, Vector2i(30, 750)], ["snow_wolf", 29, 5, 3, Vector2i(22, 772)],
-	["snow_wolf", 30, 5, 3, Vector2i(44, 786)], ["tusked_walrus", 30, 5, 2, Vector2i(132, 742)],
-	["tusked_walrus", 32, 5, 2, Vector2i(142, 758)], ["tusked_walrus", 31, 5, 2, Vector2i(30, 792)],
-	["barbarian_raider", 31, 5, 2, Vector2i(18, 754)], ["barbarian_raider", 33, 5, 2, Vector2i(52, 770)],
-	["barbarian_raider", 34, 5, 2, Vector2i(136, 748)],
+	["frost_ghost", 28, 5, 3, Vector2i(30, 750)], ["frost_ghost", 29, 5, 3, Vector2i(22, 772)],
+	["frost_ghost", 30, 5, 3, Vector2i(44, 786)], ["rust_grub", 30, 5, 2, Vector2i(132, 742)],
+	["rust_grub", 32, 5, 2, Vector2i(142, 758)], ["rust_grub", 31, 5, 2, Vector2i(30, 792)],
+	["brigand", 31, 5, 2, Vector2i(18, 754)], ["brigand", 33, 5, 2, Vector2i(52, 770)],
+	["brigand", 34, 5, 2, Vector2i(136, 748)],
 ]
 
 

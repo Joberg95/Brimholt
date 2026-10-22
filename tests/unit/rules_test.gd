@@ -139,7 +139,7 @@ func _run() -> void:
 	check(world.occupied(Vector2i(6, 6), 0.21), "origin reserved in transit (for spawns and monsters)")
 	check(world.move(1, Vector2i.RIGHT, 0.21)["ok"] and world.players[1]["cell"] == Vector2i(6, 6),
 		"players walk through each other: only the land blocks them")
-	var through: int = Combat.new(world, 3).spawn_monster("field_vole", 1, Vector2i(7, 6), 0.0)
+	var through: int = Combat.new(world, 3).spawn_monster("black_cat", 1, Vector2i(7, 6), 0.0)
 	check(world.move(1, Vector2i.RIGHT, 0.4)["ok"] and world.players[1]["cell"] == world.monsters[through]["cell"],
 		"players walk through monsters")
 	world.monsters.erase(through)
@@ -311,7 +311,9 @@ func _quest_hub_and_lexicon_checks() -> void:
 		check(not World.next_task(state).is_empty(), "a task fits at every level (%d)" % level)
 	check(World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": []}) == "wolf_winter"
 		and World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": ["wolf_winter", "lodge_wolves"]})
-		== "orc_raiders", "the suggestion moves to the best remaining fit")
+		== "orc_raiders", "the suggestion moves to the best remaining fit (%s, %s)" % [
+		World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": []}),
+		World.next_task({"level": 12, "vocation": "knight", "tasks": {}, "done_tasks": ["wolf_winter", "lodge_wolves"]})])
 	_hunters_lodge_checks()
 	_profession_data_checks()
 	_gathering_checks()
@@ -369,7 +371,7 @@ func _quest_hub_and_lexicon_checks() -> void:
 	var turned: Dictionary = combat.task_action(1, "harbourmaster_ilse", "highway_robbers", "complete", 2.0)
 	var texts: Array = turned["events"].filter(func(event: Dictionary) -> bool: return event["kind"] == "message") \
 		.map(func(event: Dictionary) -> String: return event["text"])
-	check(turned["ok"] and texts.size() == 1 and not texts[0].contains("Next:"), "a giver with more work for you does not send you away")
+	check(turned["ok"] and texts.size() == 1 and not texts[0].contains("Next:"), "a giver with more work for you does not send you away (%s)" % [texts])
 	player["done_tasks"]["wolf_winter"] = true
 	player["done_tasks"].erase("highway_robbers")
 	player["level"] = 14
@@ -386,11 +388,11 @@ func _quest_hub_and_lexicon_checks() -> void:
 	for found: Dictionary in Lexicon.entries():
 		check(found["drops"] == Monsters.LOOT[found["kind"]] and not found["places"].is_empty() and found["levels"].x >= 1
 			and found["gear"] == Combat.GEAR_DROP_CHANCE[found["rank"]], "%s's lexicon entry matches its loot and spawns" % found["kind"])
-	var spider: Dictionary = Lexicon.entry("cave_spider")
-	check("Silkhollow (dungeon)" in spider["places"] and spider["tasks"] == ["silk_harvest"] and Lexicon.matches(spider, "SILK")
-		and Lexicon.matches(spider, "cave spider") and not Lexicon.matches(spider, "golem"), "lexicon search finds names and places")
-	check(Lexicon.matches(Lexicon.entry("field_vole"), "glowcap"), "lexicon search finds drops")
-	var vole: Dictionary = Lexicon.entry("field_vole")
+	var centipede: Dictionary = Lexicon.entry("giant_centipede")
+	check("Silkhollow (dungeon)" in centipede["places"] and "silk_harvest" in centipede["tasks"] and Lexicon.matches(centipede, "SILK")
+		and Lexicon.matches(centipede, "giant centipede") and not Lexicon.matches(centipede, "golem"), "lexicon search finds names and places")
+	check(Lexicon.matches(Lexicon.entry("black_cat"), "glowcap"), "lexicon search finds drops")
+	var vole: Dictionary = Lexicon.entry("black_cat")
 	check(vole["gold"] == roundi(Balance.coins_per_kill(1) * World.ITEMS["gold_coins"]["gold"]) and "Cinder Meadows" in vole["places"] and "Bracken Leas" in vole["places"],
 		"the lexicon's gold matches the expected coin piles")
 
@@ -441,7 +443,7 @@ func _bot_checks() -> void:
 	var bots := Bots.new(world, combat)
 	world.monsters.clear()
 	var hunter: int = bots.add("knight", 20, "hunter", field, 0.0)["id"]
-	var prey: int = combat.spawn_monster("grey_wolf", 12, world.players[hunter]["cell"] + Vector2i(0, 3), 0.0)
+	var prey: int = combat.spawn_monster("giant_wasp", 12, world.players[hunter]["cell"] + Vector2i(0, 3), 0.0)
 	world.monsters[prey]["next_attack"] = INF
 	var now: float = _run_bots(bots, combat, 0.0, 30.0)
 	check(world.players[hunter].get("bot", false) and world.export_player(hunter, now)["bot"] and not world.monsters.has(prey)
@@ -505,7 +507,7 @@ func _bot_checks() -> void:
 	calm_bots.use_resources(calm, 40.0, [])
 	check(World.count_of(medic["backpack"][1]) == mana_before - 1 and World.count_of(medic["backpack"][0]) == health_before - 1,
 		"a hurt bot at 40% mana drinks a health and a mana potion in the same moment")
-	var foe: int = calm_combat.spawn_monster("thornback_boar", 5, medic["cell"] + Vector2i(1, 0), 20.0)
+	var foe: int = calm_combat.spawn_monster("wild_hog", 5, medic["cell"] + Vector2i(1, 0), 20.0)
 	calm_world.monsters[foe]["next_move"] = INF
 	calm_world.monsters[foe]["next_attack"] = INF
 	_run_bots(calm_bots, calm_combat, 20.0, 0.5)
@@ -599,7 +601,7 @@ func _pvp_policy_checks() -> void:
 		and Combat.distance(arena.world.players[arena.learner]["cell"], arena.world.players[arena.foe]["cell"]) < gap,
 		"the policy drives a bot whose target is a hostile player (on delayed sight at easy), not a scripted one")
 	var learner_cell: Vector2i = arena.world.players[arena.learner]["cell"]
-	arena.world.players[arena.learner]["target"] = arena.combat.spawn_monster("field_vole", 1, arena.bots.free_cell_near(learner_cell, arena.now), arena.now)
+	arena.world.players[arena.learner]["target"] = arena.combat.spawn_monster("black_cat", 1, arena.bots.free_cell_near(learner_cell, arena.now), arena.now)
 	check(not arena.bots.policy_drives(arena.learner, arena.now) and not arena.bots.run_policy(arena.learner, arena.now, []),
 		"the policy leaves fights against monsters to the scripted bot")
 	arena.bots.policy = null
@@ -624,7 +626,7 @@ func _bot_loot_checks() -> void:
 	var me: Dictionary = world.players[hunter]
 	# A kill claims every tile its loot spilled onto for the players credited with it.
 	# Level 40: Balance.coins_per_kill is 1.0, so the kill always drops gold as well as items.
-	var prey: int = combat.spawn_monster("grey_wolf", 40, me["cell"] + Vector2i(0, 2), 0.0)
+	var prey: int = combat.spawn_monster("giant_wasp", 40, me["cell"] + Vector2i(0, 2), 0.0)
 	world.monsters[prey]["damage_by"] = {hunter: 100}
 	var events: Array = []
 	combat._kill_monster(prey, 1.0, events)
@@ -1438,7 +1440,7 @@ func _solo_checks() -> void:
 	check(me["health"] > wounded, "a druid companion heals you when you are hurt")
 	check(Spells.for_vocation("druid").any(func(spell: String) -> bool:
 		return Spells.SPELLS[spell]["kind"] == "heal_area" and Spells.SPELLS[spell]["level"] == 1), "druids heal their party from level 1")
-	var guard: int = combat.spawn_monster("grey_wolf", 20, me["cell"] + Vector2i(1, 0), sim_clock[0])
+	var guard: int = combat.spawn_monster("giant_wasp", 20, me["cell"] + Vector2i(1, 0), sim_clock[0])
 	world.monsters[guard]["target"] = druid
 	_place(world, druid, me["cell"] + Vector2i(2, 0))
 	check(bots._should_taunt(1, 2, sim_clock[0]), "a warrior challenges a monster on a softer party member")
@@ -1724,7 +1726,7 @@ func _hunters_lodge_checks() -> void:
 			check(gear.size() == 1 and World.requirement_error(gear[0][0], Balance.MAX_LEVEL, vocation).is_empty()
 				and World.ITEMS[gear[0][0]]["level"] == Items.tier_for(Quests.TASKS[task]["level"]),
 				"%s pays a %s a piece of its own class at the hunt's tier" % [task, vocation])
-	for kind: String in ["frostfang_wolf", "cyclops", "cyclops_smith", "behemoth"]:
+	for kind: String in ["frost_ghost", "stone_gargoyle", "stone_gargoyle", "sand_lion"]:
 		var drops: Array = Monsters.LOOT[kind].map(func(entry: Array) -> String: return entry[0])
 		check("rune_shard" in drops and "health_potion" in drops and "mana_potion" in drops
 			and Monsters.MONSTERS[kind]["gear_chance"] > Combat.GEAR_DROP_CHANCE["normal"],
@@ -1881,7 +1883,7 @@ func _leech_checks() -> void:
 	player["equipment"]["main_hand"] = "grand_sanguine_blade"
 	world.clamp_vitals(1)
 	player["health"] = 100
-	var monster: int = combat.spawn_monster("void_wraith", 45, player["cell"] + Vector2i(1, 0), 0.0)
+	var monster: int = combat.spawn_monster("void_mage", 45, player["cell"] + Vector2i(1, 0), 0.0)
 	var events: Array = []
 	combat._hit(1, monster, 1.0, 1.0, events)
 	check(player["health"] > 100, "a leeching hit heals the Warrior who struck it")
@@ -1894,15 +1896,15 @@ func _loot_display_checks() -> void:
 		and SpriteArt.COINS.get_width() == SpriteArt.COIN_STAGES.size() * 32, "gold coin stacks grow by stage")
 	# A kill's loot reads like a classic loot message, for its owners only, with a rarity label.
 	var drops: Array[String] = [World.make_entry("gold_coins", 2), "flint_hatchet", "small_ruby"]
-	var event: Dictionary = Combat.loot_event({"kind": "crypt_skeleton", "cell": Vector2i(3, 4)}, drops, [7])
+	var event: Dictionary = Combat.loot_event({"kind": "skeleton_warrior", "cell": Vector2i(3, 4)}, drops, [7])
 	check(event["kind"] == "loot" and event["ids"] == [7] and event["cell"] == Vector2i(3, 4)
-		and event["text"] == "Loot of a crypt skeleton: 50 gold coins, a flint hatchet, a small ruby." and not event.has("label"),
+		and event["text"] == "Loot of a skeleton warrior: 50 gold coins, a flint hatchet, a small ruby." and not event.has("label"),
 		"loot text names the monster and every drop (%s)" % event["text"])
 	var rare: Dictionary = Combat.loot_event({"kind": "rat_king", "cell": Vector2i.ZERO}, ["voidrend"], [1])
 	check(rare["text"] == "Loot of The Rat King: a voidrend." and rare.has("label"),
 		"a boss keeps its name and a rare drop gets a rarity label (%s)" % rare["text"])
-	var empty: Dictionary = Combat.loot_event({"kind": "sewer_rat", "cell": Vector2i.ZERO}, [], [1])
-	check(empty["text"] == "Loot of a sewer rat: nothing.", "an empty kill says nothing")
+	var empty: Dictionary = Combat.loot_event({"kind": "ratkin", "cell": Vector2i.ZERO}, [], [1])
+	check(empty["text"] == "Loot of a ratkin: nothing.", "an empty kill says nothing")
 
 
 func _ring_checks() -> void:
@@ -2394,7 +2396,7 @@ func _experience_from(events: Array) -> Dictionary:
 
 ## Kills a fresh monster next to `cell`; `damage` maps player -> damage dealt (the first deals the blow).
 func _party_kill(world: World, combat: Combat, cell: Vector2i, damage: Dictionary, now: float) -> Dictionary:
-	var monster: int = combat.spawn_monster("road_bandit", 10, cell, now)
+	var monster: int = combat.spawn_monster("brigand", 10, cell, now)
 	world.monsters[monster]["damage_by"] = damage.duplicate()
 	world.monsters[monster]["health"] = 1
 	var events: Array = []
@@ -2632,9 +2634,6 @@ func _gear_tier_checks() -> void:
 		for entry: String in drops.roll_loot("blackreed_warden", 45):
 			elite_gear += 1 if not World.ITEMS[World.kind_of(entry)]["slot"].is_empty() else 0
 	check(elite_gear > 15 and elite_gear < 60, "elites drop gear about one kill in twelve (%d of 400)" % elite_gear)
-	for kind: String in Monsters.MONSTERS:
-		for slot: String in Monsters.MONSTERS[kind].get("gear", {}):
-			check(World.fits(Monsters.MONSTERS[kind]["gear"][slot], slot), "%s wears catalog gear" % kind)
 	_hunting_weapon_checks()
 
 
@@ -2660,7 +2659,7 @@ func _hunting_weapon_checks() -> void:
 			"%s is ordinary nonstacking loot, not a relic" % kind)
 		check(not Economy.stock().has(kind) and Economy.sell_price(kind) > 0,
 			"%s must be hunted but vendors accept it for sale" % kind)
-		var rolled: Array[String] = Combat.new(world, 110).roll_loot("field_vole", 1)
+		var rolled: Array[String] = Combat.new(world, 110).roll_loot("black_cat", 1)
 		check(not rolled.has(kind), "%s is not a starter-monster reward" % kind)
 		for other: String in Balance.VOCATIONS:
 			check(World.requirement_error(kind, item["level"], other).is_empty() == (other == vocation),
@@ -2883,7 +2882,7 @@ func _relic_checks(by_key: Dictionary) -> void:
 	for boss: String in bosses:
 		var definition: Dictionary = Monsters.MONSTERS[boss]
 		check(definition.get("respawn", 0.0) >= 600.0, "%s respawns slowly" % boss)
-		check(definition.has("glow") or definition["look"] == "humanoid", "%s glows (itself or through its gear)" % boss)
+		check(definition.has("glow"), "%s glows" % boss)
 		var placed: Array = World.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return spawn["monster"] == boss)
 		check(placed.size() == 1 and placed[0]["level"] == Balance.MAX_LEVEL and placed[0]["count"] == 1,
 			"%s has one level-50 lair on the map" % boss)
@@ -3219,7 +3218,7 @@ func _town_checks() -> void:
 	for task: String in Quests.TASKS:
 		var definition: Dictionary = Quests.TASKS[task]
 		check(givers.has(task), "%s has a quest giver" % task)
-		var placed: bool = Quests.monster_level(definition["monster"]) > 0 or not World.MONSTER_SPAWNS.filter(
+		var placed: bool = Quests.monster_level(definition["monster"], Quests.dungeon_of(task)) > 0 or not World.MONSTER_SPAWNS.filter(
 			func(spawn: Dictionary) -> bool: return spawn["monster"] == definition["monster"]).is_empty()
 		check(placed, "%s hunts a monster that spawns" % task)
 		for kind: String in definition.get("also", []):
@@ -3406,7 +3405,7 @@ func _town_checks() -> void:
 	var kill := func(kind: String) -> void:
 		var monster: int = combat.spawn_monster(kind, 6, field, ticks[0])
 		combat._damage(1, monster, 9999999, "damage", tick.call(), [])
-	kill.call("field_vole")
+	kill.call("black_cat")
 	check(player["tasks"][task] == 0, "other monsters do not count")
 	for index: int in count + 3:
 		kill.call(hunted)
@@ -3911,7 +3910,7 @@ func _scale_checks() -> void:
 	world.players[1]["health"] = world.player_stats(1)["health"]
 	var index: int = -1
 	for spawn: int in World.MONSTER_SPAWNS.size():
-		if World.MONSTER_SPAWNS[spawn]["monster"] == "snow_wolf":
+		if World.MONSTER_SPAWNS[spawn]["monster"] == "frost_ghost":
 			index = spawn
 			break
 	var camp: Dictionary = World.MONSTER_SPAWNS[index]
@@ -3968,7 +3967,7 @@ func _scale_checks() -> void:
 		check(missed == 0, "monsters_near misses nothing within its radius of %s" % probe)
 	# Adding and removing monsters behind Combat's back rebuilds the index.
 	var odd: int = -900001
-	full_world.monsters[odd] = {"id": odd, "kind": "snow_wolf", "home": camp["cell"], "cell": camp["cell"], "target": 0,
+	full_world.monsters[odd] = {"id": odd, "kind": "frost_ghost", "home": camp["cell"], "cell": camp["cell"], "target": 0,
 		"engaged_at": -1.0}
 	check(full._near_players().has(odd), "a monster added directly is indexed")
 	full_world.monsters.erase(odd)
@@ -3999,7 +3998,7 @@ func _spell_fx_checks() -> void:
 	check(world.add_player(1, 0.0, "sorcerer") and world.add_player(2, 0.0, "druid"), "spell effect players")
 	_place(world, 1, Vector2i(5, 6))
 	_place(world, 2, Vector2i(6, 6))
-	var vole: int = combat.spawn_monster("field_vole", 1, Vector2i(5, 9), 0.0)
+	var vole: int = combat.spawn_monster("black_cat", 1, Vector2i(5, 9), 0.0)
 	combat.set_target(1, vole, 0.0)
 	var bolt: Dictionary = combat.cast(1, "ember_bolt", 1.0)
 	check(bolt["ok"] and bolt["events"].any(func(event: Dictionary) -> bool:
@@ -4105,7 +4104,7 @@ func _gap_checks() -> void:
 func _hollow_checks() -> void:
 	var task: String = "hundred_eyed_hollow"
 	var definition: Dictionary = Quests.TASKS[task]
-	check(definition["count"] == 75 and Quests.counts(task, "cyclops") and Quests.counts(task, "cyclops_smith")
+	check(definition["count"] == 75 and Quests.counts(task, "stone_gargoyle") and Quests.counts(task, "stone_gargoyle")
 		and Caves.CAVES.has(definition["cave"]) and World.MOUTH_OF.has(definition["cave"]), "the Hollow's hunt asks for 75 cyclopes in its cave")
 	for kind: String in definition["rare"]["items"]:
 		check(World.ITEMS[kind]["level"] == 35 and World.bound(kind) and World.ITEMS[kind].has("quest")
@@ -4118,9 +4117,9 @@ func _hollow_checks() -> void:
 	player["level"] = 35
 	player["tasks"][task] = 0
 	var inside: Vector2i = World.CAVE_STAIRS[definition["cave"]]
-	combat._credit_tasks("cyclops", [1], [], Vector2i(310, 40))
+	combat._credit_tasks("stone_gargoyle", [1], [], Vector2i(310, 40))
 	check(player["tasks"][task] == 0, "a cyclops killed outside the Hollow does not count")
-	combat._credit_tasks("cyclops_smith", [1], [], inside)
+	combat._credit_tasks("stone_gargoyle", [1], [], inside)
 	check(player["tasks"][task] == 1, "a smith killed inside the Hollow counts")
 	var giver: Vector2i = World.QUEST_GIVERS[definition["giver"]]["cell"]
 	var rare: int = 0
@@ -4173,7 +4172,7 @@ func _homeward_checks() -> void:
 	player["level"] = 30
 	player["backpack"][5] = "homeward_rune#2"
 	_place(world, 1, Vector2i(120, 60))
-	var wolf: int = combat.spawn_monster("grey_wolf", 10, Vector2i(122, 60), 0.0)
+	var wolf: int = combat.spawn_monster("giant_wasp", 10, Vector2i(122, 60), 0.0)
 	world.monsters[wolf]["target"] = 1
 	check(combat.use_rune(1, "homeward_rune", 1.0).get("reason", "").contains("hunt"), "no way home while monsters hunt you")
 	world.monsters[wolf]["target"] = 0
@@ -4182,10 +4181,10 @@ func _homeward_checks() -> void:
 		"the rune spends one and carries you to the start town")
 	var drops: int = 0
 	for roll: int in 3000:
-		drops += combat.roll_loot("grey_wolf", 31).count("homeward_rune")
+		drops += combat.roll_loot("giant_wasp", 31).count("homeward_rune")
 	var low: int = 0
 	for roll: int in 3000:
-		low += combat.roll_loot("grey_wolf", 30).count("homeward_rune")
+		low += combat.roll_loot("giant_wasp", 30).count("homeward_rune")
 	check(drops > 10 and low == 0, "only monsters above level 30 drop Homeward runes (%d in 3000)" % drops)
 
 func _dungeon_checks() -> void:
@@ -4313,7 +4312,7 @@ func _dungeon_checks() -> void:
 	check(World.dungeon_at(restored.players[5]["cell"])[0] == "silkhollow" and torch_hints == [true, false],
 		"Silkhollow tells players without a torch to bring one")
 
-	var outside: int = combat.spawn_monster("field_vole", 1, Vector2i(World.OVERWORLD.end.x - 3, 5), 0.0)
+	var outside: int = combat.spawn_monster("black_cat", 1, Vector2i(World.OVERWORLD.end.x - 3, 5), 0.0)
 	_place(world, 2, Dungeons.origin("cinder_cellar", 0) + Vector2i(1, 4))
 	check(not combat.hostile(outside, 2) and not combat.hostile(2, outside), "the overworld and a dungeon copy never fight")
 	# Sleeping monsters: an untouched monster far from players does not act.
@@ -4322,8 +4321,8 @@ func _dungeon_checks() -> void:
 	quiet.monsters.clear()
 	quiet.add_player(1, 0.0)
 	_place(quiet, 1, Vector2i(10, 10))
-	var far: int = quiet_combat.spawn_monster("field_vole", 1, Vector2i(200, 200), 0.0)
-	var near: int = quiet_combat.spawn_monster("field_vole", 1, Vector2i(13, 10), 0.0)
+	var far: int = quiet_combat.spawn_monster("black_cat", 1, Vector2i(200, 200), 0.0)
+	var near: int = quiet_combat.spawn_monster("black_cat", 1, Vector2i(13, 10), 0.0)
 	quiet_combat.tick(1.0)
 	check(quiet.monsters[far]["target"] == 0 and quiet.monsters[near]["target"] == 1, "only monsters near players wake")
 
@@ -4552,7 +4551,7 @@ func _persistence_checks() -> void:
 		"vocation": "knight", "level": 999, "experience": -5, "gold": -5, "bank": "lots", "health": -4, "mana": 1e9,
 		"equipment": {"helmet": "copper_blade", "main_hand": "abyssal_greathelm", "armor": "nope", "bag": "pathfinder_pack"},
 		"backpack": ["copper_ore#500", "copper_blade#2", "gold_coins", "nope", "traveler_pack", 5, "copper_ore#1", "copper_ore#007", "glowcap#3"],
-		"depot": "everything", "trophies": {"field_vole": 3, "morvain": -1}, "tasks": {"nope": 3, "boar_cull": 999, "hollow_purge": 999},
+		"depot": "everything", "trophies": {"black_cat": 3, "morvain": -1}, "tasks": {"nope": 3, "boar_cull": 999, "hollow_purge": 999},
 		"done_tasks": ["boar_cull", "nope"], "cell": [0, 0], "skull": "black", "skull_left": 50, "unjustified_ages": ["x", -1, 1e12],
 	})
 	var bad: Dictionary = store.load_character(hostile)["data"]
@@ -4813,7 +4812,7 @@ func _hardening_checks() -> void:
 	crowd.players[1]["health"] = 999999
 	var spawned: Array = []
 	for offset: Vector2i in [Vector2i(-3, -3), Vector2i(3, -3), Vector2i(-3, 3), Vector2i(3, 3), Vector2i(0, -3), Vector2i(0, 3)]:
-		spawned.append(combat.spawn_monster("field_vole", 1, open + offset, 0.0, -1, []))
+		spawned.append(combat.spawn_monster("black_cat", 1, open + offset, 0.0, -1, []))
 	var overlap: bool = false
 	for step: int in 40:
 		var now: float = 1.0 + step * Combat.TICK_SECONDS
@@ -4851,7 +4850,7 @@ func _chase_checks() -> void:
 		var player: Dictionary = world.players[1]
 		player["health"] = 999999
 		_place(world, 1, start + Vector2i(2, 0))
-		var monster: int = combat.spawn_monster("field_vole", level, start, 0.0)
+		var monster: int = combat.spawn_monster("black_cat", level, start, 0.0)
 		# The player flees east at full walking speed; the monster chases.
 		var now: float = 0.0
 		var caught: bool = false
@@ -4874,7 +4873,7 @@ func _chase_checks() -> void:
 	drag.add_player(1, 0.0, "knight")
 	drag.players[1]["health"] = 999999
 	_place(drag, 1, start + Vector2i(1, 0))
-	var vole: int = drag_combat.spawn_monster("field_vole", 5, start, 0.0)
+	var vole: int = drag_combat.spawn_monster("black_cat", 5, start, 0.0)
 	var events: Array = []
 	drag_combat._damage(1, vole, 20, "damage", 0.0, events)
 	check(drag.monsters[vole]["health"] < drag.monsters[vole]["max_health"] and drag.monsters[vole]["target"] == 1, "a hit monster engages")
@@ -4914,7 +4913,7 @@ func _chase_checks() -> void:
 	townsfolk.monsters.clear()
 	townsfolk.add_player(1, 0.0, "knight")
 	_place(townsfolk, 1, gate + Vector2i.RIGHT)
-	var hunter: int = town_combat.spawn_monster("field_vole", 5, gate + Vector2i(3, 0), 0.0)
+	var hunter: int = town_combat.spawn_monster("black_cat", 5, gate + Vector2i(3, 0), 0.0)
 	events = []
 	town_combat._damage(1, hunter, 10, "damage", 0.0, events)
 	_place(townsfolk, 1, gate)
@@ -4943,14 +4942,14 @@ func _monster_catalog_checks() -> void:
 		var named: String = "monster %s" % kind
 		check(kind == kind.to_snake_case() and not String(definition.get("name", "")).is_empty(), "%s has a snake_case id and a name" % named)
 		check(Balance.RANKS.has(definition.get("rank", "")), "%s has a Balance rank" % named)
-		check(SpriteArt.MONSTER_SHEETS.has(definition.get("look", "")) or definition.get("look", "") == "humanoid", "%s has a drawable look" % named)
+		check(definition.get("look", "") == "outfit" and SpriteArt.OUTFIT_SHEETS.has(definition.get("outfit", -1)), "%s wears a pack creature" % named)
 		check(definition.get("color") is Color and float(definition.get("size", 0.0)) >= 0.4 and float(definition.get("size", 0.0)) <= 2.0,
 			"%s has a tint and a size between 0.4 and 2" % named)
 		check(int(definition.get("range", 0)) >= 1 and int(definition.get("range", 0)) <= 6, "%s attacks from 1 to 6 tiles" % named)
 		check(float(definition.get("step", 0.0)) >= 0.3 and float(definition.get("step", 0.0)) <= 0.8,
 			"%s idles at 0.3 to 0.8 s per tile (chasing uses Balance.chase_seconds)" % named)
 		for key: String in definition:
-			check(key in ["name", "look", "color", "size", "rank", "range", "step", "gear", "glow", "relics", "respawn", "gear_chance"],
+			check(key in ["name", "look", "outfit", "color", "size", "rank", "range", "step", "glow", "relics", "respawn", "gear_chance"],
 				"%s uses only known fields (%s)" % [named, key])
 		for numbers: String in ["health", "damage", "experience", "attack", "defense", "level"]:
 			check(not definition.has(numbers), "%s takes %s from Balance, not the catalog" % [named, numbers])
@@ -5009,7 +5008,7 @@ func _pvp_and_spell_checks() -> void:
 	_place(world, 1, arena)
 	_place(world, 2, arena + Vector2i.RIGHT)
 	check(combat.healing_factor(1, 0.0) == 1.0, "full healing outside PvP combat")
-	var vole: int = combat.spawn_monster("field_vole", 1, arena + Vector2i(0, 1), 0.0)
+	var vole: int = combat.spawn_monster("black_cat", 1, arena + Vector2i(0, 1), 0.0)
 	world.players[2]["health"] = 999999
 	var dealt: int = 0
 	for round_index: int in 400:
@@ -5067,8 +5066,6 @@ func _dungeon_task_and_region_checks() -> void:
 		var hunted: Array = []
 		var boss_task: String = ""
 		for task: String in Quests.TASKS:
-			if Quests.monster_level(Quests.TASKS[task]["monster"]) == 0:
-				continue
 			if Quests.dungeon_of(task) != dungeon:
 				continue
 			if Quests.TASKS[task]["monster"] == boss:
@@ -5102,7 +5099,7 @@ func _dungeon_task_and_region_checks() -> void:
 	var copy: Vector2i = Dungeons.origin("cinder_cellar", 0) + Dungeons.cells("cinder_cellar", "@")[0]
 	_place(world, 1, copy)
 	var kills: int = 0
-	for kind: String in ["sewer_rat", "giant_rat", "giant_rat", "sewer_rat"]:
+	for kind: String in ["ratkin", "ratkin", "ratkin", "ratkin"]:
 		var rat: int = combat.spawn_monster(kind, 3, copy + Vector2i(1, 0), 2.0)
 		combat._damage(1, rat, 9999999, "damage", 2.0 + kills, [])
 		kills += 1
@@ -5311,8 +5308,8 @@ func _armor_and_control_checks() -> void:
 		"Warriors and Hunters hit physically, Sorcerers and Druids with magic")
 	check(combat.defense_of(1) > 2 * combat.defense_of(3) and combat.defense_of(1, true) < combat.defense_of(3, true),
 		"a Warrior in plate has far more defense, and less magic defense, than a Sorcerer in cloth")
-	var wraith: int = combat.spawn_monster("cinder_wraith", 30, arena + Vector2i(0, 2), 0.0)
-	var wolf: int = combat.spawn_monster("grey_wolf", 30, arena + Vector2i(1, 2), 0.0)
+	var wraith: int = combat.spawn_monster("fire_mage", 30, arena + Vector2i(0, 2), 0.0)
+	var wolf: int = combat.spawn_monster("giant_wasp", 30, arena + Vector2i(1, 2), 0.0)
 	check(combat.magic_attacker(wraith) and not combat.magic_attacker(wolf), "wraiths cast; wolves bite")
 	# Entangling roots holds a player in place, then they cannot be held again for a while.
 	world.add_player(4, 0.0, "druid")
@@ -5365,7 +5362,7 @@ func _spell_arena(seed_value: int) -> Array:
 		world.players[spec[0]]["level"] = 50
 		world.players[spec[0]]["mana"] = 999999
 		_place(world, spec[0], arena + Vector2i(spec[0] - 1, 0))
-	var wolf: int = combat.spawn_monster("grey_wolf", 50, arena + Vector2i(0, 3), 0.0)
+	var wolf: int = combat.spawn_monster("giant_wasp", 50, arena + Vector2i(0, 3), 0.0)
 	world.monsters[wolf]["max_health"] = 1000000
 	world.monsters[wolf]["health"] = 1000000
 	for id: int in world.players:
@@ -5524,8 +5521,8 @@ func _rune_checks() -> void:
 	var low: int = 0
 	var high: int = 0
 	for roll: int in 3000:
-		low += looter.roll_loot("mire_stalker", 36).count("frost_rune")
-		high += looter.roll_loot("mire_stalker", 44).count("frost_rune")
+		low += looter.roll_loot("mire_ghost", 36).count("frost_rune")
+		high += looter.roll_loot("mire_ghost", 44).count("frost_rune")
 	check(low == 0 and high > 20, "runes drop only from level-40+ monsters (%d at 36, %d at 44)" % [low, high])
 	# Casting: a fire rune at a pack, from a few tiles off; used up; the shared rune cooldown.
 	var world := World.new()
@@ -5547,7 +5544,7 @@ func _rune_checks() -> void:
 	_place(world, 1, field + Vector2i(-3, 0))
 	var pack: Array[int] = []
 	for offset: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(2, 1), Vector2i(3, 3)]:
-		pack.append(combat.spawn_monster("behemoth", 45, field + offset, 0.0))
+		pack.append(combat.spawn_monster("sand_lion", 45, field + offset, 0.0))
 	me["target"] = pack[0]
 	check(combat.use_rune(1, "fire_rune", 1.0)["reason"].begins_with("You have no"), "a rune needs a rune in your backpack")
 	me["backpack"][0] = World.make_entry("fire_rune", 3)
@@ -5745,8 +5742,8 @@ func _combat_checks() -> void:
 	var public: Dictionary = world.export_player(1, 0.0)
 	check(public.has("health") and public.has("max_health") and not public.has("mana") and not public.has("target"),
 		"health is public; mana and target are private")
-	var vole: int = combat.spawn_monster("field_vole", 1, Vector2i(5, 8), 0.0)
-	var far: int = combat.spawn_monster("field_vole", 1, Vector2i(15, 15), 0.0)
+	var vole: int = combat.spawn_monster("black_cat", 1, Vector2i(5, 8), 0.0)
+	var far: int = combat.spawn_monster("black_cat", 1, Vector2i(15, 15), 0.0)
 	check(world.move(1, Vector2i.DOWN, 0.0)["ok"] and world.move(1, Vector2i.DOWN, 1.0)["ok"] and world.players[1]["cell"] == Vector2i(5, 8),
 		"players walk onto a monster's tile")
 	_place(world, 1, Vector2i(5, 6))
@@ -5780,7 +5777,7 @@ func _combat_checks() -> void:
 	paladin["target"] = 0
 
 	# Monster AI: notice, chase without overlapping, attack, then return home and heal.
-	var wolf: int = combat.spawn_monster("grey_wolf", 1, Vector2i(8, 6), 20.0)
+	var wolf: int = combat.spawn_monster("giant_wasp", 1, Vector2i(8, 6), 20.0)
 	_place(world, 1, Vector2i(5, 6))
 	_place(world, 2, Vector2i(20, 15))
 	var health: int = paladin["health"]
@@ -5808,7 +5805,7 @@ func _combat_checks() -> void:
 	# Kills: experience shared by damage, level ups, and loot.
 	paladin["health"] = world.player_stats(1)["health"]
 	_place(world, 1, Vector2i(5, 6))
-	var boar: int = combat.spawn_monster("thornback_boar", 40, Vector2i(9, 10), time)
+	var boar: int = combat.spawn_monster("wild_hog", 40, Vector2i(9, 10), time)
 	world.monsters[boar]["damage_by"] = {2: 30}
 	world.monsters[boar]["health"] = 10
 	events = []
@@ -5837,12 +5834,12 @@ func _combat_checks() -> void:
 	var loot_b := Combat.new(World.new(), 77)
 	var same: bool = true
 	for roll: int in 50:
-		same = same and loot_a.roll_loot("road_bandit", 12) == loot_b.roll_loot("road_bandit", 12)
+		same = same and loot_a.roll_loot("brigand", 12) == loot_b.roll_loot("brigand", 12)
 	check(same, "loot rolls are deterministic for a seed")
 	var tally: Dictionary = {}
 	var loot_rolls := Combat.new(World.new(), 3)
 	for roll: int in 4000:
-		for entry: String in loot_rolls.roll_loot("field_vole", 1):
+		for entry: String in loot_rolls.roll_loot("black_cat", 1):
 			tally[World.kind_of(entry)] = tally.get(World.kind_of(entry), 0) + World.count_of(entry)
 	check(tally.get("glowcap", 0) > 240 and tally.get("glowcap", 0) < 400, "materials drop at their table chance (%d)" % tally.get("glowcap", 0))
 	var gear: int = 0
@@ -5947,7 +5944,7 @@ func _combat_checks() -> void:
 	check(combat.cast(1, "ember_bolt", time)["reason"].begins_with("Your class"), "class spells only")
 	check(combat.cast(1, "holy_mend", time)["reason"] == "Holy mend needs level 8", "spell level requirement")
 	check(combat.cast(1, "piercing_shot", time)["reason"] == "You need a target in range", "attack spells need a target")
-	var dummy: int = combat.spawn_monster("stone_golem", 1, Vector2i(9, 6), time)
+	var dummy: int = combat.spawn_monster("stone_gargoyle", 1, Vector2i(9, 6), time)
 	world.monsters[dummy]["next_move"] = 1000.0
 	world.monsters[dummy]["next_attack"] = 1000.0
 	combat.set_target(1, dummy, time)
@@ -5967,8 +5964,8 @@ func _combat_checks() -> void:
 	world.players[3]["level"] = 10
 	world.clamp_vitals(3)
 	_place(world, 3, Vector2i(10, 2))
-	var left: int = combat.spawn_monster("stone_golem", 1, Vector2i(9, 2), time)
-	var right: int = combat.spawn_monster("stone_golem", 1, Vector2i(11, 2), time)
+	var left: int = combat.spawn_monster("stone_gargoyle", 1, Vector2i(9, 2), time)
+	var right: int = combat.spawn_monster("stone_gargoyle", 1, Vector2i(11, 2), time)
 	var whirl: Dictionary = combat.cast(3, "whirling_strike", time + 20.0)
 	check(whirl["ok"] and _hits_on(whirl["events"], left) == 1 and _hits_on(whirl["events"], right) == 1, "area spells hit every enemy around")
 	world.add_player(4, 0.0, "druid")

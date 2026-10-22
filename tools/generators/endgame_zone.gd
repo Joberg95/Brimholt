@@ -30,14 +30,14 @@ const THRONE: Rect2i = Rect2i(ORIGIN + Vector2i(45, 20), Vector2i(12, 25))
 const THRONE_SEAT: Vector2i = ORIGIN + Vector2i(53, 32)
 ## Spawns: monster, level, count, radius, cell.
 const SPAWNS: Array = [
-	["void_wraith", 45, 3, 3, ORIGIN + Vector2i(8, 10)],
-	["void_wraith", 46, 3, 3, ORIGIN + Vector2i(9, 54)],
+	["void_mage", 45, 3, 3, ORIGIN + Vector2i(8, 10)],
+	["void_mage", 46, 3, 3, ORIGIN + Vector2i(9, 54)],
 	["obsidian_golem", 46, 2, 2, ORIGIN + Vector2i(16, 22)],
 	["obsidian_golem", 47, 2, 2, ORIGIN + Vector2i(16, 43)],
-	["void_wraith", 47, 3, 2, ORIGIN + Vector2i(21, 13)],
-	["hollow_knight", 47, 2, 2, ORIGIN + Vector2i(21, 52)],
-	["hollow_knight", 48, 2, 2, ORIGIN + Vector2i(30, 18)],
-	["hollow_knight", 48, 2, 2, ORIGIN + Vector2i(30, 46)],
+	["void_mage", 47, 3, 2, ORIGIN + Vector2i(21, 13)],
+	["skeleton_warrior", 47, 2, 2, ORIGIN + Vector2i(21, 52)],
+	["skeleton_warrior", 48, 2, 2, ORIGIN + Vector2i(30, 18)],
+	["skeleton_warrior", 48, 2, 2, ORIGIN + Vector2i(30, 46)],
 	["obsidian_golem", 49, 2, 1, ORIGIN + Vector2i(40, 26)],
 	["obsidian_golem", 49, 2, 1, ORIGIN + Vector2i(40, 38)],
 	# Vaelith sits on the Void Throne past the gateway stone in the throne room (void_throne.gd).

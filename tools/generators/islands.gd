@@ -38,7 +38,7 @@ const ISLANDS: Dictionary = {
 		"town": {"name": "Fernhollow", "at": Vector2i(920, 130), "vendor": "Trader Wynne", "artisan": "Woodwright Ilsa"},
 		"port": ["cinder_landing", 90],
 		"levels": Vector2i(45, 50),
-		"camps": [["dire_bear", 3], ["harpy", 3], ["wraith_knight", 2], ["hollow_knight", 2], ["behemoth", 1]],
+		"camps": [["giant_bat", 3], ["harpy", 3], ["skeleton_warrior", 2], ["skeleton_warrior", 2], ["sand_lion", 1]],
 	},
 	# The desert island south of the mainland (docs/plan/47-world-plan.md): the sandstone castle of
 	# Qasrun by the west shore, the oasis town of Duneford to the east.
@@ -49,7 +49,7 @@ const ISLANDS: Dictionary = {
 		"town": {"name": "Duneford", "at": Vector2i(590, 860), "vendor": "Trader Nasrin", "artisan": "Potter Samir"},
 		"port": ["cinder_landing", 100],
 		"levels": Vector2i(45, 50),
-		"camps": [["dune_scorpion", 3], ["sand_raider", 3], ["thornscale_basilisk", 2], ["harpy", 2], ["behemoth", 1]],
+		"camps": [["sand_lion", 3], ["brigand", 3], ["thornscale_basilisk", 2], ["harpy", 2], ["sand_lion", 1]],
 	},
 }
 const CASTLE_SIZE: Vector2i = Vector2i(46, 40)

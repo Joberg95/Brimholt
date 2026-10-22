@@ -347,10 +347,6 @@ def character_sheet(builder, compact=False, columns=3):
 POSE_COLUMNS = 5
 
 
-def swing(frame):
-    return (0, 1, -1, 0, 0)[frame]
-
-
 def steps(points, x, y, dx, dy, limit=3):
     count = 0
     while count < limit and (x + dx * (count + 1), y + dy * (count + 1)) in points:
@@ -419,79 +415,6 @@ WOOD = (rgba("8a6440"), rgba("6e4a2e"), rgba("4f3420"))
 BONE = (rgba("f0e6cc"), rgba("d8c8a4"), rgba("a8946c"))
 
 
-def collar(image, points, extras, accent):
-    """Fur, pelt, leaf, or flower trim along a neckline (shared by armor and robes)."""
-    if "fur" in extras:
-        for x, y in points:
-            image.set(x, y, FUR[0] if (x * 3 + y) % 4 else FUR[1])
-    if "pelt" in extras:
-        for x, y in points:
-            image.set(x, y, BEAR_FUR[(x * 5 + y * 3) % 3])
-    xs = sorted({x for x, _ in points})
-    top = min(y for _, y in points)
-    if "leaves" in extras:
-        for x in xs[::4]:
-            shade(image, ellipse(x + 1, top + 1, 1.8, 1.4), LEAF_TONES, False)
-    if "flowers" in extras:
-        for x in xs[1::4]:
-            image.set(x, top, scale(accent, 1.2))
-            image.set(x + 1, top + 1, accent)
-            image.set(x, top + 1, rgba("ffe08a"))
-
-
-## Leaf greens for druidic circlets and leathers.
-LEAF_TONES = (rgba("8cc060"), rgba("6aa04a"), rgba("4a7a32"))
-FUR = (rgba("d8ccb4"), rgba("a89c84"))
-BEAR_FUR = (rgba("8a6440"), rgba("6a4a2e"), rgba("4a3220"))
-
-
-def antler(big):
-    """One branching antler rising from the left temple (mirror for the right)."""
-    points = {(25, 11), (24, 9), (23, 7), (22, 5), (24, 6), (21, 8)}
-    if big:
-        points |= {(21, 3), (20, 1), (22, 2), (19, 5), (18, 4), (23, 4), (24, 2)}
-    return thick(points, ((0, 0), (1, 0)))
-
-
-# Halo alpha by distance from the sprite: inside (0) brightens the item, then a soft falloff.
-HALO_ALPHA = {0: 18, 1: 96, 2: 58, 3: 28, 4: 10}
-
-
-def halo(image):
-    """White glow mask around and over a sprite, drawn additively in the relic's colour."""
-    distance = {}
-    frontier = []
-    for y in range(image.height):
-        for x in range(image.width):
-            if image.opaque(x, y):
-                distance[(x, y)] = 0
-                frontier.append((x, y))
-    reach = max(HALO_ALPHA)
-    while frontier:
-        following = []
-        for x, y in frontier:
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                point = (x + dx, y + dy)
-                if point not in distance and 0 <= point[0] < image.width and 0 <= point[1] < image.height \
-                        and distance[(x, y)] < reach:
-                    distance[point] = distance[(x, y)] + 1
-                    following.append(point)
-        frontier = following
-    result = Image(image.width, image.height)
-    for (x, y), steps_away in distance.items():
-        result.set(x, y, (255, 255, 255, HALO_ALPHA[steps_away]))
-    return result
-
-
-def framewise(sheet_image, cell_width, cell_height, transform):
-    """Apply transform to each cell so halos never bleed into the neighbouring frame."""
-    result = Image(sheet_image.width, sheet_image.height)
-    for y in range(0, sheet_image.height, cell_height):
-        for x in range(0, sheet_image.width, cell_width):
-            result.over(transform(sheet_image.crop(x, y, cell_width, cell_height)), x, y)
-    return result
-
-
 # ---------------------------------------------------------------- painted gear
 # Items with a painted icon (assets/sprites/icons/<id>.png, imported from art/outfits by
 # `make outfits`) wear it: the generated silhouette of each pose is filled from the icon, row by
@@ -502,210 +425,12 @@ def _luma(color):
     return color[0] * 0.3 + color[1] * 0.59 + color[2] * 0.11
 
 
-# ---------------------------------------------------------------- monsters
-# Greyscale bodies tinted per monster at runtime, plus untinted eye/detail sheets.
-# Same 64x64 frame layout and tile centre (32, 40) as characters; feet near y 53.
-
-MONSTER_TONES = grey(236, 186, 128)
-EYE = rgba("d2bf87")
-EYE_DARK = rgba("1a1612")
-
-
-def bob(frame):
-    return (0, -1, 1)[frame]
-
-
-def quadruped(direction, frame):
-    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
-    for x, y in ellipse(32, 53.5, 13, 3):
-        body.set(x, y, SHADOW)
-    shape = Image(FRAME, FRAME)
-    if direction in ("down", "up"):
-        legs = [(25, 45 + (1 if swing(frame) == 1 else 0)), (35, 45 + (1 if swing(frame) == -1 else 0))]
-        for x, y in legs:
-            shade(shape, box(x, y, 3, 8 - (y - 45)), MONSTER_TONES, False)
-        shade(shape, ellipse(32, 40, 9, 9), MONSTER_TONES)
-        if direction == "down":
-            shade(shape, ellipse(32, 35, 6, 6) | ellipse(26, 29, 2, 3) | ellipse(37, 29, 2, 3), MONSTER_TONES)
-            shade(shape, ellipse(32, 40, 3.5, 4), grey(208, 164, 116), False)
-            detail.set(28, 35, EYE_DARK)
-            detail.set(35, 35, EYE_DARK)
-            detail.rect(31, 42, 2, 1, EYE_DARK)
-        else:
-            shade(shape, box(31, 30, 3, 6), MONSTER_TONES, False)
-    else:
-        front, back = ((22, 38), (20, 40), (24, 36))[frame]
-        for x in (front, front + 5, back, back - 5):
-            leg = thick(line(x + 1, 44, x, 51), ((0, 0), (1, 0)))
-            shade(shape, leg | box(x - 1, 52, 4, 1), MONSTER_TONES, False)
-        shade(shape, ellipse(32, 40, 14, 7), MONSTER_TONES)
-        shade(shape, ellipse(20, 35, 6, 5) | ellipse(13, 38, 5, 2.5) | ellipse(20, 28, 2, 3), MONSTER_TONES)
-        shade(shape, thick(line(44, 37, 52, 42), ((0, 0), (0, 1))), MONSTER_TONES, False)
-        detail.set(17, 34, EYE_DARK)
-        detail.rect(8, 38, 2, 1, EYE_DARK)
-    for x, y in sorted(ellipse(32, 39, 8, 5)):
-        if (x * 11 + y * 7) % 13 == 0 and shape.get(x, y) == MONSTER_TONES[1]:
-            shape.set(x, y, (162, 162, 162, 255))
-    body.over(shape.outlined())
-    return body, detail
-
-
-def spider(direction, frame):
-    """Eight jointed legs around a small head and a bulbous, banded abdomen; a cluster of red eyes."""
-    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
-    for x, y in ellipse(32, 53, 15, 3):
-        body.set(x, y, SHADOW)
-    shape = Image(FRAME, FRAME)
-    lift = swing(frame)
-    legs = set()
-    if direction in ("down", "up"):
-        for side in (-1, 1):
-            for index in range(4):
-                up = lift if (index + (side > 0)) % 2 else -lift
-                foot_y = 37 + index * 5 + up
-                hip = (32 + side * 5, 37 + index * 2)
-                knee = (32 + side * (11 + (2, 4, 4, 2)[index]), foot_y - 10)
-                foot = (32 + side * (16 + (2, 5, 5, 2)[index]), foot_y)
-                legs |= line(*hip, *knee) | line(*knee, *foot)
-        shade(shape, thick(legs, ((0, 0), (1, 0))), MONSTER_TONES, False)
-        abdomen_y, head_y = (34, 44) if direction == "down" else (45, 35)
-        shade(shape, ellipse(32, abdomen_y, 10, 9), MONSTER_TONES)
-        shade(shape, ellipse(32, head_y, 6, 5), MONSTER_TONES)
-        for x, y in ellipse(32, abdomen_y, 10, 9):
-            if (y - abdomen_y) in (-3, 2) and abs(x - 32) < 7:
-                shape.set(x, y, (120, 120, 120, 255))
-        if direction == "down":
-            for x, y in ((29, 43), (34, 43), (30, 41), (33, 41)):
-                detail.set(x, y, rgba("e0303a"))
-            detail.rect(29, 48, 1, 2, EYE_DARK)
-            detail.rect(34, 48, 1, 2, EYE_DARK)
-    else:
-        for index in range(4):
-            up = lift if index % 2 else -lift
-            for far in (2, 0):
-                hip = (25 + index * 3 + far, 40 - far)
-                knee = (17 + index * 8 + far, 27 + up - far)
-                foot = (11 + index * 12 + far, 52 - far + (up if far else -up) // 2)
-                legs |= line(*hip, *knee) | line(*knee, *foot)
-        shade(shape, thick(legs, ((0, 0), (0, 1))), MONSTER_TONES, False)
-        shade(shape, ellipse(41, 38, 11, 8), MONSTER_TONES)
-        shade(shape, ellipse(23, 42, 6, 5), MONSTER_TONES)
-        for x, y in ellipse(41, 38, 11, 8):
-            if x in (38, 44) and abs(y - 38) < 6:
-                shape.set(x, y, (120, 120, 120, 255))
-        for x, y in ((19, 40), (21, 39), (20, 42)):
-            detail.set(x, y, rgba("e0303a"))
-        detail.rect(17, 45, 2, 1, EYE_DARK)
-    body.over(shape.outlined())
-    return body, detail
-
-
-def blob(direction, frame):
-    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
-    for x, y in ellipse(32, 53.5, 13, 3):
-        body.set(x, y, SHADOW)
-    squash = (0, 1, -1)[frame]
-    shape = Image(FRAME, FRAME)
-    shade(shape, {p for p in ellipse(32, 45 - squash, 13 + squash, 10 - squash) if p[1] <= 53}, MONSTER_TONES)
-    for x, y in ((24, 52), (38, 52)):
-        shade(shape, box(x, y - 2, 4, 3), MONSTER_TONES, False)
-    body.over(shape.outlined())
-    if direction != "up":
-        eyes = [(27, 39), (34, 39)] if direction == "down" else ([(23, 40)] if direction == "left" else [(39, 40)])
-        for x, y in eyes:
-            detail.rect(x, y - squash, 2, 1, EYE_DARK)
-            detail.set(x, y - squash, rgba("b9b18a"))
-    return body, detail
-
-
-def golem(direction, frame):
-    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
-    for x, y in ellipse(32, 53.5, 14, 3.5):
-        body.set(x, y, SHADOW)
-    shape = Image(FRAME, FRAME)
-    side = direction in ("left", "right")
-    lift = swing(frame)
-    plates = [
-        ellipse(27, 48 - max(lift, 0), 4, 6),
-        ellipse(37, 48 - max(-lift, 0), 4, 6),
-        ellipse(32, 38, 9, 8),
-        ellipse(32, 29, 12, 9),
-        ellipse(32, 18, 6, 7),
-    ]
-    if not side:
-        plates += [ellipse(18, 28 + lift, 5, 6), ellipse(17, 37 + lift, 4, 6),
-                   ellipse(46, 28 - lift, 5, 6), ellipse(47, 37 - lift, 4, 6)]
-    else:
-        plates += [ellipse(31 + lift * 2, 28, 5, 6), ellipse(29 + lift * 2, 38, 4, 6)]
-    for index, points in enumerate(plates):
-        stone_surface(shape, points, MONSTER_TONES, index)
-    for x, y in line(35, 25, 31, 36) | line(31, 36, 34, 40):
-        shape.set(x, y, (94, 94, 94, 255))
-    body.over(shape.outlined())
-    if direction == "down":
-        detail.rect(28, 18, 2, 1, EYE)
-        detail.rect(33, 18, 2, 1, EYE)
-    elif direction != "up":
-        detail.rect(27 if direction == "left" else 34, 18, 2, 1, EYE)
-    return body, detail
-
-
-def wraith(direction, frame):
-    body, detail = Image(FRAME, FRAME), Image(FRAME, FRAME)
-    for x, y in ellipse(32, 54, 9, 2.5):
-        body.set(x, y, SHADOW)
-    rise = bob(frame) - 2
-    shape = Image(FRAME, FRAME)
-    robe = set()
-    for y in range(14, 50):
-        half = 6 + (y - 14) * 7 // 36
-        robe |= box(32 - half, y + rise, half * 2, 1)
-    for x in range(24, 41, 4):
-        robe -= box(x + frame % 2, 47 + rise, 2, 3)
-    shade(shape, robe, MONSTER_TONES)
-    if direction != "up":
-        hood = box(27, 15 + rise, 10, 9) if direction == "down" else box(25 if direction == "left" else 29, 15 + rise, 10, 9)
-        for x, y in hood:
-            shape.set(x, y, (40, 40, 40, 255))
-    body.over(shape.outlined())
-    if direction == "down":
-        detail.rect(29, 19 + rise, 2, 2, EYE)
-        detail.rect(33, 19 + rise, 2, 2, EYE)
-    elif direction != "up":
-        detail.rect(27 if direction == "left" else 35, 19 + rise, 2, 2, EYE)
-    return body, detail
-
-
-# Painted-style creatures (tools/generators/creatures.py): one untinted sheet per species, the
-# same 64x64 frames and rows as characters (stand, step A, step B).
-import creatures  # noqa: E402
 import palette as pal  # noqa: E402
 import props  # noqa: E402
 import pixel_coins  # noqa: E402
 import pixel_floors  # noqa: E402
 
-GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
 
-
-def creature_sheet(kind):
-    def build(direction, frame):
-        image = Image(FRAME, FRAME)
-        image.pixels = creatures.frames(kind, direction, frame)
-        return image
-    return character_sheet(build)
-
-
-def monster_sheet(builder, want_detail):
-    def build(direction, frame):
-        if direction == "right":
-            image = builder("left", frame)[1 if want_detail else 0]
-        else:
-            image = builder(direction, frame)[1 if want_detail else 0]
-        return image
-    return character_sheet(build)
-
-
-PINK = (rgba("e8b8b0"), rgba("c8908a"), rgba("9a6a66"))
 
 
 def coin_stage_icon(stage):
@@ -3639,26 +3364,7 @@ def main():
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
         "coins.png": sheet_row([icon_finish(coin_stage_icon(stage)) for stage in range(len(pixel_coins.STAGES))]),
-        **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
-        **{f"creatures/{kind}.png": creature_sheet(kind) for kind in creatures.SPECIES},
-        **{f"creatures/{kind}_glow.png": None for kind in GLOWING_CREATURES},
-        **{f"monsters/{name}.png": monster_sheet(builder, False)
-           for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},
-        **{f"monsters/{name}_detail.png": monster_sheet(builder, True)
-           for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},
     }
-    for name in [name for name, image in outputs.items() if image is None]:
-        base = outputs[name.replace("_glow.png", ".png")]
-        if name.startswith("creatures/"):
-            # Only the glowing parts (eyes, seams, cores) shine, not the whole body.
-            bright = Image(base.width, base.height)
-            for y in range(base.height):
-                for x in range(base.width):
-                    pixel = base.pixels[y][x]
-                    if pixel is not None and pixel[3] == 255 and max(pixel[:3]) > 200 and max(pixel[:3]) - min(pixel[:3]) > 90:
-                        bright.pixels[y][x] = pixel
-            base = bright
-        outputs[name] = framewise(base, FRAME, FRAME, halo)
     unknown = set(args.only or []) - outputs.keys()
     if unknown:
         parser.error("unknown sheet(s): " + ", ".join(sorted(unknown)))

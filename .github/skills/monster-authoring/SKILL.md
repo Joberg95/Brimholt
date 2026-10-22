@@ -12,8 +12,8 @@ the contract below. Consult the gameplay and validation skills for wider rules.
 ## 1. Catalog row (`game/data/monsters.gd`, `MONSTERS`)
 
 ```gdscript
-"ash_hound": {"name": "Ash hound", "look": "quadruped", "color": Color("#6a5a50"), "size": 0.9,
-	"rank": "normal", "range": 1, "step": 0.4},
+"black_cat": {"name": "Black cat", "look": "outfit", "outfit": 1, "color": Color("#a08566"), "size": 1.0,
+	"rank": "normal", "range": 1, "step": 0.6},
 ```
 
 - **id**: snake_case and unique. **name**: original, never a Tibia name, even when the monster imitates a Tibia one closely.
@@ -34,42 +34,31 @@ the contract below. Consult the gameplay and validation skills for wider rules.
     per tile at even level (a touch faster than a player's 0.18 s), down to 0.13 s when the
     monster outlevels its target by 10 or more.
   - So `step` never makes a monster kitable.
-- **look**: one of the tinted creature sheets (`quadruped`, `spider`, `blob`, `golem`, `wraith`) with
-  `color` as the tint. Or `humanoid` with `gear`: catalog item ids per visible slot, each of
-  which must fit its slot.
+- **look** is `"outfit"` and **outfit** an OpenTibia pack creature looktype (plan 49: monsters are
+  the pack's creatures only; see `docs/art.md`). A normal monster is one pack creature, and its
+  levels come from the spawn markers, so place an existing creature before adding a new one.
+  Elites, champions, and bosses wear a pack creature larger. `color` is kept for the lexicon.
 - **size**: scales the sprite, 0.4–2.0.
 - Optional **glow**: a `Color` halo and light, for bosses and magical creatures only.
 - Only the fields above are allowed; the check rejects anything else.
 
-### A new body shape
+### A new creature
 
-Try an existing look with a different tint and size first. If a new body really is needed:
-- Write a builder in `tools/generators/make_sprites.py`, next to `quadruped`, `spider`,
-  `blob`, `golem` and `wraith`. Use the same 64×64 frames: three columns, four facings, feet at y 53.
-- Add its sheets to the `monsters/` outputs.
-- Register it in `SpriteArt.MONSTER_SHEETS` and `MONSTER_DETAILS` (and `MONSTER_GLOW` if it
-  glows).
-
-Art must be original (see `docs/art.md`).
+Only the pack's creatures exist (`tools/generators/otsp_export.py outfits` exports every `outfit` the
+catalog names). Do not draw new monster art.
 
 ## 2. Loot (`Monsters.LOOT`)
 
 ```gdscript
-"ash_hound": [["ash_hound_fang", 0.35], ["glowcap", 0.08]],
+"black_cat": [["glowcap", 0.08]],
 ```
 
 - Every monster has an entry, which may be `[]`. Each `[item, chance]` rolls independently,
   with the chance in (0, 1].
 - Gold piles and tier gear (`Combat.GEAR_DROP_CHANCE`, by rank) are added automatically.
-- Give each monster one signature **material**: a row in `game/data/items.json` with:
-  - a `look` from the material icons (`tail`, `vial`, `fang`, `badge`, `pelt`, `orb`, `coil`,
-    `crystal`);
-  - three colours;
-  - `value`, the gold a vendor pays. Normal monsters range from 2 (level 1) through about
-    35 (level 15) and 80 (level 30) to about 140 (level 45). Elites and champions drop a
-    pricier trophy (150–2,500). Compare with neighbouring monsters.
-
-  Run `make sprites` and `make import` after adding items.
+- Monster materials and trophies were deleted with their art (plan 49): loot is valuables (added
+  automatically), potions, runes, rune shards, and named gear. A new item needs a pack sprite (the
+  `icon-art` skill).
 - Named hunting weapons are `loot_only` items at 2–5% (12–18% on champions), gated by the
   monster's level.
 - Relics are never loot.
@@ -105,9 +94,9 @@ behave differently, change the shared rules in `combat.gd` and update the chase 
 ## 5. Check the balance
 
 ```sh
-make fight-sim MONSTER=ash_hound LEVELS=10,20 COUNT=1
-make fight-sim MONSTER=ash_hound LEVELS=10,20 COUNT=3
-make fight-sim MONSTER=ash_hound LEVELS=40 PLAYER_LEVEL=1     # an under-levelled player must lose
+make fight-sim MONSTER=black_cat LEVELS=10,20 COUNT=1
+make fight-sim MONSTER=black_cat LEVELS=10,20 COUNT=3
+make fight-sim MONSTER=black_cat LEVELS=40 PLAYER_LEVEL=1     # an under-levelled player must lose
 make fight-sim MONSTER=cave_spider LEVELS=16 OFF_HAND=torch   # a dark dungeon: torch, no shield or book
 ```
 

@@ -29,7 +29,7 @@ var loadout: Dictionary = {}
 
 
 func _initialize() -> void:
-	var options: Dictionary = {"monster": "field_vole", "levels": "1,10,20,30,40", "count": "1",
+	var options: Dictionary = {"monster": "black_cat", "levels": "1,10,20,30,40", "count": "1",
 		"player-level": "", "vocations": "knight,paladin,sorcerer,druid", "off-hand": "", "gear": ""}
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--") and argument.contains("="):

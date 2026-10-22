@@ -21,39 +21,37 @@ const STANDING_FLOOR: String = "c=b"
 ## id: name, area on the surface (the tunnels lie right under it), levels, monsters by weight, salt.
 const NETWORKS: Dictionary = {
 	"greywood_burrows": {"name": "Greywood Burrows", "area": Rect2i(60, 56, 110, 84), "levels": Vector2i(10, 16),
-		"monsters": [["cave_crawler", 3], ["giant_rat", 2], ["cave_spider", 1]], "salt": 6100},
+		"monsters": [["scarab", 3], ["ratkin", 2], ["giant_centipede", 1]], "salt": 6100},
 	"wolfholt_warrens": {"name": "Wolfholt Warrens", "area": Rect2i(400, 260, 150, 110), "levels": Vector2i(12, 20),
-		"monsters": [["cave_spider", 3], ["venom_weaver", 2], ["cave_crawler", 1]], "salt": 6200},
+		"monsters": [["giant_centipede", 3], ["venom_grub", 2], ["scarab", 1]], "salt": 6200},
 	"fernmere_grottoes": {"name": "Fernmere Grottoes", "area": Rect2i(250, 440, 160, 140), "levels": Vector2i(14, 22),
-		"monsters": [["bog_lurker", 3], ["venom_weaver", 2], ["cave_spider", 1]], "salt": 6300},
+		"monsters": [["bog_grub", 3], ["venom_grub", 2], ["giant_centipede", 1]], "salt": 6300},
 	"barrowmoor_catacombs": {"name": "Barrowmoor Catacombs", "area": Rect2i(100, 430, 130, 150), "levels": Vector2i(18, 26),
-		"monsters": [["crypt_skeleton", 3], ["grave_ghoul", 3]], "salt": 6400},
+		"monsters": [["skeleton_warrior", 3], ["skeleton_torchbearer", 3]], "salt": 6400},
 	"stonevale_delvings": {"name": "Stonevale Delvings", "area": Rect2i(60, 220, 100, 110), "levels": Vector2i(22, 30),
-		"monsters": [["stone_golem", 3], ["stone_troll", 2], ["cave_crawler", 1]], "salt": 6500},
+		"monsters": [["stone_gargoyle", 3], ["stone_gargoyle", 2], ["scarab", 1]], "salt": 6500},
 	"greycrag_mines": {"name": "Greycrag Mines", "area": Rect2i(420, 30, 170, 130), "levels": Vector2i(26, 34),
-		"monsters": [["cyclops", 3], ["stone_troll", 2], ["stone_golem", 1]], "salt": 6600},
+		"monsters": [["stone_gargoyle", 3], ["stone_gargoyle", 2], ["stone_gargoyle", 1]], "salt": 6600},
 	"emberwaste_hollows": {"name": "Emberwaste Hollows", "area": Rect2i(226, 296, 94, 84), "levels": Vector2i(30, 36),
-		"monsters": [["ember_golem", 3], ["cinder_wraith", 2], ["cyclops_smith", 1]], "salt": 6700},
+		"monsters": [["ember_wisp", 3], ["fire_mage", 2], ["stone_gargoyle", 1]], "salt": 6700},
 	"hazel_dens": {"name": "Hazel Downs Dens", "area": Rect2i(420, 380, 190, 100), "levels": Vector2i(10, 14),
-		"monsters": [["giant_rat", 3], ["cave_crawler", 2]], "salt": 6900},
+		"monsters": [["ratkin", 3], ["scarab", 2]], "salt": 6900},
 	"kestrel_caverns": {"name": "Kestrel Caverns", "area": Rect2i(400, 170, 200, 80), "levels": Vector2i(20, 28),
-		"monsters": [["grave_ghoul", 2], ["stone_golem", 2], ["venom_weaver", 1]], "salt": 7000},
+		"monsters": [["skeleton_torchbearer", 2], ["stone_gargoyle", 2], ["venom_grub", 1]], "salt": 7000},
 	"saltreed_seacaves": {"name": "Saltreed Sea-caves", "area": Rect2i(20, 400, 72, 170), "levels": Vector2i(21, 25),
-		"monsters": [["lizard_warrior", 3], ["lizard_shaman", 2]], "salt": 7100},
+		"monsters": [["blue_gargoyle", 3], ["tide_mage", 2]], "salt": 7100},
 	"gloamwood_hollows": {"name": "Gloamwood Hollows", "area": Rect2i(140, 340, 76, 80), "levels": Vector2i(16, 24),
-		"monsters": [["dire_bear", 2], ["cave_spider", 2], ["venom_weaver", 1]], "salt": 7200},
+		"monsters": [["giant_bat", 2], ["giant_centipede", 2], ["venom_grub", 1]], "salt": 7200},
 	"smoulder_deeps": {"name": "Smoulder Deeps", "area": Rect2i(200, 4, 100, 90), "levels": Vector2i(34, 40),
-		"monsters": [["cave_troll", 3], ["cyclops_smith", 2], ["ember_golem", 1]], "salt": 6800},
+		"monsters": [["stone_gargoyle", 3], ["stone_gargoyle", 2], ["ember_wisp", 1]], "salt": 6800},
 }
 const NETWORK_ORDER: Array[String] = ["greywood_burrows", "wolfholt_warrens", "fernmere_grottoes", "barrowmoor_catacombs",
 	"stonevale_delvings", "greycrag_mines", "emberwaste_hollows", "smoulder_deeps", "hazel_dens", "kestrel_caverns",
 	"saltreed_seacaves", "gloamwood_hollows"]
 ## The level bands overworld monsters already have in the heartland: their camps here stay inside
 ## them (World.task_levels reads every camp). Monsters not listed live only in dungeons today.
-const BANDS: Dictionary = {"bog_lurker": Vector2i(15, 18), "stone_golem": Vector2i(24, 28), "stone_troll": Vector2i(25, 28),
-	"cyclops": Vector2i(29, 31), "cyclops_smith": Vector2i(36, 38), "cinder_wraith": Vector2i(29, 32),
-	"cave_troll": Vector2i(38, 42), "dire_bear": Vector2i(20, 22), "lizard_warrior": Vector2i(21, 24),
-	"lizard_shaman": Vector2i(23, 25)}
+const BANDS: Dictionary = {"bog_grub": Vector2i(15, 18), "stone_gargoyle": Vector2i(24, 42), "fire_mage": Vector2i(29, 32),
+	"giant_bat": Vector2i(20, 22), "blue_gargoyle": Vector2i(21, 24), "tide_mage": Vector2i(23, 25)}
 ## Towns with sewers: name, levels, and how many ladders down.
 const SEWERS: Array = [["Reedmere", Vector2i(4, 8), 3], ["Ashford", Vector2i(5, 9), 2], ["Dunmere", Vector2i(6, 10), 2],
 	["Highmoor", Vector2i(7, 11), 2], ["Brackenford", Vector2i(3, 7), 2]]
@@ -416,7 +414,7 @@ func _sewer(town: String, rect: Rect2i, levels: Vector2i, ladders: int) -> int:
 	var spots: Array[Vector2i] = []
 	for cell: Vector2i in placed:
 		spots.append(cell)
-	var rats: Array = [["sewer_rat", 2], ["giant_rat", 1]]
+	var rats: Array = [["ratkin", 2], ["ratkin", 1]]
 	var camps: int = _camps_on_floor(town.to_snake_case() + "_sewers", rats, levels, SEWER_CAMP_GAP, spots)
 	_underground_zone("%s sewers" % town, levels, SEWER_AMBIENT)
 	return _floor.size() + walls + placed.size() * 2 + camps

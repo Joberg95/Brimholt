@@ -1,5 +1,5 @@
 """Painted-style props: furniture, hanging signs, and herb patches, built from simple 3D solids
-(boxes, cylinders, ellipsoids) and rendered with the creatures' look (creatures.py): the same
+(boxes, cylinders, ellipsoids) and rendered with the painted shading of shading.py: the same
 tilted camera and top-left light, five-tone ramps per material (warm lights, cool shadows),
 textures (wood grain and plank seams, stone slabs, cloth), gloss on metal and glass, glowing
 flames and lantern glass, a coloured edge round the silhouette, and dark seams where a nearer
@@ -11,14 +11,14 @@ World units are pixels: x to the right, y away from the viewer (north), z up; th
 
 import math
 
-import creatures as C
+import shading as C
 import palette as pal
-from creatures import Material, ramp_material, emissive, add, sub, mul, dot, norm, basis, IDENT, _hash, _pattern
+from shading import Material, ramp_material, emissive, add, sub, mul, dot, norm, basis, IDENT, _hash, _pattern
 
 UP = C.UP
 VIEW = C.VIEW
-# Lit from the top-left and a little in front, so the faces turned to the viewer read (the
-# creatures' light comes from behind them; a counter's front would be in shadow).
+# Lit from the top-left and a little in front, so the faces turned to the viewer read (shading.py's
+# light comes from behind; a counter's front would be in shadow).
 LIGHT = norm((-0.5, -0.55, 0.7))
 HALF = norm(sub(LIGHT, VIEW))
 SHADOW = (0, 0, 0, 72)
@@ -82,7 +82,7 @@ FRUIT = [Material(c, gloss=0.5) for c in ("d84a2a", "e8b030", "6aa83a", "c83a3a"
 
 
 def _surface(material, u, n, p, axis):
-    """Shade change and override colour for the props' own textures, else the creatures'."""
+    """Shade change and override colour for the props' own textures, else shading.py's."""
     if material.pattern == "wood":
         along = u[axis]
         across = u[(axis + 1) % 3] + u[(axis + 2) % 3] * 0.7

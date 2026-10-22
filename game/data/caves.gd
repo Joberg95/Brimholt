@@ -46,22 +46,22 @@ const CAVES: Dictionary = {
 	# level-35 gear among the fishfolk and crabs.
 	"rimewater_trench": {"name": "Rimewater Trench", "region": "Rimewater Floes", "near": Vector2i(112, 812), "elite": false, "below": Vector2i(2665, 788),
 		"size": Vector2i(58, 42), "min_level": 34, "max_level": 37, "ambient": Color(0.5, 0.64, 0.78), "halls": 11,
-		"camps": [["trench_crab", 34, 35, 5], ["icetide_raider", 35, 36, 5], ["icetide_shaman", 36, 37, 5]],
+		"camps": [["giant_centipede", 34, 35, 5], ["brigand", 35, 36, 5], ["tide_mage", 36, 37, 5]],
 		"champion": ["grimclaw", 37]},
 	# Not an elite cave either: the Cyclops Hollow under the Smoulder Fells, cyclopes and their
 	# smiths in dense camps for the 75-kill hunt "The Hundred-Eyed Hollow" (game/data/quests.gd).
 	"cyclops_hollow": {"name": "Cyclops Hollow", "region": "Smoulder Fells", "near": Vector2i(296, 26), "elite": false,
 		"size": Vector2i(58, 42), "min_level": 30, "max_level": 36, "ambient": Color(0.7, 0.58, 0.46), "halls": 11,
-		"camps": [["cyclops", 30, 33, 5], ["cyclops_smith", 33, 36, 5]]},
+		"camps": [["stone_gargoyle", 30, 33, 5], ["stone_gargoyle", 33, 36, 5]]},
 	# Silverwood's two great farming caves (docs/plan/40-archipelago.md): far bigger than the elite
 	# caves, dense camps of normal monsters hall after hall for experience and loot. Placeholder
 	# monsters of levels 45-50 until the island's own band (50-60) is added, with a boss each.
 	"thornroot_hollows": {"name": "Thornroot Hollows", "region": "Silverwood", "near": Vector2i(950, 215), "elite": false, "below": Vector2i(3507, 132),
 		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.8, 0.76, 0.68), "halls": 200,
-		"camps": [["dire_bear", 45, 47, 5], ["wraith_knight", 46, 48, 5], ["behemoth", 48, 50, 5]]},
+		"camps": [["giant_bat", 45, 47, 5], ["skeleton_warrior", 46, 48, 5], ["sand_lion", 48, 50, 5]]},
 	"moonwell_deeps": {"name": "Moonwell Deeps", "region": "Silverwood", "near": Vector2i(860, 95), "elite": false,
 		"size": Vector2i(300, 220), "min_level": 45, "max_level": 50, "ambient": Color(0.72, 0.76, 0.84), "halls": 200,
-		"camps": [["hollow_knight", 45, 47, 5], ["reedfang", 46, 48, 5], ["mire_stalker", 47, 50, 5]]},
+		"camps": [["skeleton_warrior", 45, 47, 5], ["fen_dragon", 46, 48, 5], ["mire_ghost", 47, 50, 5]]},
 }
 
 

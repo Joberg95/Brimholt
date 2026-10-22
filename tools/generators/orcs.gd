@@ -22,8 +22,8 @@ const HUTS: Array = [[Vector2i(3, 3), Vector2i.DOWN], [Vector2i(11, 3), Vector2i
 const HALL: Rect2i = Rect2i(19, 7, 9, 8)
 ## Camps in the fort: monster, level, count, radius, cell (relative to FORT).
 const YARD_CAMPS: Array = [
-	["orc_berserker", 22, 5, 2, Vector2i(6, 10)], ["orc_berserker", 23, 5, 2, Vector2i(24, 3)],
-	["orc_leader", 26, 5, 2, Vector2i(24, 18)], ["orc_leader", 25, 5, 2, Vector2i(15, 10)],
+	["green_gargoyle", 22, 5, 2, Vector2i(6, 10)], ["green_gargoyle", 23, 5, 2, Vector2i(24, 3)],
+	["green_gargoyle", 26, 5, 2, Vector2i(24, 18)], ["green_gargoyle", 25, 5, 2, Vector2i(15, 10)],
 	["gruzzak", 30, 1, 1, Vector2i(23, 11)],
 ]
 ## Decor (relative to FORT): furniture in the yard and the hall, banners and torches on the walls.
@@ -36,8 +36,8 @@ const FURNISHING: Array = [
 	["wall_torch", Vector2i(0, 8)], ["wall_torch", Vector2i(0, 13)],
 ]
 ## The outer camps' monsters by ring: [monster, lowest level, highest level].
-const INNER: Array = [["orc_warrior", 15, 18], ["orc_shaman", 17, 20]]
-const OUTER: Array = [["orc", 10, 13], ["orc_spearman", 12, 14]]
+const INNER: Array = [["green_gargoyle", 15, 18], ["green_mage", 17, 20]]
+const OUTER: Array = [["green_gargoyle", 10, 13], ["green_mage", 12, 14]]
 const GATE_ROWS: Array[int] = [10, 11]
 
 

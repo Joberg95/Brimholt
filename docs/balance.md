@@ -167,7 +167,7 @@ tripled the Sorcerer mirror; it now takes 30% of each hit at 2 mana a point, and
 cast it when hurt, like a heal, since in a hunt it spends the mana heals need. With it the
 Hunter wins in 13-15 s, and the Sorcerer mirror stays 6-9 s. Iron bulwark at 50 gives the Warrior
 back the Hunter matchup (70 s; the Hunter had edged it at 50). Hunter's mark and Soulfire make
-level 50 hunts a little quicker (a bog hulk pair 8.4 -> 6.4 s for a Hunter) without changing who
+level 50 hunts a little quicker (a fen dragon pair 8.4 -> 6.4 s for a Hunter) without changing who
 survives them.
 
 **Class counters.** Damage is physical (Warriors, Hunters, most monsters) or magic (Sorcerers,
@@ -187,10 +187,10 @@ The stats only gear gives (`World.GEAR_STATS`) were checked with loadouts over t
 
 | Stat | Source | Result |
 | --- | --- | --- |
-| Life leech | Warrior blades, 1-5% (`Items.leech_for`, cap `World.LEECH_MAX` 5) | A small help: 3 bog hulks or behemoths at 45, 2 Blackreed wardens at 50, 4 reedfangs at 47 end with 2-3 points more health and the same potions; about 100 more healing in a level-50 duel. A Warrior deals about 150 damage a second at 45, so 5% is about 7 health a second next to about 50 from regeneration. Leeching blades therefore keep a plain sword's full attack (no `WEAPON_FOCUS_ATTACK` trade); with the trade they ended fights slower and no healthier |
+| Life leech | Warrior blades, 1-5% (`Items.leech_for`, cap `World.LEECH_MAX` 5) | A small help: 3 fen dragons or sand lions at 45, 2 Blackreed wardens at 50, 4 fen dragons at 47 end with 2-3 points more health and the same potions; about 100 more healing in a level-50 duel. A Warrior deals about 150 damage a second at 45, so 5% is about 7 health a second next to about 50 from regeneration. Leeching blades therefore keep a plain sword's full attack (no `WEAPON_FOCUS_ATTACK` trade); with the trade they ended fights slower and no healthier |
 | Movement speed | Boots 4-10%, the Venomfang axe 4% (Warrior) | Stacks multiply: walking 5.6 tiles a second, mounted 6.9, mounted with 14% gear 7.9; Fleetfoot or Swift growth on top reach about 10 for 8 s every 20 s, an escape window, not a permanent lead. Mounted riders already outrun same-level monsters (0.144 s steps against 0.17 s chases), as before. In duels Hastewind boots only cost armour (a Warrior wins 6 s slower) |
-| Maximum mana | Sorcerer cloth boots 6-8% (Frostbloom slippers, Phialbound boots) | +350-400 mana at 45 (about a third of a mana potion); hunts of 3 bog hulks are not mana-bound, so results do not move |
-| Frost damage | The Rootbound crown, 9% | A Druid on 3 bog hulks at 45: 36.7 to 35.2 s, 8 to 6 potions |
+| Maximum mana | Sorcerer cloth boots 6-8% (Frostbloom slippers, Phialbound boots) | +350-400 mana at 45 (about a third of a mana potion); hunts of 3 fen dragons are not mana-bound, so results do not move |
+| Frost damage | The Rootbound crown, 9% | A Druid on 3 fen dragons at 45: 36.7 to 35.2 s, 8 to 6 potions |
 
 Numbers kept: `HELMET_FOCUS_DEFENSE` 0.85, `WEAPON_FOCUS_SPEED` 4, the boots' extras, and
 `LEECH_LEVELS` 6. Changed: leeching blades keep full attack. The boots named here were deleted in plan 49 (no pack

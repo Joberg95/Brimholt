@@ -142,7 +142,7 @@ func _process(delta: float) -> void:
 	for id: int in game.monsters_in(area):
 		var monster: Dictionary = game.monsters[id]
 		var definition: Dictionary = Monsters.MONSTERS.get(monster["state"]["kind"], {})
-		var glow: Variant = definition.get("glow", _glow_color(definition.get("gear", {})))
+		var glow: Variant = definition.get("glow", null)
 		if glow != null and area.has_point(Vector2i(monster["visual"])):
 			_light(_centre(monster["visual"]), glow, GLOW_TILES * definition.get("size", 1.0), 1.0 * tint)
 	for cell: Vector2i in game.ground_in(area):

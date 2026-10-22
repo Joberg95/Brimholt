@@ -10,6 +10,9 @@ extends RefCounted
 ## supplies (supplies(): potions and food for its level), since it is done only once; those that
 ## do not fit in the backpack go to the ground at your feet.
 ##
+## Dungeons: a task with "dungeon" (game/data/dungeons.gd) hunts that dungeon's monsters at its
+## legend's levels (one pack creature lives in many places, so the task names where).
+##
 ## Caves: a task with "cave" (game/data/caves.gd) counts only kills inside that cave. Rare rolls:
 ## "rare" ({chance, items}) adds one of its items, drawn at random, to the reward that often.
 ##
@@ -26,68 +29,68 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const TASKS: Dictionary = {
 	# The adventurer's trial: passing it (and reaching Balance.CHOOSE_LEVEL) lets an Adventurer
 	# choose a vocation at a trainer. "level" sets the reward for monsters outside dungeons.
-	"adventurers_trial": {"title": "The adventurer's trial", "giver": "trial_master", "monster": "thornback_boar",
+	"adventurers_trial": {"title": "The adventurer's trial", "giver": "trial_master", "monster": "wild_hog",
 		"count": 8, "level": 6, "reward": "experience", "share": 0.5,
 		"intro": "Every hero began as an adventurer. Hunt eight thornback boars in Greywood,\nand the trainers in the hall behind me will teach you."},
-	"boar_cull": {"title": "Boar cull", "giver": "warden_brask", "monster": "thornback_boar", "count": 15,
+	"boar_cull": {"title": "Boar cull", "giver": "warden_brask", "monster": "wild_hog", "count": 15,
 		"reward": "pack", "intro": "Thornback boars are tearing up the fields beyond the town walls."},
-	"outlaw_bounty": {"title": "Outlaw bounty", "giver": "captain_ardo", "monster": "outlaw_archer", "count": 25,
+	"outlaw_bounty": {"title": "Outlaw bounty", "giver": "captain_ardo", "monster": "star_mage", "count": 25,
 		"reward": "pack", "intro": "Outlaw archers ambush every caravan on the road to Ashford."},
-	"hollow_purge": {"title": "Hollow purge", "giver": "marshal_venn", "monster": "hollow_knight", "count": 30,
+	"hollow_purge": {"title": "Hollow purge", "giver": "marshal_venn", "monster": "skeleton_warrior", "count": 30,
 		"reward": "pack", "intro": "Hollow knights march on Emberfall from the wastes."},
 	# Quest hubs: a giver in the town nearest each band of overworld monsters, so there is always
 	# a next stop (World.next_task). "level" is the band's typical level, for the reward.
-	"highway_robbers": {"title": "Highway robbers", "giver": "harbourmaster_ilse", "monster": "road_bandit", "count": 20,
+	"highway_robbers": {"title": "Highway robbers", "giver": "harbourmaster_ilse", "monster": "brigand", "count": 20,
 		"level": 9, "reward": "experience", "share": 0.5,
 		"intro": "Bandits rob every cart between the landing and Greywood. Twenty fewer would do."},
-	"wolf_winter": {"title": "Wolves at the woodline", "giver": "harbourmaster_ilse", "monster": "grey_wolf", "count": 20,
+	"wolf_winter": {"title": "Wolves at the woodline", "giver": "harbourmaster_ilse", "monster": "giant_wasp", "count": 20,
 		"level": 12, "reward": "experience", "share": 0.5, "target": "grey wolves",
 		"intro": "Grey wolves come down from Greywood and Westwind for our nets and goats."},
-	"lurker_drain": {"title": "Drain the bog pools", "giver": "fenwarden_ostrel", "monster": "bog_lurker", "count": 25,
+	"lurker_drain": {"title": "Drain the bog pools", "giver": "fenwarden_ostrel", "monster": "bog_grub", "count": 25,
 		"level": 16, "reward": "experience", "share": 0.5,
 		"intro": "Bog lurkers spit at the reed cutters in Thornfield and Lurkmoor. Clear them out."},
-	"golem_breakers": {"title": "Golem breakers", "giver": "quartermaster_rhosyn", "monster": "stone_golem", "count": 25,
+	"golem_breakers": {"title": "Golem breakers", "giver": "quartermaster_rhosyn", "monster": "stone_gargoyle", "count": 25,
 		"level": 26, "reward": "experience", "share": 0.5,
 		"intro": "The hills around the desert stand up and walk. Break twenty-five stone golems."},
-	"wraith_quench": {"title": "Quench the wraiths", "giver": "quartermaster_rhosyn", "monster": "cinder_wraith", "count": 25,
+	"wraith_quench": {"title": "Quench the wraiths", "giver": "quartermaster_rhosyn", "monster": "fire_mage", "count": 25,
 		"level": 30, "reward": "experience", "share": 0.5,
 		"intro": "Cinder wraiths drift over the waste and the fells, setting the scrub alight."},
-	"stalker_hunt": {"title": "Stalkers in the fen", "giver": "huntmaster_corvel", "monster": "mire_stalker", "count": 25,
+	"stalker_hunt": {"title": "Stalkers in the fen", "giver": "huntmaster_corvel", "monster": "mire_ghost", "count": 25,
 		"level": 40, "reward": "experience", "share": 0.5,
 		"intro": "Mire stalkers took three of my hunters in Mirewood Fen. Take twenty-five of them."},
-	"fen_beasts": {"title": "Beasts of the drowned wood", "giver": "huntmaster_corvel", "monster": "reedfang",
-		"also": ["bog_hulk"], "target": "fen beasts", "count": 25, "level": 45, "reward": "experience", "share": 0.5,
+	"fen_beasts": {"title": "Beasts of the drowned wood", "giver": "huntmaster_corvel", "monster": "fen_dragon",
+		"also": ["fen_dragon"], "target": "fen beasts", "count": 25, "level": 45, "reward": "experience", "share": 0.5,
 		"intro": "Reedfangs and bog hulks rule the deep fen and Gloamwood. Thin them before they reach Emberfall."},
 	# More hunting grounds for 20-42 (Monsters, the same comment): two or three tasks per band of
 	# a few levels, so a party levelling through the twenties always has work of its level.
-	"bear_country": {"title": "Bear country", "giver": "ranger_aldric", "monster": "dire_bear", "count": 25,
+	"bear_country": {"title": "Bear country", "giver": "ranger_aldric", "monster": "giant_bat", "count": 25,
 		"level": 21, "reward": "experience", "share": 0.5,
 		"intro": "Dire bears have come down to the lake shore and taken two fishers. Thin them out."},
-	"lizard_raiders": {"title": "Scales on the shore", "giver": "ranger_aldric", "monster": "lizard_warrior", "count": 25,
+	"lizard_raiders": {"title": "Scales on the shore", "giver": "ranger_aldric", "monster": "blue_gargoyle", "count": 25,
 		"level": 23, "reward": "experience", "share": 0.5,
 		"intro": "Lizardfolk warriors raid the reed beds of Stillwater Shore. Drive them back into the water."},
-	"lizard_shamans": {"title": "Silence the shamans", "giver": "ranger_aldric", "monster": "lizard_shaman", "count": 20,
+	"lizard_shamans": {"title": "Silence the shamans", "giver": "ranger_aldric", "monster": "tide_mage", "count": 20,
 		"level": 24, "reward": "experience", "share": 0.5,
 		"intro": "Their shamans call fog and sickness off the lake. Twenty of them, and the raids will falter."},
 	"harpy_cliffs": {"title": "Harpies over the downs", "giver": "skywatch_mera", "monster": "harpy", "count": 25,
 		"level": 25, "reward": "experience", "share": 0.5, "target": "harpies",
 		"intro": "Harpies dive on every shepherd on Lastlight Downs. Bring twenty-five of them down."},
-	"troll_quarry": {"title": "Trolls in the quarries", "giver": "caravan_master_idris", "monster": "stone_troll", "count": 25,
+	"troll_quarry": {"title": "Trolls in the quarries", "giver": "caravan_master_idris", "monster": "stone_gargoyle", "count": 25,
 		"level": 27, "reward": "experience", "share": 0.5,
 		"intro": "Stone trolls squat in the Stonevale quarries and eat the oxen. My caravans need that road."},
-	"scorpion_dunes": {"title": "Stingers in the sand", "giver": "caravan_master_idris", "monster": "dune_scorpion", "count": 25,
+	"scorpion_dunes": {"title": "Stingers in the sand", "giver": "caravan_master_idris", "monster": "sand_lion", "count": 25,
 		"level": 28, "reward": "experience", "share": 0.5,
 		"intro": "Dune scorpions bury themselves by the caravan track in the Sunscar Dunes. Dig them out."},
-	"sand_raiders": {"title": "Raiders of the Sunscar", "giver": "caravan_master_idris", "monster": "sand_raider", "count": 25,
+	"sand_raiders": {"title": "Raiders of the Sunscar", "giver": "caravan_master_idris", "monster": "brigand", "count": 25,
 		"level": 30, "reward": "experience", "share": 0.5,
 		"intro": "Sand raiders strike from the dunes and vanish. Twenty-five fewer and my wagons roll again."},
-	"wraith_knights": {"title": "The dead garrison", "giver": "skywatch_mera", "monster": "wraith_knight", "count": 25,
+	"wraith_knights": {"title": "The dead garrison", "giver": "skywatch_mera", "monster": "skeleton_warrior", "count": 25,
 		"level": 32, "reward": "experience", "share": 0.5,
 		"intro": "An old garrison rides the downs at night, in armour that rusted centuries ago. Lay them down."},
-	"witch_hunt": {"title": "The fen witches", "giver": "huntmaster_corvel", "monster": "marsh_witch", "count": 20,
+	"witch_hunt": {"title": "The fen witches", "giver": "huntmaster_corvel", "monster": "pale_banshee", "count": 20,
 		"level": 35, "reward": "experience", "share": 0.5, "target": "marsh witches",
 		"intro": "Witches brew in the drowned wood, and my hunters walk into the water in their sleep."},
-	"troll_caves": {"title": "Trolls of the Gloamwood", "giver": "huntmaster_corvel", "monster": "cave_troll", "count": 25,
+	"troll_caves": {"title": "Trolls of the Gloamwood", "giver": "huntmaster_corvel", "monster": "stone_gargoyle", "count": 25,
 		"level": 40, "reward": "experience", "share": 0.5,
 		"intro": "Cave trolls have come up out of the Gloamwood's hollows. They are bigger than the stone kind."},
 	# The elite caves (game/data/caves.gd): one task per cave monster, from a giver in the town
@@ -141,29 +144,29 @@ const TASKS: Dictionary = {
 	# The Cyclops Hollow (game/data/caves.gd): a long hunt inside the cave only ("cave"), paying
 	# potions and, one turn-in in four, one of the Hollow's own pieces ("rare": a chance and the
 	# items one is drawn from; turning in needs a free slot for it).
-	"hundred_eyed_hollow": {"title": "The Hundred-Eyed Hollow", "giver": "watchman_brega", "monster": "cyclops",
-		"also": ["cyclops_smith"], "target": "cyclopes in the Hollow", "count": 75, "level": 33, "cave": "cyclops_hollow",
+	"hundred_eyed_hollow": {"title": "The Hundred-Eyed Hollow", "giver": "watchman_brega", "monster": "stone_gargoyle",
+		"also": ["stone_gargoyle"], "target": "cyclopes in the Hollow", "count": 75, "level": 33, "cave": "cyclops_hollow",
 		"reward": "experience", "share": 0.5, "items": [["health_potion", 10], ["mana_potion", 10]],
 		"rare": {"chance": 0.25, "items": ["cyclops_eye_amulet", "hollowforge_hammer"]},
 		"intro": "A whole tribe of cyclopes lives in the Hollow under the fells, and their smiths keep its forges hot. Seventy-five of them, and they will think twice before coming up again."},
 	# The frost isles (Hrimvik, by boat): tundra hunts from Huntswoman Eyra and the Rimewater
 	# Trench from Trenchwarden Olav, none chained.
-	"snow_wolves": {"title": "Wolves on the snow", "giver": "huntswoman_eyra", "monster": "snow_wolf", "count": 25,
+	"snow_wolves": {"title": "Wolves on the snow", "giver": "huntswoman_eyra", "monster": "frost_ghost", "count": 25,
 		"level": 29, "reward": "experience", "share": 0.5, "target": "snow wolves",
 		"intro": "Snow wolves follow the herds right up to our palisade. Twenty-five pelts, and the herders can sleep."},
-	"walrus_hunt": {"title": "Tusks for the carvers", "giver": "huntswoman_eyra", "monster": "tusked_walrus", "count": 20,
+	"walrus_hunt": {"title": "Tusks for the carvers", "giver": "huntswoman_eyra", "monster": "rust_grub", "count": 20,
 		"level": 31, "reward": "experience", "share": 0.5, "target": "tusked walruses",
 		"intro": "The walruses on Wolfskerry gore anyone who lands a boat. My carvers want the tusks."},
-	"raider_bounty": {"title": "Raiders of the fjords", "giver": "huntswoman_eyra", "monster": "barbarian_raider", "count": 20,
+	"raider_bounty": {"title": "Raiders of the fjords", "giver": "huntswoman_eyra", "monster": "brigand", "count": 20,
 		"level": 33, "reward": "experience", "share": 0.5,
 		"intro": "Not every barbarian came to live in peace. The raiders burn our drying racks. Drive them off."},
-	"trench_crabs": {"title": "Crabs of the trench", "giver": "trenchwarden_olav", "monster": "trench_crab", "count": 30,
+	"trench_crabs": {"title": "Crabs of the trench", "giver": "trenchwarden_olav", "monster": "giant_centipede", "count": 30,
 		"level": 35, "reward": "experience", "share": 0.5,
 		"intro": "Under the Rimewater Floes the sea ice hollows into a trench, and crabs the size of sledges crawl it."},
-	"icetide_raiders": {"title": "The icetide raiders", "giver": "trenchwarden_olav", "monster": "icetide_raider", "count": 30,
+	"icetide_raiders": {"title": "The icetide raiders", "giver": "trenchwarden_olav", "monster": "brigand", "count": 30,
 		"level": 36, "reward": "experience", "share": 0.5,
 		"intro": "Fishfolk come up through the trench to raid our nets. They carry old plate. Who wore it before them?"},
-	"icetide_shamans": {"title": "Silence the tide-callers", "giver": "trenchwarden_olav", "monster": "icetide_shaman", "count": 25,
+	"icetide_shamans": {"title": "Silence the tide-callers", "giver": "trenchwarden_olav", "monster": "tide_mage", "count": 25,
 		"level": 37, "reward": "experience", "share": 0.5,
 		"intro": "Their shamans call the cold up out of the deep. Twenty-five of them, and the ice may hold this winter."},
 	"old_grimclaw": {"title": "Old Grimclaw", "giver": "trenchwarden_olav", "monster": "grimclaw", "count": 1,
@@ -172,11 +175,11 @@ const TASKS: Dictionary = {
 	# The Hunters' Lodge (Lodgemaster Varga, Reedmere): one contract at a time, each against
 	# harder prey, paying potions, a class piece of the hunt's tier, and rune shards that a class
 	# trainer turns into spell ranks (Spells.RANK_COSTS). The prey are farms in their own right.
-	"lodge_wolves": {"title": "Lodge contract: the grey pack", "giver": "lodgemaster_varga", "monster": "grey_wolf",
+	"lodge_wolves": {"title": "Lodge contract: the grey pack", "giver": "lodgemaster_varga", "monster": "giant_wasp",
 		"count": 20, "level": 12, "reward": "experience", "share": 0.5, "chain": "hunters_lodge", "target": "grey wolves",
 		"items": [["health_potion", 5], ["mana_potion", 5]], "gear": "boots",
 		"intro": "The Hunters' Lodge pays for proof, not stories. Start with twenty grey wolves in Greywood."},
-	"lodge_frostfang": {"title": "Lodge contract: frostfangs", "giver": "lodgemaster_varga", "monster": "frostfang_wolf",
+	"lodge_frostfang": {"title": "Lodge contract: frostfangs", "giver": "lodgemaster_varga", "monster": "frost_ghost",
 		"count": 25, "level": 20, "reward": "experience", "share": 0.5, "requires": "lodge_wolves", "chain": "hunters_lodge",
 		"target": "frostfang wolves",
 		"items": [["health_potion", 8], ["mana_potion", 8], ["rune_shard", 1]], "gear": "legs",
@@ -185,65 +188,65 @@ const TASKS: Dictionary = {
 		"count": 1, "level": 24, "reward": "experience", "share": 1.0, "requires": "lodge_frostfang", "chain": "hunters_lodge",
 		"items": [["rune_shard", 2]], "gear": "main_hand",
 		"intro": "Their alpha is a dire wolf the size of a horse, lairing in the Golemback Hills. End it."},
-	"lodge_cyclops": {"title": "Lodge contract: the one-eyed", "giver": "lodgemaster_varga", "monster": "cyclops",
+	"lodge_cyclops": {"title": "Lodge contract: the one-eyed", "giver": "lodgemaster_varga", "monster": "stone_gargoyle",
 		"count": 25, "level": 30, "reward": "experience", "share": 0.5, "requires": "lodge_greymaw", "chain": "hunters_lodge",
 		"target": "cyclopes",
 		"items": [["health_potion", 10], ["mana_potion", 10], ["rune_shard", 1]], "gear": "helmet",
 		"intro": "Cyclopes have come down from the mountains of the Smoulder Fells. Twenty-five eyes, hunter."},
-	"lodge_smiths": {"title": "Lodge contract: cyclops forges", "giver": "lodgemaster_varga", "monster": "cyclops_smith",
+	"lodge_smiths": {"title": "Lodge contract: cyclops forges", "giver": "lodgemaster_varga", "monster": "stone_gargoyle",
 		"count": 25, "level": 37, "reward": "experience", "share": 0.5, "requires": "lodge_cyclops", "chain": "hunters_lodge",
 		"target": "cyclops smiths",
 		"items": [["health_potion", 10], ["mana_potion", 10], ["rune_shard", 2]], "gear": "armor",
 		"intro": "The cyclopes arm themselves at forges in the Hollow March. Break the smiths and their iron is yours."},
-	"lodge_behemoth": {"title": "Lodge contract: behemoth country", "giver": "lodgemaster_varga", "monster": "behemoth",
+	"lodge_behemoth": {"title": "Lodge contract: behemoth country", "giver": "lodgemaster_varga", "monster": "sand_lion",
 		"count": 20, "level": 44, "reward": "experience", "share": 0.5, "requires": "lodge_smiths", "chain": "hunters_lodge",
 		"items": [["health_potion", 15], ["mana_potion", 15], ["rune_shard", 3]], "gear": "off_hand",
 		"intro": "The last contract: behemoths roam the Gloamwood, and nothing in the Lodge's books is bigger."},
 	# Dungeon tasks: a hunt through the copies, and the dungeon's champion.
-	"cellar_vermin": {"title": "Vermin in the cellar", "giver": "cellarmaster_pell", "monster": "giant_rat",
-		"also": ["sewer_rat"], "target": "cellar rats", "count": 25, "reward": "experience", "share": 0.5,
+	"cellar_vermin": {"title": "Vermin in the cellar", "giver": "cellarmaster_pell", "monster": "ratkin", "dungeon": "cinder_cellar",
+		"also": ["ratkin"], "target": "cellar rats", "count": 25, "reward": "experience", "share": 0.5,
 		"intro": "Rats have taken the old cellar under the town. Thin them out before they reach the granary."},
-	"rat_king": {"title": "Down with the Rat King", "giver": "cellarmaster_pell", "monster": "rat_king", "count": 1,
+	"rat_king": {"title": "Down with the Rat King", "giver": "cellarmaster_pell", "monster": "rat_king", "dungeon": "cinder_cellar", "count": 1,
 		"reward": "experience", "share": 1.0,
 		"intro": "A rat the size of a pony rules that cellar. Bring it down and the rest will scatter."},
-	"crypt_rest": {"title": "Rest for the dead", "giver": "sexton_wren", "monster": "crypt_skeleton",
-		"also": ["grave_ghoul"], "target": "risen dead", "count": 30, "reward": "experience", "share": 0.5,
+	"crypt_rest": {"title": "Rest for the dead", "giver": "sexton_wren", "monster": "skeleton_warrior", "dungeon": "ashford_crypt",
+		"also": ["skeleton_torchbearer"], "target": "risen dead", "count": 30, "reward": "experience", "share": 0.5,
 		"intro": "The dead of Ashford's crypt will not lie still. Put them back to rest."},
-	"crimson_watch": {"title": "The Crimson Watch", "giver": "sergeant_brenna", "monster": "crimson_guard",
-		"also": ["crimson_crossbowman"], "target": "crimson watchmen", "count": 40, "reward": "experience", "share": 0.5,
+	"crimson_watch": {"title": "The Crimson Watch", "giver": "sergeant_brenna", "monster": "skeleton_warrior", "dungeon": "aldmoor_barracks",
+		"also": ["blood_mage"], "target": "crimson watchmen", "count": 40, "reward": "experience", "share": 0.5,
 		"intro": "The old guard took the barracks under the keep and wear red for a rebel captain. Thin their ranks."},
-	"captain_marrec": {"title": "The captain's mutiny", "giver": "sergeant_brenna", "monster": "captain_marrec", "count": 1,
+	"captain_marrec": {"title": "The captain's mutiny", "giver": "sergeant_brenna", "monster": "captain_marrec", "dungeon": "aldmoor_barracks", "count": 1,
 		"reward": "experience", "share": 1.0, "items": [["great_ruby", 1]],
 		"intro": "Captain Marrec holds the far hall of the barracks. End his mutiny and the keep sleeps easy again."},
 	# The Grimtusk Hold (tools/generators/orcs.gd): Scout Rhydda in Brackenford, one task per ring
 	# of the hold and one for its warlord.
-	"orc_raiders": {"title": "Grimtusk raiders", "giver": "scout_rhydda", "monster": "orc", "also": ["orc_spearman"],
+	"orc_raiders": {"title": "Grimtusk raiders", "giver": "scout_rhydda", "monster": "green_gargoyle", "also": ["green_mage"],
 		"target": "orc raiders", "count": 25, "level": 12, "reward": "experience", "share": 0.5,
 		"intro": "Orcs from the Grimtusk Hold raid the downs for sheep and travellers. Twenty-five fewer raiders, please."},
-	"orc_warband": {"title": "Break the warband", "giver": "scout_rhydda", "monster": "orc_warrior", "also": ["orc_shaman"],
+	"orc_warband": {"title": "Break the warband", "giver": "scout_rhydda", "monster": "green_gargoyle", "also": ["green_mage"],
 		"target": "orc warriors and shamans", "count": 30, "level": 18, "reward": "experience", "share": 0.5,
 		"requires": "orc_raiders",
 		"intro": "Warriors and their shamans gather under the hold's walls. Break the warband before it marches."},
-	"orc_berserkers": {"title": "Inside the hold", "giver": "scout_rhydda", "monster": "orc_berserker", "also": ["orc_leader"],
+	"orc_berserkers": {"title": "Inside the hold", "giver": "scout_rhydda", "monster": "green_gargoyle", "also": ["green_gargoyle"],
 		"target": "berserkers and leaders", "count": 30, "level": 24, "reward": "experience", "share": 0.5,
 		"requires": "orc_warband",
 		"intro": "Inside the palisade the berserkers paint themselves for war. Get in there and thin them out."},
 	"warlord_gruzzak": {"title": "The warlord's horn", "giver": "scout_rhydda", "monster": "gruzzak", "count": 1,
 		"reward": "experience", "share": 1.0, "requires": "orc_berserkers", "items": [["small_topaz", 1]],
 		"intro": "Warlord Gruzzak sits in the great hut at the back of the hold. Bring him down, and the Grimtusk scatter."},
-	"abbot_morrow": {"title": "The abbot's last rites", "giver": "sexton_wren", "monster": "abbot_morrow", "count": 1,
+	"abbot_morrow": {"title": "The abbot's last rites", "giver": "sexton_wren", "monster": "abbot_morrow", "dungeon": "ashford_crypt", "count": 1,
 		"reward": "experience", "share": 1.0, "items": [["abbots_prayer_beads", 1]],
 		"intro": "Abbot Morrow raises them all from the bottom of the crypt. End his vigil."},
-	"mine_clearing": {"title": "Clear the deep mine", "giver": "foreman_dagny", "monster": "cave_crawler",
-		"also": ["ember_golem"], "target": "mine creatures", "count": 30, "reward": "experience", "share": 0.5,
+	"mine_clearing": {"title": "Clear the deep mine", "giver": "foreman_dagny", "monster": "scarab", "dungeon": "highmoor_mine",
+		"also": ["ember_wisp"], "target": "mine creatures", "count": 30, "reward": "experience", "share": 0.5,
 		"intro": "Crawlers and ember golems drove my miners out. Clear the shafts so we can dig again."},
-	"forgemaw": {"title": "Quench the Forgemaw", "giver": "foreman_dagny", "monster": "forgemaw", "count": 1,
+	"forgemaw": {"title": "Quench the Forgemaw", "giver": "foreman_dagny", "monster": "forgemaw", "dungeon": "highmoor_mine", "count": 1,
 		"reward": "experience", "share": 1.0, "items": [["forgeheart_ring", 1]],
 		"intro": "Something burns at the bottom of the mine. The miners call it the Forgemaw."},
-	"silk_harvest": {"title": "Cut the webs", "giver": "trapper_maud", "monster": "cave_spider",
-		"also": ["venom_weaver"], "target": "Silkhollow spiders", "count": 25, "reward": "experience", "share": 0.5,
+	"silk_harvest": {"title": "Cut the webs", "giver": "trapper_maud", "monster": "giant_centipede", "dungeon": "silkhollow",
+		"also": ["venom_grub"], "target": "Silkhollow spiders", "count": 25, "reward": "experience", "share": 0.5,
 		"intro": "Spiders the size of dogs nest in Silkhollow. Take a torch, it is black as pitch down there."},
-	"silk_matron": {"title": "The Silk Matron", "giver": "trapper_maud", "monster": "silk_matron", "count": 1,
+	"silk_matron": {"title": "The Silk Matron", "giver": "trapper_maud", "monster": "silk_matron", "dungeon": "silkhollow", "count": 1,
 		"reward": "experience", "share": 1.0, "items": [],
 		"intro": "Their mother spins at the bottom of the cave. Burn her nest and the wilds are ours again."},
 }
@@ -299,24 +302,18 @@ static func target_name(task: String) -> String:
 	return name if definition["count"] == 1 else name.to_lower() + "s"
 
 
-## The level a task's monster is placed at (its dungeon legend), or 0 if it is not in a dungeon.
-static func monster_level(kind: String) -> int:
-	for dungeon: String in Dungeons.DUNGEONS:
-		for symbol: String in Dungeons.DUNGEONS[dungeon]["monsters"]:
-			var entry: Array = Dungeons.DUNGEONS[dungeon]["monsters"][symbol]
-			if entry[0] == kind:
-				return entry[1]
+## The level `kind` is placed at in `dungeon`'s legend (its first entry), or 0 if it is not there.
+static func monster_level(kind: String, dungeon: String) -> int:
+	for symbol: String in Dungeons.DUNGEONS.get(dungeon, {}).get("monsters", {}):
+		var entry: Array = Dungeons.DUNGEONS[dungeon]["monsters"][symbol]
+		if entry[0] == kind:
+			return entry[1]
 	return 0
 
 
-## The dungeon a task's monster lives in, or "".
+## The dungeon a task hunts in ("dungeon"), or "".
 static func dungeon_of(task: String) -> String:
-	var kind: String = TASKS[task]["monster"]
-	for dungeon: String in Dungeons.DUNGEONS:
-		for symbol: String in Dungeons.DUNGEONS[dungeon]["monsters"]:
-			if Dungeons.DUNGEONS[dungeon]["monsters"][symbol][0] == kind:
-				return dungeon
-	return ""
+	return TASKS[task].get("dungeon", "")
 
 
 ## Supplies every hunting task pays on top of its reward: a task is done only once, so it stocks
@@ -350,7 +347,7 @@ static func reward(task: String) -> Dictionary:
 	if definition["reward"] != "experience":
 		return {}
 	var kind: String = definition["monster"]
-	var level: int = definition.get("level", monster_level(kind))
+	var level: int = definition.get("level", monster_level(kind, dungeon_of(task)))
 	var rank: String = Monsters.MONSTERS[kind]["rank"]
 	var piles: float = Balance.coins_per_kill(level, rank)
 	var share: float = definition["share"]

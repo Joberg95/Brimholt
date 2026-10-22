@@ -71,3 +71,12 @@ Each phase: review renders by eye (art is never tested), functional tests, docs,
   townsfolk 16, humanoid monsters 18, tinted through the pack's colour masks. The body, cloth, worn-gear,
   and mount code is gone (riding and its 25% step bonus too), along with the item-icon modules and about
   2,700 lines of `make_sprites.py`. The pack has no attack frames; the robes only tint hair.
+- **Phase 4 (done):** monsters are the pack's creatures (`"outfit"` in monsters.gd, exported with the
+  outfits). The 61 normal monsters folded into 30 pack creatures (Black cat, Ratkin, Brigand, the
+  gargoyles, mages, ghosts, grubs, Fen dragon ...); every camp, task, dungeon legend, and generator was
+  renamed to them, loot tables merged, and the farms' gear chance carried over. The 33 elites,
+  champions, and bosses keep their names and roles in a pack creature's look, drawn larger; Vaelith and
+  Morvain glow in their own colour now. Dungeon tasks name their dungeon (`"dungeon"`), and an overworld
+  task's level band counts only camps within `World.TASK_SPAN` of its level. Our creature art, its
+  sheets, and the creature builders are deleted (`creatures.py` kept only props' shading, now
+  `shading.py`). Unused: the mount (looktype 12) and five creatures (5/40 and 10/35 are duplicates; 27, 43).

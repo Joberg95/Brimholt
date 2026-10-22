@@ -18,11 +18,11 @@ const WALL_SIZE: float = 48.0
 const WALL_RAISE: float = 16.0
 const DIRECTIONS: Array[Vector2i] = [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]
 const OUTLINE: Color = Color("#1a1612")
-## Player hood/tabard tints; the cloth sheet is greyscale. Capes are equipped items only.
-## Characters wear the OpenTibia pack's player outfits (plan 49; otsp_export.py outfits): one sheet per
-## looktype, five blocks of FRAME frames stacked (the untinted outfit, then its head, body, legs, and feet
-## parts, tinted like Tibia's outfit colours). The pack draws a figure 8 pixels up and left of its tile,
-## the bottom-right quarter of the frame, so the tile centre sits at OUTFIT_ANCHOR.
+## Characters and monsters wear the OpenTibia pack's outfits (plan 49; otsp_export.py outfits): one sheet
+## per looktype of OUTFIT_FRAME frames laid out like frame_region, placed as the pack draws them so the
+## tile centre sits at OUTFIT_ANCHOR. A player outfit stacks five blocks (the untinted outfit, then its
+## head, body, legs, and feet parts, tinted like Tibia's outfit colours); a creature has the first only.
+const OUTFIT_FRAME: float = 72.0
 const OUTFIT_ANCHOR: Vector2 = Vector2(56, 56)
 const OUTFIT_PARTS: int = 5
 const OUTFITS: Dictionary = {"adventurer": 17, "knight": 18, "paladin": 45, "sorcerer": 20, "druid": 21}
@@ -36,9 +36,8 @@ const OUTFIT_COLORS: Dictionary = {
 	"sorcerer": [Color("#e0e0e8"), Color("#3a3a8a"), Color("#2a2a5a"), Color("#4a3a2a")],
 	"druid": [Color("#b0602a"), Color("#3a7a3a"), Color("#2a4a2a"), Color("#4a3a2a")],
 }
-## Townsfolk and humanoid monsters wear these looktypes (the pack's other player outfits).
+## Townsfolk wear this looktype (the pack's other player outfit).
 const TOWNSFOLK_OUTFIT: int = 16
-const HUMANOID_OUTFIT: int = 18
 static var OUTFIT_SHEETS: Dictionary = _outfit_sheets()
 const MARKER: Texture2D = preload("res://assets/sprites/marker.png")
 const ITEM_ICONS: Texture2D = preload("res://assets/sprites/items.png")
@@ -110,24 +109,6 @@ const TREE_SIZE: Vector2 = Vector2(64, 96)
 const TREE_ANCHOR: Vector2 = Vector2(32, 80)
 const TREE_VARIANTS: int = 3
 const NPC_TINT: Color = Color("#4f7f86")
-## Creature sheets are greyscale (tinted per monster) with untinted eye/detail sheets.
-const MONSTER_SHEETS: Dictionary = {
-	"quadruped": preload("res://assets/sprites/monsters/quadruped.png"),
-	"spider": preload("res://assets/sprites/monsters/spider.png"),
-	"blob": preload("res://assets/sprites/monsters/blob.png"),
-	"golem": preload("res://assets/sprites/monsters/golem.png"),
-	"wraith": preload("res://assets/sprites/monsters/wraith.png"),
-}
-const MONSTER_DETAILS: Dictionary = {
-	"quadruped": preload("res://assets/sprites/monsters/quadruped_detail.png"),
-	"spider": preload("res://assets/sprites/monsters/spider_detail.png"),
-	"blob": preload("res://assets/sprites/monsters/blob_detail.png"),
-	"golem": preload("res://assets/sprites/monsters/golem_detail.png"),
-	"wraith": preload("res://assets/sprites/monsters/wraith_detail.png"),
-}
-## Painted-style creature sheets (tools/generators/creatures.py), one per monster kind, drawn
-## untinted; kinds without one fall back to the tinted generic sheets above.
-static var CREATURES: Dictionary = _creature_sheets()
 ## Items whose icon moves (assets/sprites/items_anim/<id>.png, ANIM_FRAMES 32x32 frames in a row,
 ## from make_sprites.py icon_frames): flames flicker, halos and eyes glow, sheen sweeps across.
 static var ANIMATED: Dictionary = _anim_sheets()
@@ -137,22 +118,18 @@ const COINS: Texture2D = preload("res://assets/sprites/coins.png")
 const COIN_STAGES: Array[int] = [1, 2, 3, 4, 10, 30]
 const ANIM_FRAMES: int = 12
 const ANIM_SECONDS: float = 0.1
-static var CREATURE_GLOW: Dictionary = _creature_sheets("_glow")
-## Characters' feet sit this far below the tile centre; monsters scale around that point.
-const FEET: Vector2 = Vector2(0, 13.5)
+## Figures' feet sit about this far below the tile centre; monsters scale around that point.
+const FEET: Vector2 = Vector2(0, 6)
 ## Source rectangles of tiles.png by tile index (4 per row), computed once.
 static var TILE_REGIONS: Array[Rect2] = _tile_regions()
 ## Icon order in items.png: the catalog order of game/data/items.json, ITEM_COLUMNS icons per row
 ## (make_sprites.py ITEM_COLUMNS; one long row would pass the 16384-pixel texture limit).
 const ITEM_COLUMNS: int = 64
 static var ITEM_ORDER: Array[String] = _item_order()
-## Relics glow: white halo sheets (items_glow.png, monsters/<look>_glow.png) drawn additively in the
-## item's "glow" colour by game/render/glow_layer.gd.
+## Relics glow: white halo sheets (items_glow.png) drawn additively in the item's "glow" colour by
+## game/render/glow_layer.gd; glowing monsters draw their creature GLOW_SCALE larger in that colour.
+const GLOW_SCALE: float = 1.12
 const ITEM_GLOW: Texture2D = preload("res://assets/sprites/items_glow.png")
-const MONSTER_GLOW: Dictionary = {
-	"golem": preload("res://assets/sprites/monsters/golem_glow.png"),
-	"wraith": preload("res://assets/sprites/monsters/wraith_glow.png"),
-}
 const GRASS_TILES: Array[int] = [0, 1, 2, 0, 1, 2, 0, 3]
 const DIRT_TILE: int = 4
 const WATER_TILE: int = 8
@@ -263,17 +240,12 @@ static func _item_order() -> Array[String]:
 
 static func _outfit_sheets() -> Dictionary:
 	var sheets: Dictionary = {}
-	for looktype: int in OUTFITS.values() + [TOWNSFOLK_OUTFIT, HUMANOID_OUTFIT]:
-		sheets[looktype] = load("res://assets/sprites/outfits/%d.png" % looktype)
-	return sheets
-
-
-static func _creature_sheets(suffix: String = "") -> Dictionary:
-	var sheets: Dictionary = {}
+	var looktypes: Array = OUTFITS.values() + [TOWNSFOLK_OUTFIT]
 	for kind: String in Monsters.MONSTERS:
-		var path: String = "res://assets/sprites/creatures/%s%s.png" % [kind, suffix]
-		if ResourceLoader.exists(path):
-			sheets[kind] = load(path)
+		looktypes.append(Monsters.MONSTERS[kind]["outfit"])
+	for looktype: int in looktypes:
+		if not sheets.has(looktype):
+			sheets[looktype] = load("res://assets/sprites/outfits/%d.png" % looktype)
 	return sheets
 
 
@@ -802,12 +774,13 @@ static func draw_actor(canvas: CanvasItem, center: Vector2, state: Dictionary, l
 	var vocation: String = String(state.get("vocation", ""))
 	var colors: Array = OUTFIT_COLORS.get(vocation, OUTFIT_COLORS[Balance.ADVENTURER])
 	var sheet: Texture2D = OUTFIT_SHEETS[int(state.get("outfit", OUTFITS.get(vocation, OUTFITS[Balance.ADVENTURER])))]
-	var dest := Rect2(center - OUTFIT_ANCHOR, Vector2.ONE * FRAME)
-	for part: int in OUTFIT_PARTS:
+	var dest := Rect2(center - OUTFIT_ANCHOR, Vector2.ONE * OUTFIT_FRAME)
+	var frame := Rect2(source.position / FRAME * OUTFIT_FRAME, Vector2.ONE * OUTFIT_FRAME)
+	for part: int in mini(OUTFIT_PARTS, roundi(sheet.get_height() / (4 * OUTFIT_FRAME))):
 		var color: Color = Color.WHITE if part == 0 else colors[part - 1]
 		if part == 2 and tint.a > 0.0:
 			color = tint
-		canvas.draw_texture_rect_region(sheet, dest, Rect2(source.position + Vector2(0, part * 4 * FRAME), source.size), color)
+		canvas.draw_texture_rect_region(sheet, dest, Rect2(frame.position + Vector2(0, part * 4 * OUTFIT_FRAME), frame.size), color)
 
 
 static func item_region(kind: String) -> Rect2:
@@ -846,23 +819,14 @@ static func draw_slot_hint(canvas: CanvasItem, center: Vector2, slot: String, si
 			return
 
 
-## Draws a monster from game/data/monsters.gd; humanoids wear HUMANOID_OUTFIT in their colour.
+## Draws a monster from game/data/monsters.gd: its pack creature at its size.
 static func draw_monster(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float) -> void:
 	var definition: Dictionary = Monsters.MONSTERS.get(state["kind"], {})
 	if definition.is_empty():
 		return
 	canvas.draw_set_transform(center + FEET, 0.0, Vector2.ONE * definition["size"])
-	if CREATURES.has(state["kind"]):
-		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
-		canvas.draw_texture_rect_region(CREATURES[state["kind"]], dest, frame_region(state["facing"], stride))
-	elif definition["look"] == "humanoid":
-		draw_actor(canvas, -FEET, {"facing": state["facing"], "outfit": HUMANOID_OUTFIT, "attack": state.get("attack", -1.0)},
-			false, stride, definition["color"])
-	else:
-		var source: Rect2 = frame_region(state["facing"], stride)
-		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
-		canvas.draw_texture_rect_region(MONSTER_SHEETS[definition["look"]], dest, source, definition["color"])
-		canvas.draw_texture_rect_region(MONSTER_DETAILS[definition["look"]], dest, source)
+	draw_actor(canvas, -FEET, {"facing": state["facing"], "outfit": definition["outfit"], "attack": state.get("attack", -1.0)},
+		false, stride)
 	canvas.draw_set_transform(Vector2.ZERO)
 
 
@@ -936,25 +900,19 @@ static func draw_skull(canvas: CanvasItem, at: Vector2, skull: String) -> void:
 
 # ---------------------------------------------------------------- glow (additive pass)
 
-## Boss halos: the creature's own "glow" colour.
+## Glowing monsters: their creature again in their "glow" colour, a little larger, as a halo.
 static func draw_monster_glow(canvas: CanvasItem, center: Vector2, state: Dictionary, stride: float, strength: float) -> bool:
 	var definition: Dictionary = Monsters.MONSTERS.get(state["kind"], {})
-	if definition.is_empty():
+	if not definition.has("glow"):
 		return false
-	var glowing: bool = false
-	canvas.draw_set_transform(center + FEET, 0.0, Vector2.ONE * definition["size"])
-	if definition.has("glow") and CREATURE_GLOW.has(state["kind"]):
-		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
-		canvas.draw_texture_rect_region(CREATURE_GLOW[state["kind"]], dest, frame_region(state["facing"], stride),
-			Color(definition["glow"], strength))
-		glowing = true
-	elif definition.has("glow") and MONSTER_GLOW.has(definition["look"]):
-		var dest := Rect2(-FRAME_ANCHOR - FEET, Vector2.ONE * FRAME)
-		canvas.draw_texture_rect_region(MONSTER_GLOW[definition["look"]], dest, frame_region(state["facing"], stride),
-			Color(definition["glow"], strength))
-		glowing = true
+	var sheet: Texture2D = OUTFIT_SHEETS[definition["outfit"]]
+	var source: Rect2 = frame_region(state["facing"], stride, state.get("attack", -1.0))
+	var frame := Rect2(source.position / FRAME * OUTFIT_FRAME, Vector2.ONE * OUTFIT_FRAME)
+	canvas.draw_set_transform(center + FEET, 0.0, Vector2.ONE * definition["size"] * GLOW_SCALE)
+	canvas.draw_texture_rect_region(sheet, Rect2(-FEET - OUTFIT_ANCHOR, Vector2.ONE * OUTFIT_FRAME), frame,
+		Color(definition["glow"], strength))
 	canvas.draw_set_transform(Vector2.ZERO)
-	return glowing
+	return true
 
 
 static func draw_item_glow(canvas: CanvasItem, center: Vector2, entry: String, strength: float) -> bool:

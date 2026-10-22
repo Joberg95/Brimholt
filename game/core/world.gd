@@ -1451,7 +1451,7 @@ static func with_items(slots: Array, items: Array) -> Array:
 static func task_items(task: String, vocation: String) -> Array:
 	var definition: Dictionary = Quests.TASKS[task]
 	var result: Array = definition.get("items", []).duplicate(true)
-	var level: int = definition.get("level", Quests.monster_level(definition["monster"]))
+	var level: int = definition.get("level", Quests.monster_level(definition["monster"], Quests.dungeon_of(task)))
 	if level <= 0:
 		level = task_levels(task).x
 	for supply: Array in Quests.supplies(maxi(1, level)):
@@ -1513,7 +1513,9 @@ static func receiving_slot(slots: Array, kind: String, count: int) -> int:
 
 ## Wears a pack in the bag slot (replacing any smaller one) and grows the backpack to fit.
 ## The level band (x..y) of the monsters a task counts: its dungeon's band, or their overworld
-## spawn levels. Computed once per task from the map.
+## spawn levels, only those within TASK_SPAN of the task's "level" when it has one (one pack creature
+## lives in camps of many levels; plan 49). Computed once per task from the map.
+const TASK_SPAN: int = 6
 static func task_levels(task: String) -> Vector2i:
 	if _task_levels.has(task):
 		return _task_levels[task]
@@ -1522,8 +1524,9 @@ static func task_levels(task: String) -> Vector2i:
 	if not dungeon.is_empty():
 		band = Vector2i(Dungeons.DUNGEONS[dungeon]["min_level"], Dungeons.DUNGEONS[dungeon]["max_level"])
 	else:
+		var level: int = Quests.TASKS[task].get("level", 0)
 		for spawn: Dictionary in MONSTER_SPAWNS:
-			if Quests.counts(task, spawn["monster"]):
+			if Quests.counts(task, spawn["monster"]) and (level == 0 or absi(spawn["level"] - level) <= TASK_SPAN):
 				band = Vector2i(mini(band.x, spawn["level"]), maxi(band.y, spawn["level"]))
 	if band.y == 0:
 		band = Vector2i.ZERO

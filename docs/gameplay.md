@@ -67,17 +67,17 @@ left and a tooltip: the meal you ate and spell buffs such as Iron bulwark or Swi
 frame), and roots, slows, or a Hunter's mark on you (red frame).
 
 **Rune spells.** Level 40+ hunting grounds drop runes: small carved stones of fire, frost, or
-lightning (behemoths and obsidian golems fire, bog hulks and mire stalkers frost, reedfangs and
-void wraiths lightning; the level-50 elites more often). Any class from level 40 casts one at its
+lightning (sand lions and obsidian golems fire, fen dragons and mire ghosts frost, fen dragons and
+void mages lightning; the level-50 elites more often). Any class from level 40 casts one at its
 target up to 7 tiles away: drag it from your backpack onto the action bar (or right-click a
 slot), and each cast uses one up. A fire rune burns every enemy within 3 tiles of the target (a
 round area of 37 tiles, as in Tibia), a frost rune freezes 2 tiles around and slows what it hits,
 and a lightning rune strikes the target and leaps to two more enemies nearby. Runes are magic and
 hit for a geared attack of your level, whatever your class, and all runes share a 2-second
 cooldown. The heaviest hits are runes, so endgame damage costs supplies: a **Great fireball
-rune** (level 45; ashmaw drakes, obsidian golems, behemoths, ember witches) burns every enemy
-within 4 tiles of the target, and a **Sudden death rune** (level 50; barrow liches, void wraiths,
-Blackreed wardens, bog hulks) strikes one target for 5 times a geared attack. Bots carry the runes
+rune** (level 45; ashmaw drakes, obsidian golems, sand lions, ember witches) burns every enemy
+within 4 tiles of the target, and a **Sudden death rune** (level 50; barrow liches, void mages,
+Blackreed wardens, fen dragons) strikes one target for 5 times a geared attack. Bots carry the runes
 they find and cast area runes at packs and Sudden death at bosses, champions, and players.
 
 **Roots and slows.** Entangling roots holds its target in place and Crippling arrow halves its
@@ -168,7 +168,7 @@ tiles when the corpse tile is full and is not reserved for the killer yet. A new
 needs a row in `game/data/items.json` with a pack `sprite` and a loot row; `otsp_export.py items` writes its icon.
 
 When a monster dies, the players its loot is credited to see green text over the body for four
-seconds, "Loot of a crypt skeleton: 250 gold coins, a bone, a flint hatchet." (`Combat.loot_event`),
+seconds, "Loot of a skeleton warrior: 250 gold coins, a bone, a flint hatchet." (`Combat.loot_event`),
 and a "Rare!", "Epic!" or "Legendary!" label in the rarity's colour when the best drop is Rare or
 better. Gold shows its amount as a heap that grows with the stack: one coin, two, three, a small
 heap from 4 piles, a heap from 10, a big heap from 30 (`SpriteArt.COIN_STAGES`); on the ground the
@@ -179,12 +179,11 @@ heap stands in for the number.
 Nine named helmets drop from hunts (1.2% a kill, at or above their level). Each keeps
 85% of its tier helmet's defenses and adds one bonus (`Items.HELMET_FOCUS`): half a rod's healing,
 half a spellbook's mana, a ring's 2% critical, an armor's regeneration, or half an amulet's
-health. The **Delver's lamp helm** (level 20 mail, critical; lizard warriors), the **Sunforged
-crown helm** (30 plate, health; sand raiders), the **Serpent hood** (30 leather, healing; wraith
-knights), the **Gilded hornhelm** (35 plate, regeneration; cave trolls), the **Fangmaw mask** (40
-leather, healing; bog hulks), the **Cinder visage** (40 cloth, mana; mire stalkers), the
+health. The **Delver's lamp helm** (level 20 mail, critical; blue gargoyles), the **Sunforged
+crown helm** (30 plate, health; brigands), the **Serpent hood** (30 leather, healing; skeleton warriors), the **Gilded hornhelm** (35 plate, regeneration; stone gargoyles), the **Fangmaw mask** (40
+leather, healing; fen dragons), the **Cinder visage** (40 cloth, mana; mire ghosts), the
 **Moonsteel visor** (45 mail, health; obsidian golems), the **Starhalo hat** (45 cloth,
-critical; void wraiths), and the **Rootbound crown** (45 leather, healing and **+9% frost damage**;
+critical; void mages), and the **Rootbound crown** (45 leather, healing and **+9% frost damage**;
 rime titans). Frost damage is a gear-only stat (`Combat.ELEMENT_STATS`): it adds its percentage to
 the wearer's frost spells (Frost bolt, Hailstorm) and frost runes. Their icons move in the backpack and on the ground: the lamp and the
 visage's spikes burn, the crown's frost crystal pulses, the masks' and hood's eyes glow, the hat's halo sparkles, and light
@@ -198,11 +197,11 @@ one bonus.
 
 | Axe | Level | Focus | Dropped by |
 | --- | --- | --- | --- |
-| Barbarian's hewer | 25 | a cape's defense | barbarian raiders |
-| Amberglass axe | 30 | +3% critical | sand raiders |
-| Venomfang axe | 35 | +4% movement speed | marsh witches |
-| Seraphic waraxe | 40 | regeneration | mire stalkers |
-| Crimsonheart battleaxe | 45 | health | void wraiths |
+| Barbarian's hewer | 25 | a cape's defense | brigands |
+| Amberglass axe | 30 | +3% critical | brigands |
+| Venomfang axe | 35 | +4% movement speed | pale banshees |
+| Seraphic waraxe | 40 | regeneration | mire ghosts |
+| Crimsonheart battleaxe | 45 | health | void mages |
 | Starsteel chopper | 45 | +3% critical | obsidian golems |
 
 The venomfang's serpent eyes and the sanguine axe's heart glow, starlight glints along the
@@ -217,9 +216,9 @@ six levels to 5% (`Items.leech_for`), so a Warrior can sustain alone on a long h
 
 | Sword | Level | Life leech | Dropped by |
 | --- | --- | --- | --- |
-| Bloodletter | 20 | 1% | lizard warriors (1%) |
-| Vampiric shortblade | 30 | 2% | cinder wraiths (1%) |
-| Bloodvein blade | 35 | 3% | cave trolls (1%) |
+| Bloodletter | 20 | 1% | blue gargoyles (1%) |
+| Vampiric shortblade | 30 | 2% | fire mages (1%) |
+| Bloodvein blade | 35 | 3% | stone gargoyles (1%) |
 | Bloodvein greatblade | 45 | 5% | obsidian golems (1%) |
 
 The gems in their guards glow.
@@ -228,11 +227,11 @@ The gems in their guards glow.
 
 Seven rings drop from overworld hunts (1.5% a kill, only at or above the ring's level). Each
 gives up the tier ring's mix of health, mana and critical for more of one thing
-(`Items.RING_FOCUS`): the **Briarwreath ring** (level 20, healing; lizard shamans), the
-**Bloodstone signet** (20, double health; dire bears), the **Warding coil** (25, a cape's defense
-and magic defense; stone trolls), the **Stormglass ring** (25, 5% critical; harpies), the
-**Wellspring ring** (30, double mana; cinder wraiths), the **Mending band** (35, regeneration
-and some health; marsh witches), and the **Gravewyrm signet** (40, double health; cave trolls). They are unbound, so trade them, and wear
+(`Items.RING_FOCUS`): the **Briarwreath ring** (level 20, healing; tide mages), the
+**Bloodstone signet** (20, double health; giant bats), the **Warding coil** (25, a cape's defense
+and magic defense; stone gargoyles), the **Stormglass ring** (25, 5% critical; harpies), the
+**Wellspring ring** (30, double mana; fire mages), the **Mending band** (35, regeneration
+and some health; pale banshees), and the **Gravewyrm signet** (40, double health; stone gargoyles). They are unbound, so trade them, and wear
 two to stack a focus.
 
 ### Hunting shields
@@ -243,11 +242,11 @@ upgrade:
 
 | Shield | Level | Bonus | Source and chance |
 | --- | ---: | --- | --- |
-| Bandit's roundshield | 10 | +30 health | Road bandit 2% |
-| Lizardscale shield | 20 | +3 magic defense | Lizard warrior 1.5% |
+| Bandit's roundshield | 10 | +30 health | Brigand 2% |
+| Lizardscale shield | 20 | +3 magic defense | Blue gargoyle 1.5% |
 | Harpywing kite | 25 | +8 regeneration | Harpy 1.5% |
-| Cyclops-eye targe | 30 | +80 health | Cyclops 1.2% |
-| Gravewarden tower | 30 | +5 magic defense | Wraith knight 1.5% |
+| Cyclops-eye targe | 30 | +80 health | Stone gargoyle 1.2% |
+| Gravewarden tower | 30 | +5 magic defense | Skeleton warrior 1.5% |
 | Tidebound ward | 35 | +12 regeneration | Drowned priest 1.2% |
 | Cinderforge bulwark | 40 | +140 health | Cinder brute 1% |
 | Rimeheart aegis | 45 | +8 magic defense | Rime titan 5% |
@@ -265,16 +264,16 @@ generic gear. A monster must be at least the weapon's required level for that ro
 
 | Weapon | Level | Class | Source and chance |
 | --- | ---: | --- | --- |
-| Quarry handhammer | 1 | Warrior | Giant rat 2%; Rat King 12% |
-| Watchman's shortsword | 5 | Warrior | Road bandit 3.5% |
+| Quarry handhammer | 1 | Warrior | Ratkin 2%; Rat King 12% |
+| Watchman's shortsword | 5 | Warrior | Brigand 3.5% |
 | Burrow falchion | 5 | Warrior | Rat King 18% |
-| Poacher's flatbow | 10 | Hunter | Grey wolf 2.5% |
-| Alder crook | 10 | Druid | Bog lurker 3.5% |
-| Ashford arming sword | 15 | Warrior | Crypt skeleton 3.5% |
-| Reedsteel sabre | 20 | Warrior | Outlaw archer 2.5% |
-| Ridgewind recurve | 20 | Hunter | Outlaw archer 4% |
+| Poacher's flatbow | 10 | Hunter | Giant wasp 2.5% |
+| Alder crook | 10 | Druid | Bog grub 3.5% |
+| Ashford arming sword | 15 | Warrior | Skeleton warrior 3.5% |
+| Reedsteel sabre | 20 | Warrior | Star mage 2.5% |
+| Ridgewind recurve | 20 | Hunter | Star mage 4% |
 | Reliquary focus | 20 | Sorcerer | Abbot Morrow 12% |
-| Stonebreak pickhammer | 25 | Warrior | Stone golem 3.5% |
+| Stonebreak pickhammer | 25 | Warrior | Stone gargoyle 3.5% |
 | Mourning estoc | 25 | Warrior | Abbot Morrow 12% |
 | Forgemaw arbalest | 40 | Hunter | Forgemaw 14% |
 | Sanctum warhammer | 45 | Warrior | Obsidian golem 5.5% |
@@ -518,9 +517,8 @@ share its cooldown, and Q/E drink your strongest health or mana potion first.
 
 ## Town tasks and packs
 
-Three quest givers hand out hunting tasks: **Warden Brask** in Cinder Crossing (15 thornback
-boars, levels 5–7), **Captain Ardo** in Ashford (25 outlaw archers, levels 19–23), and
-**Marshal Venn** in Emberfall (30 hollow knights, levels 33–35). Accept a task, then every
+Three quest givers hand out hunting tasks: **Warden Brask** in Cinder Crossing (15 wild hogs, levels 5–7), **Captain Ardo** in Ashford (25 star mages, levels 19–23), and
+**Marshal Venn** in Emberfall (30 skeleton warriors, levels 33–35). Accept a task, then every
 kill of that monster that earns you experience (your own or your party's shared kills) counts;
 progress shows in the message line and in the quest dialog. Turn it in to the giver.
 
@@ -535,13 +533,13 @@ monsters, paying experience and gold.
 
 | Giver | Town | Tasks | Monster levels |
 | --- | --- | --- | --- |
-| Harbourmaster Ilse | Cinder Crossing (harbour) | 20 road bandits; 20 grey wolves | 8–10; 11–14 |
-| Fenwarden Ostrel | Reedmere | 25 bog lurkers | 15–18 |
-| Quartermaster Rhosyn | Dunmere | 25 stone golems; 25 cinder wraiths | 24–28; 29–32 |
-| Ranger Aldric | Reedmere (west square) | 25 dire bears; 25 lizard warriors; 20 lizard shamans | 20–22; 21–24; 23–25 |
-| Skywatch Mera | Lastlight | 25 harpies; 25 wraith knights | 24–27; 31–34 |
-| Caravan master Idris | Dunmere | 25 stone trolls; 25 dune scorpions; 25 sand raiders | 25–28; 26–30; 28–32 |
-| Huntmaster Corvel | Emberfall | 25 mire stalkers; 25 fen beasts (reedfangs, bog hulks); 20 marsh witches; 25 cave trolls | 36–44; 40–48; 33–36; 38–42 |
+| Harbourmaster Ilse | Cinder Crossing (harbour) | 20 brigands; 20 giant wasps | 8–10; 11–14 |
+| Fenwarden Ostrel | Reedmere | 25 bog grubs | 15–18 |
+| Quartermaster Rhosyn | Dunmere | 25 stone gargoyles; 25 fire mages | 24–28; 29–32 |
+| Ranger Aldric | Reedmere (west square) | 25 giant bats; 25 blue gargoyles; 20 tide mages | 20–22; 21–24; 23–25 |
+| Skywatch Mera | Lastlight | 25 harpies; 25 skeleton warriors | 24–27; 31–34 |
+| Caravan master Idris | Dunmere | 25 stone gargoyles; 25 sand lions; 25 brigands | 25–28; 26–30; 28–32 |
+| Huntmaster Corvel | Emberfall | 25 mire ghosts; 25 fen beasts (fen dragons, fen dragons); 20 pale banshees; 25 stone gargoyles | 36–44; 40–48; 33–36; 38–42 |
 
 **The Hunters' Lodge.** **Lodgemaster Varga** on Reedmere's plaza runs a chain of six hunting
 contracts, one at a time: each opens once the one before it is turned in, against harder prey in
@@ -555,12 +553,12 @@ tier and **bound**: they are never dropped on death, sold, or traded.
 
 | Contract | Prey | Where | Levels | Also pays |
 | --- | --- | --- | --- | --- |
-| The grey pack | 20 grey wolves | Greywood | 11–14 | 5+5 potions, boots |
-| Frostfangs | 25 frostfang wolves (white, ice-eyed) | Outlaw Ridge | 19–21 | 8+8 potions, 1 shard, legs |
+| The grey pack | 20 giant wasps | Greywood | 11–14 | 5+5 potions, boots |
+| Frostfangs | 25 frost ghosts (white, ice-eyed) | Outlaw Ridge | 19–21 | 8+8 potions, 1 shard, legs |
 | Greymaw the Dire | the black dire wolf (champion, 10 min respawn) | Golemback Hills | 24 | 2 shards, weapon |
-| The one-eyed | 25 cyclopes (with clubs) | Smoulder Fells | 29–31 | 10+10 potions, 1 shard, helmet |
-| Cyclops forges | 25 cyclops smiths (hammers, aprons) | Hollow March | 36–38 | 10+10 potions, 2 shards, armor |
-| Behemoth country | 20 behemoths (horned, tusked) | Gloamwood | 43–45 | 15+15 potions, 3 shards, off-hand |
+| The one-eyed | 25 stone gargoyles (with clubs) | Smoulder Fells | 29–31 | 10+10 potions, 1 shard, helmet |
+| Stone gargoyle forges | 25 stone gargoyles (hammers, aprons) | Hollow March | 36–38 | 10+10 potions, 2 shards, armor |
+| Sand lion country | 20 sand lions (horned, tusked) | Gloamwood | 43–45 | 15+15 potions, 3 shards, off-hand |
 
 **Spell ranks.** Right-click your class trainer in Cinder Crossing's training hall and choose
 **Runes**: they carve rune shards into a spell you know, one rank at a time (rank 2 costs 3
@@ -634,7 +632,7 @@ overworld. Its north-west part, the heartland (384×384, walking straight across
 minute and three quarters), is where the game began; the newer land wraps round it to the east and
 south, levels 1-30 rising from **Brackenford**, a small walled town at the elbow with a coach
 station, through leas, downs, a wolf holt, windy heights, and bare peaks to the north, and meres,
-barrow heath, and a salt marsh on the bay to the west. East of the north road the orcs of the
+barrow heath, and a salt marsh on the bay to the west. East of the north road the green gargoyles of the
 **Grimtusk Hold** hunt in rings round their stone fort: raiders and spear throwers (levels 10-14) in
 the woods, warriors and shamans (15-20) under the walls, berserkers and leaders (21-27) in the yard,
 and Warlord Gruzzak (level 30 champion) in his hut. Scout Rhydda
@@ -642,7 +640,7 @@ on Brackenford's square gives a chain of tasks through the rings.
 
 **Underground.** Below the mainland lies a second floor, right under the land above it, as in
 Tibia. Holes in the wilds drop into twelve winding tunnel networks for levels 10-40 (Greywood
-Burrows and Hazel Downs Dens for the low teens up to the Smoulder Deeps' cave trolls), each with
+Burrows and Hazel Downs Dens for the low teens up to the Smoulder Deeps' stone gargoyles), each with
 about eight holes and rough steps back up; ladders in the streets of Reedmere, Ashford, Dunmere,
 Highmoor, and Brackenford lead down into their rat-infested sewers. It is dim and dry below. The Ogre Warrens, the Drowned Grotto, the Rimewater Trench, and the Thornroot
 Hollows now lie on this floor too, right under their mouths. The world map's ▲ and ▼ (or Page Up
@@ -701,10 +699,10 @@ and leaves you in town.
 
 | Dungeon | Entrance | Levels | Monsters | Champion |
 | --- | --- | --- | --- | --- |
-| Cinder cellar | Cinder Crossing, north-east house | 3–9 | sewer rats, giant rats | The Rat King |
-| Ashford crypt | Ashford, south-west house | 19–25 | crypt skeletons, grave ghouls | Abbot Morrow |
-| Highmoor deep mine | Highmoor, north-east house | 33–40 | cave crawlers, ember golems | Forgemaw |
-| Silkhollow | Thornfield Wilds, a cave mouth west of the lake at the end of a dirt trail from the coast road | 15–20 | cave spiders, venom weavers (spit from 3 tiles) | The Silk Matron |
+| Cinder cellar | Cinder Crossing, north-east house | 3–9 | ratkins, ratkins | The Rat King |
+| Ashford crypt | Ashford, south-west house | 19–25 | skeleton warriors, skeleton torchbearers | Abbot Morrow |
+| Highmoor deep mine | Highmoor, north-east house | 33–40 | scarabs, ember wisps | Forgemaw |
+| Silkhollow | Thornfield Wilds, a cave mouth west of the lake at the end of a dirt trail from the coast road | 15–20 | giant centipedes, venom grubs (spit from 3 tiles) | The Silk Matron |
 
 **Silkhollow is pitch dark**: you carry no light of your own, so you will not see a
 spider until it bites. Hold a **Torch** (15 gold at any vendor, any class, no stats) in your
@@ -743,9 +741,9 @@ elites (half of what the kills gave, in experience and gold), or the champion (a
 the champion gave, and potions or rune shards). Elites drop materials that sell for 90–165
 gold, potions, rune shards, and from the Ember Deep and the Frostvault fire and frost runes.
 
-**The Cyclops Hollow** (a hole in the Smoulder Fells, north of Highmoor; levels 30-36) is a shared
-cave of cyclopes and cyclops smiths in dense camps of five, normal monsters like the trench's.
-**Watchman Brega** in Highmoor gives its long hunt, **The Hundred-Eyed Hollow**: 75 cyclopes or
+**The Stone gargoyle Hollow** (a hole in the Smoulder Fells, north of Highmoor; levels 30-36) is a shared
+cave of stone gargoyles and stone gargoyles in dense camps of five, normal monsters like the trench's.
+**Watchman Brega** in Highmoor gives its long hunt, **The Hundred-Eyed Hollow**: 75 stone gargoyles or
 smiths, killed inside the Hollow (kills outside it do not count). It pays half the kills'
 experience and gold, 10 health and 10 mana potions, and one turn-in in four one of the Hollow's own
 bound Epic pieces: the **Cyclops-eye amulet** or the **Hollowforge hammer** (a Warrior's) (keep a
@@ -766,8 +764,8 @@ snowed-over roofs, and plank floors.
 
 | Hunt | Where | Levels | Tasks from |
 | --- | --- | --- | --- |
-| Snow wolves, tusked walruses, barbarian raiders | Hrimfold Tundra and Wolfskerry | 28–34 | Huntswoman Eyra, Hrimvik |
-| **Rimewater Trench**: trench crabs, icetide raiders, icetide shamans (magic), and Old Grimclaw (champion) | a hole in the Rimewater Floes | 34–37 | Trenchwarden Olav, Hrimvik |
+| Frost ghosts, rust grubs, brigands | Hrimfold Tundra and Wolfskerry | 28–34 | Huntswoman Eyra, Hrimvik |
+| **Rimewater Trench**: giant centipedes, brigands, tide mages (magic), and Old Grimclaw (champion) | a hole in the Rimewater Floes | 34–37 | Trenchwarden Olav, Hrimvik |
 
 The **Rimewater Trench** is a shared cave under the sea ice, like the elite caves but with normal
 monsters in dense camps of five: a level-35 kill gives about 270 experience, so it is a fast place
@@ -884,11 +882,11 @@ The endgame zone fills the south-east corner (tiles 700-757 x 690-753): a **high
 PvP zone**
 of blighted violet soil and dead trees inside an obsidian wall, entered on foot through a
 single gate in its west wall (a clearing in the forest leads to it). An obsidian road runs
-east past void wraiths, obsidian golems (elite), and hollow knights to the **Hollow
+east past void mages, obsidian golems (elite), and skeleton warriors to the **Hollow
 Sanctum**: an antechamber of pillars, a narrow gallery, and at the very end the throne room
 with the **Void Gate**. Step through it (free, both ways) to the **Void Throne**, an arena
 beyond the world where **Vaelith, Sovereign of the Hollow** sits; it is a level-50 full-loot
-PvP zone open to everyone, so a rival raid can follow yours in. Void wraiths glow faintly; Vaelith wears
+PvP zone open to everyone, so a rival raid can follow yours in. Void mages glow faintly; Vaelith wears
 his own glowing relics. Obsidian walls block movement and sight like stone walls.
 
 **Dying in the Hollow Reach drops everything**: your backpack, your gold, and every worn
@@ -953,7 +951,7 @@ bow shoots from six tiles, with a wand or rod from five). Adventurers stop at le
 you (other givers send you to the trainers, and show no mark), and the dungeon stairways turn
 you away. The quest list leads the way: the trial, then "choose your class" at a trainer.
 **Master Hesk**, outside Cinder Crossing's training hall in the south-east corner, gives
-**The adventurer's trial**: hunt eight thornback boars in Greywood. Once you have passed it and
+**The adventurer's trial**: hunt eight wild hogs in Greywood. Once you have passed it and
 reached level 5, right-click a trainer in the hall and choose **Class**: Sir Garrow
 (Warrior), Ranger Tamsin (Hunter), Magister Vell (Sorcerer), or Elder Fenna (Druid). Each
 explains the class and its spells; **Become a ...** is permanent, restores your health

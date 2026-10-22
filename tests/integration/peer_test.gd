@@ -402,7 +402,7 @@ func _dedicated_host_tick() -> void:
 			for step: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
 				if sparring == 0 and World.walkable(cell + step) and not game.world.occupied(cell + step, game._now()):
 					var events: Array = []
-					sparring = game.combat.spawn_monster("field_vole", 1, cell + step, game._now(), -1, events)
+					sparring = game.combat.spawn_monster("black_cat", 1, cell + step, game._now(), -1, events)
 					game.world.monsters[sparring]["health"] = 6
 					game._handle_events(events)
 	# Test-only: after the fight, grant a boss trophy and carry the client to the Relic keeper.

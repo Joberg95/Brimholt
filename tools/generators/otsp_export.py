@@ -6,14 +6,16 @@
 items.png holds every catalog item's pack sprite (items.json "sprite") in catalog order, ITEM_COLUMNS to a
 row (SpriteArt.item_region). A two-by-two pack item is halved to fit its 32x32 cell.
 
-An outfit sheet holds the pack outfit's 64x64 frames as the pack draws them (its tile is the bottom-right
-quarter, shifted 8 pixels up and left: SpriteArt.OUTFIT_ANCHOR). Columns are stand, step A, step B, attack
+An outfit sheet holds 72x72 frames of a pack outfit (players, townsfolk, and creatures), each placed as
+the pack draws it so its tile centre is at (56, 56) (SpriteArt.OUTFIT_ANCHOR). Columns are stand, step A, step B, attack
 wind-up, and strike (the pack has no attack frames: stand and step A stand in); rows are down, up, left,
-right. The sheet is five such blocks stacked: the untinted outfit, then the parts the pack's colour mask
-marks as head, body, legs, and feet (yellow, red, green, blue), which the game tints like Tibia does.
+right. A player outfit's sheet is five such blocks stacked: the untinted outfit, then the parts the pack's
+colour mask marks as head, body, legs, and feet (yellow, red, green, blue), which the game tints like
+Tibia does; a creature's sheet is the first block only.
 """
 import json
 import pathlib
+import re
 import struct
 import sys
 import zlib
@@ -59,39 +61,58 @@ def items_sheet():
     print(f"wrote assets/sprites/items.png ({len(catalog)} items)")
 
 
-# The player outfits: the pack's looktypes with a colour mask (a second layer).
-OUTFITS = [16, 17, 18, 20, 21, 45]
-FRAME = 64
+# The player and townsfolk outfits (the pack's looktypes with a colour mask, a second layer); the
+# creatures are every "outfit" in game/data/monsters.gd.
+PLAYER_OUTFITS = [16, 17, 18, 20, 21, 45]
+FRAME = 72
+# Where the figure's tile centre sits in a frame (SpriteArt.OUTFIT_ANCHOR): the pack draws a thing
+# from its tile's bottom-right corner, shifted up and left by its displacement.
+ANCHOR = 56
 # Our rows (down, up, left, right) in the pack's directions (north, east, south, west).
 FACINGS = [2, 0, 3, 1]
 POSES = [0, 1, 2, 0, 1]
 MASK = [(255, 255, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]
 
 
+def creature_outfits():
+    text = (ROOT / "game/data/monsters.gd").read_text(encoding="utf-8")
+    return sorted({int(n) for n in re.findall(r'"outfit": (\d+)', text)})
+
+
 def outfit_sheet(looktype):
+    """FRAME frames, POSES by FACINGS; masked outfits stack their head, body, legs, and feet parts below."""
     thing = otsp.load()["outfits"][looktype]
-    rows = [[None] * (len(POSES) * FRAME) for _ in range(5 * len(FACINGS) * FRAME)]
+    parts = 5 if thing.layers > 1 else 1
+    rows = [[None] * (len(POSES) * FRAME) for _ in range(parts * len(FACINGS) * FRAME)]
+    dx, dy = thing.displacement
     for row, facing in enumerate(FACINGS):
         for column, pose in enumerate(POSES):
-            base = otsp.compose(thing, px=facing, frame=pose)
-            mask = otsp.compose(thing, layer=1, px=facing, frame=pose) if thing.layers > 1 else None
-            for y in range(FRAME):
-                for x in range(FRAME):
+            frame = pose % thing.frames
+            base = otsp.compose(thing, px=facing, frame=frame)
+            mask = otsp.compose(thing, layer=1, px=facing, frame=frame) if parts > 1 else None
+            h, w = len(base), len(base[0])
+            ox, oy = ANCHOR - (w - 16 + dx), ANCHOR - (h - 16 + dy)
+            for y in range(h):
+                for x in range(w):
                     pixel = base[y][x]
-                    if pixel is None:
+                    if pixel is None or not (0 <= ox + x < FRAME and 0 <= oy + y < FRAME):
                         continue
                     marked = mask[y][x][:3] if mask and mask[y][x] else None
                     part = MASK.index(marked) + 1 if marked in MASK else 0
-                    rows[(part * len(FACINGS) + row) * FRAME + y][column * FRAME + x] = pixel
+                    rows[(part * len(FACINGS) + row) * FRAME + oy + y][column * FRAME + ox + x] = pixel
     return rows
 
 
 def outfits():
     folder = ROOT / "assets/sprites/outfits"
     folder.mkdir(exist_ok=True)
-    for looktype in OUTFITS:
+    looktypes = sorted(set(PLAYER_OUTFITS) | set(creature_outfits()))
+    for old in folder.glob("*.png"):
+        if int(old.stem) not in looktypes:
+            old.unlink()
+    for looktype in looktypes:
         save_png(folder / f"{looktype}.png", outfit_sheet(looktype))
-    print(f"wrote {len(OUTFITS)} outfit sheets to assets/sprites/outfits/")
+    print(f"wrote {len(looktypes)} outfit sheets to assets/sprites/outfits/")
 
 
 if __name__ == "__main__":

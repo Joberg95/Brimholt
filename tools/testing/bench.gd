@@ -56,7 +56,7 @@ func _run() -> void:
 	var me: Dictionary = game.world.players[game.self_id]
 	me["level"] = 20
 	await _scene("town")
-	_place(_camp_of("outlaw_archer"))
+	_place(_camp_of("star_mage"))
 	await _scene("hunt")
 	me["level"] = 35
 	_place(Vector2i(80, 746))

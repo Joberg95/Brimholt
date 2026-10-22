@@ -96,25 +96,14 @@ outfit, then the parts the pack's colour mask marks as head, body, legs, and fee
 multiplies by colours like Tibia's outfit colours. Each vocation has its looktype and colours
 (`SpriteArt.OUTFITS`, `OUTFIT_COLORS`): Adventurer 17, Warrior 18 (the helmet sits in the "feet" part),
 Hunter 45, Sorcerer 20 and Druid 21 (robes whose mask only covers the hair, so they differ by hair
-colour). Townsfolk wear 16 with their trade's body colour, humanoid monsters 18 in their own colour.
-There are no mounts.
-Creatures have one sheet each, `creatures/<monster>.png` (untinted; stand, step A, step B by
-four facings), made by `tools/generators/creatures.py`: each species is built from simple 3D
-anatomy (ellipsoid body, head, jointed limbs, tails, horns, crowns ...) and rendered for every
-facing and walk frame with the painted look of the gear art: top-left light posterized into a
-five-tone ramp per material (warm lights, cool shadows), gloss on chitin and slime, textures
-(fur strokes, stone slabs and cracks, glowing ember seams, warts, scales), emissive eyes and
-cores, a coloured silhouette edge, and dark seams where parts overlap. Builders: `quadruped`
-(voles, rats, the Rat King's crown, boars with tusks and spines, wolves with a ruff, the
-reedfang lizard, the thornscale basilisk, and the Ashmaw drake's swept horns and beating wings:
-a bony edge with a membrane sail under each bone), `beetle`, `spider` (the dune scorpion's curled tail and pincers), `toad`, `slime`, `golem` (stone, moss, ember, obsidian,
-Forgemaw's and Kharzul's horns and burning maws), `wraith` (Sylvaine's flowers and antlers; the harpy's feathered wings), and
-`biped` (the skeleton, ghoul, robed Abbot, and the Barrow lich's crown), and `giant` (cyclopes;
-the Rime titan's shoulder crystals; trolls' two eyes, brow, and tusks). `SPECIES` sets each one's proportions and
-materials and `ZOOM` its on-screen scale; `creatures/<monster>_glow.png` halos only the bright
-parts of glowing creatures. Armed humanoids (bandits, archers, knights, Vaelith, Morvain) still
-wear catalog gear. The old tinted `monsters/<look>.png` sheets remain as a fallback.
-Glow masks are generated from the final compact sheets.
+colour). Townsfolk wear 16 with their trade's body colour. There are no mounts (the pack's one mount,
+looktype 12, a saddled bear, is unused).
+**Monsters** are the pack's creatures (plan 49): every row of `game/data/monsters.gd` names one in
+`outfit`, exported by `otsp_export.py outfits` like the player outfits (one untinted block) and drawn at
+the row's `size` around the feet (`SpriteArt.draw_monster`). The pack has 38 creatures besides the player
+outfits; the normal monsters are one each (Black cat, Ratkin, Wild hog, Brigand, the gargoyles, mages,
+ghosts, grubs, and the Fen dragon ...), and the elites, champions, and bosses wear one of them larger.
+A glowing monster draws its creature again, `SpriteArt.GLOW_SCALE` larger, in its `glow` colour.
 
 To edit art, change a PNG in Aseprite or another pixel editor, keeping its frame
 layout, then reimport (open the editor or run `make import`). Running
@@ -145,10 +134,9 @@ Every item row has `id`, `sprite`, `name`, `slot`, `level`, optional `vocations`
 order is the icon order in `items.png`. `look` and `colors` no longer draw the icon. Helmets, armor,
 legs, and boots carry an `armor` type (`plate`, `mail`, `leather`, `cloth`).
 
-**Glow.** Glowing bosses have white halo sheets (`monsters/<look>_glow.png`): the sprite plus a
-4-pixel soft falloff. `game/render/glow_layer.gd` draws them additively in the `glow` colour with a
-slow pulse and a few rising sparks, above the world (light shines through trees). Relic icons have no
-halo until the effects phase.
+**Glow.** Glowing monsters draw their creature again, a little larger, in their `glow` colour:
+`game/render/glow_layer.gd` draws it additively with a slow pulse and a few rising sparks, above the
+world (light shines through trees). Relic icons have no halo until the effects phase.
 
 ## Lighting, particles, and third-party textures
 

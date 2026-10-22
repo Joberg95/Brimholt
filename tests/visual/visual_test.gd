@@ -728,7 +728,7 @@ func _check_combat() -> bool:
 		var cell: Vector2i = player["cell"] + step * 2
 		if spawned.size() < 2 and World.walkable(cell) and not game.world.occupied(cell, game._now()):
 			var events: Array = []
-			var id: int = game.combat.spawn_monster("field_vole" if spawned.is_empty() else "stone_golem", 1, cell,
+			var id: int = game.combat.spawn_monster("black_cat" if spawned.is_empty() else "stone_gargoyle", 1, cell,
 				game._now(), -1, events)
 			game.world.monsters[id]["health"] = 1000
 			game.world.monsters[id]["max_health"] = 1000
@@ -752,7 +752,7 @@ func _check_combat() -> bool:
 	# The target frame beside your health bar names the target and shows its health.
 	var info: Dictionary = game.hud.target_info()
 	var frame_bar: Vector2i = Vector2i(game.hud.target_frame.get_global_rect().position + Vector2(2, 24))
-	if not _expect(info.get("title", "") == "%s 1" % Monsters.MONSTERS["field_vole"]["name"] and info["max_health"] == 1000
+	if not _expect(info.get("title", "") == "%s 1" % Monsters.MONSTERS["black_cat"]["name"] and info["max_health"] == 1000
 			and info["health"] == game.world.monsters[spawned[0]]["health"]
 			and image.get_pixelv(frame_bar).r > 0.6 and image.get_pixelv(frame_bar).g < 0.35,
 			"The target frame does not show the target's name and health (%s)" % [info]):
@@ -1100,7 +1100,7 @@ func _check_rune_bar() -> bool:
 	var pack: Array[int] = []
 	for offset: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, -1)]:
 		var events: Array = []
-		var id: int = game.combat.spawn_monster("behemoth", 45, field + offset, game._now(), -1, events)
+		var id: int = game.combat.spawn_monster("sand_lion", 45, field + offset, game._now(), -1, events)
 		game.world.monsters[id]["health"] = 100000
 		game.world.monsters[id]["next_move"] = INF
 		game.world.monsters[id]["next_attack"] = INF
@@ -1157,7 +1157,7 @@ func _check_dark_cave() -> bool:
 		if torch:
 			player["equipment"]["off_hand"] = "torch"
 			var events: Array = []
-			for entry: Array in [["cave_spider", Vector2i(3, 1)], ["venom_weaver", Vector2i(2, 3)]]:
+			for entry: Array in [["giant_centipede", Vector2i(3, 1)], ["venom_grub", Vector2i(2, 3)]]:
 				var id: int = game.combat.spawn_monster(entry[0], 16, arrival + entry[1], game._now(), -1, events)
 				game.world.monsters[id]["next_move"] = INF
 				game.world.monsters[id]["next_attack"] = INF
@@ -1340,9 +1340,9 @@ func _check_lexicon_and_marks() -> bool:
 		names.append(book.list.get_item_text(index).get_slice("   ", 0))
 	var text: PackedStringArray = []
 	_texts(book, text)
-	if not _expect(book.visible and names.has("Cave spider") and names.has("Venom weaver") and not names.has("Field vole")
+	if not _expect(book.visible and names.has("Giant centipede") and names.has("Venom grub") and not names.has("Black cat")
 			and "\n".join(text).contains("Silkhollow (dungeon)"),
-			"The lexicon search for silk did not find the spiders and their dungeon (%s)" % [names]):
+			"The lexicon search for silk did not find the Silkhollow creatures and their dungeon (%s)" % [names]):
 		return false
 	await _press("lexicon")
 	var player: Dictionary = game.world.players[1]

@@ -79,7 +79,7 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 				monster["state"].get("enraged", false))
 			SpriteArt.draw_nameplate(self, center, title,
 				monster["state"]["health"], monster["state"]["max_health"], definition["size"], "",
-				SpriteArt.danger_color(monster["state"]["level"], own_level), "", definition.get("look", "") == "humanoid")
+				SpriteArt.danger_color(monster["state"]["level"], own_level), "", true)
 	for id: int in game.actors:
 		var actor: Dictionary = game.actors[id]
 		var center: Vector2 = _center_of(actor)
