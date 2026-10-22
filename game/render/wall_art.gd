@@ -4,7 +4,7 @@ extends RefCounted
 ## a wall cell shows its vertical piece where the wall goes on north, its horizontal piece where it goes
 ## on west, the corner where it does both, and a pole where it only starts or stands alone. Natural rock
 ## is a raised rock top with cliff pieces (the same rule) on its cells that face open ground south or
-## east (its raised top is drawn with the floor, GroundArt.ROCK_TOPS). Draw in row-major order: a piece
+## east (its raised top and its north and west rim are drawn with the floor, GroundArt.layers). Draw in row-major order: a piece
 ## reaches into the rows above.
 
 const World = preload("res://game/core/world.gd")
@@ -26,13 +26,9 @@ const WALLS: Dictionary = {
 	"dark": [891, 892, 893, 894, 0, 0, 1020, 1021],
 	"dungeon": [558, 559, 560, 561, 0, 0, 1020, 1021],
 }
-## Rock styles (GroundArt.rock_style): [vertical, horizontal, pole, corner] cliff pieces.
-const ROCKS: Dictionary = {
-	"grey": [957, 956, 958, 961],
-	"cave": [957, 956, 958, 961],
-	"snow": [935, 936, 937, 945],
-	"sand": [919, 920, 921, 934],
-}
+## Rock styles' [vertical, horizontal, pole, corner] cliff pieces (GroundArt.ROCKS): faces follow the
+## wall rule.
+const ROCKS: Dictionary = GroundArt.ROCKS
 ## Ore veins by resource band (copper, iron, silver, cobalt, starmetal): the ore's pack sprite set into
 ## the rock face.
 const ORES: Array[int] = [2200, 2202, 2201, 2199, 2203]

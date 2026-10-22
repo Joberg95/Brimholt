@@ -48,10 +48,17 @@ const ROPE_SPOT: int = 1000
 ## Natural rock's raised top by rock style (WallArt.rock_style): drawn with the floor, a tile up and
 ## left of its cell like a floor above, so the cliff pieces drawn over it never get cut.
 const ROCK_TOPS: Dictionary = {"grey": 991, "cave": 992, "snow": 991, "sand": 990}
-## The rock's north and west rim, laid on the open cell beside it: [north, west, north-west corner]
-## (the overworld's grey rock only: the pack has no rim for its snowy and sandy rock, and in caves the
-## rim would lie on the cave floor as a pale slab).
-const ROCK_RIMS: Dictionary = {"grey": [938, 939, 940]}
+## The rock's north and west rim, the earth edge under its raised top, laid on the open cell beside it
+## (as in Tibia, rock shows its cliff only to the south and east): [rock south, rock east, both, only
+## south-east]. The pack has no rim for snowy or sandy rock.
+const ROCK_RIMS: Dictionary = {"grey": [2254, 2253, 2257, 2255], "cave": [2254, 2253, 2257, 2255]}
+## Rock styles: [vertical, horizontal, pole, corner] cliff pieces (WallArt draws them on the faces).
+const ROCKS: Dictionary = {
+	"grey": [957, 956, 958, 961],
+	"cave": [957, 956, 958, 961],
+	"snow": [935, 936, 937, 945],
+	"sand": [919, 920, 921, 934],
+}
 ## Animated grounds (water) cycle their frames this fast.
 const FRAME_SECONDS: float = 0.35
 const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
@@ -197,8 +204,7 @@ static func layers(cell: Vector2i, frame: int = 0) -> Array:
 	return out
 
 
-## The rim of rock south or east of an open cell: the north rim where rock lies south (and south-east),
-## the west rim where it lies east, the corner where only the south-east cell is rock.
+## The earth rim of rock south or east of an open cell.
 static func _rock_rim(cell: Vector2i, out: Array) -> void:
 	var corner: Vector2i = cell + Vector2i.ONE
 	if not SpriteArt.natural_rock(corner) or not ROCK_RIMS.has(rock_style(corner)):
@@ -206,9 +212,7 @@ static func _rock_rim(cell: Vector2i, out: Array) -> void:
 	var rims: Array = ROCK_RIMS[rock_style(corner)]
 	var south: bool = SpriteArt.natural_rock(cell + Vector2i.DOWN)
 	var east: bool = SpriteArt.natural_rock(cell + Vector2i.RIGHT)
-	var id: int = rims[0] if south else rims[1] if east else rims[2]
-	if south and east:
-		return  # an inside corner: the rock's own top covers it
+	var id: int = rims[2] if south and east else rims[0] if south else rims[1] if east else rims[3]
 	out.append([id, piece(id, cell), 15])
 
 

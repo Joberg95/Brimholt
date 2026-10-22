@@ -140,8 +140,10 @@ pole where it only starts or stands alone. `WallArt.WALLS` picks the style by pl
 windows in towns, yellow plaster in Sunreach, logs on the frost isles, brick in cellars, fieldstone
 keeps, round-topped castle walls, dark stone in the Hollow Reach, stone blocks in other dungeons; each
 style has its doors. Natural rock is a raised rock top with cliff pieces on its cells that face open
-ground south or east (`WallArt.ROCKS`: grey, snowy, sandy, and black-topped in caves); ore veins are
-the ores' pack sprites set into the face.
+ground south or east (`GroundArt.ROCKS`: grey, snowy, sandy, and black-topped in caves). As in Tibia,
+where mountains are built on two floors, rock shows its cliff only to the south and east: to the north
+and west its flat top just ends in an earth rim on the open ground (`GroundArt.ROCK_RIMS`, grey rock
+and caves). Ore veins are the ores' pack sprites set into the face.
 
 **Roofs** (`game/render/roof_art.gd`) are the pack's roof tiles over each building's rectangle, the
 north row the tiles with the ridge's edge, raised a tile up and left like a floor above: clay, red,
