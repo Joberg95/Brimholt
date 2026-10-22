@@ -3,6 +3,7 @@ extends SceneTree
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const GroundArt = preload("res://game/render/ground_art.gd")
+const WallArt = preload("res://game/render/wall_art.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
@@ -3885,7 +3886,7 @@ func _isles_checks() -> void:
 	check("s" in World.WALKABLE and "s" in World.LAND and "P" in World.TREES and "P" not in World.WALKABLE,
 		"snow is walkable land and firs block")
 	var house: Dictionary = homes[0]
-	check(SpriteArt.wall_sheet(house["rect"].position) == SpriteArt.LOG_WALLS, "Hrimvik's houses have log walls")
+	check(WallArt.wall_style(house["rect"].position) == "logs", "Hrimvik's houses have log walls")
 	check(GroundArt.ground_of("=", house["interior"][0]) == "planks"
 		and GroundArt.ground_of("=", town["rect"].position + Vector2i(1, 16)) == "snow_street",
 		"Hrimvik's houses have plank floors and its streets are snowy")

@@ -120,8 +120,9 @@ def outfits():
     print(f"wrote {len(looktypes)} outfit sheets to assets/sprites/outfits/")
 
 
-# Pack items drawn in the world: grounds, ground borders, and the ways down and up.
-WORLD_RANGES = [(101, 214), (215, 517), (995, 1011)]
+# Pack items drawn in the world: grounds, ground borders, walls and rock, the ways down and up, doors,
+# and the ores set into rock.
+WORLD_RANGES = [(101, 214), (215, 517), (518, 994), (995, 1011), (1012, 1086), (2199, 2203)]
 ATLAS_WIDTH = 2048
 # Ground border sets: the pack lists each set's pieces in Tibia's order (BORDER_PIECES; the two moss sets
 # have no diagonals), by first id. The snow set's pieces are out of order; 411 is a street's stone kerb.

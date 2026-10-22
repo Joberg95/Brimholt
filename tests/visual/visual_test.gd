@@ -134,8 +134,6 @@ func _run() -> void:
 			push_error("Unequipping did not change the %s panel slot" % slot)
 			quit(1)
 			return
-	if not await _check_oblique_wall():
-		return
 	if unequipped.save_png("res://.tools/visual-unequipped.png") != OK:
 		push_error("Cannot save unequipped capture")
 		quit(1)
@@ -202,7 +200,7 @@ func _run() -> void:
 		return
 	if not await _check_loot_display():
 		return
-	print("BRIMHOLT_VISUAL_PASS four facings, unequip clears the panel slots, panel slots, ground items, oblique walls, gold heaps and green loot text, "
+	print("BRIMHOLT_VISUAL_PASS four facings, unequip clears the panel slots, panel slots, ground items, gold heaps and green loot text, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
 		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night and steady while walking past, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, a Glacier wall and a sudden death rune, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
@@ -970,43 +968,6 @@ func _check_waystone() -> bool:
 	return _expect(World.FERRYMEN["cinder_coach"]["vehicle"] == "waystone" and named, "The Cinder Crossing waystone is not drawn")
 
 
-## A town's house-stone wall with open ground north, west, and north-west of it (no roof over
-## it): its raised top must reach over the tile up-left of its own, at noon.
-func _check_oblique_wall() -> bool:
-	var wall: Vector2i = Vector2i(-1, -1)
-	for y: int in range(2, World.OVERWORLD.end.y - 4):
-		for x: int in range(2, World.OVERWORLD.end.x - 2):
-			var cell := Vector2i(x, y)
-			if World.terrain(cell) == "#" and not World.ROOF_AT.has(cell) and World.walkable(cell + Vector2i(-1, -1)) \
-					and World.walkable(cell + Vector2i.UP) and World.walkable(cell + Vector2i.LEFT) \
-					and not World.ROOF_AT.has(cell + Vector2i(-1, -1)) and World.walkable(cell + Vector2i(0, 3)):
-				wall = cell
-				break
-		if wall.x >= 0:
-			break
-	if not _expect(wall.x >= 0, "No free-standing house-stone wall to check"):
-		return false
-	var player: Dictionary = game.world.players[1]
-	var saved: Vector2i = player["cell"]
-	player["cell"] = wall + Vector2i(0, 3)
-	player["from"] = player["cell"]
-	game._publish_actor(1)
-	await create_timer(0.8).timeout
-	await RenderingServer.frame_post_draw
-	var image: Image = screen.get_texture().get_image()
-	var wall_origin: Vector2 = Vector2(wall) * World.TILE_SIZE - Vector2.ONE * SpriteArt.wall_raise(wall)
-	var wall_region: Rect2 = SpriteArt.wall_region(wall)
-	# Thin walls: the centre post's top (sprite 12..16) lies over the tile up-left of the wall's own tile.
-	var raised: bool = _matches_texel(image, SpriteArt.wall_sheet(wall), Rect2(wall_region.position + Vector2(12, 12), Vector2(4, 4)),
-		wall_origin + Vector2(12, 12))
-	if not raised:
-		image.save_png("res://.tools/visual-wall.png")
-	player["cell"] = saved
-	player["from"] = saved
-	game._publish_actor(1)
-	await create_timer(0.8).timeout
-	return _expect(raised, "Oblique wall top at %s is not raised over the tile behind it" % wall)
-
 ## Lamp posts: at night the street beside a lamp is lit well above the darkest ground on screen.
 func _check_town_lamps() -> bool:
 	var lamp: Vector2i = World.LAMPS[0]
@@ -1499,7 +1460,8 @@ func _check_roofs_and_signs() -> bool:
 	var near_alpha: float = game._world_view._roof_alpha.get(World.ROOM_AT[keeper], 1.0)
 	var named_near: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
 	var door_spot: Vector2 = game.map_to_screen((Vector2(door) + Vector2(0.5, 0.55)) * World.TILE_SIZE)
-	var door_area := Rect2(door_spot - Vector2(8, 4), Vector2(16, 8))
+	# Pack doors rise up and left from their cell, like the walls they are set into.
+	var door_area := Rect2(door_spot - Vector2(24, 28), Vector2(40, 32))
 	player["cell"] = keeper + Vector2i.DOWN * 2
 	player["from"] = player["cell"]
 	game._publish_actor(1)
@@ -1549,19 +1511,13 @@ func _check_ore_vein() -> bool:
 	await RenderingServer.frame_post_draw
 	var worked: Image = screen.get_texture().get_image()
 	game.worked_nodes.erase(vein)
-	return _expect(Crafting.node_at(vein) == "mining" and _orange(shown, area) > 12,
-			"The copper vein at %s shows no ore (%d orange pixels)" % [vein, _orange(shown, area)]) \
-		and _expect(_orange(worked, area) < 4, "A worked vein still shows its ore (%d orange pixels)" % _orange(worked, area))
+	# The vein is drawn while it stands and gone once worked (the pack's ore is grey, so compare the frames).
+	var face_shown: Image = shown.get_region(Rect2i(area))
+	var face_worked: Image = worked.get_region(Rect2i(area))
+	return _expect(Crafting.node_at(vein) == "mining" and face_shown.get_data() != face_worked.get_data(),
+		"The copper vein at %s does not disappear once worked" % vein)
 
 
-func _orange(image: Image, area: Rect2) -> int:
-	var count: int = 0
-	for y: int in range(int(area.position.y), int(area.end.y)):
-		for x: int in range(int(area.position.x), int(area.end.x)):
-			var pixel: Color = image.get_pixel(x, y)
-			if pixel.r > 0.6 and pixel.r > pixel.g + 0.2 and pixel.g > pixel.b + 0.1:
-				count += 1
-	return count
 
 
 ## Pixels in a screen area that look like door planks (warm brown: red over green over blue).

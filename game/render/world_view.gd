@@ -14,6 +14,7 @@ const GlowLayer = preload("res://game/render/glow_layer.gd")
 const Lighting = preload("res://game/render/lighting.gd")
 const Fx = preload("res://game/render/fx.gd")
 const FloorLayer = preload("res://game/render/floor_layer.gd")
+const WallArt = preload("res://game/render/wall_art.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const NPC_NAME: Color = Color("#9fe0c8")
@@ -192,15 +193,15 @@ func _draw() -> void:
 			next_roof += 1
 		var tile: String = _tall.get(cell, "")
 		if tile in World.WALLS and not tile.is_empty():
-			SpriteArt.draw_wall(self, cell)
+			WallArt.draw_wall(self, cell)
 			if World.WALL_DECOR.has(cell):
 				SpriteArt.draw_wall_decor(self, cell, World.WALL_DECOR[cell])
 			if Crafting.ORES.has(cell) and not game.node_worked(cell):
 				# Veins catch the eye: each glints for a moment every few seconds.
-				SpriteArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
+				WallArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
 			continue
 		if tile == "door":
-			SpriteArt.draw_door(self, cell)
+			WallArt.draw_door(self, cell)
 		if game.ground_view.has(cell):
 			_draw_stack(cell, game.ground_view[cell])
 		if tile == "furniture":

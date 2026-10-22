@@ -14,8 +14,6 @@ const Atlas = preload("res://game/data/atlas.gd")
 const FRAME: float = 64.0
 const FRAME_ANCHOR: Vector2 = Vector2(32, 40)
 const TILE: float = 32.0
-const WALL_SIZE: float = 48.0
-const WALL_RAISE: float = 16.0
 const DIRECTIONS: Array[Vector2i] = [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]
 const OUTLINE: Color = Color("#1a1612")
 ## Characters and monsters wear the OpenTibia pack's outfits (plan 49; otsp_export.py outfits): one sheet
@@ -41,7 +39,6 @@ const TOWNSFOLK_OUTFIT: int = 16
 static var OUTFIT_SHEETS: Dictionary = _outfit_sheets()
 const MARKER: Texture2D = preload("res://assets/sprites/marker.png")
 const ITEM_ICONS: Texture2D = preload("res://assets/sprites/items.png")
-const WALLS: Texture2D = preload("res://assets/sprites/walls.png")
 const OBJECTS: Texture2D = preload("res://assets/sprites/objects.png")
 ## Roof material swatches (one row per material), rasterized per building by roof_art.gd.
 const ROOFS: Texture2D = preload("res://assets/sprites/roofs.png")
@@ -53,9 +50,6 @@ const FURNITURE: Array[String] = ["counter_shop", "counter_bank", "shelf_potions
 	"crate", "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth", "bed", "table", "chair", "plant", "chest",
 	"lamp_post", "well", "bench", "stall", "stall_back", "bench_back",
 	"pillar", "knight_statue", "gargoyle", "bush", "flower_vase", "potted_palm", "candelabra", "fruit_table", "stove", "throne"]
-## Castle keeps: house walls ("#") beside a sandstone floor or carpet are rubble fieldstone
-## (fieldstone_walls.png, laid out like house_walls.png: 16 shapes, two doorways, the block fill).
-const FIELDSTONE_WALLS: Texture2D = preload("res://assets/sprites/fieldstone_walls.png")
 ## Decorations hung on a wall's visible face (Decor markers on wall cells; props.py wall_decor).
 const WALL_DECOR_SHEET: Texture2D = preload("res://assets/sprites/wall_decor.png")
 const WALL_DECOR: Array[String] = ["banner", "wall_torch", "painting"]
@@ -68,17 +62,6 @@ const FOUNTAIN_KINDS: Array[String] = ["fountain", "fountain_basin"]
 const FOUNTAIN_FPS: float = 6.0
 ## Herb patches (Crafting.HERBS): two 32x32 variants per resource band (make_sprites.py herb_patch).
 const HERBS: Texture2D = preload("res://assets/sprites/herbs.png")
-## House and town walls ("#") stand a full tile tall, as in Tibia: house_walls.png holds HOUSE_SIZE
-## frames drawn HOUSE_RAISE px up and left of their tile, 16 thin walls indexed by connected sides
-## (1 N, 2 W, 4 S, 8 E), then a doorway in a west-east wall (HOUSE_DOOR) and in a north-south one.
-const HOUSE_WALLS: Texture2D = preload("res://assets/sprites/house_walls.png")
-const HOUSE_RAISE: float = 32.0
-const HOUSE_SIZE: float = 64.0
-const HOUSE_DOOR: int = 16
-## The top of a thin-wall block (frame 18 of house_walls, cellar_walls, and log_walls): closes the
-## gap between the bands where four walls meet in a 2 x 2 square, drawn over the square's
-## north-west wall.
-const HOUSE_FILL: int = 18
 static var _roofs: Dictionary = {}
 ## Hanging shop signs, one 32x32 board per keeper role.
 const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
@@ -132,42 +115,14 @@ const MUSHROOMS: Texture2D = preload("res://assets/sprites/mushrooms.png")
 const MUSHROOM_VARIANTS: int = 3
 const FIRS: Texture2D = preload("res://assets/sprites/firs.png")
 const FIR_VARIANTS: int = 3
-const LOG_WALLS: Texture2D = preload("res://assets/sprites/log_walls.png")
 ## Sunreach, the desert island (Biomes.SUNREACH): palms for its trees (palms.png, 64x96 like the
 ## trees), cream plaster walls (sandstone_walls.png: the house wall frames, then a south- and an
 ## east-facing wall with a latticed window, WINDOW_FRAME), sandstone castle walls and towers,
 ## and streets and floors of sandstone flags (FLAG_TILE).
 const PALMS: Texture2D = preload("res://assets/sprites/palms.png")
 const PALM_VARIANTS: int = 3
-const SANDSTONE_WALLS: Texture2D = preload("res://assets/sprites/sandstone_walls.png")
-## Window walls follow the fill in sandstone_walls, house_walls, and log_walls (the house style).
-const WINDOW_FRAME: int = 19
-const SANDSTONE_CASTLE_WALLS: Texture2D = preload("res://assets/sprites/sandstone_castle_walls.png")
-const SANDSTONE_CASTLE_TOWERS: Texture2D = preload("res://assets/sprites/sandstone_castle_towers.png")
 ## The elite cave under the frost isles' sea ice, floored with snow (game/data/caves.gd).
 const ICE_CAVE: String = "rimewater_trench"
-## Cellar walls: the house wall shapes (house_walls.png) in red-brown brick.
-const CELLAR_WALLS: Texture2D = preload("res://assets/sprites/cellar_walls.png")
-## cave_rock.png: the rock of every cave (rock off the overworld), laid out like mountains.png but
-## built of rounded pale boulders with dark crevices, as in Tibia's caves.
-const CAVE_ROCK: Texture2D = preload("res://assets/sprites/cave_rock.png")
-## mountains.png: Tibia-style rock blocks for mountains ("L") and rock outcrops ("C" on the
-## overworld), 48x48 frames drawn like walls: 16 columns by open sides (1 N, 2 W, 4 S, 8 E, see
-## rock_mask), and ROCK_SPAN x ROCK_SPAN rows that are the parts of one seamless rock texture
-## (a tile draws row (x % ROCK_SPAN) + (y % ROCK_SPAN) * ROCK_SPAN).
-const MOUNTAINS: Texture2D = preload("res://assets/sprites/mountains.png")
-const ROCK_SPAN: int = 4
-## Castle walls ("W"): town curtain walls (castle_walls.png, raised CASTLE_RAISE) and, where castle
-## wall fills a 2x2 square, towers twice as tall (castle_towers.png): one frame per open-side mask,
-## with CASTLE_PAD pixels of room above and left for the battlements (make_sprites.py castle_block).
-const CASTLE_WALLS: Texture2D = preload("res://assets/sprites/castle_walls.png")
-const CASTLE_TOWERS: Texture2D = preload("res://assets/sprites/castle_towers.png")
-const CASTLE_RAISE: int = 16
-const TOWER_RAISE: int = 32
-const CASTLE_PAD: int = 6
-## ores.png: ore vein overlays for a rock block's south face (Crafting.ORES), 48x48 like the
-## blocks: one column per resource band, row 0 plain and row 1 glinting.
-const ORES: Texture2D = preload("res://assets/sprites/ores.png")
 ## objects.png: three living trees, two dead trees of the Hollow Reach, then three desert
 ## plants (a columnar cactus, a clump of barrel cacti, and a thorn shrub).
 const DEAD_TREE_FIRST: int = 3
@@ -273,39 +228,6 @@ static func draw_waystone(canvas: CanvasItem, cell: Vector2i) -> void:
 	canvas.draw_texture_rect_region(OBJECTS, dest, Rect2(Vector2(WAYSTONE_OBJECT * TREE_SIZE.x, 0), TREE_SIZE))
 
 
-## Walls are drawn raised up and left; call in row-major order so nearer walls cover.
-static func wall_mask(cell: Vector2i) -> int:
-	var mask: int = 0
-	var bits: Array[Vector2i] = [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]
-	for bit: int in bits.size():
-		if tile_at(cell + bits[bit]) not in World.WALLS or tile_at(cell + bits[bit]).is_empty():
-			mask |= 1 << bit
-	return mask
-
-
-## The sheet region of a wall cell's sprite, in wall_sheet(cell), drawn wall_raise(cell) px up-left.
-static func wall_region(cell: Vector2i) -> Rect2:
-	# House walls ("#"): house_walls.png. walls.png rows: 0 grey stone, 1 obsidian, 2 cave rock,
-	# 4 cliffs ("L"), 5 rock outcrops ("C" on the overworld).
-	if tile_at(cell) == "#":
-		var mask: int = thin_wall_mask(cell)
-		# Some straight overworld walls get a window (frames WINDOW_FRAME: south, then east face).
-		if wall_sheet(cell) in [SANDSTONE_WALLS, HOUSE_WALLS, LOG_WALLS] and World.OVERWORLD.has_point(cell) \
-				and mask in [5, 10] and noise(cell, 17) % 3 == 0:
-			return Rect2((WINDOW_FRAME + (1 if mask == 5 else 0)) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
-		return Rect2(mask * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE)
-	var row: int = {"O": 1, "L": 4}.get(tile_at(cell), 2)
-	if row == 2 and World.OVERWORLD.has_point(cell):
-		row = 5
-	return Rect2(wall_mask(cell) * WALL_SIZE, row * WALL_SIZE, WALL_SIZE, WALL_SIZE)
-
-
-## An ore vein glittering in a rock block's cliff face (drawn over the block).
-static func draw_ore(canvas: CanvasItem, cell: Vector2i, band: int, glint: bool) -> void:
-	var dest: Rect2 = Rect2(Vector2(cell) * TILE - Vector2.ONE * WALL_RAISE, Vector2.ONE * WALL_SIZE)
-	canvas.draw_texture_rect_region(ORES, dest, Rect2(band * WALL_SIZE, (1 if glint else 0) * WALL_SIZE, WALL_SIZE, WALL_SIZE))
-
-
 ## Whether a castle wall cell belongs to a tower: some 2x2 square of castle wall holds it.
 static func tower(cell: Vector2i) -> bool:
 	if tile_at(cell) != "W":
@@ -316,19 +238,6 @@ static func tower(cell: Vector2i) -> bool:
 				and tile_at(square + Vector2i.ONE) == "W":
 			return true
 	return false
-
-
-## A castle wall's open sides (1 N, 2 W, 4 S, 8 E): sides not joined to more castle wall, or for a
-## tower, to more tower (so a tower shows its full height against the wall beside it).
-static func castle_mask(cell: Vector2i) -> int:
-	var high: bool = tower(cell)
-	var mask: int = 0
-	var bits: Array[Vector2i] = [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]
-	for bit: int in bits.size():
-		var next: Vector2i = cell + bits[bit]
-		if not (tower(next) if high else tile_at(next) == "W"):
-			mask |= 1 << bit
-	return mask
 
 
 ## Natural rock, drawn as the mountains' seamless rock blocks: mountains ("L"), the overworld's
@@ -347,16 +256,6 @@ static func rock_cave(cell: Vector2i) -> bool:
 	return not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] in ["L", "C"]
 
 
-## A rock block's open sides (1 N, 2 W, 4 S, 8 E): every side not joined to more natural rock.
-static func rock_mask(cell: Vector2i) -> int:
-	var mask: int = 0
-	var bits: Array[Vector2i] = [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]
-	for bit: int in bits.size():
-		if not natural_rock(cell + bits[bit]):
-			mask |= 1 << bit
-	return mask
-
-
 ## A thin wall's connected sides: walls, and building doorways (so a door fills the gap exactly).
 static func thin_wall_mask(cell: Vector2i) -> int:
 	var mask: int = 0
@@ -369,41 +268,6 @@ static func thin_wall_mask(cell: Vector2i) -> int:
 		if (not tile.is_empty() and tile in World.WALLS) or (World.ROOM_AT.has(next) or castle_stone(next) and World.OVERWORLD.has_point(next)) 				and Buildings.is_door(World.terrain, next):
 			mask |= 1 << bit
 	return mask
-
-
-static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
-	if tile_at(cell) == "W":
-		var high: bool = tower(cell)
-		var lift: int = (TOWER_RAISE if high else CASTLE_RAISE) + CASTLE_PAD
-		var size: float = TILE + lift
-		var sand: bool = Biomes.in_sunreach(cell)
-		var sheet: Texture2D = (SANDSTONE_CASTLE_TOWERS if high else SANDSTONE_CASTLE_WALLS) if sand 			else (CASTLE_TOWERS if high else CASTLE_WALLS)
-		canvas.draw_texture_rect_region(sheet,
-			Rect2(Vector2(cell) * TILE - Vector2.ONE * lift, Vector2.ONE * size), Rect2(castle_mask(cell) * size, 0, size, size))
-		return
-	var raise: float = wall_raise(cell)
-	var dest: Rect2 = Rect2(Vector2(cell) * TILE - Vector2.ONE * raise, Vector2.ONE * (TILE + raise))
-	if natural_rock(cell):
-		# Natural rock: a block of the seamless rock texture with cliff faces where it meets open ground.
-		var part: int = posmod(cell.x, ROCK_SPAN) + posmod(cell.y, ROCK_SPAN) * ROCK_SPAN
-		canvas.draw_texture_rect_region(MOUNTAINS if World.OVERWORLD.has_point(cell) else CAVE_ROCK, dest, Rect2(rock_mask(cell) * WALL_SIZE, part * WALL_SIZE, WALL_SIZE, WALL_SIZE))
-		return
-	canvas.draw_texture_rect_region(wall_sheet(cell), dest, wall_region(cell))
-	if tile_at(cell) == "#" and tile_at(cell + Vector2i.RIGHT) == "#" and tile_at(cell + Vector2i.DOWN) == "#" 			and tile_at(cell + Vector2i.ONE) == "#":
-		canvas.draw_texture_rect_region(wall_sheet(cell), dest, Rect2(HOUSE_FILL * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE))
-
-
-## The sheet a wall cell is drawn from (house_walls.png for "#", else walls.png).
-static func wall_sheet(cell: Vector2i) -> Texture2D:
-	if tile_at(cell) != "#":
-		return WALLS
-	if Biomes.in_sunreach(cell):
-		return SANDSTONE_WALLS
-	if castle_stone(cell):
-		return FIELDSTONE_WALLS
-	if Biomes.in_isles(cell):
-		return LOG_WALLS
-	return CELLAR_WALLS if theme_at(cell) == "cellar" else HOUSE_WALLS
 
 
 ## Whether a wall or doorway belongs to a castle keep: a sandstone floor or carpet beside it.
@@ -426,21 +290,6 @@ static func draw_wall_decor(canvas: CanvasItem, cell: Vector2i, kind: String) ->
 static func theme_at(cell: Vector2i) -> String:
 	var place: Array = World.dungeon_at(cell)
 	return "" if place.is_empty() else Dungeons.theme_at(place[0])
-
-
-## How far up and left a wall cell's sprite is raised: a full tile for house walls.
-static func wall_raise(cell: Vector2i) -> float:
-	return HOUSE_RAISE if tile_at(cell) == "#" else WALL_RAISE
-
-
-## A doorway in a house wall: the wall runs on over it with a door standing ajar in its visible
-## face (south for a west-east wall, east for a north-south one), drawn like a wall in depth order.
-static func draw_door(canvas: CanvasItem, cell: Vector2i) -> void:
-	var vertical: bool = tile_at(cell + Vector2i.UP) in World.WALLS and not tile_at(cell + Vector2i.UP).is_empty()
-	var sheet: Texture2D = SANDSTONE_WALLS if Biomes.in_sunreach(cell) else FIELDSTONE_WALLS if castle_stone(cell) else HOUSE_WALLS
-	canvas.draw_texture_rect_region(sheet,
-		Rect2(Vector2(cell) * TILE - Vector2.ONE * HOUSE_RAISE, Vector2.ONE * HOUSE_SIZE),
-		Rect2((HOUSE_DOOR + (1 if vertical else 0)) * HOUSE_SIZE, 0, HOUSE_SIZE, HOUSE_SIZE))
 
 
 ## A building's pitched roof (roof_art.gd), rasterized the first time it is drawn.

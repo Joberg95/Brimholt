@@ -77,11 +77,12 @@ static func ground_of(tile: String, cell: Vector2i, indoors: bool = false) -> St
 		"=", "W":
 			if SpriteArt.theme_at(cell) == "cellar":
 				return "cellar"
-			if Biomes.in_isles(cell):
-				return "planks" if indoors or World.ROOM_AT.has(cell) else "snow_street"
 			if Biomes.in_sunreach(cell):
 				return "sandstone"
-			return "street"
+			# Houses have plank floors, as in Tibia.
+			if indoors or World.ROOM_AT.has(cell):
+				return "planks"
+			return "snow_street" if Biomes.in_isles(cell) else "street"
 		"c", "C":
 			if tile == "C" and World.OVERWORLD.has_point(cell):
 				return "grass"
