@@ -62,13 +62,16 @@ game/
     start_panel.gd       Start screen until you play: painted backdrop, character list and creation, play solo, host, or join
     controls_menu.gd     Key-binding window
   render/                Client-side drawing only
-    floor_layer.gd       Floor chunks: one data texture per 16x16 tiles, drawn by terrain.gdshader
-    terrain.gdshader     GPU floors: blended ragged edges, animated water and foam, swaying grass
+    floor_layer.gd       Floor chunks: one image per 16x16 tiles composed from ground_art.gd's layers
+    ground_art.gd        Pack grounds, their Tibia borders, and the ways down and up
+    wall_art.gd          Pack walls, doors, rock, and ore veins (Tibia's wall rule)
+    object_art.gd        Pack trees, furniture, herbs, signs, wall decor, and waystones
+    pack_atlas.gd        Generated: where each pack world thing lies in world.png
     world_view.gd        Depth-ordered walls, trees, NPCs, items and actors (sparse, cached)
     world_overlay.gd     Unlit layer: nameplates, NPC names, target square, floating numbers
     lighting.gd          Day/night, zone ambient, and weather tint (CanvasModulate), pooled point lights
     weather.gd           Deterministic weather from the host clock (clear/overcast/rain/storm, lightning)
-    roof_art.gd          Pitched building roofs rasterized from material swatches
+    roof_art.gd          Building roofs composed from the pack's roof tiles
     cell_index.gd        Chunked spatial index: monsters and ground stacks near the camera
     rain_layer.gd        Rain over the game window (rain.gdshader: drops, splashes, veil)
     fx.gd                One-shot particle bursts (CC0 Kenney textures)
@@ -133,16 +136,12 @@ and respawns on the host; `game/data/monsters.gd` and `game/data/spells.gd` are 
 sender-validated RPCs, the camera, input, and interpolation, and assembles the UI components in
 `game/ui/` (inventory panel and drag-and-drop, action bar, NPC menus and dialogs, minimap and
 world map, HUD, start menu).
-`game/render/world_view.gd` draws the visible, depth-ordered part of the world and `game/render/sprite_art.gd` maps tiles, walls, characters, gear, and icons to
-sprite-sheet regions. Floors are drawn on the GPU: `floor_layer.gd` packs each 16x16-tile chunk
-into a small data texture once (one RGBA8 texel per cell plus a one-cell border, from
-`SpriteArt.floor_texel`: R base tile, G overlay tile, B overlay quarters and kerb sides, A blend
-priority and flags; visible chunks first, two per frame, far chunks freed), and
-`terrain.gdshader` draws it as one rect, fetching tiles from `tiles.png`. Natural ground of higher
-priority (`SpriteArt.FLOOR_PRIORITY`: grass over dirt over sand over water) reaches a few noisy
-pixels over its lower neighbour with a darkened lip; built floors (cobble, planks, obsidian) keep
-hard edges and exact texels. Water animates with glints, swell, and shore foam, and grass sways,
-from `TIME` alone, so nothing is redrawn per frame. `world_view.gd` caches the walls,
+`game/render/world_view.gd` draws the visible, depth-ordered part of the world from the OpenTibia
+sprite pack (plan 49): `sprite_art.gd` draws characters, monsters, and item icons, and `ground_art.gd`,
+`wall_art.gd`, `object_art.gd`, and `roof_art.gd` the world. Floors are composed on the CPU:
+`floor_layer.gd` turns each 16x16-tile chunk into an image once, from `GroundArt.layers` (each cell's
+pack ground, by its position pattern, and the border pieces of higher grounds beside it), four images
+where water animates (visible chunks first, two per frame, far chunks freed). `world_view.gd` caches the walls,
 trees, and NPCs around the view and each frame visits only cells with content, sorted by
 depth. On the host, monster steps share one occupied-tile set per tick
 (`World.occupied_cells`) and monsters sleep at home unless a player is in a nearby 16-tile chunk.

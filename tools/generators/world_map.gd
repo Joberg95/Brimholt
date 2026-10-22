@@ -1,10 +1,10 @@
 extends SceneTree
 ## Bakes the painted world map in pages (game/data/atlas.gd: one PNG per sector near painted land,
 ## Atlas.MAP_SCALE pixels per cell, map tile = world cell) from the map, in the art direction's
-## map look: deep blue sea with lighter shallows and a pale line of surf, green land with soft
-## painted variation, forests as clumps of canopy lit from the top-left, grey ridges with a lit
-## and a shaded side, sandy plains and desert, dusky purple for the Hollow Reach, and towns as
-## terracotta roofs on paved streets inside their walls. The game tints PvP zones and draws the
+## map look, in the OpenTibia pack's colours (plan 49): blue sea with lighter shallows and a pale line
+## of surf, green land with soft painted variation, forests as clumps of canopy lit from the top-left,
+## grey ridges with a lit and a shaded side, sandy plains and desert, dark brown for the Hollow Reach,
+## and towns as red roofs on paved streets inside their walls. The game tints PvP zones and draws the
 ## markers on top (game/ui/world_maps.gd). Each page's terrain hash (World.page_hash) goes to
 ## pages.json: only pages whose terrain changed are painted again (FORCE=1 paints them all), and
 ## the rules check notices a page edited since the last bake. overview.png, the whole overworld
@@ -17,23 +17,23 @@ const Atlas = preload("res://game/data/atlas.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const SCALE: int = Atlas.MAP_SCALE
 
-const SEA_DEEP: Color = Color("#285384")
-const SEA_SHALLOW: Color = Color("#427aa1")
+const SEA_DEEP: Color = Color("#1468b8")
+const SEA_SHALLOW: Color = Color("#1f8fe0")
 const SURF: Color = Color("#c8dce4")
-const GRASS: Color = Color("#5b8a34")
-const FOREST: Array[Color] = [Color("#79af42"), Color("#3f7f29"), Color("#165216"), Color("#0f3c14")]
+const GRASS: Color = Color("#3d7a1c")
+const FOREST: Array[Color] = [Color("#6a8a2c"), Color("#3d5a19"), Color("#2a3a12"), Color("#1a240a")]
 ## The Hollow Reach's dead trees.
-const DEAD_FOREST: Array[Color] = [Color("#6c518e"), Color("#3e2c5d"), Color("#2a1e45"), Color("#19122e")]
-const DIRT: Color = Color("#8f6d4b")
-const SAND: Color = Color("#d8c48a")
-const DUSK: Color = Color("#543d75")
-const BOG: Color = Color("#435329")
-const MUSHROOM_CAPS: Array[Color] = [Color("#8ab0a0"), Color("#5e8a7a"), Color("#3e6a5c"), Color("#22403a")]
-const OBSIDIAN: Color = Color("#2a1e45")
-const ROCK: Array[Color] = [Color("#b4aca0"), Color("#847f79"), Color("#575454")]
-const STREET: Color = Color("#b7b2a7")
+const DEAD_FOREST: Array[Color] = [Color("#6a4a3a"), Color("#4a2e26"), Color("#36201c"), Color("#1e1210")]
+const DIRT: Color = Color("#6a4a30")
+const SAND: Color = Color("#c9a25a")
+const DUSK: Color = Color("#4f5e18")
+const BOG: Color = Color("#5c5420")
+const MUSHROOM_CAPS: Array[Color] = [Color("#9a7a3a"), Color("#71561d"), Color("#5a4214"), Color("#302208")]
+const OBSIDIAN: Color = Color("#392c22")
+const ROCK: Array[Color] = [Color("#a9aa9f"), Color("#919287"), Color("#5e5f57")]
+const STREET: Color = Color("#7a7684")
 const WALL: Color = Color("#575454")
-const ROOF: Array[Color] = [Color("#b86e53"), Color("#9e5744"), Color("#74342d")]
+const ROOF: Array[Color] = [Color("#c04a2c"), Color("#a4381b"), Color("#6e2414")]
 const TOWN_GROUND: Color = Color("#a89a7a")
 const BRIDGE: Color = Color("#875d3d")
 const STAIRS: Color = Color("#20180e")

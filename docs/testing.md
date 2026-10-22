@@ -191,7 +191,7 @@ has faded and the merchant shows).
 
 Weather and desert captures: `visual-rain.png` (rain draws drops and dims the light at noon),
 `visual-rain-night.png` (night rain is darker; carried lights still show), and
-`visual-desert.png` (a storm leaves the desert dry; cacti stand on sand).
+`visual-desert.png` (a storm leaves the desert dry; dry trees stand on sand).
 
 The weapon study (`visual-weapons.png`) renders all 15 hunting additions as native/2x icons
 and in four facings with stand/step-A/step-B poses (180 worn frames). Unit checks cover the
@@ -215,10 +215,9 @@ The graphical check renders the game into an offscreen buffer; Godot only opens 
 64×64 borderless window in the top-left corner, so nothing flashes over your work; it
 ignores OS close requests. It writes
 ignored captures (equipped, unequipped, forest, Cinder Crossing harbour, world map) and
-`.tools/visual-report.html` (open it in a browser or an editor's browser panel). It checks pixel changes in each character's region
-and each equipment panel slot after removing gear, four facings, ground item and
-raised oblique wall pixels matching their sprite texels, the camera staying centred and gliding with the
-character, an interpolated movement midpoint/endpoint, a tree sprite in depth order,
+`.tools/visual-report.html` (open it in a browser or an editor's browser panel). It checks pixel changes in each equipment panel slot
+after removing gear (gear is not drawn on characters), four facings, ground items, the camera staying
+centred and gliding with the character, an interpolated movement midpoint/endpoint, a tree sprite in depth order,
 sailing through the real right-click menu and route list (Cinder Crossing harbour to Lastlight,
 then Reedmere to Blackreed Isle), the island's PvP banner, casting the spell in action
 bar slot 1 with its key (the bar holds spells only), and opening and closing the world map with its bound key.

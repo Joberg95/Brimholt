@@ -80,3 +80,13 @@ Each phase: review renders by eye (art is never tested), functional tests, docs,
   task's level band counts only camps within `World.TASK_SPAN` of its level. Our creature art, its
   sheets, and the creature builders are deleted (`creatures.py` kept only props' shading, now
   `shading.py`). Unused: the mount (looktype 12) and five creatures (5/40 and 10/35 are duplicates; 27, 43).
+- **Phase 5 (done):** the world is the pack's. Floors are composed per chunk from pack grounds with
+  Tibia's border pieces (`ground_art.gd`, `floor_layer.gd`; the terrain shader is gone); walls, doors,
+  rock, and ores follow Tibia's wall rule (`wall_art.gd`); roofs are pack roof tiles raised a floor
+  (`roof_art.gd`); trees, furniture, herbs, signs, decor, and waystones are pack things
+  (`object_art.gd`). `otsp_export.py world` packs them into `world.png` and the generated
+  `pack_atlas.gd`; `palette` exports the map editor's palette. The world map's colours follow the pack.
+  The pack's map-editor files (`rme_files`) were added: nearly empty, but they name the creatures
+  (the pack's names show some of ours misfit their art) and confirm the border order. The pack has no
+  palms or cacti (dry trees stand in) and no water borders. make_sprites.py keeps only the marker,
+  coins, spell effects, menu icons, and title painting (phase 6).
