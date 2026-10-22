@@ -4,7 +4,8 @@ extends RefCounted
 ## a wall cell shows its vertical piece where the wall goes on north, its horizontal piece where it goes
 ## on west, the corner where it does both, and a pole where it only starts or stands alone. Natural rock
 ## is a raised rock top with cliff pieces (the same rule) on its cells that face open ground south or
-## east. Draw in row-major order: a piece reaches into the rows above.
+## east (its raised top is drawn with the floor, GroundArt.ROCK_TOPS). Draw in row-major order: a piece
+## reaches into the rows above.
 
 const World = preload("res://game/core/world.gd")
 const Biomes = preload("res://game/data/biomes.gd")
@@ -25,12 +26,12 @@ const WALLS: Dictionary = {
 	"dark": [891, 892, 893, 894, 0, 0, 1020, 1021],
 	"dungeon": [558, 559, 560, 561, 0, 0, 1020, 1021],
 }
-## Rock styles: [vertical, horizontal, pole, corner cliff pieces, raised rock top].
+## Rock styles (GroundArt.rock_style): [vertical, horizontal, pole, corner] cliff pieces.
 const ROCKS: Dictionary = {
-	"grey": [957, 956, 958, 961, 991],
-	"cave": [957, 956, 958, 961, 992],
-	"snow": [935, 936, 937, 945, 991],
-	"sand": [919, 920, 921, 934, 990],
+	"grey": [957, 956, 958, 961],
+	"cave": [957, 956, 958, 961],
+	"snow": [935, 936, 937, 945],
+	"sand": [919, 920, 921, 934],
 }
 ## Ore veins by resource band (copper, iron, silver, cobalt, starmetal): the ore's pack sprite set into
 ## the rock face.
@@ -58,8 +59,7 @@ static func piece_of(pieces: Array, north: bool, west: bool) -> int:
 
 static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 	if SpriteArt.natural_rock(cell):
-		var rock: Array = ROCKS[rock_style(cell)]
-		draw(canvas, rock[4], cell)
+		var rock: Array = ROCKS[GroundArt.rock_style(cell)]
 		if _face(cell):
 			draw(canvas, piece_of(rock, _face(cell + Vector2i.UP), _face(cell + Vector2i.LEFT)), cell)
 		return
@@ -92,14 +92,6 @@ static func draw_ore(canvas: CanvasItem, cell: Vector2i, band: int, glint: bool)
 static func _face(cell: Vector2i) -> bool:
 	return SpriteArt.natural_rock(cell) and not (SpriteArt.natural_rock(cell + Vector2i.RIGHT)
 		and SpriteArt.natural_rock(cell + Vector2i.DOWN) and SpriteArt.natural_rock(cell + Vector2i.ONE))
-
-
-static func rock_style(cell: Vector2i) -> String:
-	if Biomes.in_isles(cell) or GroundArt.base_of(cell) == "ice":
-		return "snow"
-	if Biomes.in_sunreach(cell):
-		return "sand"
-	return "grey" if World.OVERWORLD.has_point(cell) else "cave"
 
 
 ## The wall style of a wall or doorway cell: castle walls ("W"), the Hollow Reach's obsidian ("O"), and

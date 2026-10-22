@@ -45,6 +45,12 @@ const SEWER_GRATE: int = 999
 const HOLE: int = 995
 const LADDER: int = 1009
 const ROPE_SPOT: int = 1000
+## Natural rock's raised top by rock style (WallArt.rock_style): drawn with the floor, a tile up and
+## left of its cell like a floor above, so the cliff pieces drawn over it never get cut.
+const ROCK_TOPS: Dictionary = {"grey": 991, "cave": 992, "snow": 991, "sand": 990}
+## The rock's north and west rim, laid on the open cell beside it: [north, west, north-west corner]
+## (grey rock only: the pack has no rim for its snowy and sandy rock).
+const ROCK_RIMS: Dictionary = {"grey": [938, 939, 940], "cave": [938, 939, 940]}
 ## Animated grounds (water) cycle their frames this fast.
 const FRAME_SECONDS: float = 0.35
 const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
@@ -182,7 +188,37 @@ static func layers(cell: Vector2i, frame: int = 0) -> Array:
 	elif tile == "v" or tile == "^":
 		var way: int = way_of(cell)
 		out.append([way, piece(way, cell), 15])
+	elif SpriteArt.natural_rock(cell):
+		var top: int = ROCK_TOPS[rock_style(cell)]
+		out.append([top, piece(top, cell), 15])
+	else:
+		_rock_rim(cell, out)
 	return out
+
+
+## The rim of rock south or east of an open cell: the north rim where rock lies south (and south-east),
+## the west rim where it lies east, the corner where only the south-east cell is rock.
+static func _rock_rim(cell: Vector2i, out: Array) -> void:
+	var corner: Vector2i = cell + Vector2i.ONE
+	if not SpriteArt.natural_rock(corner) or not ROCK_RIMS.has(rock_style(corner)):
+		return
+	var rims: Array = ROCK_RIMS[rock_style(corner)]
+	var south: bool = SpriteArt.natural_rock(cell + Vector2i.DOWN)
+	var east: bool = SpriteArt.natural_rock(cell + Vector2i.RIGHT)
+	var id: int = rims[0] if south else rims[1] if east else rims[2]
+	if south and east:
+		return  # an inside corner: the rock's own top covers it
+	out.append([id, piece(id, cell), 15])
+
+
+## The rock style of a natural rock cell: snowy on the isles and in the ice cave, sandy in Sunreach,
+## grey on the overworld, and black-topped in caves.
+static func rock_style(cell: Vector2i) -> String:
+	if Biomes.in_isles(cell) or Caves.at(cell) == SpriteArt.ICE_CAVE:
+		return "snow"
+	if Biomes.in_sunreach(cell):
+		return "sand"
+	return "grey" if World.OVERWORLD.has_point(cell) else "cave"
 
 
 ## The border pieces higher grounds lay over this cell, lowest ground first.
