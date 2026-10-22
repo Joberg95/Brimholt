@@ -1706,7 +1706,8 @@ func _check_night_and_particles() -> bool:
 	await RenderingServer.frame_post_draw
 	var day: Image = screen.get_texture().get_image()
 	lighting.time_override = 0.0
-	await create_timer(0.2).timeout
+	# Long enough for the dark to settle (Lighting.DARKNESS_RATE) and a torch to fade in.
+	await create_timer(0.5).timeout
 	await RenderingServer.frame_post_draw
 	var night: Image = screen.get_texture().get_image()
 	night.save_png("res://.tools/visual-night.png")
@@ -1719,7 +1720,7 @@ func _check_night_and_particles() -> bool:
 	var worn: Dictionary = player["equipment"].duplicate()
 	player["equipment"]["off_hand"] = "torch"
 	game._publish_actor(1)
-	await create_timer(0.2).timeout
+	await create_timer(0.5).timeout
 	await RenderingServer.frame_post_draw
 	var torchlit: Image = screen.get_texture().get_image()
 	player["equipment"] = worn

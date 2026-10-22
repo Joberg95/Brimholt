@@ -4,7 +4,7 @@ extends RefCounted
 ## a wall cell shows its vertical piece where the wall goes on north, its horizontal piece where it goes
 ## on west, the corner where it does both, and a pole where it only starts or stands alone. Natural rock
 ## is a raised rock top with cliff pieces (the same rule) on its cells that face open ground south or
-## east (its raised top and its north and west rim are drawn with the floor, GroundArt.layers). Draw in row-major order: a piece
+## east (its flat top is a ground, GroundArt.GROUNDS, that the grounds around lay their edges on). Draw in row-major order: a piece
 ## reaches into the rows above.
 
 const World = preload("res://game/core/world.gd")
@@ -32,6 +32,8 @@ const ROCKS: Dictionary = GroundArt.ROCKS
 ## Ore veins by resource band (copper, iron, silver, cobalt, starmetal): the ore's pack sprite set into
 ## the rock face.
 const ORES: Array[int] = [2200, 2202, 2201, 2199, 2203]
+## How many tiles deep the cliff on a rock's south and east sides is.
+const FACE_DEPTH: int = 1
 ## About one straight overworld house wall in WINDOW_EVERY has a window.
 const WINDOW_EVERY: int = 5
 
@@ -55,6 +57,8 @@ static func piece_of(pieces: Array, north: bool, west: bool) -> int:
 
 static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 	if SpriteArt.natural_rock(cell):
+		if GroundArt.ROCK_EDGES.has("rock_" + GroundArt.rock_style(cell)):
+			return  # its boulders are part of its floor (GroundArt.ROCK_EDGES)
 		var rock: Array = ROCKS[GroundArt.rock_style(cell)]
 		if _face(cell):
 			draw(canvas, piece_of(rock, _face(cell + Vector2i.UP), _face(cell + Vector2i.LEFT)), cell)
@@ -84,10 +88,16 @@ static func draw_ore(canvas: CanvasItem, cell: Vector2i, band: int, glint: bool)
 	draw(canvas, ORES[band], cell, cell, 0, Color(1.4, 1.4, 1.4) if glint else Color.WHITE)
 
 
-## A rock cell shows a cliff where open ground lies south, east, or south-east of it.
+## A rock cell is part of the cliff (one row of rock wall) where open ground lies within FACE_DEPTH
+## tiles south, east, or south-east of it.
 static func _face(cell: Vector2i) -> bool:
-	return SpriteArt.natural_rock(cell) and not (SpriteArt.natural_rock(cell + Vector2i.RIGHT)
-		and SpriteArt.natural_rock(cell + Vector2i.DOWN) and SpriteArt.natural_rock(cell + Vector2i.ONE))
+	if not SpriteArt.natural_rock(cell):
+		return false
+	for dy: int in FACE_DEPTH + 1:
+		for dx: int in FACE_DEPTH + 1:
+			if (dx != 0 or dy != 0) and not SpriteArt.natural_rock(cell + Vector2i(dx, dy)):
+				return true
+	return false
 
 
 ## The wall style of a wall or doorway cell: castle walls ("W"), the Hollow Reach's obsidian ("O"), and

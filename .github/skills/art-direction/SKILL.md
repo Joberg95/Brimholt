@@ -16,7 +16,7 @@ in `assets/third_party/CREDITS.md`.
 | --- | --- | --- |
 | Floors | `game/render/ground_art.gd` `GROUNDS`, `ground_of` | terrain -> pack ground, its border set, and its priority (higher grounds lay their borders on lower ones) |
 | Walls, doors, ores | `game/render/wall_art.gd` `WALLS`, `ORES` | each style's [vertical, horizontal, pole, corner, windows, doors] |
-| Rock | `game/render/ground_art.gd` `ROCKS`, `ROCK_TOPS`, `ROCK_RIMS` | cliff pieces on the south and east faces, the raised flat top, the earth rim on the north and west |
+| Rock | `game/render/ground_art.gd` `ROCKS`, `GROUNDS` `rock_*`, `ROCK_EDGES` | one row of cliff pieces on the south and east faces under the flat top, a floor up; caves: the underground rock's whole-tile edges |
 | Roofs | `game/render/roof_art.gd` `MATERIALS` | [north row tile, other rows] per material |
 | Trees, furniture, herbs, signs, decor | `game/render/object_art.gd` | terrain or kind -> pack thing |
 | Characters | `game/render/sprite_art.gd` `OUTFITS`, `OUTFIT_COLORS` | a looktype and head/body/legs/feet colours per vocation |
@@ -27,7 +27,7 @@ in `assets/third_party/CREDITS.md`.
 
 1. Find candidates: render a labelled contact sheet of a pack id range (the pack's `items.xml` names
    the ranges: grounds 100-214, borders 215-517, walls 518-1011, doors 1012-1086, objects 1087-1314,
-   plants 1315-1499, trees 1500-1591, stones 1592-1676, mountain rims 2253-2257) with `otsp.compose`.
+   plants 1315-1499, trees 1500-1591, stones 1592-1676) with `otsp.compose`.
 2. Change the table above, then re-export what it reads: `python tools/generators/otsp_export.py world`
    (`assets/sprites/world.png` and the generated `game/render/pack_atlas.gd`; add new id ranges to
    `WORLD_RANGES`), `outfits`, `items`, or `palette`, and reimport (`make import`).

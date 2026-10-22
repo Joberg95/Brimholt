@@ -37,6 +37,13 @@ const GROUNDS: Dictionary = {
 	"flagstones": [155, 0, 1],
 	"carpet": [176, 0, 1],
 	"water": [163, 0, 0],
+	# Natural rock's flat top by rock style (rock_style): a floor up, so the pack draws it a tile up and
+	# left of its cell, over the ground beside it, with the cliff below its south and east edges (Tibia
+	# builds mountains on two floors). Highest of all, so nothing lays a border on it.
+	"rock_grey": [991, 0, 20],
+	"rock_cave": [2298, 0, 20],
+	"rock_snow": [991, 0, 20],
+	"rock_sand": [990, 0, 20],
 }
 ## Ways down and up (pack ids): a stairway frame into built dungeons and houses, a sewer grate in the
 ## streets, a stone hole into caves, a ladder up into a town, and a rope spot up out of a cave.
@@ -45,13 +52,13 @@ const SEWER_GRATE: int = 999
 const HOLE: int = 995
 const LADDER: int = 1009
 const ROPE_SPOT: int = 1000
-## Natural rock's raised top by rock style (WallArt.rock_style): drawn with the floor, a tile up and
-## left of its cell like a floor above, so the cliff pieces drawn over it never get cut.
-const ROCK_TOPS: Dictionary = {"grey": 991, "cave": 992, "snow": 991, "sand": 990}
-## The rock's north and west rim, the earth edge under its raised top, laid on the open cell beside it
-## (as in Tibia, rock shows its cliff only to the south and east): [rock south, rock east, both, only
-## south-east]. The pack has no rim for snowy or sandy rock.
-const ROCK_RIMS: Dictionary = {"grey": [2254, 2253, 2257, 2255], "cave": [2254, 2253, 2257, 2255]}
+## The pack's underground rock (Tibia's floor -1): solid red earth (2298) with grey rock edges, drawn
+## as whole tiles in caves: [south, east, north, west,
+## south-east, north-east, south-west, north-west outer corners, then the inner corners where only the
+## south-east, south-west, north-east, or north-west neighbour is open]. Boulders face south and east.
+const ROCK_EDGES: Dictionary = {
+	"rock_cave": [2299, 2302, 2301, 2300, 2306, 2304, 2305, 2303, 2307, 2308, 2309, 2310],
+}
 ## Rock styles: [vertical, horizontal, pole, corner] cliff pieces (WallArt draws them on the faces).
 const ROCKS: Dictionary = {
 	"grey": [957, 956, 958, 961],
@@ -125,6 +132,8 @@ static func base_of(cell: Vector2i) -> String:
 		return ground_of(_wall_sides(cell)[0], cell)
 	if tile == "v" or tile == "^":
 		return ground_of(SpriteArt.ground_under(cell), cell)
+	if SpriteArt.natural_rock(cell):
+		return "rock_" + rock_style(cell)
 	return ground_of(tile, cell)
 
 
@@ -178,6 +187,19 @@ static func layers(cell: Vector2i, frame: int = 0) -> Array:
 	var base: String = base_of(cell)
 	if base.is_empty():
 		return []
+	if ROCK_EDGES.has(base):
+		# The rock's earth top with its edge: boulders where it drops south or east, a thin lip north
+		# and west (whole tiles, so nothing leans out of the cell).
+		var top: int = GROUNDS[base][0]
+		var out_top: Array = [[top, piece(top, cell), 15]]
+		var edge: int = _rock_edge(cell, ROCK_EDGES[base])
+		if edge != 0:
+			out_top.append([edge, piece(edge, cell), 15])
+		return out_top
+	if base.begins_with("rock_"):
+		# The ground under the rock (seen where the cliff leaves a gap), then its top a floor up.
+		var under: int = GROUNDS[ground_of(tile, cell)][0]
+		return [[under, piece(under, cell), 15], [GROUNDS[base][0], piece(GROUNDS[base][0], cell), 15]]
 	var out: Array = [[GROUNDS[base][0], piece(GROUNDS[base][0], cell, frame), 15]]
 	_borders(cell, base, out)
 	if tile == "#":
@@ -196,24 +218,31 @@ static func layers(cell: Vector2i, frame: int = 0) -> Array:
 	elif tile == "v" or tile == "^":
 		var way: int = way_of(cell)
 		out.append([way, piece(way, cell), 15])
-	elif SpriteArt.natural_rock(cell):
-		var top: int = ROCK_TOPS[rock_style(cell)]
-		out.append([top, piece(top, cell), 15])
-	else:
-		_rock_rim(cell, out)
 	return out
 
 
-## The earth rim of rock south or east of an open cell.
-static func _rock_rim(cell: Vector2i, out: Array) -> void:
-	var corner: Vector2i = cell + Vector2i.ONE
-	if not SpriteArt.natural_rock(corner) or not ROCK_RIMS.has(rock_style(corner)):
-		return
-	var rims: Array = ROCK_RIMS[rock_style(corner)]
-	var south: bool = SpriteArt.natural_rock(cell + Vector2i.DOWN)
-	var east: bool = SpriteArt.natural_rock(cell + Vector2i.RIGHT)
-	var id: int = rims[2] if south and east else rims[0] if south else rims[1] if east else rims[3]
-	out.append([id, piece(id, cell), 15])
+## The edge piece of a rock cell from ROCK_EDGES' `pieces`, by which neighbours are open; 0 inside.
+static func _rock_edge(cell: Vector2i, pieces: Array) -> int:
+	var open: Callable = func(offset: Vector2i) -> bool: return not SpriteArt.natural_rock(cell + offset)
+	var n: bool = open.call(Vector2i.UP)
+	var s: bool = open.call(Vector2i.DOWN)
+	var w: bool = open.call(Vector2i.LEFT)
+	var e: bool = open.call(Vector2i.RIGHT)
+	if s and e:
+		return pieces[4]
+	if n and e:
+		return pieces[5]
+	if s and w:
+		return pieces[6]
+	if n and w:
+		return pieces[7]
+	for index: int in 4:
+		if [s, e, n, w][index]:
+			return pieces[index]
+	for index: int in 4:
+		if open.call([Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)][index]):
+			return pieces[8 + index]
+	return 0
 
 
 ## The rock style of a natural rock cell: snowy on the isles and in the ice cave, sandy in Sunreach,

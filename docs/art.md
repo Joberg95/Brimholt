@@ -140,10 +140,13 @@ pole where it only starts or stands alone. `WallArt.WALLS` picks the style by pl
 windows in towns, yellow plaster in Sunreach, logs on the frost isles, brick in cellars, fieldstone
 keeps, round-topped castle walls, dark stone in the Hollow Reach, stone blocks in other dungeons; each
 style has its doors. Natural rock is a raised rock top with cliff pieces on its cells that face open
-ground south or east (`GroundArt.ROCKS`: grey, snowy, sandy, and black-topped in caves). As in Tibia,
-where mountains are built on two floors, rock shows its cliff only to the south and east: to the north
-and west its flat top just ends in an earth rim on the open ground (`GroundArt.ROCK_RIMS`, grey rock
-and caves). Ore veins are the ores' pack sprites set into the face.
+ground south or east (`GroundArt.ROCKS`: grey, snowy, sandy). As in Tibia (Remere's Map Editor's
+mountain brush: an inner border on its east and south edges only), rock shows one row of cliff only
+to the south and east, under its flat top (`GroundArt.GROUNDS` `rock_*`), which lies a floor up: a
+tile up and left. Caves use the pack's underground rock instead (Tibia's floor -1,
+`GroundArt.ROCK_EDGES`): solid red earth (2298) with grey rock edges as whole tiles. The pack has no
+grey outer border and no round boulders like modern Tibia's. Ore veins are the ores' pack sprites
+set into the face.
 
 **Roofs** (`game/render/roof_art.gd`) are the pack's roof tiles over each building's rectangle, the
 north row the tiles with the ridge's edge, raised a tile up and left like a floor above: clay, red,
@@ -151,7 +154,7 @@ and shingle in the towns, blue slate in Reedmere, snow on the isles, sandstone i
 composed once per building and cached.
 
 **Trees and objects** (`game/render/object_art.gd`): trees by terrain (`ObjectArt.TREES`: broadleaf
-woods, dark Gloamwood trees, dry trees in the desert, as the pack has no palms or cacti, dead trees in
+woods, dark Gloamwood trees, dry trees in the desert, dead trees in
 the Hollow Reach, giant mushrooms in the fen, firs on the isles), furniture by kind
 (`ObjectArt.FURNITURE`), herb patches as the herbs' plants, signs and wall decorations as banners,
 paintings, and wall torches, and waystones as a moss-grown shrine stone. Shops get a counter, potion

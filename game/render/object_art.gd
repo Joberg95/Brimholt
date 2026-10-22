@@ -7,7 +7,7 @@ const WallArt = preload("res://game/render/wall_art.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 
 ## Trees by terrain, a variant picked per cell: broadleaf woods ("T"), Gloamwood's dark trees ("D"),
-## Sunreach's and the dunes' dry trees ("K"; the pack has no palms or cacti), the Hollow Reach's dead
+## Sunreach's and the dunes' dry trees ("K"; the pack's palms and cacti, 2583-2585, are not used yet), the Hollow Reach's dead
 ## trees ("R"), Mirewood Fen's giant mushrooms ("U"), and the frost isles' firs ("P").
 const TREES: Dictionary = {
 	"T": [1504, 1507, 1509, 1531, 1533, 1563, 1564, 1582, 1505, 1508],
