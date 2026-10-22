@@ -32,7 +32,6 @@ class Chunk extends Node2D:
 
 var view: Node2D
 var _chunks: Dictionary = {}
-static var _atlas: Image
 
 
 func _ready() -> void:
@@ -82,9 +81,7 @@ func _build(area: Rect2i) -> Node2D:
 ## An area's floor image in animation frame `frame` (the void is black). Pieces larger than a tile
 ## reach up and left from their cell, so cells just right of and below the area draw theirs too.
 static func compose(area: Rect2i, frame: int = 0) -> Image:
-	if _atlas == null:
-		_atlas = PackAtlas.TEXTURE.get_image()
-		_atlas.convert(Image.FORMAT_RGBA8)
+	var atlas: Image = GroundArt.atlas_image()
 	var image := Image.create_empty(area.size.x * TILE, area.size.y * TILE, false, Image.FORMAT_RGBA8)
 	image.fill(Color.BLACK)
 	for y: int in range(area.position.y, area.end.y + 1):
@@ -99,11 +96,11 @@ static func compose(area: Rect2i, frame: int = 0) -> Image:
 					continue
 				var source := Rect2i(PackAtlas.RECTS[layer[1] * 2], PackAtlas.RECTS[layer[1] * 2 + 1], size.x, size.y)
 				if layer[2] == 15:
-					image.blend_rect(_atlas, source, corner - size)
+					image.blend_rect(atlas, source, corner - size)
 					continue
 				for quarter: int in 4:
 					if layer[2] & (1 << quarter):
 						var offset := Vector2i(quarter % 2, quarter / 2) * (TILE / 2)
-						image.blend_rect(_atlas, Rect2i(source.position + offset, Vector2i.ONE * (TILE / 2)),
+						image.blend_rect(atlas, Rect2i(source.position + offset, Vector2i.ONE * (TILE / 2)),
 							corner - Vector2i(TILE, TILE) + offset)
 	return image

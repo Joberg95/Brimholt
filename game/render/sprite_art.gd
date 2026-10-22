@@ -39,32 +39,16 @@ const TOWNSFOLK_OUTFIT: int = 16
 static var OUTFIT_SHEETS: Dictionary = _outfit_sheets()
 const MARKER: Texture2D = preload("res://assets/sprites/marker.png")
 const ITEM_ICONS: Texture2D = preload("res://assets/sprites/items.png")
-const OBJECTS: Texture2D = preload("res://assets/sprites/objects.png")
-## Roof material swatches (one row per material), rasterized per building by roof_art.gd.
-const ROOFS: Texture2D = preload("res://assets/sprites/roofs.png")
+## Roofs from the pack's roof tiles, composed per building by roof_art.gd.
 const RoofArt = preload("res://game/render/roof_art.gd")
 const Buildings = preload("res://game/data/buildings.gd")
-## Shop, bank, and workshop furniture, 32x48 cells drawn 16 px above their tile (make_sprites.py FURNITURE_KINDS).
-const FURNITURE_SHEET: Texture2D = preload("res://assets/sprites/furniture.png")
 const FURNITURE: Array[String] = ["counter_shop", "counter_bank", "shelf_potions", "shelf_books", "weapon_rack", "barrel",
 	"crate", "strongbox", "anvil", "workbench", "cauldron", "loom", "hearth", "bed", "table", "chair", "plant", "chest",
 	"lamp_post", "well", "bench", "stall", "stall_back", "bench_back",
 	"pillar", "knight_statue", "gargoyle", "bush", "flower_vase", "potted_palm", "candelabra", "fruit_table", "stove", "throne"]
-## Decorations hung on a wall's visible face (Decor markers on wall cells; props.py wall_decor).
-const WALL_DECOR_SHEET: Texture2D = preload("res://assets/sprites/wall_decor.png")
 const WALL_DECOR: Array[String] = ["banner", "wall_torch", "painting"]
-## The town square's fountain (make_sprites.py fountain): FOUNTAIN_FRAMES 96x112 frames of water
-## falling bowl to bowl, drawn from the bottom-middle tile of the 3x3 it stands on ("fountain";
-## the other eight are "fountain_basin" and draw nothing).
-const FOUNTAIN_SHEET: Texture2D = preload("res://assets/sprites/fountain.png")
-const FOUNTAIN_FRAMES: int = 4
 const FOUNTAIN_KINDS: Array[String] = ["fountain", "fountain_basin"]
-const FOUNTAIN_FPS: float = 6.0
-## Herb patches (Crafting.HERBS): two 32x32 variants per resource band (make_sprites.py herb_patch).
-const HERBS: Texture2D = preload("res://assets/sprites/herbs.png")
 static var _roofs: Dictionary = {}
-## Hanging shop signs, one 32x32 board per keeper role.
-const SIGNS: Texture2D = preload("res://assets/sprites/signs.png")
 const SIGN_KINDS: Array[String] = ["vendor", "banker", "artisan", "warden"]
 ## Spells and runes landing (Combat.cast, Combat.use_rune; Spells.ELEMENTS): per element a row of
 ## RUNE_FX_FRAMES 32x32 frames, played once over RUNE_FX_SECONDS on every tile hit.
@@ -86,10 +70,6 @@ const RUNE_FX_SECONDS: float = 0.6
 const SIGN_OFFSETS: Dictionary = {
 	Vector2i.DOWN: Vector2(4, 6), Vector2i.UP: Vector2(-16, -40), Vector2i.RIGHT: Vector2(6, 0), Vector2i.LEFT: Vector2(-28, -10),
 }
-## Trees are 64x96 cells in objects.png with the trunk base on the tile centre at (32, 80).
-const TREE_SIZE: Vector2 = Vector2(64, 96)
-const TREE_ANCHOR: Vector2 = Vector2(32, 80)
-const TREE_VARIANTS: int = 3
 const NPC_TINT: Color = Color("#4f7f86")
 ## Items whose icon moves (assets/sprites/items_anim/<id>.png, ANIM_FRAMES 32x32 frames in a row,
 ## from make_sprites.py icon_frames): flames flicker, halos and eyes glow, sheen sweeps across.
@@ -110,25 +90,8 @@ static var ITEM_ORDER: Array[String] = _item_order()
 ## game/render/glow_layer.gd; glowing monsters draw their creature GLOW_SCALE larger in that colour.
 const GLOW_SCALE: float = 1.12
 const ITEM_GLOW: Texture2D = preload("res://assets/sprites/items_glow.png")
-## Giant swamp mushrooms ("U"): 64x96 frames like the trees (make_sprites.py mushroom).
-const MUSHROOMS: Texture2D = preload("res://assets/sprites/mushrooms.png")
-const MUSHROOM_VARIANTS: int = 3
-const FIRS: Texture2D = preload("res://assets/sprites/firs.png")
-const FIR_VARIANTS: int = 3
-## Sunreach, the desert island (Biomes.SUNREACH): palms for its trees (palms.png, 64x96 like the
-## trees), cream plaster walls (sandstone_walls.png: the house wall frames, then a south- and an
-## east-facing wall with a latticed window, WINDOW_FRAME), sandstone castle walls and towers,
-## and streets and floors of sandstone flags (FLAG_TILE).
-const PALMS: Texture2D = preload("res://assets/sprites/palms.png")
-const PALM_VARIANTS: int = 3
 ## The elite cave under the frost isles' sea ice, floored with snow (game/data/caves.gd).
 const ICE_CAVE: String = "rimewater_trench"
-## objects.png: three living trees, two dead trees of the Hollow Reach, then three desert
-## plants (a columnar cactus, a clump of barrel cacti, and a thorn shrub).
-const DEAD_TREE_FIRST: int = 3
-const DEAD_TREE_VARIANTS: int = 2
-const DESERT_PLANT_FIRST: int = 5
-const DESERT_PLANT_VARIANTS: int = 3
 ## The four sides: north, east, south, west.
 const EDGES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 
@@ -193,39 +156,6 @@ static func ground_under(cell: Vector2i) -> String:
 	return best
 
 
-## Trees stand on their tile and rise about two tiles; draw in row-major order like walls.
-static func draw_tree(canvas: CanvasItem, cell: Vector2i) -> void:
-	var dest: Rect2 = Rect2((Vector2(cell) + Vector2(0.5, 0.5)) * TILE - TREE_ANCHOR, TREE_SIZE)
-	if tile_at(cell) == "U":
-		canvas.draw_texture_rect_region(MUSHROOMS, dest,
-			Rect2(Vector2(noise(cell, 7) % MUSHROOM_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
-		return
-	if tile_at(cell) == "P":
-		canvas.draw_texture_rect_region(FIRS, dest, Rect2(Vector2(noise(cell, 7) % FIR_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
-		return
-	if tile_at(cell) == "T" and Biomes.in_sunreach(cell):
-		canvas.draw_texture_rect_region(PALMS, dest, Rect2(Vector2(noise(cell, 7) % PALM_VARIANTS * TREE_SIZE.x, 0), TREE_SIZE))
-		return
-	var variant: int = noise(cell, 7) % TREE_VARIANTS
-	if tile_at(cell) == "D":
-		variant = DEAD_TREE_FIRST + noise(cell, 7) % DEAD_TREE_VARIANTS
-	elif tile_at(cell) == "K":
-		variant = DESERT_PLANT_FIRST + noise(cell, 7) % DESERT_PLANT_VARIANTS
-	elif tile_at(cell) == "R":
-		variant = ROCK_FIRST + noise(cell, 7) % ROCK_VARIANTS
-	canvas.draw_texture_rect_region(OBJECTS, dest, Rect2(Vector2(variant * TREE_SIZE.x, 0), TREE_SIZE))
-
-
-## A waystone (objects.png after the desert plants), standing on its tile like a tree.
-const WAYSTONE_OBJECT: int = 8
-## Boulders ("R", objects.png after the waystone): a rounded boulder, a pair of rocks, a mossy slab.
-const ROCK_FIRST: int = 9
-const ROCK_VARIANTS: int = 3
-
-
-static func draw_waystone(canvas: CanvasItem, cell: Vector2i) -> void:
-	var dest: Rect2 = Rect2((Vector2(cell) + Vector2(0.5, 0.5)) * TILE - TREE_ANCHOR, TREE_SIZE)
-	canvas.draw_texture_rect_region(OBJECTS, dest, Rect2(Vector2(WAYSTONE_OBJECT * TREE_SIZE.x, 0), TREE_SIZE))
 
 
 ## Whether a castle wall cell belongs to a tower: some 2x2 square of castle wall holds it.
@@ -279,51 +209,17 @@ static func castle_stone(cell: Vector2i) -> bool:
 	return false
 
 
-## A decoration on a wall's visible face, hung like a sign (SIGN_OFFSETS for a south-facing door).
-static func draw_wall_decor(canvas: CanvasItem, cell: Vector2i, kind: String) -> void:
-	var centre: Vector2 = Vector2(cell) * TILE + SIGN_OFFSETS[Vector2i.DOWN]
-	var index: int = maxi(0, WALL_DECOR.find(kind))
-	canvas.draw_texture_rect_region(WALL_DECOR_SHEET, Rect2(centre - Vector2(16, 16), Vector2(32, 32)), Rect2(index * TILE, 0, TILE, TILE))
-
-
 ## The theme of the dungeon copy a cell lies in ("" on the overworld).
 static func theme_at(cell: Vector2i) -> String:
 	var place: Array = World.dungeon_at(cell)
 	return "" if place.is_empty() else Dungeons.theme_at(place[0])
 
 
-## A building's pitched roof (roof_art.gd), rasterized the first time it is drawn.
+## A building's roof (roof_art.gd), composed the first time it is drawn.
 static func draw_roof(canvas: CanvasItem, index: int, building: Dictionary, alpha: float) -> void:
 	if not _roofs.has(index):
-		_roofs[index] = RoofArt.build(building, ROOFS)
+		_roofs[index] = RoofArt.build(building)
 	canvas.draw_texture(_roofs[index]["texture"], _roofs[index]["origin"], Color(1, 1, 1, alpha))
-
-
-## A piece of shop or bank furniture standing on its tile.
-static func draw_furniture(canvas: CanvasItem, cell: Vector2i, kind: String, time: float = 0.0) -> void:
-	if kind == "fountain_basin":
-		return
-	if kind == "fountain":
-		var frame: int = int(time * FOUNTAIN_FPS) % FOUNTAIN_FRAMES
-		canvas.draw_texture_rect_region(FOUNTAIN_SHEET, Rect2(Vector2(cell) * TILE - Vector2(TILE, 80), Vector2(96, 112)),
-			Rect2(frame * 96, 0, 96, 112))
-		return
-	var index: int = maxi(0, FURNITURE.find(kind))
-	canvas.draw_texture_rect_region(FURNITURE_SHEET, Rect2(Vector2(cell) * TILE - Vector2(0, 16), Vector2(32, 48)),
-		Rect2(index * TILE, 0, TILE, 48))
-
-
-## A herb patch of a resource band on its tile (the variant picked by the cell).
-static func draw_herb(canvas: CanvasItem, cell: Vector2i, band: int) -> void:
-	var variant: int = band * 2 + (cell.x + cell.y) % 2
-	canvas.draw_texture_rect_region(HERBS, Rect2(Vector2(cell) * TILE, Vector2(TILE, TILE)), Rect2(variant * TILE, 0, TILE, TILE))
-
-
-## A shop or bank sign ({cell, outward, kind} from World.SIGNS) on the wall beside its door.
-static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
-	var centre: Vector2 = Vector2(sign["cell"]) * TILE + SIGN_OFFSETS[sign["outward"]]
-	var index: int = maxi(0, SIGN_KINDS.find(sign["kind"]))
-	canvas.draw_texture_rect_region(SIGNS, Rect2(centre - Vector2(16, 16), Vector2(32, 32)), Rect2(index * TILE, 0, TILE, TILE))
 
 
 

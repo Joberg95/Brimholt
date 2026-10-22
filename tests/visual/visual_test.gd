@@ -4,6 +4,7 @@ const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const GroundArt = preload("res://game/render/ground_art.gd")
 const PackAtlas = preload("res://game/render/pack_atlas.gd")
+const ObjectArt = preload("res://game/render/object_art.gd")
 const Combat = preload("res://game/core/combat.gd")
 const WorldViewScript = preload("res://game/render/world_view.gd")
 const Atlas = preload("res://game/data/atlas.gd")
@@ -524,10 +525,13 @@ func _check_ferry_and_maps() -> bool:
 	await RenderingServer.frame_post_draw
 	var forest: Image = screen.get_texture().get_image()
 	forest.save_png("res://.tools/visual-forest.png")
-	var variant: int = SpriteArt.noise(spot[0], 7) % SpriteArt.TREE_VARIANTS
-	var tree_origin: Vector2 = (Vector2(spot[0]) + Vector2(0.5, 0.5)) * World.TILE_SIZE - SpriteArt.TREE_ANCHOR
-	if not _expect(_matches_texel(forest, SpriteArt.OBJECTS, Rect2(Vector2(variant * SpriteArt.TREE_SIZE.x, 0),
-			SpriteArt.TREE_SIZE), tree_origin), "Tree sprite is not drawn on its tile"):
+	var kinds: Array = ObjectArt.TREES.get(World.terrain(spot[0]), ObjectArt.TREES["T"])
+	var tree: int = kinds[SpriteArt.noise(spot[0], 7) % kinds.size()]
+	var piece: int = GroundArt.piece(tree, spot[0])
+	var tree_size := Vector2(PackAtlas.THINGS[tree][3], PackAtlas.THINGS[tree][4])
+	var tree_origin: Vector2 = (Vector2(spot[0]) + Vector2.ONE) * World.TILE_SIZE - tree_size
+	if not _expect(_matches_texel(forest, PackAtlas.TEXTURE, Rect2(Vector2(PackAtlas.RECTS[piece * 2], PackAtlas.RECTS[piece * 2 + 1]),
+			tree_size), tree_origin), "Tree sprite is not drawn on its tile"):
 		return false
 	var dock: Vector2i = game.world.arrival_cell("cinder_landing", game._now())
 	player["cell"] = dock
@@ -1472,7 +1476,8 @@ func _check_roofs_and_signs() -> bool:
 	var named_inside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
 	var spot: Vector2 = game.map_to_screen((Vector2(keeper) + Vector2(0.5, 0.2)) * World.TILE_SIZE)
 	var keeper_area := Rect2i(Vector2i(spot) - Vector2i(10, 10), Vector2i(20, 20))
-	var sign_centre: Vector2 = game.map_to_screen(Vector2(sign["cell"]) * World.TILE_SIZE + SpriteArt.SIGN_OFFSETS[sign["outward"]])
+	# Pack signs hang on the wall's face, which rises up and left of the wall's cell.
+	var sign_centre: Vector2 = game.map_to_screen(Vector2(sign["cell"]) * World.TILE_SIZE)
 	return _expect(not named_outside and named_inside, "The merchant's name must hide under the roof and show inside (%s, %s)"
 			% [named_outside, named_inside]) \
 		and _expect(is_equal_approx(near_alpha, WorldViewScript.ROOF_NEAR_ALPHA) and named_near,
@@ -1621,7 +1626,8 @@ func _check_weather_and_desert() -> bool:
 	var sand: Color = desert.get_pixelv(Vector2i(game.map_to_screen((Vector2(plant) + Vector2(-1.0, 0.5)) * World.TILE_SIZE)))
 	for dy: int in range(-40, 0, 2):
 		var pixel: Color = desert.get_pixelv(Vector2i(origin) + Vector2i(0, dy))
-		plant_drawn = plant_drawn or (pixel.g > pixel.r and pixel.g > pixel.b + 0.05)
+		# A dry tree (the pack has no cacti): anything clearly not sand above the plant's tile.
+		plant_drawn = plant_drawn or absf(pixel.r - sand.r) + absf(pixel.g - sand.g) + absf(pixel.b - sand.b) > 0.3
 	Weather.override = "clear"
 	var location: String = game.hud.location_label.text
 	if not _expect(location.begins_with("Sunscar Dunes · levels "), "The location line should name the desert and its levels (%s)" % location):

@@ -15,6 +15,7 @@ const Lighting = preload("res://game/render/lighting.gd")
 const Fx = preload("res://game/render/fx.gd")
 const FloorLayer = preload("res://game/render/floor_layer.gd")
 const WallArt = preload("res://game/render/wall_art.gd")
+const ObjectArt = preload("res://game/render/object_art.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const NPC_NAME: Color = Color("#9fe0c8")
@@ -141,7 +142,7 @@ func _draw_roof(index: int) -> void:
 	if alpha > 0.01:
 		SpriteArt.draw_roof(self, index, World.BUILDINGS[index], alpha)
 	for sign: Dictionary in _signs_of.get(index, []):
-		SpriteArt.draw_sign(self, sign)
+		ObjectArt.draw_sign(self, sign)
 
 
 func _draw() -> void:
@@ -195,7 +196,7 @@ func _draw() -> void:
 		if tile in World.WALLS and not tile.is_empty():
 			WallArt.draw_wall(self, cell)
 			if World.WALL_DECOR.has(cell):
-				SpriteArt.draw_wall_decor(self, cell, World.WALL_DECOR[cell])
+				ObjectArt.draw_wall_decor(self, cell, World.WALL_DECOR[cell])
 			if Crafting.ORES.has(cell) and not game.node_worked(cell):
 				# Veins catch the eye: each glints for a moment every few seconds.
 				WallArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
@@ -205,11 +206,11 @@ func _draw() -> void:
 		if game.ground_view.has(cell):
 			_draw_stack(cell, game.ground_view[cell])
 		if tile == "furniture":
-			SpriteArt.draw_furniture(self, cell, World.FURNITURE[cell], time)
+			ObjectArt.draw_furniture(self, cell, World.FURNITURE[cell])
 		elif tile == "herb" and not game.node_worked(cell):
-			SpriteArt.draw_herb(self, cell, Crafting.HERBS[cell])
+			ObjectArt.draw_herb(self, cell, Crafting.HERBS[cell])
 		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
-			SpriteArt.draw_waystone(self, cell)
+			ObjectArt.draw_waystone(self, cell)
 			if not covered(cell):
 				# The stone stands taller than a person: its name sits above it.
 				names.append([(Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE - Vector2(0, 24), "Waystone", WAYSTONE_NAME])
@@ -223,7 +224,7 @@ func _draw() -> void:
 				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME, World.NPC_CELLS[cell]])
 		_draw_occupants(cell)
 		if tile in World.TREES and not tile.is_empty():
-			SpriteArt.draw_tree(self, cell)
+			ObjectArt.draw_tree(self, cell)
 	while next_roof < roofs.size():
 		_draw_roof(roofs[next_roof][1])
 		next_roof += 1

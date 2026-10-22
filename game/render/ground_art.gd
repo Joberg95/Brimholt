@@ -49,6 +49,15 @@ const ROPE_SPOT: int = 1000
 const FRAME_SECONDS: float = 0.35
 const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 const DIAGONALS: Array[Vector2i] = [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]
+static var _atlas: Image
+
+
+## The pack atlas as an image (floors and roofs are composed from it on the CPU), loaded once.
+static func atlas_image() -> Image:
+	if _atlas == null:
+		_atlas = PackAtlas.TEXTURE.get_image()
+		_atlas.convert(Image.FORMAT_RGBA8)
+	return _atlas
 
 
 ## The ground name of a terrain at a cell; `indoors` marks a building's floor seen beside its wall.

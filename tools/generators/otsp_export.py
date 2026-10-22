@@ -3,6 +3,7 @@
   python tools/generators/otsp_export.py items     # assets/sprites/items.png (and a blank items_glow.png)
   python tools/generators/otsp_export.py outfits   # assets/sprites/outfits/<looktype>.png
   python tools/generators/otsp_export.py world     # assets/sprites/world.png and game/render/pack_atlas.gd
+  python tools/generators/otsp_export.py palette   # assets/sprites/terrain_palette.png (the map editor's)
 
 items.png holds every catalog item's pack sprite (items.json "sprite") in catalog order, ITEM_COLUMNS to a
 row (SpriteArt.item_region). A two-by-two pack item is halved to fit its 32x32 cell.
@@ -121,8 +122,8 @@ def outfits():
 
 
 # Pack items drawn in the world: grounds, ground borders, walls and rock, the ways down and up, doors,
-# and the ores set into rock.
-WORLD_RANGES = [(101, 214), (215, 517), (518, 994), (995, 1011), (1012, 1086), (2199, 2203)]
+# town objects, plants, trees, and stones, and the ores set into rock.
+WORLD_RANGES = [(101, 214), (215, 517), (518, 994), (995, 1011), (1012, 1086), (1087, 1676), (2199, 2203)]
 ATLAS_WIDTH = 2048
 # Ground border sets: the pack lists each set's pieces in Tibia's order (BORDER_PIECES; the two moss sets
 # have no diagonals), by first id. The snow set's pieces are out of order; 411 is a street's stone kerb.
@@ -197,5 +198,23 @@ const BORDERS: Dictionary = {
     print(f"wrote assets/sprites/world.png ({ATLAS_WIDTH}x{len(sheet)}, {len(pieces)} pieces) and game/render/pack_atlas.gd")
 
 
+# The map editor's palette: one 32x32 tile per terrain in tools/generators/make_map.gd TERRAINS order,
+# each the pack thing the game draws for it (larger things halved, like item icons).
+PALETTE = {".": 106, ",": 140, "~": 163, "#": 534, "T": 1504, ":": 126, "=": 154, "b": 172, "d": 116, "o": 162, "O": 891,
+           "D": 1512, "c": 139, "C": 956, "v": 995, "^": 1009, "K": 1576, "R": 1501, "L": 957, "W": 542, "m": 141,
+           "U": 1585, "s": 145, "P": 1505, "F": 155, "Y": 176}
+
+
+def palette():
+    text = (ROOT / "tools/generators/make_map.gd").read_text(encoding="utf-8")
+    terrains = re.findall(r'"(.)"', re.search(r"const TERRAINS: Array\[String\] = \[(.*?)\]", text).group(1))
+    sheet = [[None] * (len(terrains) * TILE) for _ in range(TILE)]
+    for index, terrain in enumerate(terrains):
+        for y, row in enumerate(icon(PALETTE[terrain])):
+            sheet[y][index * TILE:(index + 1) * TILE] = row
+    save_png(ROOT / "assets/sprites/terrain_palette.png", sheet)
+    print(f"wrote assets/sprites/terrain_palette.png ({len(terrains)} terrains)")
+
+
 if __name__ == "__main__":
-    {"items": items_sheet, "outfits": outfits, "world": world}[sys.argv[1]]()
+    {"items": items_sheet, "outfits": outfits, "world": world, "palette": palette}[sys.argv[1]]()
