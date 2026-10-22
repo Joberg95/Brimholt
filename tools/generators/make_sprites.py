@@ -1854,50 +1854,8 @@ def painted_held(kind, icon):
     return build
 
 
-# Worn looks (pixel_worn.py): helmets, armour, legs, and boots as hand-pixelled families drawn on the
-# finished body frame (no rig compaction), tinted by the item's colours.
-_BODY_FRAMES = {}
-
-
-def _body_frame(part, direction, frame):
-    """The finished (compacted) body or cloth frame as pixel rows, cached."""
-    key = (part, direction, frame)
-    if key not in _BODY_FRAMES:
-        _BODY_FRAMES[key] = compact_humanoid(split_body(part)(direction, frame)).pixels
-    return _BODY_FRAMES[key]
-
-
-def worn_builder(kind):
-    """The item's worn family look as a gear builder, or None when its look has no family."""
-    slot = ITEMS[kind].get("slot")
-    shape, extras = look(kind)
-    colors = ITEMS[kind]["colors"]
-    known = {"helmet": pixel_worn.HELM_OF, "armor": pixel_worn.ARMOR_OF, "legs": pixel_worn.LEGS_OF,
-             "boots": pixel_worn.BOOTS_OF}.get(slot, {})
-    if shape not in known:
-        return None
-
-    def build(direction, frame):
-        image = Image(FRAME, FRAME)
-        if slot == "helmet":
-            pixel_worn.helmet_layer(shape, extras, colors, direction, image)
-        elif slot == "armor":
-            pixel_worn.armor_layer(shape, colors, direction, _body_frame("cloth", direction, frame),
-                                   _body_frame("body", direction, frame), image)
-        elif slot == "legs":
-            pixel_worn.legs_layer(shape, colors, direction, _body_frame("body", direction, frame), image)
-        else:
-            pixel_worn.boots_layer(shape, colors, direction, _body_frame("body", direction, frame), image)
-        return image
-    build.compacted = True
-    return build
-
-
 def gear_builder(kind):
     slot = ITEMS[kind]["slot"]
-    worn = worn_builder(kind)
-    if worn is not None:
-        return worn
     icon = painted_icon(kind)
     # Showpiece helmets wear their icon; showpiece boots are too small for that and are drawn
     # as generated boots in their colours with their own details (boots_builder).
@@ -2127,7 +2085,6 @@ import pixel_food  # noqa: E402
 import pixel_floors  # noqa: E402
 import pixel_legwear  # noqa: E402
 import pack_helmets  # noqa: E402
-import pixel_worn  # noqa: E402
 import pack_sprites  # noqa: E402
 
 GLOWING_CREATURES = ("forgemaw", "void_wraith", "kharzul", "sylvaine")
@@ -6486,13 +6443,7 @@ def main():
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
         "coins.png": sheet_row([icon_finish(coin_stage_icon(stage)) for stage in range(len(pixel_coins.STAGES))]),
-        # Worn gear exists only where a worn family is drawn (pixel_worn.py); weapons, shields, and
-        # capes show nothing on the body until theirs are.
-        **{f"gear/{kind}.png": character_sheet(worn_builder(kind), compact=True, columns=POSE_COLUMNS)
-           for kind in ITEMS if worn_builder(kind) is not None},
-        **{f"gear/{kind}_glow.png": None for kind, item in ITEMS.items()
-           if item.get("glow") and worn_builder(kind) is not None},
-        "items_glow.png": None,
+"items_glow.png": None,
         **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
         **{f"creatures/{kind}.png": creature_sheet(kind) for kind in creatures.SPECIES},
         **{f"mounts/{kind}{suffix}.png": mount_sheet(kind, part) for kind, item in ITEMS.items()

@@ -1,0 +1,58 @@
+# 49 - All art from the OpenTibia sprite pack
+
+**Effort:** XL  **Status:** started 2026-10-22 (branch `experiment/pack-paperdoll`); supersedes plan 48
+
+## Request (owner, 2026-10-22)
+Use all the art from the OpenTibia sprite pack (https://github.com/peonso/opentibia_sprite_pack,
+CC BY 4.0) and stop making our own for now; delete what we made. Decisions:
+- **Items:** the catalog is rebuilt from the pack. Each pack item sprite becomes one item with stats;
+  our items without a matching sprite are deleted with their loot, shop, and quest entries.
+- **Characters:** players wear the pack's outfits as in Tibia; gear is not drawn on the body.
+- **Monsters:** only the pack's creatures (about 30); the rest are cut, and every camp, task, and boss
+  that used a cut monster is re-seeded with the nearest pack creature by level and region.
+- **World:** tiles, ground borders, walls, nature, town objects, doors, effects, and missiles all come
+  from the pack.
+
+The pack's license asks only for attribution: keep `assets/third_party/opentibia_sprite_pack/LICENSE.txt`,
+`AUTHORS.md`, and the row in `assets/third_party/CREDITS.md`.
+
+## What the pack has
+`assets/third_party/opentibia_sprite_pack/`: twelve PNG sheets, the client files `otsp.dat` and
+`otsp.spr` (protocol 10.41), and `server_files/items.xml` (category names per id).
+`tools/generators/otsp.py` reads the client files: 2613 items (ids 100-2712; 1519 one tile, 971 two by
+two), 46 outfits (four facings with walk frames), 64 effects, 60 missiles, 7691 sprites.
+
+| Category (items.xml) | Count | | Category | Count |
+| --- | --- | --- | --- | --- |
+| sword | 148 | | wall | 418 |
+| armor chest | 103 | | door / archway | 277 / 68 |
+| helmet | ~67 | | border | 272 |
+| axe | 63 | | plant / tree | 189 / 85 |
+| shield | 39 | | mountain / stone(s) | 60 / 87 |
+| distance weapon | 36 | | tile / grass | 56 / 25 |
+| club | 29 | | object (town) | 300 |
+| legs / boots | 20 / 15 | | roof | 79 |
+| wand / grimoire | 15 / 5 | | bodies, pools | ~50 |
+| equipment (tools, potions, rings, amulets, food, gems) | 75 | | | |
+
+## Phases
+1. **Pipeline.** `otsp.py` exports the game's sheets from the client files: item icons (one 32x32 frame
+   per item, two-by-two items scaled to a slot or drawn on the ground at full size), outfits, creatures,
+   effects, and missiles. Delete our own item, icon, worn-gear, and body art and their generators
+   (`tools/icons/`, `pixel_worn.py`, `body.png`/`cloth.png` and the gear builders).
+2. **Items.** Map each pack equipment sprite to an item: our item where one fits (its id, name, and
+   role kept), else a new item; delete our items with no sprite (most boots and legs beyond the pack's
+   15 and 20, amulets and rings beyond its few, capes, charms, mounts, and monster-drop materials unless
+   a pack object fits). Stats from `Items.tier_stats` by slot and tier; names are our own. Update loot,
+   shops, quests, start kits, relics, docs, and tests. A review sheet of every mapping comes first.
+3. **Characters.** Players wear pack outfits (the player looktypes among the 46), chosen by vocation;
+   remove the body, cloth, and gear layers and the worn-gear pipeline.
+4. **Monsters.** The pack's creatures become the monster roster with level bands and loot; every camp,
+   task, boss, and dungeon spawn of a cut monster is re-seeded with the nearest pack creature by level
+   and region. Delete our creature art and its generator.
+5. **World.** Grounds with the pack's borders, walls, mountains, trees and plants, town objects, doors,
+   roofs, and stairs replace our tiles, walls, and props; the terrain shader's blending gives way to the
+   pack's border tiles. Rebake the world map.
+6. **Effects.** Spell effects and missiles from the pack.
+
+Each phase: review renders by eye (art is never tested), functional tests, docs, commit.

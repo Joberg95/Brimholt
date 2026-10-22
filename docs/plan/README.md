@@ -11,6 +11,7 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
+| 49 | [All art from the OpenTibia sprite pack: items, outfits, creatures, world](49-opentibia-art.md) | XL | Review each phase's renders |
 | 47 | [The world plan: the frame frozen, every landmass and floor listed](47-world-plan.md) | S | New capital and town names; Frostvault's home |
 | 46 | [Direction: modern-Tibia feel (art, world, floors, hunts, quests)](46-modern-tibia-direction.md) | XL | Private Tibia reference screenshots; loot questions |
 | 39 | [Classic-style icons for the remaining item families](39-icon-families.md) | L | Paused until plan 46 phase 2 |
