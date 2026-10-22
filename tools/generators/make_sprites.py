@@ -431,8 +431,6 @@ import pixel_coins  # noqa: E402
 import pixel_floors  # noqa: E402
 
 
-
-
 def coin_stage_icon(stage):
     """Gold coins at one stack-size stage (pixel_coins.STAGES)."""
     image = Image(TILE, TILE)
@@ -610,28 +608,6 @@ def floor_tile(kind, variant=0):
     image = Image(TILE, TILE)
     image.pixels = pixel_floors.tile(kind, variant)
     return image
-
-
-def floor_tiles():
-    """tiles.png in index order (SpriteArt's *_TILE constants): grass, dirt, water frames, eight
-    blank cells, sand, cobble, horizontal and vertical planks, dusk soil, obsidian, cave floor,
-    a ladder opening, a ladder up, rock steps up, three blank cells, gravel, the cave hole, cellar floor, kerbs, bog, snow,
-    snowy cobble, castle sandstone flags, and the 16 carpet tiles by open sides. The ways down and up (ladders, rock steps, the cave hole) are overlays."""
-    def four(kind):
-        return [floor_tile(kind, variant) for variant in range(4)]
-    return (four("grass") + four("dirt") + four("water") + unused_cells(8) + four("sand") + four("cobble")
-            + four("plank") + four("dusk") + four("obsidian") + four("cave")
-            + [floor_tile("ladder_down"), floor_tile("ladder_up"), floor_tile("rock_steps")] + unused_cells(3)
-            + four("gravel")
-            + [floor_tile("cave_hole")] + four("cellar") + four("curb") + four("bog") + four("snow")
-            + four("snow_cobble") + four("flags") + [floor_tile("carpet", mask) for mask in range(16)]
-            + four("cave_earth"))
-
-
-def unused_cells(count):
-    """Blank cells where tiles.png held the dirt, shore, and dry-grass edge overlays, which the
-    terrain shader's blended edges replaced; kept so the later tiles keep their indices."""
-    return [Image(TILE, TILE) for _ in range(count)]
 
 
 SAND = (rgba("ac9c76"), rgba("9d8e6b"), rgba("c0ae86"), rgba("837759"))
@@ -3315,7 +3291,6 @@ def main():
                                     MISSILE_FRAMES, MISSILE_SIZE),
         "rune_fx.png": sheet([rune_fx(element, frame) for element in RUNE_FX_ELEMENTS for frame in range(RUNE_FX_FRAMES)],
                              RUNE_FX_FRAMES, TILE),
-        "tiles.png": sheet(floor_tiles(), 4, TILE),
         "crags.png": sheet_row([crag(v) for v in range(8)] + [crag(v, True) for v in range(6)]),
         "objects.png": sheet_row([tree(v) for v in range(3)] + [dead_tree(v) for v in range(2)]
                                  + [desert_plant(v) for v in range(3)] + [waystone()]

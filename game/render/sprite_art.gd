@@ -41,7 +41,6 @@ const TOWNSFOLK_OUTFIT: int = 16
 static var OUTFIT_SHEETS: Dictionary = _outfit_sheets()
 const MARKER: Texture2D = preload("res://assets/sprites/marker.png")
 const ITEM_ICONS: Texture2D = preload("res://assets/sprites/items.png")
-const TILES: Texture2D = preload("res://assets/sprites/tiles.png")
 const WALLS: Texture2D = preload("res://assets/sprites/walls.png")
 const OBJECTS: Texture2D = preload("res://assets/sprites/objects.png")
 ## Roof material swatches (one row per material), rasterized per building by roof_art.gd.
@@ -120,8 +119,6 @@ const ANIM_FRAMES: int = 12
 const ANIM_SECONDS: float = 0.1
 ## Figures' feet sit about this far below the tile centre; monsters scale around that point.
 const FEET: Vector2 = Vector2(0, 6)
-## Source rectangles of tiles.png by tile index (4 per row), computed once.
-static var TILE_REGIONS: Array[Rect2] = _tile_regions()
 ## Icon order in items.png: the catalog order of game/data/items.json, ITEM_COLUMNS icons per row
 ## (make_sprites.py ITEM_COLUMNS; one long row would pass the 16384-pixel texture limit).
 const ITEM_COLUMNS: int = 64
@@ -130,50 +127,9 @@ static var ITEM_ORDER: Array[String] = _item_order()
 ## game/render/glow_layer.gd; glowing monsters draw their creature GLOW_SCALE larger in that colour.
 const GLOW_SCALE: float = 1.12
 const ITEM_GLOW: Texture2D = preload("res://assets/sprites/items_glow.png")
-const GRASS_TILES: Array[int] = [0, 1, 2, 0, 1, 2, 0, 3]
-const DIRT_TILE: int = 4
-const WATER_TILE: int = 8
-## Tiles 12-19 and 47-49 are blank (the old edge overlays; the terrain shader blends edges).
-const SAND_TILE: int = 20
-const COBBLE_TILE: int = 24
-const PLANK_TILE: int = 28
-const VERTICAL_PLANK_TILE: int = 30
-const DUSK_TILE: int = 32
-const OBSIDIAN_TILE: int = 36
-const CAVE_TILE: int = 40
-## Ways down and up, drawn as overlays (transparent round the opening) over the ground the
-## stairway cell stands on (ground_under): a ladder opening into built places (town cellars and
-## crypts), a ladder up out of them, rough stone steps up out of rock caves, and a hole in the
-## ground into caves (CAVE_HOLE_TILE). way_tile picks one by where the way leads.
-const STAIRS_DOWN_TILE: int = 44
-const STAIRS_UP_TILE: int = 45
-const ROCK_STEPS_TILE: int = 46
-## Grey grit under mountains ("L"), four variants.
-const GRAVEL_TILE: int = 50
-## A hole into a cave: a ragged pit in an apron of worn earth (an overlay, see STAIRS_DOWN_TILE).
-const CAVE_HOLE_TILE: int = 54
-## Cellar floors (dungeons with "theme": "cellar"): dark red-brown brick, four variants.
-const CELLAR_FLOOR_TILE: int = 55
-## Kerb stones where a cobbled street meets grass, dirt, sand, or trees (north, east, south, west).
-const CURB_TILE: int = 59
-const CURBED: Array[String] = [".", ",", ":", "T", "K", "d", "m", "U", "s", "P"]
-## Bog mud of the swamp ("m"), four variants (make_sprites.py bog_tile).
-const BOG_TILE: int = 63
 ## Giant swamp mushrooms ("U"): 64x96 frames like the trees (make_sprites.py mushroom).
 const MUSHROOMS: Texture2D = preload("res://assets/sprites/mushrooms.png")
 const MUSHROOM_VARIANTS: int = 3
-## The frost isles (Biomes.ISLES): snow ground ("s", tiles 67-70), snowy streets (cobbles with snow
-## in the joints, 71-74), snow-laden firs ("P", 64x96 like the trees), and log walls: the house
-## wall shapes in timber under snow (log_walls.png). House floors there are planks.
-const SNOW_TILE: int = 67
-const SNOW_COBBLE_TILE: int = 71
-## Castle floors: cream sandstone flags ("F", four variants) and the red carpet ("Y"): CARPET_TILE
-## plus a mask of the sides where the carpet ends (1 N, 2 E, 4 S, 8 W), which carry its fringe.
-const FLAG_TILE: int = 75
-const CARPET_TILE: int = 79
-## The floor of rock caves (the elite and farming caves, the mine, Silkhollow): red-brown earth with
-## gravel (four variants). Built dungeons (the crypt) keep CAVE_TILE's flat stone.
-const CAVE_EARTH_TILE: int = 95
 const FIRS: Texture2D = preload("res://assets/sprites/firs.png")
 const FIR_VARIANTS: int = 3
 const LOG_WALLS: Texture2D = preload("res://assets/sprites/log_walls.png")
@@ -218,17 +174,7 @@ const DEAD_TREE_FIRST: int = 3
 const DEAD_TREE_VARIANTS: int = 2
 const DESERT_PLANT_FIRST: int = 5
 const DESERT_PLANT_VARIANTS: int = 3
-## The void and "no overlay" in floor_texel.
-const NO_TILE: int = 255
-const BLEND_WATER: int = 16
-const BLEND_SWAY: int = 32
-## Blend priority by the first of each four-tile floor set (grass, below DIRT_TILE, is 8): water
-## lowest, then bog, dusk soil and cave floor, sand, gravel, dirt roads, and snow.
-const FLOOR_PRIORITY: Dictionary = {
-	WATER_TILE: 1 | BLEND_WATER, BOG_TILE: 2, DUSK_TILE: 3, CAVE_TILE: 3, SAND_TILE: 4, GRAVEL_TILE: 5,
-	DIRT_TILE: 6, SNOW_TILE: 7, CAVE_EARTH_TILE: 3,
-}
-## Edge overlay order in the tile sheet: north, east, south, west.
+## The four sides: north, east, south, west.
 const EDGES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 
 
@@ -275,141 +221,6 @@ static func noise(cell: Vector2i, salt: int) -> int:
 	return absi((cell.x * 73856093) ^ (cell.y * 19349663) ^ (salt * 83492791)) % 1000003
 
 
-static func _tile_region(index: int) -> Rect2:
-	return TILE_REGIONS[index]
-
-
-static func _tile_regions() -> Array[Rect2]:
-	var regions: Array[Rect2] = []
-	for index: int in 80:
-		regions.append(Rect2(Vector2(index % 4, index / 4) * TILE, Vector2.ONE * TILE))
-	return regions
-
-
-## Floor data for game/render/terrain.gdshader, one texel per cell packed little-endian in an int:
-## R the floor tile; G an overlay tile drawn over the quarters set in B's low four bits (a pier's
-## planks, a building's floor beside its wall; NO_TILE for none); B's high four bits the kerbs by
-## side (EDGES order); A the blend (floor_blend). R = NO_TILE is the void, drawn black.
-static func floor_texel(cell: Vector2i) -> int:
-	var tile: String = tile_at(cell)
-	if tile == " " or tile.is_empty():
-		return NO_TILE
-	var base: int
-	var overlay: int = NO_TILE
-	var bits: int = 0
-	if tile == "#":
-		var outside: String = "."
-		var inside: String = ""
-		for side: Vector2i in EDGES:
-			var next: String = tile_at(cell + side)
-			# Never a stairway: a wall beside one would show a second hole under it.
-			if next.is_empty() or next in World.WALLS or next in World.TREES or next in ["~", "b", "v", "^", " "]:
-				continue
-			if _inner(cell + side):
-				inside = next if inside.is_empty() and next in World.LAND and next != "v" else inside
-			elif outside == ".":
-				outside = next
-		# A wall with nothing open on its outer side (a dungeon's outer wall) stands on its inside floor.
-		if outside == "." and not inside.is_empty() and not EDGES.any(func(side: Vector2i) -> bool: return tile_at(cell + side) == "."):
-			outside = inside
-		# Below ground there is no grass: a corner wall of the sewers stands on the floor beside it.
-		if outside == "." and inside.is_empty() and Atlas.below_ground(cell):
-			for corner: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
-				var floor_beside: String = tile_at(cell + corner)
-				if floor_beside in World.LAND and floor_beside not in ["v", "^"]:
-					outside = floor_beside
-					break
-		base = _floor_index(outside, cell, 0.0)
-		# A carpet never runs under a wall: a keep's wall shows its sandstone floor inside.
-		overlay = _floor_index("=" if inside.is_empty() else ("F" if inside == "Y" else inside), cell, 0.0, true)
-		var quarter: int = 0
-		for corner: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
-			if _inner(cell + Vector2i(corner.x, 0)) or _inner(cell + Vector2i(0, corner.y)) or _inner(cell + corner):
-				bits |= 1 << quarter
-			quarter += 1
-		if bits == 0:
-			overlay = NO_TILE
-	elif tile == "v" or tile == "^":
-		base = _floor_index(ground_under(cell), cell, 0.0)
-		overlay = way_tile(cell)
-		bits = 15
-	else:
-		base = _floor_index(tile, cell, 0.0)
-		if tile == "b":
-			overlay = (PLANK_TILE if _run(cell, Vector2i.DOWN) > _run(cell, Vector2i.RIGHT) else VERTICAL_PLANK_TILE) \
-				+ noise(cell, 6) % 2
-			bits = 15
-		elif tile == "=" and World.OVERWORLD.has_point(cell):
-			for side: int in EDGES.size():
-				if tile_at(cell + EDGES[side]) in CURBED:
-					bits |= 16 << side
-	return base | overlay << 8 | bits << 16 | floor_blend(base) << 24
-
-
-## Inside a building or a castle keep (its sandstone floor or carpet): a wall's floor shows the
-## inside there and the street or ground outside.
-static func _inner(cell: Vector2i) -> bool:
-	return World.ROOM_AT.has(cell) or tile_at(cell) in ["F", "Y"]
-
-
-## How a floor tile meets its neighbours in terrain.gdshader: bits 0-3 a priority (natural ground
-## of a higher priority spills over a lower one in a ragged edge; 0 is a built floor that never
-## blends), BLEND_WATER for animated water with shore foam, BLEND_SWAY for grass that sways.
-static func floor_blend(index: int) -> int:
-	if index < DIRT_TILE:
-		return 8 | BLEND_SWAY
-	for start: int in FLOOR_PRIORITY:
-		if index >= start and index < start + 4:
-			return FLOOR_PRIORITY[start]
-	return 0
-
-
-## The tile index of a floor; `indoors` marks a building's floor seen beside its wall.
-static func _floor_index(tile: String, cell: Vector2i, time: float, indoors: bool = false) -> int:
-	var index: int = GRASS_TILES[noise(cell, 1) % GRASS_TILES.size()]
-	if tile == ",":
-		index = DIRT_TILE + noise(cell, 2) % 4
-	elif tile == "~" or tile == "b":
-		index = WATER_TILE + (int(time * 3.0) + noise(cell, 3)) % 4
-	elif tile == ":" or tile == "K":
-		index = SAND_TILE + noise(cell, 4) % 4
-	elif tile == "=" and theme_at(cell) == "cellar":
-		index = CELLAR_FLOOR_TILE + noise(cell, 13) % 4
-	elif tile == "=" and Biomes.in_isles(cell):
-		index = PLANK_TILE + noise(cell, 6) % 2 if indoors or World.ROOM_AT.has(cell) else SNOW_COBBLE_TILE + noise(cell, 5) % 4
-	elif tile == "=" and Biomes.in_sunreach(cell):
-		index = FLAG_TILE + noise(cell, 5) % 4
-	elif tile == "s" or tile == "P":
-		index = SNOW_TILE + noise(cell, 15) % 4
-	elif tile == "=" or tile == "W":
-		index = COBBLE_TILE + noise(cell, 5) % 4
-	elif tile == "d" or tile == "D" or tile == "O":
-		index = DUSK_TILE + noise(cell, 8) % 4
-	elif tile == "o":
-		index = obsidian_variant(cell)
-	elif tile == "L":
-		index = GRAVEL_TILE + noise(cell, 12) % 4
-	elif tile == "c" and Caves.at(cell) == ICE_CAVE:
-		# The Rimewater Trench lies under the sea ice: its floor is packed snow and ice.
-		index = SNOW_TILE + noise(cell, 15) % 4
-	elif (tile == "c" or tile == "C" and not World.OVERWORLD.has_point(cell)) and rock_cave(cell):
-		index = CAVE_EARTH_TILE + noise(cell, 11) % 4
-	elif tile == "c" or tile == "C" and not World.OVERWORLD.has_point(cell):
-		# Rock outcrops on the overworld stand on grass; cave rock in dungeons on cave floor.
-		index = CAVE_TILE + noise(cell, 11) % 4
-	elif tile == "F":
-		index = FLAG_TILE + (noise(cell, 16) % 7) % 4
-	elif tile == "Y":
-		var open: int = 0
-		for side: int in 4:
-			if tile_at(cell + [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT][side]) != "Y":
-				open |= 1 << side
-		index = CARPET_TILE + open
-	elif tile == "m" or tile == "U":
-		index = BOG_TILE + noise(cell, 14) % 4
-	return index
-
-
 ## The ground a stairway cell stands on: the walkable ground most common round it (floor, street,
 ## grass, sand...), so the way down or up is set into it and the shader blends it like its
 ## neighbours.
@@ -425,40 +236,6 @@ static func ground_under(cell: Vector2i) -> String:
 		if counts[kind] > counts.get(best, 0):
 			best = kind
 	return best
-
-
-## The overlay of a stairway: into a built dungeon (stone walls, like the town cellar and the
-## crypt) a ladder opening, into a cave (rock walls) or an elite cave a hole in the ground; out of
-## a built dungeon a ladder up, out of a cave rough steps.
-static func way_tile(cell: Vector2i) -> int:
-	if tile_at(cell) == "^" and World.HOLES.has(cell):
-		# Between floors: a ladder in or up to a town (a sewer's, a house's), rough steps elsewhere.
-		var town: bool = World.zone_at(cell).get("town", false) or World.zone_at(World.HOLES[cell]).get("town", false)
-		return STAIRS_UP_TILE if town else ROCK_STEPS_TILE
-	if tile_at(cell) == "^":
-		var place: Array = World.dungeon_at(cell)
-		return STAIRS_UP_TILE if not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] == "#" else ROCK_STEPS_TILE
-	if World.DUNGEON_ENTRANCES.has(cell):
-		return STAIRS_DOWN_TILE if Dungeons.DUNGEONS[World.DUNGEON_ENTRANCES[cell]]["wall"] == "#" else CAVE_HOLE_TILE
-	if World.CAVE_MOUTHS.has(cell):
-		return CAVE_HOLE_TILE
-	return STAIRS_DOWN_TILE if World.zone_at(cell).get("town", false) else CAVE_HOLE_TILE
-
-
-## Obsidian flagstones; the rune-carved stone (variant 0) appears on about one tile in twelve.
-static func obsidian_variant(cell: Vector2i) -> int:
-	return OBSIDIAN_TILE + (0 if noise(cell, 9) % 12 == 0 else 1 + noise(cell, 10) % 3)
-
-
-## Length of the pier or bridge through a cell along an axis; boards run across the longer one.
-static func _run(cell: Vector2i, axis: Vector2i) -> int:
-	var length: int = 1
-	for direction: Vector2i in [axis, -axis]:
-		var next: Vector2i = cell + direction
-		while length < 12 and tile_at(next) in ["b", "="]:
-			length += 1
-			next += direction
-	return length
 
 
 ## Trees stand on their tile and rise about two tiles; draw in row-major order like walls.

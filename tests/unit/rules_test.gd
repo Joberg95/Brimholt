@@ -2,6 +2,7 @@ extends SceneTree
 
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
+const GroundArt = preload("res://game/render/ground_art.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
@@ -3885,8 +3886,8 @@ func _isles_checks() -> void:
 		"snow is walkable land and firs block")
 	var house: Dictionary = homes[0]
 	check(SpriteArt.wall_sheet(house["rect"].position) == SpriteArt.LOG_WALLS, "Hrimvik's houses have log walls")
-	check(SpriteArt._floor_index("=", house["interior"][0], 0.0) in [SpriteArt.PLANK_TILE, SpriteArt.PLANK_TILE + 1]
-		and SpriteArt._floor_index("=", town["rect"].position + Vector2i(1, 16), 0.0) >= SpriteArt.SNOW_COBBLE_TILE,
+	check(GroundArt.ground_of("=", house["interior"][0]) == "planks"
+		and GroundArt.ground_of("=", town["rect"].position + Vector2i(1, 16)) == "snow_street",
 		"Hrimvik's houses have plank floors and its streets are snowy")
 	var weather: Dictionary = Weather.local(0.0, boat)
 	check(weather.get("snow", false) and weather["rain"] > 0.0 and weather["flash"] == 0.0, "it snows over the isles")
@@ -4428,7 +4429,7 @@ func _swamp_checks() -> void:
 	check(stray == 0, "bog and mushrooms grow only in Mirewood Fen")
 	check(World.walkable(mud[0]) and not World.walkable(mud[0] + Vector2i(9999, 0)), "bog mud is walkable")
 	check("U" in World.TREES and "U" not in World.WALKABLE, "giant mushrooms block like trees")
-	check(SpriteArt.TILES.get_height() >= SpriteArt.TILE_REGIONS[SpriteArt.BOG_TILE + 3].end.y, "tiles.png holds the four bog tiles")
+	check(GroundArt.ground_of("m", mud[0]) == "bog", "bog mud has its own ground")
 	var dry: float = -1.0
 	for step: int in 2000:
 		if Weather.at(step * 60.0)["rain"] == 0.0:

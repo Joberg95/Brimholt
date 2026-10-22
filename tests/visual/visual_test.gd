@@ -2,6 +2,8 @@ extends SceneTree
 
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
+const GroundArt = preload("res://game/render/ground_art.gd")
+const PackAtlas = preload("res://game/render/pack_atlas.gd")
 const Combat = preload("res://game/core/combat.gd")
 const WorldViewScript = preload("res://game/render/world_view.gd")
 const Atlas = preload("res://game/data/atlas.gd")
@@ -1071,10 +1073,20 @@ func _check_town_lamps() -> bool:
 				far = cell
 	if not _expect(darkest >= 4, "No dark ground on screen near the lamp at %s" % lamp):
 		return false
-	var near: Color = night.get_pixelv(Vector2i(game.map_to_screen((Vector2(lamp) + Vector2(1.5, 0.5)) * World.TILE_SIZE)))
-	var dark: Color = night.get_pixelv(Vector2i(game.map_to_screen((Vector2(far) + Vector2(0.5, 0.5)) * World.TILE_SIZE)))
-	return _expect(near.get_luminance() > dark.get_luminance() + 0.08,
-		"A town lamp post does not light the street at night (%s beside %s, %s at %s)" % [near, lamp, dark, far])
+	# Averages over a patch, since textured ground has dark joints between its stones.
+	var near: float = _patch_luminance(night, game.map_to_screen((Vector2(lamp) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
+	var dark: float = _patch_luminance(night, game.map_to_screen((Vector2(far) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
+	return _expect(near > dark + 0.08,
+		"A town lamp post does not light the street at night (%.2f beside %s, %.2f at %s)" % [near, lamp, dark, far])
+
+
+## The mean luminance of a 16x16 screen patch round `at`.
+func _patch_luminance(image: Image, at: Vector2) -> float:
+	var total: float = 0.0
+	for y: int in range(-8, 8):
+		for x: int in range(-8, 8):
+			total += image.get_pixelv(Vector2i(at) + Vector2i(x, y)).get_luminance()
+	return total / 256.0
 
 
 ## Silkhollow is pitch dark: without a torch you see nothing; a held torch lights three tiles and more.
@@ -1712,8 +1724,9 @@ func _check_hollow_reach() -> bool:
 	game._world_view.lighting.visible = true
 	game._world_view.glow.visible = true
 	var floor_cell: Vector2i = EndgameZone.THRONE_SEAT + Vector2i(-4, -2)
-	var region: Rect2 = SpriteArt._tile_region(SpriteArt.obsidian_variant(floor_cell))
-	return _expect(_matches_texel(unlit, SpriteArt.TILES, Rect2(region.position + Vector2(2, 20), Vector2(4, 4)),
+	var piece: int = GroundArt.piece(GroundArt.GROUNDS["obsidian"][0], floor_cell)
+	var corner := Vector2(PackAtlas.RECTS[piece * 2], PackAtlas.RECTS[piece * 2 + 1])
+	return _expect(_matches_texel(unlit, PackAtlas.TEXTURE, Rect2(corner + Vector2(2, 20), Vector2(4, 4)),
 		Vector2(floor_cell) * World.TILE_SIZE + Vector2(2, 20)), "The throne room floor is not drawn with obsidian tiles")
 
 
