@@ -90,3 +90,6 @@ Each phase: review renders by eye (art is never tested), functional tests, docs,
   (the pack's names show some of ours misfit their art) and confirm the border order. The pack has no
   palms or cacti (dry trees stand in) and no water borders. make_sprites.py keeps only the marker,
   coins, spell effects, menu icons, and title painting (phase 6).
+  After review the rock got its north and west rim and its top drawn with the floor, and the map's
+  rock moved to where it belongs (`mountains.gd`): small clumps cleared, massifs around every cave
+  mouth and hole, and mountains along the map's north and west edges (470 ore veins, from 422).

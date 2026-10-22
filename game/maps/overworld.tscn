@@ -119,84 +119,85 @@ metadata/cave_below_thornroot_hollows = true
 metadata/region_silverwood = true
 metadata/island_sunreach = true
 metadata/region_sunreach = true
+metadata/mountains = true
 
 [node name="Sectors" type="Node2D" parent="." unique_id=2003087866]
 
-[node name="Sector_0_0" parent="Sectors" unique_id=1597694699 instance=ExtResource("1_pcknd")]
+[node name="Sector_0_0" parent="Sectors" unique_id=1249316316 instance=ExtResource("1_pcknd")]
 
-[node name="Sector_0_1" parent="Sectors" unique_id=820883860 instance=ExtResource("2_7u13y")]
+[node name="Sector_0_1" parent="Sectors" unique_id=1502208738 instance=ExtResource("2_7u13y")]
 
-[node name="Sector_0_2" parent="Sectors" unique_id=1545210083 instance=ExtResource("3_j1712")]
+[node name="Sector_0_2" parent="Sectors" unique_id=939764475 instance=ExtResource("3_j1712")]
 
-[node name="Sector_0_3" parent="Sectors" unique_id=301404153 instance=ExtResource("4_q0lg1")]
+[node name="Sector_0_3" parent="Sectors" unique_id=1171634180 instance=ExtResource("4_q0lg1")]
 
-[node name="Sector_0_4" parent="Sectors" unique_id=653036425 instance=ExtResource("5_dfish")]
+[node name="Sector_0_4" parent="Sectors" unique_id=1915788248 instance=ExtResource("5_dfish")]
 
-[node name="Sector_0_5" parent="Sectors" unique_id=1786654722 instance=ExtResource("6_l7w5o")]
+[node name="Sector_0_5" parent="Sectors" unique_id=988468296 instance=ExtResource("6_l7w5o")]
 
-[node name="Sector_0_6" parent="Sectors" unique_id=229945941 instance=ExtResource("7_7or3e")]
+[node name="Sector_0_6" parent="Sectors" unique_id=1605769571 instance=ExtResource("7_7or3e")]
 
-[node name="Sector_1_0" parent="Sectors" unique_id=1434658270 instance=ExtResource("6_827vx")]
+[node name="Sector_1_0" parent="Sectors" unique_id=1811882762 instance=ExtResource("6_827vx")]
 
-[node name="Sector_1_1" parent="Sectors" unique_id=1160618892 instance=ExtResource("7_nu51i")]
+[node name="Sector_1_1" parent="Sectors" unique_id=500631604 instance=ExtResource("7_nu51i")]
 
-[node name="Sector_1_2" parent="Sectors" unique_id=1710042512 instance=ExtResource("8_vhqwq")]
+[node name="Sector_1_2" parent="Sectors" unique_id=930042796 instance=ExtResource("8_vhqwq")]
 
-[node name="Sector_1_3" parent="Sectors" unique_id=1980316262 instance=ExtResource("9_0feea")]
+[node name="Sector_1_3" parent="Sectors" unique_id=1516440103 instance=ExtResource("9_0feea")]
 
-[node name="Sector_1_4" parent="Sectors" unique_id=2129330596 instance=ExtResource("10_3rgd2")]
+[node name="Sector_1_4" parent="Sectors" unique_id=2122433421 instance=ExtResource("10_3rgd2")]
 
 [node name="Sector_1_5" parent="Sectors" unique_id=94138827 instance=ExtResource("13_fmebg")]
 
 [node name="Sector_1_6" parent="Sectors" unique_id=1957129184 instance=ExtResource("14_neb46")]
 
-[node name="Sector_2_0" parent="Sectors" unique_id=1588682514 instance=ExtResource("11_vy3hr")]
+[node name="Sector_2_0" parent="Sectors" unique_id=623087872 instance=ExtResource("11_vy3hr")]
 
-[node name="Sector_2_1" parent="Sectors" unique_id=858624060 instance=ExtResource("12_y06j2")]
+[node name="Sector_2_1" parent="Sectors" unique_id=424527385 instance=ExtResource("12_y06j2")]
 
-[node name="Sector_2_2" parent="Sectors" unique_id=1331673158 instance=ExtResource("13_icv6c")]
+[node name="Sector_2_2" parent="Sectors" unique_id=1058630007 instance=ExtResource("13_icv6c")]
 
-[node name="Sector_2_3" parent="Sectors" unique_id=626444354 instance=ExtResource("14_0bof0")]
+[node name="Sector_2_3" parent="Sectors" unique_id=161958198 instance=ExtResource("14_0bof0")]
 
-[node name="Sector_2_4" parent="Sectors" unique_id=195036973 instance=ExtResource("19_s0ikt")]
+[node name="Sector_2_4" parent="Sectors" unique_id=411844106 instance=ExtResource("19_s0ikt")]
 
-[node name="Sector_3_0" parent="Sectors" unique_id=1775927459 instance=ExtResource("20_kd3gj")]
+[node name="Sector_3_0" parent="Sectors" unique_id=652072319 instance=ExtResource("20_kd3gj")]
 
-[node name="Sector_3_1" parent="Sectors" unique_id=2058018807 instance=ExtResource("21_57m7n")]
+[node name="Sector_3_1" parent="Sectors" unique_id=1465940704 instance=ExtResource("21_57m7n")]
 
-[node name="Sector_3_2" parent="Sectors" unique_id=1619439754 instance=ExtResource("22_7bpcm")]
+[node name="Sector_3_2" parent="Sectors" unique_id=498100665 instance=ExtResource("22_7bpcm")]
 
-[node name="Sector_3_3" parent="Sectors" unique_id=651148402 instance=ExtResource("23_ncskn")]
+[node name="Sector_3_3" parent="Sectors" unique_id=1173734772 instance=ExtResource("23_ncskn")]
 
-[node name="Sector_3_4" parent="Sectors" unique_id=944874195 instance=ExtResource("24_yeqt5")]
+[node name="Sector_3_4" parent="Sectors" unique_id=1625055320 instance=ExtResource("24_yeqt5")]
 
-[node name="Sector_3_6" parent="Sectors" unique_id=749814256 instance=ExtResource("25_4b4h1")]
+[node name="Sector_3_6" parent="Sectors" unique_id=517655364 instance=ExtResource("25_4b4h1")]
 
-[node name="Sector_3_7" parent="Sectors" unique_id=788887526 instance=ExtResource("26_pelei")]
+[node name="Sector_3_7" parent="Sectors" unique_id=1486597578 instance=ExtResource("26_pelei")]
 
-[node name="Sector_4_0" parent="Sectors" unique_id=1550271261 instance=ExtResource("25_qhiic")]
+[node name="Sector_4_0" parent="Sectors" unique_id=1738411307 instance=ExtResource("25_qhiic")]
 
-[node name="Sector_4_1" parent="Sectors" unique_id=462033314 instance=ExtResource("26_oq2ia")]
+[node name="Sector_4_1" parent="Sectors" unique_id=737309253 instance=ExtResource("26_oq2ia")]
 
-[node name="Sector_4_2" parent="Sectors" unique_id=679034457 instance=ExtResource("27_0is1r")]
+[node name="Sector_4_2" parent="Sectors" unique_id=61343473 instance=ExtResource("27_0is1r")]
 
-[node name="Sector_4_3" parent="Sectors" unique_id=740906781 instance=ExtResource("28_fg6lk")]
+[node name="Sector_4_3" parent="Sectors" unique_id=2122593496 instance=ExtResource("28_fg6lk")]
 
-[node name="Sector_4_4" parent="Sectors" unique_id=1779790423 instance=ExtResource("29_pi4ho")]
+[node name="Sector_4_4" parent="Sectors" unique_id=2088620335 instance=ExtResource("29_pi4ho")]
 
-[node name="Sector_4_6" parent="Sectors" unique_id=1320390041 instance=ExtResource("32_4c6ti")]
+[node name="Sector_4_6" parent="Sectors" unique_id=757117789 instance=ExtResource("32_4c6ti")]
 
-[node name="Sector_4_7" parent="Sectors" unique_id=1050862126 instance=ExtResource("33_xkfp8")]
+[node name="Sector_4_7" parent="Sectors" unique_id=190259789 instance=ExtResource("33_xkfp8")]
 
-[node name="Sector_6_0" parent="Sectors" unique_id=1435239114 instance=ExtResource("19_jre8o")]
+[node name="Sector_6_0" parent="Sectors" unique_id=828824704 instance=ExtResource("19_jre8o")]
 
-[node name="Sector_6_1" parent="Sectors" unique_id=1900550622 instance=ExtResource("20_0sou3")]
+[node name="Sector_6_1" parent="Sectors" unique_id=641181888 instance=ExtResource("20_0sou3")]
 
 [node name="Sector_6_2" parent="Sectors" unique_id=1949263058 instance=ExtResource("21_oj10t")]
 
-[node name="Sector_7_0" parent="Sectors" unique_id=822369378 instance=ExtResource("22_fv3fk")]
+[node name="Sector_7_0" parent="Sectors" unique_id=2083060520 instance=ExtResource("22_fv3fk")]
 
-[node name="Sector_7_1" parent="Sectors" unique_id=1638280359 instance=ExtResource("23_md8a2")]
+[node name="Sector_7_1" parent="Sectors" unique_id=1547225709 instance=ExtResource("23_md8a2")]
 
 [node name="Sector_7_2" parent="Sectors" unique_id=1891000672 instance=ExtResource("35_bhn54")]
 

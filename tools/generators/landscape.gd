@@ -97,6 +97,8 @@ var _zones: Array = []
 var _protected: Dictionary = {}
 ## Towns that get a DISTRICT.
 var _districts: Array[String] = []
+## Where _reconnect carves paths (the mainland unless a generator widens it).
+var _reconnect_area: Rect2i = WORLD
 
 
 func _initialize() -> void:
@@ -151,22 +153,23 @@ func apply(scene_root: Node) -> Dictionary:
 
 ## Every marker must stay reachable on foot from the player spawns (or its own dock): for any that
 ## is not, the shortest way back through trees, boulders, and rock outcrops is cleared to meadow.
-## Places only reachable by boat (an island) are left alone. Returns the tiles cleared.
-func _reconnect(scene_root: Node) -> int:
+## Places only reachable by boat (an island) are left alone. `extra` cells (such as holes down)
+## must stay reachable too, walking from the `from` marker groups. Returns the tiles cleared.
+func _reconnect(scene_root: Node, extra: Array[Vector2i] = [], from: Array[String] = ["Spawns", "Ferrymen"]) -> int:
 	var walkable: String = ".,:=bdocv^"
 	var reached: Dictionary = {}
 	var starts: Array[Vector2i] = []
-	for group: String in ["Spawns", "Ferrymen"]:
+	for group: String in from:
 		for marker: Node2D in scene_root.get_node(group).get_children():
 			starts.append(_cell_of(marker))
 	_flood(starts, walkable, reached)
-	var targets: Array[Vector2i] = []
+	var targets: Array[Vector2i] = extra.duplicate()
 	for group: String in ["Items", "QuestGivers", "Townsfolk", "DungeonEntrances", "MonsterSpawns"]:
 		for marker: Node2D in scene_root.get_node(group).get_children():
 			targets.append(_cell_of(marker))
 	var cleared: int = 0
 	for target: Vector2i in targets:
-		if reached.has(target) or not WORLD.has_point(target):
+		if reached.has(target) or not _reconnect_area.has_point(target):
 			continue
 		# Search outward from the target through walkable ground and clearable obstacles.
 		var came: Dictionary = {target: target}
@@ -178,7 +181,7 @@ func _reconnect(scene_root: Node) -> int:
 			head += 1
 			for side: Vector2i in SIDES:
 				var next: Vector2i = cell + side
-				if came.has(next) or not WORLD.has_point(next):
+				if came.has(next) or not _reconnect_area.has_point(next):
 					continue
 				var tile: String = _tile(next)
 				if tile.is_empty() or not (tile in walkable or tile in "TRCL"):

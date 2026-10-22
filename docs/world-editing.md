@@ -177,6 +177,15 @@ clear of roads, water, towns, markers, and camps, with no trees inside or at the
 about 30% of the countryside trees. Ground a cliff closed off got a way in, and every marker
 stays reachable. Paint `L` by hand for more rock.
 
+Later `tools/generators/mountains.gd` (`make mountains`, once: scene metadata `mountains`) put the
+rock where the land has a reason for it: rock pieces (`C`, `L`) under 30 tiles in the open were
+cleared to the ground around them; a massif rises around every way down outside towns (cave mouths
+and dungeon entrances 13 tiles, other holes 8, ragged by noise), the hole at its south foot in a
+notch opening south, so it reads as a cave in a cliff; and mountains run along the map's north and
+west edges where land meets them. Roads, water, walls, markers, monster camps (their radius and a
+tile and a half), and the town painter's patches stay clear, and the shortest way from a harbour to
+every marker and hole was cut through. Ore veins follow the new rock faces by themselves.
+
 **Hunting grounds** for the Hunters' Lodge and the level-50 elites are placed by
 `tools/generators/hunts.gd` (`make hunts`): camps named `Hunt_<monster>_<n>` in the region that
 suits each prey (`HUNTS`), on open meadow that can be walked to, away from zones and other camps;
