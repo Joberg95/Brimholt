@@ -49,8 +49,9 @@ const ROPE_SPOT: int = 1000
 ## left of its cell like a floor above, so the cliff pieces drawn over it never get cut.
 const ROCK_TOPS: Dictionary = {"grey": 991, "cave": 992, "snow": 991, "sand": 990}
 ## The rock's north and west rim, laid on the open cell beside it: [north, west, north-west corner]
-## (grey rock only: the pack has no rim for its snowy and sandy rock).
-const ROCK_RIMS: Dictionary = {"grey": [938, 939, 940], "cave": [938, 939, 940]}
+## (the overworld's grey rock only: the pack has no rim for its snowy and sandy rock, and in caves the
+## rim would lie on the cave floor as a pale slab).
+const ROCK_RIMS: Dictionary = {"grey": [938, 939, 940]}
 ## Animated grounds (water) cycle their frames this fast.
 const FRAME_SECONDS: float = 0.35
 const SIDES: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
