@@ -1,116 +1,159 @@
 """Maces, hammers, and clubs in the OpenTibia pack's proportions (measured from 28 pack maces,
-reference only): a 2-3 px haft on the diagonal to the bottom-right corner, a compact head about 9 px
-across at its top-left end, a wrapped grip and a small end cap. They differ in head (flanged, spiked,
-hammer, maul, club, scepter, crystal, bone), haft, wrap, and materials.
+reference only), built as real weapons seen from the side and dressed from Brimholt's flavour pillars
+(motifs.py): a haft on the diagonal to the bottom-right corner with a wrapped grip and a cap, and at
+its top a head about 12-14 px across. Real heads: a flanged mace (a long core with flanged plates
+standing out on both sides), a morning star (a ball with conical spikes), a war hammer (a square face,
+a curved beak behind, a spike on top), a maul (a banded block), a club (a log thickening to the top).
+The pillar shows in materials and decoration, never in an unreal shape.
 """
 import math
 
+import motifs
 from core import ROUND, Icon, at, local, to_local
 
 TIP = (1.6, 1.6)
-END = 38.5  # the haft's end along the diagonal
+END = 38.6
+HEAD_AT = 9.0
+
+
+def _shade_block(icon, cells, c, mat, half_along, rough=False, seed=1):
+    """A solid lit from the top-left: the upper (lit) part bright, faces toward the tip darker."""
+    for (x, y) in cells:
+        t, v = to_local(c, x, y)
+        tone = 0.62 - 0.3 * (t / half_along) + 0.1 * (v / 6.0)
+        if rough:
+            tone += 0.14 * (motifs.noise(x * 31 + y, seed) - 0.5)
+        icon.put(x, y, mat, tone)
 
 
 def _flanged(icon, c, d):
-    for k in range(6):
-        a = k * math.pi / 3 + 0.3
-        icon.stroke([c, (c[0] + math.cos(a) * 6.6, c[1] + math.sin(a) * 6.6)], lambda s: 1.5 - s * 0.4, ROUND, d["head_mat"])
-    icon.ball(c[0], c[1], 4.3, 4.3, d["head_mat"])
+    """A long core with flanged plates standing out on both sides and a bright front flange."""
+    mat = d["head"]
+    for side in (1, -1):
+        for start in (-4.0, -0.4):
+            plate = local(c, lambda t, v, a=start: a <= t <= a + 3.2 and 2.0 <= v * side <= 2.0 + 3.6 * (1 - (t - a) / 3.6))
+            _shade_block(icon, plate, c, mat, 4.5)
+    core = local(c, lambda t, v: (t / 5.0) ** 2 + (v / 2.6) ** 2 <= 1)
+    icon.dome(core, mat, height=2.0)
+    icon.stroke([at(c, -4.2), at(c, 3.8)], lambda s: 0.5, lambda u, *_: 0.95, mat)
+    icon.ball(*at(c, -5.4), 1.3, 1.3, mat)
+    return core
 
 
-def _spiked(icon, c, d):
-    for k in range(8):
-        a = k * math.pi / 4 + 0.39
-        icon.stroke([(c[0] + math.cos(a) * 3.2, c[1] + math.sin(a) * 3.2), (c[0] + math.cos(a) * 7.4, c[1] + math.sin(a) * 7.4)],
-                    lambda s: 1.4 * (1 - s) + 0.15, ROUND, d.get("spike_mat", d["head_mat"]))
-    icon.ball(c[0], c[1], 4.5, 4.5, d["head_mat"])
+def _morning_star(icon, c, d):
+    """A ball with conical spikes all round."""
+    mat = d["head"]
+    for k in range(10):
+        a = k * 2 * math.pi / 10 + 0.2
+        base = (c[0] + math.cos(a) * 3.6, c[1] + math.sin(a) * 3.6)
+        icon.stroke([base, (c[0] + math.cos(a) * 7.0, c[1] + math.sin(a) * 7.0)], lambda s: 1.25 * (1 - s) + 0.15,
+                    ROUND, d.get("spike", mat))
+    icon.ball(c[0], c[1], 4.6, 4.6, mat)
+    return local(c, lambda t, v: t * t + v * v <= 4.6 ** 2)
 
 
-def _block(icon, c, d, half_along, half_across, spike=False):
-    """A hammer head square to the haft: a lit top face, darker sides, bright striking faces."""
-    cells = local(c, lambda t, v: abs(t) <= half_along and (-half_across <= v <= (1.0 if spike else half_across)))
-    for (x, y) in cells:
-        t, v = to_local(c, x, y)
-        tone = 0.62 - 0.32 * (t / half_along) - 0.08 * (v / half_across)
-        if abs(v) > half_across - 1.1:
-            tone += 0.25  # the striking face catches the light
-        icon.put(x, y, d["head_mat"], tone)
-    if spike:
-        icon.stroke([at(c, 0, 0.8), at(c, 0.6, half_across + 2.5)], lambda s: half_along * (1 - s) + 0.2, ROUND, d["head_mat"])
-    for band in d.get("bands", ()):
-        icon.shade(local(c, lambda t, v, b=band: abs(t) <= half_along and abs(v - b) < 0.7), -0.3)
+def _war_hammer(icon, c, d):
+    """A square striking face on one side, a curved beak on the other, a spike on top."""
+    mat = d["head"]
+    face = local(c, lambda t, v: abs(t) <= 2.6 and -6.4 <= v <= 1.2)
+    _shade_block(icon, face, c, mat, 2.6)
+    icon.shade(local(c, lambda t, v: abs(t) <= 2.6 and -6.4 <= v <= -5.4), 0.28)  # the striking face
+    icon.stroke([at(c, -0.4, 1.0), at(c, 0.4, 5.4), at(c, 3.4, 8.0)], lambda s: 2.0 * (1 - s) + 0.25, ROUND, mat)
+    icon.stroke([at(c, -2.4), at(c, -6.6)], lambda s: 1.3 * s + 0.25, ROUND, mat)
+    return face
+
+
+def _maul(icon, c, d):
+    """A heavy block square to the haft, banded at both ends."""
+    mat = d["head"]
+    block = local(c, lambda t, v: abs(t) <= 3.8 and abs(v) <= 6.8)
+    _shade_block(icon, block, c, mat, 3.8, d.get("rough", False), d.get("seed", 1))
+    for band in (-5.0, 5.0):
+        icon.dome(local(c, lambda t, v, b=band: abs(t) <= 4.1 and abs(v - b) <= 0.8), d.get("band", "iron"), height=1.0)
+    return block
 
 
 def _club(icon, c, d):
-    icon.stroke([at(c, -5.5), at(c, 10.0)], lambda s: 4.3 - s * 3.0, ROUND, d["head_mat"],
-                pattern=lambda length, u: -0.12 if int(length * 0.7) % 3 == 0 else 0.0)
-    for along, across in ((-2.5, 1.8), (0.5, -2.4), (3.2, 1.6), (-0.4, 0.6)):
-        icon.ball(*at(c, along, across), 0.9, 0.9, d.get("stud_mat", "iron"))
+    """A log thickening toward the top, knotted, with studs or bands."""
+    mat = d["head"]
+    icon.stroke([at(c, -5.8), at(c, 10.5)], lambda s: 4.4 - s * 3.2, ROUND, mat,
+                pattern=lambda length, u: -0.14 if int(length * 0.8) % 4 == 0 else 0.0)
+    cells = local(c, lambda t, v: -5.8 <= t <= 10.5 and abs(v) <= 4.4 - (t + 5.8) / 16.3 * 3.2)
+    for along, across in d.get("studs", ()):
+        icon.ball(*at(c, along, across), 0.95, 0.95, d.get("stud", "iron"))
+    return cells
 
 
-def _scepter(icon, c, d):
-    for k in (-1, 0, 1):
-        icon.stroke([at(c, -1.2, k * 2.6), at(c, -6.4, k * 4.4)], lambda s: 1.2 * (1 - s) + 0.3, ROUND, d["head_mat"])
-    icon.ball(c[0], c[1], 3.9, 3.9, d["head_mat"])
-    icon.ball(*at(c, -1.4), 2.1, 2.1, d["gem"])
-
-
-def _crystal(icon, c, d):
-    cells = local(c, lambda t, v: abs(t + 1.5) / 7.6 + abs(v) / 4.5 <= 1)
-    for (x, y) in cells:
-        t, v = to_local(c, x, y)
-        tone = 0.55 + (0.35 if v > 0 else -0.05) - 0.25 * ((t + 1.5) / 7.6)
-        if abs(v) < 0.6:
-            tone += 0.3  # the bright ridge between two facets
-        icon.put(x, y, d["head_mat"], tone)
-
-
-def _bone(icon, c, d):
-    icon.stroke([at(c, -3.0), at(c, 7.0)], lambda s: 2.3 - s * 0.8, ROUND, d["head_mat"])
-    for across in (2.1, -2.1):
-        icon.ball(*at(c, -4.2, across), 2.6, 2.6, d["head_mat"])
-
-
-HEADS = {"flanged": _flanged, "spiked": _spiked, "club": _club, "scepter": _scepter, "crystal": _crystal, "bone": _bone,
-         "hammer": lambda icon, c, d: _block(icon, c, d, 3.2, 6.2, spike=d.get("spike", False)),
-         "maul": lambda icon, c, d: _block(icon, c, d, 4.2, 7.0)}
+HEADS = {"flanged": _flanged, "morning_star": _morning_star, "war_hammer": _war_hammer, "maul": _maul, "club": _club}
 
 
 def mace(d):
-    """Draws one mace design (a dict, see DESIGNS) and returns the Icon."""
+    """Draws one design (a dict, see DESIGNS) and returns the Icon."""
     icon = Icon()
-    head = at(TIP, d.get("head_at", 8.5))
-    grip = END - d.get("grip", 10)
-    icon.stroke([head, at(TIP, END)], lambda s: d.get("haft_width", 1.0), ROUND, d["haft_mat"])
-    icon.stroke([at(TIP, grip), at(TIP, END - 0.8)], lambda s: 1.15, ROUND, d["wrap"],
-                pattern=lambda length, u: -0.3 if int(length) % 2 == 0 else 0.05)
-    icon.ball(*at(TIP, END), 1.3, 1.3, d.get("cap_mat", "iron"))
-    HEADS[d["head"]](icon, head, d)
+    seed = d.get("seed", 1)
+    head = at(TIP, d.get("head_at", HEAD_AT))
+    icon.stroke([at(head, -2.0), at(TIP, END)], lambda s: d.get("haft_width", 1.0), ROUND, d["haft"])
+    icon.stroke([at(TIP, END - 10.0), at(TIP, END - 0.8)], lambda s: 1.15, ROUND, d["grip"],
+                pattern=motifs.GRIPS[d.get("wrap", "wrap")]())
+    if d.get("root_wrap"):
+        motifs.root(icon, [at(TIP, d.get("head_at", HEAD_AT) + 6 + k * 2.6, 1.3 if k % 2 else -1.3) for k in range(8)],
+                    "wood", width=0.8)
+    icon.ball(*at(TIP, END), 1.35, 1.35, d.get("cap", "iron"))
+    cells = HEADS[d["shape"]](icon, head, d)
+    # The pillar's dressing.
+    if d.get("runes"):
+        motifs.runes(icon, at(head, -0.4, 5.0), at(head, -0.4, -5.6), d["runes"])
+    if d.get("cracks"):
+        motifs.crack_cells(icon, cells, d["cracks"], seed, count=3)
+    if d.get("seam"):
+        motifs.seam(icon, at(head, -2.6, 5.4), at(head, 2.6, -5.4), d["seam"], seed)
+    if d.get("moss"):
+        tops = sorted(cells, key=lambda c: to_local(head, *c)[0])[: max(1, len(cells) // 3)]
+        motifs.moss(icon, [(x + 0.5, y + 0.5) for (x, y) in tops[::4]], seed)
+    if d.get("crystals"):
+        for k, (along, across) in enumerate(((-4.0, -4.6), (-4.6, 4.4), (0.6, -6.6), (0.8, 6.4), (-6.8, 0.0))):
+            base = at(head, along * 0.4, across * 0.4)
+            motifs.crystal(icon, base, at(head, along, across), d["crystals"], width=1.4)
+    if d.get("lashing"):
+        for k in (-1, 1):
+            icon.stroke([at(head, -4.0, k * 3.0), at(head, 4.0, -k * 3.0)], lambda s: 0.6, ROUND, "leather")
+    for band, mat in d.get("bindings", ()):  # cord bound round the head
+        icon.stroke([at(head, band, 4.6), at(head, band, -4.6)], lambda s: 0.7, ROUND, mat, pattern=motifs.reed())
+    icon.stroke([at(head, 2.6), at(head, 4.6)], lambda s: 1.5, ROUND, d.get("collar", "iron"),
+                pattern=motifs.GRIPS[d.get("collar_wrap", "plain")]())
+    if d.get("tassel"):
+        motifs.tassel(icon, at(head, 5.2, 0.8), d["tassel"], d.get("collar", "iron"))
     return icon
 
 
-# Each design its own weapon: head, haft, wrap, and materials all differ.
+# Real maces, hammers, and clubs, each dressed from one of Brimholt's flavour pillars.
 DESIGNS = {
-    # A flanged mace: six iron flanges round a ball, an iron haft, a leather grip.
-    "flanged_mace": dict(head="flanged", head_mat="iron", haft_mat="iron", wrap="leather"),
-    # A spiked mace: a dark ball bristling with eight spikes, a wooden haft, a red grip.
-    "spiked_mace": dict(head="spiked", head_mat="darksteel", spike_mat="steel", haft_mat="wood", wrap="7a1a14"),
-    # A war hammer: a steel block with a back spike, a wooden haft, a black grip.
-    "war_hammer": dict(head="hammer", spike=True, head_mat="steel", haft_mat="wood", wrap="2a2a32", head_at=9.0),
-    # A maul: a big bronze block banded twice, a long banded haft, a gold cap.
-    "maul": dict(head="maul", head_mat="bronze", bands=(-2.2, 2.2), haft_mat="5a3a22", wrap="leather", cap_mat="gold",
-                 head_at=9.5, haft_width=1.2),
-    # A studded club: a tapering knotty log with iron studs, a short grip.
-    "studded_club": dict(head="club", head_mat="wood", stud_mat="iron", haft_mat="wood", wrap="leather", grip=8,
-                         head_at=9.5, haft_width=1.2),
-    # A scepter: a gold ball crowned with three prongs and a ruby, a gold haft, a white grip.
-    "scepter": dict(head="scepter", head_mat="gold", gem="c02040", haft_mat="gold", wrap="e8e4d8", cap_mat="gold"),
-    # A crystal mace: a long faceted crystal on a silver haft, a blue grip.
-    "crystal_mace": dict(head="crystal", head_mat="6ad0f0", haft_mat="silver", wrap="1a2a4a", cap_mat="silver",
-                         head_at=9.5),
-    # A bone club: a great knuckled bone, bound with a leather grip.
-    "bone_club": dict(head="bone", head_mat="bone", haft_mat="bone", wrap="leather", cap_mat="bone", head_at=9.0,
-                      haft_width=1.25),
+    # Runes and old stone: an iron maul with silver runes across its block, a knotwork collar and grip.
+    "rune_maul": dict(shape="maul", head="iron", band="bronze", runes="silver", collar="bronze", collar_wrap="knotwork",
+                      haft="wood", grip="bronze", wrap="knotwork", cap="bronze", head_at=10.0),
+    # Runes and old stone: a barrow mace, flanged bog bronze dug from a mound, a bone haft, a gold cap.
+    "barrow_mace": dict(shape="flanged", head="verdigris", collar="gold", haft="bone", grip="leather", cap="gold",
+                        head_at=10.0, seed=3),
+    # Runes and old stone: a waystone maul, a rough stone block lashed to the haft, a glowing rune seam.
+    "waystone_maul": dict(shape="maul", head="runestone", band="leather", rough=True, seam="glow_rune", lashing=True,
+                          collar="leather", collar_wrap="wrap", haft="wood", grip="leather", cap="runestone",
+                          head_at=10.0, seed=5),
+    # Ember: a morning star of ember glass cracked through with fire, iron spikes, a dark haft.
+    "ember_star": dict(shape="morning_star", head="emberglass", spike="iron", cracks="glow_ember", haft="2a2a32",
+                       grip="iron", cap="glow_ember", head_at=9.5, seed=2),
+    # Reed: a bog-oak club bound with reed cord, a lake-blue stud, a reed grip.
+    "reed_club": dict(shape="club", head="4a3020", bindings=((-2.5, "reed"), (2.8, "reed")), studs=((-0.2, 2.2),),
+                      stud="lakestone", haft="4a3020", grip="reed", wrap="reed", cap="lakestone", collar="reed",
+                      head_at=9.5, haft_width=1.2),
+    # Grey castles: a war hammer, a grey steel face and beak, a spike on top, a gold collar, a banner tassel.
+    "castle_hammer": dict(shape="war_hammer", head="steel", collar="gold", haft="4a2e1e", grip="banner", cap="gold",
+                          tassel="banner", head_at=10.0),
+    # The Hollow: an obsidian mace whose flanges are violet crystals.
+    "hollow_mace": dict(shape="morning_star", head="hollowglass", spike="hollowglass", crystals="glow_hollow",
+                        haft="1a1a22", grip="hollowglass", cap="glow_hollow", collar="hollowglass", head_at=9.5, seed=4),
+    # The land that wakes: a gnarled root club grown over with moss, green light in its cracks.
+    "woken_club": dict(shape="club", head="wood", moss=True, cracks="glow_moss", root_wrap=True, haft="5a3a22",
+                       grip="wood", wrap="plain", cap="moss", collar="wood", head_at=9.5, haft_width=1.2, seed=7),
 }
 
 
