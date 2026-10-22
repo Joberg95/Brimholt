@@ -165,12 +165,11 @@ const TALK_RANGE: int = 2
 const TRAVEL_SECONDS: float = 1.0
 ## Equipment slots in paperdoll order. Each accepts items of one slot type; both rings take "ring".
 ## The bag slot holds a bound pack from a town task; packs are only ever replaced by a bigger one.
-const SLOTS: Array[String] = ["necklace", "helmet", "cape", "main_hand", "armor", "off_hand", "ring_1", "legs", "ring_2", "boots",
-	"charm", "bag", "mount"]
+const SLOTS: Array[String] = ["necklace", "helmet", "main_hand", "armor", "off_hand", "ring_1", "legs", "ring_2", "boots",
+	"bag"]
 const SLOT_TYPES: Dictionary = {
-	"necklace": "necklace", "helmet": "helmet", "cape": "cape", "charm": "charm", "main_hand": "main_hand",
+	"necklace": "necklace", "helmet": "helmet", "main_hand": "main_hand",
 	"armor": "armor", "legs": "legs", "boots": "boots", "off_hand": "off_hand", "ring_1": "ring", "ring_2": "ring", "bag": "bag",
-	"mount": "mount",
 }
 ## Item catalog from game/data/items.json (see game/data/items.gd): stats add to
 ## Balance.base_stats(level) when the wearer meets the item's level and vocation.
@@ -768,7 +767,7 @@ static func bound(entry: String) -> bool:
 	return ITEMS.has(kind) and ITEMS[kind].get("bound", false)
 
 
-## The item id of a backpack or ground entry ("wolf_pelt#12" -> "wolf_pelt").
+## The item id of a backpack or ground entry ("health_potion#12" -> "health_potion").
 static func kind_of(entry: String) -> String:
 	return entry.get_slice("#", 0)
 

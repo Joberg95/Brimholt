@@ -43,8 +43,15 @@ PACK = {
     "amulet": _ids(2139, 2140, 2142, 2219, 2220, 2677, 2678),
     "ring": _ids((2143, 2151), (2679, 2682)),
     "food": _ids(2174, (2177, 2188)),
-    "ore": _ids(2199, 2201, 2203),
-    "rune": _ids((2694, 2697)),
+    "ore": _ids(2199, 2201, 2203, 2200, 2202),
+    # The gathering professions: logs from the pack's nature items, herbs from its small plants; fish
+    # share the food pool (the pack has no fish).
+    "log": _ids(1588, 1589, 1590, 2258, 2259),
+    "herb": _ids(1315, 1328, 1338, 1344, 1349, 1318),
+    "rune": _ids((2694, 2699)),
+    "gem": _ids(2205, 2207, 2209, 2211, 2213, 2214, 2215, 2216, 2217, 2218),
+    "shard": _ids(2161),
+    "pearl": _ids(2191),
     "coins": _ids(2192),
 }
 
@@ -60,15 +67,25 @@ KIND = {
     "main_hand:wand": "wand", "main_hand:rod": "wand",
     "off_hand:book": "book", "off_hand:heater": "shield", "off_hand:tower": "shield", "off_hand:buckler": "shield",
     "off_hand:torch": "torch",
-    "-:drink": "potion", "-:eat": "food", "-:ore": "ore", "-:runestone": "rune", "-:coins": "coins",
+    "-:drink": "potion", "-:eat": "food", "-:fish": "food", "-:ore": "ore", "-:log": "log", "-:herb": "herb",
+    "-:runestone": "rune", "-:coins": "coins",
+    "-:trophy:gem": "gem", "-:trophy:great_gem": "gem", "-:trophy:pearl": "pearl", "rune_shard": "shard", "glowcap": "herb",
 }
 
 
+BACKPACK_FIRST = ["traveler_pack", "explorer_pack", "pathfinder_pack", "leather_satchel", "reedweave_bag"]
+
+
 def kind(item):
+    if item["id"] in KIND:
+        return KIND[item["id"]]
     slot = item.get("slot") or "-"
-    shape = item["look"].split("+")[0]
+    parts = item["look"].split("+")
+    shape = parts[0]
     if slot == "-":
         shape = "drink" if item.get("drink") else "eat" if item.get("eat") else shape
+        if shape == "trophy" and len(parts) > 1:  # monster drops: only gems and pearls have pack art
+            return KIND.get(f"-:trophy:{parts[1]}")
     return KIND.get(slot) or KIND.get(f"{slot}:{shape}")
 
 
@@ -109,9 +126,12 @@ def mapping(items):
             continue
         sprites = {sid: _profile(otsp.compose(things[sid])) for sid in PACK[category] if sid in things}
         ranked = sorted(sprites, key=lambda sid: sprites[sid][0])  # plainest first
-        members = sorted(members, key=lambda i: (i.get("level", 0), i["id"]))
+        members = sorted(members, key=lambda i: (i.get("slot") != "bag", i.get("level", 0), i["id"]))
         free = list(ranked)
         n = len(members)
+        if category == "backpack":  # the quests' packs, then tailoring's bags, get the few backpacks
+            members = sorted(members, key=lambda i: (i["id"] not in BACKPACK_FIRST, BACKPACK_FIRST.index(i["id"])
+                                                     if i["id"] in BACKPACK_FIRST else 0, i.get("level", 0)))
         for index, item in enumerate(members):
             if not free:
                 out[item["id"]] = None

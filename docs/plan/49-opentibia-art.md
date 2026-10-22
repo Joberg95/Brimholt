@@ -56,3 +56,13 @@ two), 46 outfits (four facings with walk frames), 64 effects, 60 missiles, 7691 
 6. **Effects.** Spell effects and missiles from the pack.
 
 Each phase: review renders by eye (art is never tested), functional tests, docs, commit.
+
+## Progress
+- **Phase 1 (done):** pack downloaded, `otsp.py` reads the client files, our item and worn art deleted.
+- **Phase 2 (done):** `otsp_items.py` mapped 314 items to pack sprites (`sprite` in items.json) and
+  deleted 205 (capes, charms, mounts, monster trophies, themed backpacks, most showpiece boots, and
+  tier pieces past the pack's count, with their loot, shop, quest, and recipe entries); fish, logs, and
+  herbs use pack food, tree logs, and plants. The cape, charm, and mount slots are gone (ten slots).
+  `otsp_export.py items` writes `items.png`; `make_sprites.py` no longer writes item or mount sheets.
+  Tier gaps: legs, boots, druid and sorcerer weapons and off-hands at some tiers; Sylvaine has no
+  relics; dungeon champions lost their trophies. Phase 4 re-seeds loot and bosses.

@@ -88,7 +88,7 @@ again until 6 seconds after it ended.
 monsters, hit physically; Sorcerers' and Druids', rune spells, and casting monsters (wraiths,
 the lich, the Hollow Bloom) hit with magic. Defense cuts physical damage and magic defense
 cuts magic. Plate gives Warriors the most defense and no magic defense, cloth gives Sorcerers
-the most magic defense and the least defense; mail and leather sit between. Capes, amulets,
+the most magic defense and the least defense; mail and leather sit between. Amulets
 and spellbooks add magic defense. So a Warrior shrugs off a Hunter's arrows but not a
 Sorcerer's fire ([balance](balance.md#pvp)).
 
@@ -154,9 +154,7 @@ for three, and ×2 for all four.
 ## Loot
 
 Each monster has a loot table in `game/data/monsters.gd` (`Monsters.LOOT`): every `[item,
-chance]` row rolls independently. Rows include materials unique to the monster (vole tails,
-toad slime, boar tusks, ... warden crests; 20–50% chance), which vendors will buy for its
-`value`. On top, gold coins drop as one stack: `Balance.coins_per_kill` on average, 0.2 + 0.02
+chance]` row rolls independently. On top, gold coins drop as one stack: `Balance.coins_per_kill` on average, 0.2 + 0.02
 per level (about 5 gold a kill at level 1, 15 at level 19, 30 at level 50; elites and bosses 3
 coins more), **valuables**, and rarely a piece of **tiered gear** from the monster's level tier
 (1% from normal monsters, 8% from elites; 30% of those come from the tier below; named hunting
@@ -167,11 +165,7 @@ by the monster's level (`Monsters.VALUABLES`), and from level 35 a rare great em
 sapphire, or diamond (worth 400 to 1,200). Gems stack and sell to any vendor for their value
 (the sell-all-materials button takes them too), and the gold buys high-value gear. Loot spills onto nearby
 tiles when the corpse tile is full and is not reserved for the killer yet. A new material
-needs a row in `game/data/items.json` and a loot row; `make sprites` draws its icon.
-
-Most hunts drop a common material and, about one kill in ten, a rarer trophy worth half again as
-much: a grey wolf paw, a thornback hide, a dire bear pelt, a scaled lizard tail, a harpy talon, a
-scorpion carapace, a crypt skull, a cave spider fang, a smouldering pelt, a frostbitten paw.
+needs a row in `game/data/items.json` with a pack `sprite` and a loot row; `otsp_export.py items` writes its icon.
 
 When a monster dies, the players its loot is credited to see green text over the body for four
 seconds, "Loot of a crypt skeleton: 250 gold coins, a bone, a flint hatchet." (`Combat.loot_event`),
@@ -230,51 +224,16 @@ six levels to 5% (`Items.leech_for`), so a Warrior can sustain alone on a long h
 
 The gems in their guards glow.
 
-### Showpiece boots
-
-Seven pairs of boots drop from hunts (about 1% a kill, at or above their level) with stats no
-other gear has (`World.GEAR_STATS`): **movement speed** (each step takes 1 / (1 + speed%) as long,
-on top of a mount) and **maximum mana** in percent. Those with an armor type also keep 85% of their
-tier's defenses and add a focus bonus like the showpiece helmets.
-
-| Boots | Level, armor | Stats | Dropped by |
-| --- | --- | --- | --- |
-| Brockhide boots | 20 mail | +5% speed, health | dire bears |
-| Hastewind boots | 25, anyone | +10% speed, no defense | dune scorpions (0.8%) |
-| Mossbloom boots | 35 leather | +5% speed, healing | bog trolls |
-| Frostbloom slippers | 35 cloth | +8% max mana | rime stalkers |
-| Emberwalk boots | 40 plate | +4% speed, regeneration | magma hounds |
-| Phialbound boots | 45 cloth | +6% max mana, mana | void wraiths |
-| Drakescale greaves | 45 plate | +4% speed, health | ashmaw drakes |
-
-Their icons move too: Hastewind wings beat, Emberwalk boots burn, the ice flowers, blossoms and
-potion vials glow, and light sweeps across the drakescale.
-
 ### Focused rings
 
-Eight rings drop from overworld hunts (1.5% a kill, only at or above the ring's level). Each
+Seven rings drop from overworld hunts (1.5% a kill, only at or above the ring's level). Each
 gives up the tier ring's mix of health, mana and critical for more of one thing
 (`Items.RING_FOCUS`): the **Briarwreath ring** (level 20, healing; lizard shamans), the
 **Bloodstone signet** (20, double health; dire bears), the **Warding coil** (25, a cape's defense
 and magic defense; stone trolls), the **Stormglass ring** (25, 5% critical; harpies), the
 **Wellspring ring** (30, double mana; cinder wraiths), the **Mending band** (35, regeneration
-and some health; marsh witches), the **Gravewyrm signet** (40, double health; cave trolls), and
-the **Talonheart ring** (45, 5% critical; bog hulks). They are unbound, so trade them, and wear
+and some health; marsh witches), and the **Gravewyrm signet** (40, double health; cave trolls). They are unbound, so trade them, and wear
 two to stack a focus.
-
-### Mounts
-
-Every champion and final boss has its own mount, dropped on **1% of kills**
-(`Monsters.MOUNTS`, `Monsters.MOUNT_CHANCE`): Greymaw a dire wolf, Gorvak a war boar, the
-Drowned Abbess a tidal steed, the Hoarfrost Jarl a frost elk, Old Grimclaw a trench crawler,
-the Rat King a giant rat, Abbot Morrow a bone steed, Forgemaw an ember salamander, the Silk
-Matron a silk crawler, Vaelith a void steed, Morvain a drowned kelpie, Kharzul a cinder drake,
-and Sylvaine a bloom stag. Mounts are Legendary, unbound (trade them, sell them for 5,000
-gold), and any class of any level can ride one: put it in the **mount slot** under the bag
-slots. A rider steps 25% faster (`World.MOUNT_STEP`, 0.8 of a walker's step) wherever there is
-sky; in caves and dungeons you walk, and the mount is not drawn. Fighting, casting and looting
-work the same mounted. A ridden mount is never lost when you die; one carried in the backpack
-drops with it.
 
 ### Hunting shields
 
@@ -293,12 +252,9 @@ upgrade:
 | Cinderforge bulwark | 40 | +140 health | Cinder brute 1% |
 | Rimeheart aegis | 45 | +8 magic defense | Rime titan 5% |
 
-One spellbook drops the same way, for Sorcerers and Druids: the **Serpentcoil grimoire** (level 25,
-+40 mana on top of its tier's book), a snake coiled round its cover, from lizard shamans (1.5%).
-
 ### Hunting weapons
 
-Fifteen additional weapons are **source-specific drops**, not shop stock or additions to the
+Thirteen additional weapons are **source-specific drops**, not shop stock or additions to the
 generic tier pool. Existing equipment remains available. They use the same tier/class
 attack budget as the regular weapon at that level: these are visual alternatives to collect,
 not extra damage types or a new combat system. They can be equipped, sold, stored and saved
@@ -320,8 +276,6 @@ generic gear. A monster must be at least the weapon's required level for that ro
 | Reliquary focus | 20 | Sorcerer | Abbot Morrow 12% |
 | Stonebreak pickhammer | 25 | Warrior | Stone golem 3.5% |
 | Mourning estoc | 25 | Warrior | Abbot Morrow 12% |
-| Cinder spindle | 30 | Sorcerer | Cinder wraith 3.5% |
-| Duskroot branch | 35 | Druid | Mire stalker 3.5% |
 | Forgemaw arbalest | 40 | Hunter | Forgemaw 14% |
 | Sanctum warhammer | 45 | Warrior | Obsidian golem 5.5% |
 
@@ -330,7 +284,7 @@ generic gear. A monster must be at least the weapon's required level for that ro
 Dying costs 10% of your total experience (which can lose levels) and returns you to Cinder
 Crossing at full health. **Below level 8 you keep your items and gold**, so an early death
 cannot strand you. From level 8, as in classic Tibia without blessings, you always lose your whole
-backpack and all purse gold, and each worn item has a 10% chance to drop (never the mount you ride). Everything lost
+backpack and all purse gold, and each worn item has a 10% chance to drop. Everything lost
 lands on the tile where you fell, spilling onto tiles within 3 steps (six items per tile),
 and anyone can pick it up, including you on a run back to your body. What drops is only what
 you **found or bought**: anything **bound** to you stays, wherever you die and whatever your
@@ -548,8 +502,8 @@ gear, a tier, then craft any recipe your skill allows from the resources in your
 resources a recipe uses, less for recipes well below your skill.
 
 - **Smithing** (ore with logs): plate and mail armor, Warrior weapons, shields, amulets, rings.
-- **Woodworking** (logs with ore): bows, wands, rods, charms.
-- **Tailoring** (herbs with ore): leather and cloth armor, spellbooks, capes, and bags (6 to 14 slots).
+- **Woodworking** (logs with ore): bows, wands, and rods.
+- **Tailoring** (herbs with ore): leather and cloth armor, spellbooks, and bags (6 and 8 slots).
 - **Alchemy** (herbs): health and mana potions, and from skill 20 and 40 strong and great
   potions (30% and 40% health, 35% and 45% mana) that vendors never sell.
 - **Cooking** (fish and herbs): food. Eating (right-click it) speeds health and mana
@@ -639,9 +593,8 @@ Thornfield Wilds (25 Silkhollow spiders, then the Silk Matron). Any of the dunge
 hunt, and your party's shared kills count too. They pay experience and gold instead of a pack:
 half of what the kills themselves gave for a hunt, and as much again as the boss gave for a
 boss task (shown in the quest dialog). A giver lists all their tasks; each is done once.
-Three boss tasks also pay a bound accessory: **Matron's silk cape** (the Silk Matron, level 20),
-**Abbot's prayer beads** (Abbot Morrow, level 25), and the **Forgeheart ring** (the Forgemaw,
-level 35).
+Two boss tasks also pay a bound accessory: **Abbot's prayer beads** (Abbot Morrow, level 25) and the
+**Forgeheart ring** (the Forgemaw, level 35).
 
 The **quest list** in the top-left of the game window shows every task you are on: its giver
 and town, and your progress, or "Done: return to ..." once you can turn it in. Press L
@@ -684,15 +637,14 @@ station, through leas, downs, a wolf holt, windy heights, and bare peaks to the 
 barrow heath, and a salt marsh on the bay to the west. East of the north road the orcs of the
 **Grimtusk Hold** hunt in rings round their stone fort: raiders and spear throwers (levels 10-14) in
 the woods, warriors and shamans (15-20) under the walls, berserkers and leaders (21-27) in the yard,
-and Warlord Gruzzak (level 30 champion, who may drop a Grimtusk warg mount) in his hut. Scout Rhydda
+and Warlord Gruzzak (level 30 champion) in his hut. Scout Rhydda
 on Brackenford's square gives a chain of tasks through the rings.
 
 **Underground.** Below the mainland lies a second floor, right under the land above it, as in
 Tibia. Holes in the wilds drop into twelve winding tunnel networks for levels 10-40 (Greywood
 Burrows and Hazel Downs Dens for the low teens up to the Smoulder Deeps' cave trolls), each with
 about eight holes and rough steps back up; ladders in the streets of Reedmere, Ashford, Dunmere,
-Highmoor, and Brackenford lead down into their rat-infested sewers. It is dim and dry below, and
-mounts stay above. The Ogre Warrens, the Drowned Grotto, the Rimewater Trench, and the Thornroot
+Highmoor, and Brackenford lead down into their rat-infested sewers. It is dim and dry below. The Ogre Warrens, the Drowned Grotto, the Rimewater Trench, and the Thornroot
 Hollows now lie on this floor too, right under their mouths. The world map's ▲ and ▼ (or Page Up
 and Page Down) show either floor, and right-clicking it places your own marker (an icon and a
 label, kept on your computer). Roads and streets are quicker to walk (a fifth off every step),
@@ -796,8 +748,8 @@ cave of cyclopes and cyclops smiths in dense camps of five, normal monsters like
 **Watchman Brega** in Highmoor gives its long hunt, **The Hundred-Eyed Hollow**: 75 cyclopes or
 smiths, killed inside the Hollow (kills outside it do not count). It pays half the kills'
 experience and gold, 10 health and 10 mana potions, and one turn-in in four one of the Hollow's own
-bound Epic pieces: the **Cyclops-eye amulet**, the **Hollowforge hammer** (a Warrior's), or the
-**Cyclops-hide cloak** (keep a backpack slot free for it).
+bound Epic pieces: the **Cyclops-eye amulet** or the **Hollowforge hammer** (a Warrior's) (keep a
+backpack slot free for it).
 
 ## The frost isles and Hrimvik
 
@@ -827,17 +779,16 @@ them one time in seven.
 
 ## Inventory
 
-The right-hand panel shows a Tibia-style paperdoll with twelve slots (necklace, helmet, pack /
-main hand, armor, off hand / ring, legs, ring / cape, boots, charm), a backpack of 8 slots
+The right-hand panel shows a Tibia-style paperdoll with ten slots (necklace, helmet, pack /
+main hand, armor, off hand / ring, legs, ring / boots), a backpack of 8 slots
 (up to 20 with a pack from a town task), and your stat sheet. Adventurers start with an Ember
 cap, Moss coat, Moss breeches, Moss boots, Copper blade, and Oak buckler in the backpack.
 Choosing a class hands you its tier-1 kit (helmet, armor, legs, boots, weapon, and off-hand of
 its armor type) that you lack: the trainer takes back each starter piece the class cannot use,
 worn or carried, and puts the class's piece for that slot in its place, so only the remaining
 gifts need free backpack slots. Druids keep the leather starter pieces. Tier-5 gear for every class lies around Cinder Crossing. Rings
-fit either ring slot; right-clicking a ring fills an empty ring slot first. Every slot marks its item's rarity with a small triangle in the top-left corner, in the rarity's colour (relics in their glow). Helmets, capes,
-armor, and both hands are drawn on the character (a cape appears only when equipped);
-legs and boots too; rings, amulets, and charms are too small to show. Items can be dropped on any walkable
+fit either ring slot; right-clicking a ring fills an empty ring slot first. Every slot marks its item's rarity with a small triangle in the top-left corner, in the rarity's colour (relics in their glow). Worn gear is not drawn on the
+character (plan 49): it shows in the paperdoll. Items can be dropped on any walkable
 tile, stacking up to six per tile, and the top item is picked up. Ground tiles must be
 your own tile or one of the eight around you.
 
@@ -856,19 +807,6 @@ on death, but what they hold is carried like the backpack and follows its death 
 | --- | ---: | --- |
 | Leather satchel | 6 | vendors (120 gold), or Tailoring 1 |
 | Reedweave bag | 8 | Tailoring 10 |
-| Silkthistle pack | 10 | Tailoring 20 |
-| Nightcotton haversack | 12 | Tailoring 30 |
-| Starweave rucksack | 14 | Tailoring 40 |
-| Downy pack | 10 | sewer rats (0.5%) |
-| Trailblazer's pack | 12 | road bandits (0.5%) |
-| Marshbloom pack | 12 | bog lurkers (0.5%) |
-| Deckhand's pack | 12 | trench crabs (0.5%) |
-| Featherwing pack | 14 | harpies (0.4%) |
-| Spectral pack | 14 | wraith knights (0.4%) |
-| Bottomless pack | 16 | the four final bosses (2%) |
-
-The themed packs are rare drops, never crafted or sold by vendors; the ghost backpack's skull
-eyes and the rune on the Bottomless pack glow.
 
 Peer 1 validates every item move: location shape, reach, slot type, level and class,
 free space, stack limit, and a 150 ms item cooldown. Dragging onto an occupied slot swaps
@@ -910,11 +848,10 @@ Silverleaf hoods; Sorcerers blue, purple, red, and white wizard hats and robes. 
 Crimson aegis, Skullcrusher, and the brute's Obsidian bulwark (Warrior); Windrider, Sunspear,
 Glacierstrider, Shadowstalker, and the Great bear (Hunter); Spiritbloom, Mooncloak, Wildroot,
 Verdant spirit, and the Elder stag (Druid); Astral veil, Arcane eclipse, Ashcaller, Voidweaver,
-and the fire warlock's Netherflame (Sorcerer). Sets with painted art show the whole painted
-figure when their armor is worn (see [art.md](art.md#painted-outfits)). There is also a weapon per
+and the fire warlock's Netherflame (Sorcerer). There is also a weapon per
 class (Warriors: swords, axes, and maces; Hunters: bows and crossbows; Sorcerers: wands;
 Druids: rods), and an off-hand (shields for Warriors and Hunters, spellbooks for Sorcerers
-and Druids). **Amulets, capes, charms, and rings start at tier 20.** An item needs its tier
+and Druids). **Amulets and rings start at tier 20.** An item needs its tier
 level and, for weapons, off-hands, helmets, armor, legs, and boots, your class: the server refuses to equip it
 otherwise, and worn items you no longer qualify for (after losing levels) give no stats.
 Tooltips show the tier, level, and who can use an item; a coloured bar under each slot
@@ -926,21 +863,20 @@ shows its tier, red when you cannot use it yet. Stats come from the balance curv
 Endgame characters farm four **level 48–50 elites** in the high regions, each camp of two kept
 at least seven tiles from roads so travellers are not caught. They hit like the Blackreed
 warden: one at a time with spells and potions solo, a whole camp with a party. Each drops elite
-gold, a 25% tier-45 gear roll, potions, rune shards (5%), a valuable trophy (50%), and pieces
+gold, a 25% tier-45 gear roll, potions, rune shards (5%), and pieces
 of its own **mythic set** at 1.2–1.5% each:
 
-| Elite | Region | Trophy (sells for) | Mythic pieces |
-| --- | --- | --- | --- |
-| Ashmaw drake (winged, horned) | Emberwaste | Ashmaw heartscale (380) | Drakeforged plate set (Warrior), Drakefang greatsword, Drakescale bulwark, Emberwing cape |
-| Rime titan (ice-shard giant) | Hollow March | Rime core (360) | Rimeguard mail set (Hunter), Rimestring longbow, Rimeheart ring |
-| Barrow lich (crowned, ranged) | Mirewood Fen | Lich phylactery (420) | Gravecall cloth set (Sorcerer), Gravecall wand and grimoire, Gravecall amulet |
-| Thornscale basilisk | Gloamwood | Basilisk eye (340) | Thornscale leather set (Druid), Thornscale rod, Basilisk-eye charm |
+| Elite | Region | Mythic pieces |
+| --- | --- | --- |
+| Ashmaw drake (winged, horned) | Emberwaste | Drakeforged helm and plate (Warrior), Drakefang greatsword, Drakescale bulwark |
+| Rime titan (ice-shard giant) | Hollow March | Rimeguard coif and hauberk (Hunter), Rimestring longbow |
+| Barrow lich (crowned, ranged) | Mirewood Fen | Gravecall cowl and robe (Sorcerer) |
+| Thornscale basilisk | Gloamwood | Thornscale circlet and hide (Druid) |
 
 **Mythic gear** is level 50, a step past tier 45 and below the relics (stats in
 [balance.md](balance.md#gear-tiers)). Unlike relics it is ordinary loot: unbound, sold to
 vendors (never bought from them), kept in the depot, and dropped on death like other gear.
-Tooltips name each piece's source. Every class can farm a full mythic helmet, armor, legs,
-boots, and weapon. Mythic pieces need a level-50 kill.
+Tooltips name each piece's source. Every class can farm a mythic helmet and armor. Mythic pieces need a level-50 kill.
 
 ## The Hollow Reach
 
@@ -988,10 +924,8 @@ kill**: the fallen raid gets nothing. Each final boss has its own **relic keeper
 of the world (gold names): **Ysolde** keeps Morvain's relics, **Brannoc the Forgemaster**
 Kharzul's, **Liraen of the Thorn** Sylvaine's, and **Oswin the Ashen** Vaelith's. Right-click
 the keeper, choose **Quests**, and trade a trophy for any one of that boss's relics: Morvain gives
-Warrior and shared armor, Kharzul a Hunter bow, Sorcerer wand, amulet, and charm, and
-Sylvaine a Druid rod, spellbook, cape, and ring. Vaelith's trophies buy the strongest
-relics: a void weapon for each class (Voidrend, Eclipse bow, Starless wand, Nightbloom
-rod) or the Sovereign's mantle. Trophies stack, so kill a boss again for
+Warrior and shared armor, Kharzul a Hunter bow, and Vaelith the strongest weapons (Voidrend and
+the Eclipse bow). Sylvaine has no relics until the bosses are re-seeded (plan 49). Trophies stack, so kill a boss again for
 another relic. Relics are level 50, beat the best tiered gear, glow in their boss's colour
 with drifting sparks, and are **bound**: they cannot be dropped and are never lost on death,
 even with a red skull.
@@ -1036,7 +970,7 @@ without it, `--vocation` is ignored. Everyone sees each player's class and level
 
 Each item has stats (health, mana, attack, defense, critical chance, regeneration,
 healing) that add to your class's base stats for your level; the stat sheet shows the
-totals and the gear bonus. Charms, rings, and necklaces give passive stats only. Stats are
+totals and the gear bonus. Rings and necklaces give passive stats only. Stats are
 computed with the same shared function on every peer from server-authoritative class,
 level, and equipment.
 

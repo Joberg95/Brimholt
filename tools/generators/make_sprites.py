@@ -6379,7 +6379,6 @@ def spell_icon(spell_id, rune, color):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--preview", type=Path, help="also write a 4x preview sheet to this path")
     parser.add_argument("--only", nargs="+", metavar="SHEET",
                         help="write only these sheets (e.g. house_walls.png), leaving the others as they are")
     args = parser.parse_args()
@@ -6388,7 +6387,6 @@ def main():
         "body.png": character_sheet(split_body("body"), compact=True, columns=POSE_COLUMNS),
         "cloth.png": character_sheet(split_body("cloth"), compact=True, columns=POSE_COLUMNS),
         "marker.png": character_sheet(marker, columns=POSE_COLUMNS),
-        "items.png": sheet([finished_icon(kind) for kind in ITEM_ORDER], ITEM_COLUMNS, TILE),
         "spells.png": sheet([spell_icon(spell, rune, color) for spell, rune, color in spell_catalog()], 8, TILE),
         "spell_missiles.png": sheet([spell_missile(element, frame) for element in MISSILE_ELEMENTS for frame in range(MISSILE_FRAMES)],
                                     MISSILE_FRAMES, MISSILE_SIZE),
@@ -6443,11 +6441,8 @@ def main():
         "furniture.png": sheet_row([furniture(kind) for kind in FURNITURE_KINDS]),
         "fountain.png": sheet_row([fountain(frame) for frame in range(props.FOUNTAIN_FRAMES)]),
         "coins.png": sheet_row([icon_finish(coin_stage_icon(stage)) for stage in range(len(pixel_coins.STAGES))]),
-"items_glow.png": None,
         **{f"monsters/{name}_glow.png": None for name in ("golem", "wraith")},
         **{f"creatures/{kind}.png": creature_sheet(kind) for kind in creatures.SPECIES},
-        **{f"mounts/{kind}{suffix}.png": mount_sheet(kind, part) for kind, item in ITEMS.items()
-           if item.get("slot") == "mount" for part, suffix in ((0, ""), (1, "_front"))},
         **{f"creatures/{kind}_glow.png": None for kind in GLOWING_CREATURES},
         **{f"monsters/{name}.png": monster_sheet(builder, False)
            for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},
@@ -6455,26 +6450,17 @@ def main():
            for name, builder in (("quadruped", quadruped), ("spider", spider), ("blob", blob), ("golem", golem), ("wraith", wraith))},
     }
     for name in [name for name, image in outputs.items() if image is None]:
-        if name == "items_glow.png":
-            icons = outputs["items.png"]
-            glowing = Image(icons.width, icons.height)
-            for index, kind in enumerate(ITEM_ORDER):
-                if ITEMS[kind].get("glow"):
-                    x, y = item_cell(index)
-                    glowing.over(halo(icons.crop(x, y, TILE, TILE)), x, y)
-            outputs[name] = glowing
-        else:
-            base = outputs[name.replace("_glow.png", ".png")]
-            if name.startswith("creatures/"):
-                # Only the glowing parts (eyes, seams, cores) shine, not the whole body.
-                bright = Image(base.width, base.height)
-                for y in range(base.height):
-                    for x in range(base.width):
-                        pixel = base.pixels[y][x]
-                        if pixel is not None and pixel[3] == 255 and max(pixel[:3]) > 200 and max(pixel[:3]) - min(pixel[:3]) > 90:
-                            bright.pixels[y][x] = pixel
-                base = bright
-            outputs[name] = framewise(base, FRAME, FRAME, halo)
+        base = outputs[name.replace("_glow.png", ".png")]
+        if name.startswith("creatures/"):
+            # Only the glowing parts (eyes, seams, cores) shine, not the whole body.
+            bright = Image(base.width, base.height)
+            for y in range(base.height):
+                for x in range(base.width):
+                    pixel = base.pixels[y][x]
+                    if pixel is not None and pixel[3] == 255 and max(pixel[:3]) > 200 and max(pixel[:3]) - min(pixel[:3]) > 90:
+                        bright.pixels[y][x] = pixel
+            base = bright
+        outputs[name] = framewise(base, FRAME, FRAME, halo)
     unknown = set(args.only or []) - outputs.keys()
     if unknown:
         parser.error("unknown sheet(s): " + ", ".join(sorted(unknown)))
@@ -6483,76 +6469,7 @@ def main():
             continue
         image.save(root / name)
         print(f"wrote assets/sprites/{name} ({image.width}x{image.height})")
-    if args.preview:
-        write_preview(outputs, args.preview)
 
-
-def dressed(outputs, equipment, direction, column, tint):
-    """One 64x64 frame layered exactly like SpriteArt.draw_actor."""
-    x, y = column * FRAME, DIRECTIONS.index(direction) * FRAME
-    frame = Image(FRAME, FRAME)
-    frame.rect(0, 0, FRAME, FRAME, GRASS[0])
-
-    def put(name, color=None):
-        if name not in outputs:
-            return
-        part = outputs[name].crop(x, y, FRAME, FRAME)
-        frame.over(part.tinted(color) if color else part)
-
-    held, shield = equipment.get("main_hand"), equipment.get("off_hand")
-    if held and direction == "up":
-        put(f"gear/{held}.png")
-    if shield and direction in ("left", "right"):
-        put(f"gear/{shield}.png")
-    put("body.png")
-    for slot in ("legs", "boots"):
-        if equipment.get(slot):
-            put(f"gear/{equipment[slot]}.png")
-    put("cloth.png", tint)
-    if equipment.get("cape") and direction != "up":
-        put(f"gear/{equipment['cape']}.png")
-    if equipment.get("armor"):
-        put(f"gear/{equipment['armor']}.png")
-    if equipment.get("cape") and direction == "up":
-        put(f"gear/{equipment['cape']}.png")
-    if equipment.get("helmet"):
-        put(f"gear/{equipment['helmet']}.png")
-    if shield and direction in ("down", "up"):
-        put(f"gear/{shield}.png")
-    if held and direction != "up":
-        put(f"gear/{held}.png")
-    return frame
-
-
-ARMOR_OF = {"knight": "plate", "paladin": "mail", "druid": "leather", "sorcerer": "cloth"}
-
-
-def write_preview(outputs, path):
-    """Every tier worn by each vocation (rows), plus all item icons, at 2x."""
-    tiers = sorted({item["level"] for item in CATALOG if item.get("slot")})
-    vocations = ("knight", "paladin", "sorcerer", "druid")
-    tint = rgba("6a88a8")
-    views = [("knight", "down"), ("knight", "left"), ("knight", "up")] + [(v, "down") for v in vocations[1:]] \
-        + [("paladin", "left"), ("sorcerer", "left")]
-    icons_per_row = 24
-    icon_rows = (len(ITEM_ORDER) + icons_per_row - 1) // icons_per_row
-    preview = Image(len(views) * 2 * FRAME, len(tiers) * 2 * FRAME + icon_rows * 2 * TILE + 8)
-    preview.rect(0, 0, preview.width, preview.height, rgba("20262e"))
-    for row, tier in enumerate(tiers):
-        for column, (vocation, direction) in enumerate(views):
-            equipment = {}
-            for kind, item in ITEMS.items():
-                slot = item.get("slot")
-                if slot in VISIBLE_SLOTS and item["level"] == tier and vocation in item.get("vocations", [vocation]) \
-                        and item.get("armor", ARMOR_OF[vocation]) == ARMOR_OF[vocation] and not item.get("loot_only"):
-                    equipment[slot] = kind
-            preview.over(dressed(outputs, equipment, direction, 0, tint).scaled(2), column * 2 * FRAME, row * 2 * FRAME)
-    for index in range(len(ITEM_ORDER)):
-        icon = outputs["items.png"].crop(*item_cell(index), TILE, TILE)
-        preview.over(icon.scaled(2), (index % icons_per_row) * 2 * TILE,
-                     len(tiers) * 2 * FRAME + 8 + (index // icons_per_row) * 2 * TILE)
-    preview.save(path)
-    print(f"wrote preview {path}")
 
 if __name__ == "__main__":
     main()

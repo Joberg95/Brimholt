@@ -18,8 +18,8 @@ const Crafting = preload("res://game/core/crafting.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const FERRYMAN_GEAR: Dictionary = {"helmet": "ember_cap"}
 const NPC_NAME: Color = Color("#9fe0c8")
-## Quest givers stand out: gold cloth, a starweave cape, and a gold name.
-const QUEST_GIVER_GEAR: Dictionary = {"cape": "starweave_cape"}
+## Quest givers stand out: gold cloth and a gold name.
+const QUEST_GIVER_GEAR: Dictionary = {}
 const QUEST_GIVER_TINT: Color = Color("#a8843a")
 const QUEST_GIVER_NAME: Color = Color("#ffcf6a")
 const WAYSTONE_NAME: Color = Color("#8fe8f0")

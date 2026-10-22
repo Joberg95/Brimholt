@@ -1,7 +1,5 @@
 extends SceneTree
 
-const CAPES: Array[String] = ["silverleaf_cape", "cobalt_cape", "ember_cape", "dusk_cape"]
-
 const World = preload("res://game/core/world.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Combat = preload("res://game/core/combat.gd")
@@ -23,51 +21,6 @@ var game: Node2D
 var screen: SubViewport
 var finished: bool = false
 var elapsed: float = 0.0
-
-
-class WardrobeStrip extends Node2D:
-	const OUTFITS: Array[Dictionary] = [
-		{}, {"armor": "moss_coat"}, {"cape": "silverleaf_cape"},
-		{"armor": "moss_coat", "cape": "silverleaf_cape"},
-	]
-	const BACKGROUND: Color = Color("#414637")
-
-	func _draw() -> void:
-		draw_rect(Rect2(0, 0, 768, 256), BACKGROUND)
-		for row: int in OUTFITS.size():
-			for facing: int in SpriteArt.DIRECTIONS.size():
-				for pose: int in 3:
-					var center: Vector2 = Vector2((facing * 3 + pose) * 64, row * 64) + SpriteArt.FRAME_ANCHOR
-					SpriteArt.draw_actor(self, center, {"id": 1, "facing": SpriteArt.DIRECTIONS[facing],
-						"equipment": OUTFITS[row]}, false, [0.0, 0.25, 0.75][pose])
-
-
-class WeaponStudy extends Node2D:
-	const CARD := Vector2i(360, 292)
-	var weapons: Array[String] = []
-	var equipped: bool = true
-
-	func _draw() -> void:
-		var font: Font = ThemeDB.fallback_font
-		draw_rect(Rect2(0, 0, CARD.x * 3, CARD.y * 5), Color("#171c22"))
-		for index: int in weapons.size():
-			var kind: String = weapons[index]
-			var item: Dictionary = World.ITEMS[kind]
-			var origin := Vector2(index % 3 * CARD.x, index / 3 * CARD.y)
-			draw_rect(Rect2(origin + Vector2(4, 4), Vector2(CARD) - Vector2(8, 8)), Color("#272e33"))
-			draw_string(font, origin + Vector2(12, 24), item["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#d8ceb4"))
-			draw_string(font, origin + Vector2(12, 43), "Level %d | %s" % [item["level"], item["vocations"][0]],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a4b0b4"))
-			SpriteArt.draw_item(self, origin + Vector2(30, 70), kind)
-			draw_set_transform(origin + Vector2(96, 70), 0.0, Vector2(2, 2))
-			SpriteArt.draw_item(self, Vector2.ZERO, kind)
-			draw_set_transform(Vector2.ZERO)
-			for pose: int in 3:
-				for facing: int in 4:
-					var corner: Vector2 = origin + Vector2(20 + facing * 80, 100 + pose * 60)
-					SpriteArt.draw_actor(self, corner + SpriteArt.FRAME_ANCHOR, {"id": 1,
-						"facing": SpriteArt.DIRECTIONS[facing], "equipment": {"main_hand": kind} if equipped else {}},
-						false, [0.0, 0.25, 0.75][pose])
 
 
 func _initialize() -> void:
@@ -116,10 +69,6 @@ func _run() -> void:
 	if not game.connected:
 		quit(1)
 		return
-	if not await _check_cape_layers():
-		return
-	if not await _check_weapon_study():
-		return
 	# Remove the map's monsters so pixel checks are deterministic; combat is checked at the end.
 	game.world.monsters.clear()
 	game.monsters.clear()
@@ -134,9 +83,6 @@ func _run() -> void:
 			return
 		game.world.players[id]["facing"] = directions[id - 1]
 		game.world.players[id]["next_item"] = 0.0
-		# Capes are later-stage gear: level 20+, one tier per actor.
-		game.world.players[id]["level"] = 20 + 5 * (id - 1)
-		game.world.players[id]["backpack"][6] = CAPES[id - 1]
 		for slot: String in SpriteArt.VISIBLE_SLOTS:
 			var toggled: Dictionary = game.world.toggle_equipment(id, slot, float(id) + SpriteArt.VISIBLE_SLOTS.find(slot))
 			if not toggled["ok"]:
@@ -176,14 +122,7 @@ func _run() -> void:
 		push_error("Unequipped capture is empty")
 		quit(1)
 		return
-	for id: int in range(1, 5):
-		var cell: Vector2 = game.world.players[id]["cell"]
-		var corner: Vector2 = game.map_to_screen((cell + Vector2(0.5, 0.5)) * World.TILE_SIZE - SpriteArt.FRAME_ANCHOR)
-		var region: Rect2i = Rect2i(Vector2i(corner), Vector2i.ONE * int(SpriteArt.FRAME * game.ZOOM))
-		if image.get_region(region).get_data() == unequipped.get_region(region).get_data():
-			push_error("Unequipping did not visibly change actor %d" % id)
-			quit(1)
-			return
+	# Worn gear is not drawn on the character (plan 49), so only the panel slots change.
 	for slot: String in SpriteArt.VISIBLE_SLOTS:
 		var slot_region: Rect2i = Rect2i(Vector2i(game.slot_position({"type": "equipment", "slot": slot})),
 			Vector2i(32, 32))
@@ -191,8 +130,6 @@ func _run() -> void:
 			push_error("Unequipping did not change the %s panel slot" % slot)
 			quit(1)
 			return
-	# Item icons are being remade (docs/plan/48-item-icons-remake.md): items.png is blank until then,
-	# so there is no ground item sprite to compare.
 	if not await _check_oblique_wall():
 		return
 	if unequipped.save_png("res://.tools/visual-unequipped.png") != OK:
@@ -259,64 +196,14 @@ func _run() -> void:
 		return
 	if not await _check_rune_bar():
 		return
-	if not await _check_mount():
-		return
 	if not await _check_loot_display():
 		return
-	print("BRIMHOLT_VISUAL_PASS four facings, cape-free base and 12 cape poses, 26 hunting weapons in 312 worn poses, visible unequip, panel slots, ground items, oblique walls, a rider on a mount, gold heaps and green loot text, "
+	print("BRIMHOLT_VISUAL_PASS four facings, unequip clears the panel slots, panel slots, ground items, oblique walls, gold heaps and green loot text, "
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
 		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night and steady while walking past, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, a Glacier wall and a sudden death rune, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
 	await game.leave_game()
 	quit()
-
-
-func _check_cape_layers() -> bool:
-	var viewport := SubViewport.new()
-	viewport.size = Vector2i(768, 256)
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	root.add_child(viewport)
-	viewport.add_child(WardrobeStrip.new())
-	await process_frame
-	await RenderingServer.frame_post_draw
-	# Worn gear is art: the capture is saved for review by eye, not checked pixel by pixel.
-	var image: Image = viewport.get_texture().get_image()
-	var saved: Error = image.save_png("res://.tools/visual-wardrobe.png")
-	viewport.queue_free()
-	return _expect(saved == OK, "Could not save wardrobe capture")
-
-
-func _check_weapon_study() -> bool:
-	var viewport := SubViewport.new()
-	viewport.size = WeaponStudy.CARD * Vector2i(3, 9)
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	root.add_child(viewport)
-	var study := WeaponStudy.new()
-	for kind: String in World.ITEMS:
-		if World.ITEMS[kind].get("loot_only", false) and World.ITEMS[kind]["slot"] == "main_hand":
-			study.weapons.append(kind)
-	viewport.add_child(study)
-	await process_frame
-	await RenderingServer.frame_post_draw
-	var dressed: Image = viewport.get_texture().get_image()
-	var saved: Error = dressed.save_png("res://.tools/visual-weapons.png")
-	study.equipped = false
-	study.queue_redraw()
-	await process_frame
-	await RenderingServer.frame_post_draw
-	var bare: Image = viewport.get_texture().get_image()
-	var visible: bool = study.weapons.size() == 26
-	for index: int in study.weapons.size():
-		var origin: Vector2i = Vector2i(index % 3, index / 3) * WeaponStudy.CARD
-		for pose: int in 3:
-			for facing: int in 4:
-				var region := Rect2i(origin + Vector2i(20 + facing * 80, 100 + pose * 60), Vector2i(64, 60))
-				visible = visible and dressed.get_region(region).get_data() != bare.get_region(region).get_data()
-	viewport.queue_free()
-	return _expect(visible, "Every new weapon must remain visible in four facings and three animation poses") \
-		and _expect(saved == OK, "Could not save the weapon study")
 
 
 func _push_mouse(at: Vector2, button: MouseButton, pressed: bool) -> void:
@@ -956,7 +843,6 @@ func _check_relics() -> bool:
 		return false
 	player["equipment"]["helmet"] = "abyssal_greathelm"
 	player["equipment"]["main_hand"] = "cinderheart_bow"
-	player["equipment"]["cape"] = "hollowbloom_cape"
 	player["facing"] = Vector2i.DOWN
 	game._publish_actor(1)
 	var free: Array[Vector2i] = []
@@ -968,8 +854,8 @@ func _check_relics() -> bool:
 	if not _expect(free.size() >= 3, "No room around the Relic keeper for the relic showcase"):
 		return false
 	var relic_cell: Vector2i = free[0]
-	game.world.ground[relic_cell] = ["verdant_codex"]
-	game._apply_ground(relic_cell, ["verdant_codex"])
+	game.world.ground[relic_cell] = ["abyssal_ward"]
+	game._apply_ground(relic_cell, ["abyssal_ward"])
 	var bosses: Array[int] = []
 	for kind: String in ["morvain", "kharzul"]:
 		var events: Array = []
@@ -990,7 +876,9 @@ func _check_relics() -> bool:
 	game._world_view.glow.visible = true
 	var spots: Dictionary = {"the relic-wearing player": beside, "the relic on the ground": relic_cell}
 	for id: int in bosses:
-		spots[Monsters.MONSTERS[game.world.monsters[id]["kind"]]["name"]] = game.world.monsters[id]["cell"]
+		# A boss that glowed only through its worn relics has no glow now (plan 49: gear is not drawn).
+		if Monsters.MONSTERS[game.world.monsters[id]["kind"]].has("glow"):
+			spots[Monsters.MONSTERS[game.world.monsters[id]["kind"]]["name"]] = game.world.monsters[id]["cell"]
 	for label: String in spots:
 		var corner: Vector2 = game.map_to_screen(Vector2(spots[label]) * World.TILE_SIZE - Vector2(8, 24))
 		var region := Rect2i(Vector2i(corner), Vector2i(48, 56) * int(game.ZOOM))
@@ -1451,8 +1339,8 @@ func _check_lexicon_and_marks() -> bool:
 	var text: PackedStringArray = []
 	_texts(book, text)
 	if not _expect(book.visible and names.has("Cave spider") and names.has("Venom weaver") and not names.has("Field vole")
-			and "\n".join(text).contains("Spider silk") and "\n".join(text).contains("Silkhollow (dungeon)"),
-			"The lexicon search for silk did not find the spiders and their drops (%s)" % [names]):
+			and "\n".join(text).contains("Silkhollow (dungeon)"),
+			"The lexicon search for silk did not find the spiders and their dungeon (%s)" % [names]):
 		return false
 	await _press("lexicon")
 	var player: Dictionary = game.world.players[1]
@@ -1680,7 +1568,6 @@ func _check_loot_display() -> bool:
 	var player: Dictionary = game.world.players[1]
 	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
 	player["from"] = player["cell"]
-	player["equipment"].erase("mount")
 	game._publish_actor(1)
 	var cells: Array = []
 	for index: int in 6:
@@ -1708,42 +1595,6 @@ func _check_loot_display() -> bool:
 		game.world.ground.erase(cell)
 	game._publish_ground(cells)
 	return _expect(green, "A kill's green loot text must show over the body")
-
-
-## A rider on a mount above ground: the mount shows round the rider's feet and the rider sits higher.
-func _check_mount() -> bool:
-	game.world.monsters.clear()
-	game.monsters.clear()
-	Weather.override = "clear"
-	game._world_view.lighting.time_override = 0.5
-	var player: Dictionary = game.world.players[1]
-	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
-	player["from"] = player["cell"]
-	player["facing"] = Vector2i.LEFT
-	player["equipment"].erase("mount")
-	game._publish_actor(1)
-	await create_timer(0.8).timeout
-	await RenderingServer.frame_post_draw
-	var walking: Image = screen.get_texture().get_image()
-	player["equipment"]["mount"] = "frost_elk_mount"
-	game._publish_actor(1)
-	await create_timer(0.3).timeout
-	await RenderingServer.frame_post_draw
-	var riding: Image = screen.get_texture().get_image()
-	riding.save_png("res://.tools/visual-mount.png")
-	var feet := Rect2i(Vector2i(game.map_to_screen((Vector2(player["cell"]) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
-		+ Vector2i(-28, 0), Vector2i(56, 28))
-	if not _expect(riding.get_region(feet).get_data() != walking.get_region(feet).get_data(),
-			"A ridden mount must be drawn under its rider"):
-		return false
-	player["facing"] = Vector2i.DOWN
-	game._publish_actor(1)
-	await create_timer(0.3).timeout
-	await RenderingServer.frame_post_draw
-	screen.get_texture().get_image().save_png("res://.tools/visual-mount-front.png")
-	player["equipment"].erase("mount")
-	game._publish_actor(1)
-	return true
 
 
 func _check_weather_and_desert() -> bool:

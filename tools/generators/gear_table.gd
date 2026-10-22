@@ -31,7 +31,7 @@ func _initialize() -> void:
 		func(level: int, column: int) -> String:
 			return _cell(_find("main_hand", level, Balance.VOCATIONS.keys()[column])))
 	lines.append("")
-	_table(lines, "Tier", ["Amulet", "Cape", "Charm", "Ring"],
+	_table(lines, "Tier", ["Amulet", "Ring"],
 		func(level: int, column: int) -> String:
 			return _cell(_find(Items.ACCESSORY_SLOTS[column], level, "")), Items.ACCESSORY_LEVEL)
 	lines.append("")

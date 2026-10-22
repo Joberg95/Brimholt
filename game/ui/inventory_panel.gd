@@ -17,14 +17,12 @@ const Layout = preload("res://game/ui/layout.gd")
 const ItemSlot = preload("res://game/ui/item_slot.gd")
 const ItemTip = preload("res://game/ui/item_tip.gd")
 const SLOT_STEP: float = 34.0
-## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/legs/ring,
-## and cape/boots/charm; the mount sits under the three bag slots.
+## Tibia-style paperdoll grid: necklace/helmet/pack, main hand/armor/off hand, ring/legs/ring, and boots.
 const PAPERDOLL: Dictionary = {
 	"necklace": Vector2(0, 0), "helmet": Vector2(1, 0), "bag": Vector2(2, 0),
 	"main_hand": Vector2(0, 1), "armor": Vector2(1, 1), "off_hand": Vector2(2, 1),
 	"ring_1": Vector2(0, 2), "legs": Vector2(1, 2), "ring_2": Vector2(2, 2),
-	"cape": Vector2(0, 3), "boots": Vector2(1, 3), "charm": Vector2(2, 3),
-	"mount": Vector2(3.2, 3),
+	"boots": Vector2(1, 3),
 }
 const BACKPACK_COLUMNS: int = 5
 ## Size of the rarity notch in a slot's top-left corner, in pixels.
@@ -297,17 +295,6 @@ func item_tooltip(kind: String) -> String:
 		return ""
 	var item: Dictionary = World.ITEMS[kind]
 	var lines: PackedStringArray = [item["name"]]
-	if item["slot"] == "mount":
-		var bosses: PackedStringArray = []
-		for boss: String in Monsters.MOUNTS:
-			if Monsters.MOUNTS[boss] == kind:
-				bosses.append(Monsters.MONSTERS[boss]["name"])
-		lines.append("%s mount  ·  all classes" % Items.rarity(item)[0])
-		lines.append("Put it in the mount slot to ride: %d%% faster above ground" % roundi((1.0 / World.MOUNT_STEP - 1.0) * 100.0))
-		lines.append("Ridden mounts are kept when you die")
-		lines.append("Rare drop (%d%%): %s" % [roundi(Monsters.MOUNT_CHANCE * 100.0), ", ".join(bosses)])
-		lines.append("Vendors buy it for %d gold" % item["value"])
-		return "\n".join(lines)
 	var grade: Array = Items.rarity(item)
 	if (item["slot"].is_empty() or item["slot"] in ["bag", "container"]) and not grade.is_empty():
 		# Everything but gear and gold: the quality and what kind of thing it is.

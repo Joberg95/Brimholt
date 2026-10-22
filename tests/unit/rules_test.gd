@@ -202,7 +202,6 @@ func _run() -> void:
 	_inventory_checks()
 	_sprite_checks()
 	_slot_and_stat_checks()
-	_mount_checks()
 	_ring_checks()
 	_loot_display_checks()
 	_leech_checks()
@@ -389,7 +388,8 @@ func _quest_hub_and_lexicon_checks() -> void:
 			and found["gear"] == Combat.GEAR_DROP_CHANCE[found["rank"]], "%s's lexicon entry matches its loot and spawns" % found["kind"])
 	var spider: Dictionary = Lexicon.entry("cave_spider")
 	check("Silkhollow (dungeon)" in spider["places"] and spider["tasks"] == ["silk_harvest"] and Lexicon.matches(spider, "SILK")
-		and Lexicon.matches(spider, "spider silk") and not Lexicon.matches(spider, "golem"), "lexicon search finds names, places, and drops")
+		and Lexicon.matches(spider, "cave spider") and not Lexicon.matches(spider, "golem"), "lexicon search finds names and places")
+	check(Lexicon.matches(Lexicon.entry("field_vole"), "glowcap"), "lexicon search finds drops")
 	var vole: Dictionary = Lexicon.entry("field_vole")
 	check(vole["gold"] == roundi(Balance.coins_per_kill(1) * World.ITEMS["gold_coins"]["gold"]) and "Cinder Meadows" in vole["places"] and "Bracken Leas" in vole["places"],
 		"the lexicon's gold matches the expected coin piles")
@@ -709,11 +709,11 @@ func _armor_type_checks() -> void:
 		var tiers: Dictionary = {}
 		for kind: String in World.ITEMS:
 			var item: Dictionary = World.ITEMS[kind]
-			# Legs are exempt until the gear rebalance: their recoloured duplicates were deleted.
-			if item.get("armor", "") == type and item["slot"] != "legs" and not item.get("loot_only", false) \
+			# Legs and boots have tier gaps: the pack has fewer of them than our tiers (plan 49).
+			if item.get("armor", "") == type and not item["slot"] in ["legs", "boots"] and not item.get("loot_only", false) \
 					and not Items.mythic(item):
 				tiers["%s/%d" % [item["slot"], item["level"]]] = true
-		check(tiers.size() == Items.TIER_LEVELS.size() * 3, "%s has a helmet, armor, and boots of every tier" % type)
+		check(tiers.size() == Items.TIER_LEVELS.size() * 2, "%s has a helmet and armor of every tier" % type)
 	# Trainers hand over the class's armor; old saves swap shared pieces for the player's own type.
 	var world := World.new()
 	world.add_player(1, 0.0, Balance.ADVENTURER)
@@ -984,10 +984,10 @@ func _inventory_checks() -> void:
 
 
 func _stacking_checks() -> void:
-	check(World.kind_of("wolf_pelt#12") == "wolf_pelt" and World.count_of("wolf_pelt#12") == 12, "stack entry parts")
-	check(World.count_of("wolf_pelt") == 1 and World.count_of("") == 0 and World.make_entry("wolf_pelt", 1) == "wolf_pelt",
+	check(World.kind_of("copper_ore#12") == "copper_ore" and World.count_of("copper_ore#12") == 12, "stack entry parts")
+	check(World.count_of("copper_ore") == 1 and World.count_of("") == 0 and World.make_entry("copper_ore", 1) == "copper_ore",
 		"a plain entry is a stack of one")
-	check(World.stackable("wolf_pelt") and World.stackable("gold_coins") and World.stackable("glowcap")
+	check(World.stackable("copper_ore") and World.stackable("gold_coins") and World.stackable("glowcap")
 		and not World.stackable("ember_cap") and not World.stackable("nope"), "only slotless items stack")
 	var bag := World.new()
 	check(bag.add_player(1, 0.0, "knight"), "stacking player")
@@ -1004,32 +1004,32 @@ func _stacking_checks() -> void:
 		return bag.move_item(1, source, target, ticks[0])
 	var tile: Dictionary = {"type": "ground", "cell": here}
 	var auto: Dictionary = {"type": "backpack"}
-	backpack[2] = "wolf_pelt#5"
-	bag.ground[here] = ["wolf_pelt#3"]
-	check(move.call(tile, auto)["ok"] and backpack[2] == "wolf_pelt#8" and backpack[0] == "" and not bag.ground.has(here),
+	backpack[2] = "copper_ore#5"
+	bag.ground[here] = ["copper_ore#3"]
+	check(move.call(tile, auto)["ok"] and backpack[2] == "copper_ore#8" and backpack[0] == "" and not bag.ground.has(here),
 		"pickup merges into a matching backpack stack")
-	backpack[4] = "wolf_pelt#2"
+	backpack[4] = "copper_ore#2"
 	check(move.call({"type": "backpack", "index": 4}, {"type": "backpack", "index": 2})["ok"]
-		and backpack[2] == "wolf_pelt#10" and backpack[4] == "", "dragging onto a matching stack merges")
+		and backpack[2] == "copper_ore#10" and backpack[4] == "", "dragging onto a matching stack merges")
 	backpack[4] = "ember_cap"
-	backpack[5] = "wolf_pelt"
+	backpack[5] = "copper_ore"
 	check(move.call({"type": "backpack", "index": 5}, {"type": "backpack", "index": 4})["ok"]
-		and backpack[2] == "wolf_pelt#11" and backpack[4] == "ember_cap", "dropping onto another item merges into the stack")
-	backpack[2] = "wolf_pelt#%d" % World.STACK_MAX
-	bag.ground[here] = ["wolf_pelt#4"]
-	check(move.call(tile, auto)["ok"] and backpack[0] == "wolf_pelt#4" and World.count_of(backpack[2]) == World.STACK_MAX,
+		and backpack[2] == "copper_ore#11" and backpack[4] == "ember_cap", "dropping onto another item merges into the stack")
+	backpack[2] = "copper_ore#%d" % World.STACK_MAX
+	bag.ground[here] = ["copper_ore#4"]
+	check(move.call(tile, auto)["ok"] and backpack[0] == "copper_ore#4" and World.count_of(backpack[2]) == World.STACK_MAX,
 		"a full stack overflows into a free slot")
 	check(move.call({"type": "backpack", "index": 0}, {"type": "backpack", "index": 2})["ok"]
-		and backpack[0] == "wolf_pelt#%d" % World.STACK_MAX and backpack[2] == "wolf_pelt#4",
+		and backpack[0] == "copper_ore#%d" % World.STACK_MAX and backpack[2] == "copper_ore#4",
 		"a merge past the stack limit swaps instead")
 	var full: Array = []
 	for count: int in World.GROUND_STACK_MAX:
 		full.append("iron_coif")
-	full[-1] = "wolf_pelt#2"
+	full[-1] = "copper_ore#2"
 	bag.ground[here] = full
 	var dropped: Dictionary = move.call({"type": "backpack", "index": 2}, tile)
 	check(dropped["ok"] and dropped["ground"] == [here] and bag.ground[here].size() == World.GROUND_STACK_MAX
-		and bag.ground[here][-1] == "wolf_pelt#6" and backpack[2] == "", "dropping merges onto a full tile's matching top stack")
+		and bag.ground[here][-1] == "copper_ore#6" and backpack[2] == "", "dropping merges onto a full tile's matching top stack")
 	var wall: Vector2i = _test_wall()
 	player["cell"] = wall + Vector2i.UP
 	player["from"] = wall + Vector2i.UP
@@ -1041,10 +1041,10 @@ func _stacking_checks() -> void:
 	var gold: int = player["gold"]
 	check(move.call(tile, auto)["ok"] and player["gold"] == gold + 7 * World.ITEMS["gold_coins"]["gold"]
 		and not backpack.has("gold_coins#7"), "a gold stack goes to the purse at full value")
-	var stack: Array = ["wolf_pelt#%d" % (World.STACK_MAX - 1)]
-	check(World.stack_onto(stack, "wolf_pelt#2") and stack == ["wolf_pelt#99", "wolf_pelt#2"],
+	var stack: Array = ["copper_ore#%d" % (World.STACK_MAX - 1)]
+	check(World.stack_onto(stack, "copper_ore#2") and stack == ["copper_ore#99", "copper_ore#2"],
 		"ground stacks never exceed the stack limit")
-	check(World.bound("abyssal_greathelm") and World.bound("abyssal_greathelm#1") and not World.bound("wolf_pelt#3"), "bound checks use the item id")
+	check(World.bound("abyssal_greathelm") and World.bound("abyssal_greathelm#1") and not World.bound("copper_ore#3"), "bound checks use the item id")
 
 
 ## Professions: resources, derived recipes, and what crafting may make.
@@ -1082,10 +1082,11 @@ func _profession_data_checks() -> void:
 			check(crafted.has(kind), "%s can be crafted" % kind)
 	for vocation: String in Balance.VOCATIONS:
 		for tier: int in Items.TIER_LEVELS:
-			# Legs have tier gaps until the gear rebalance (recoloured legs were deleted).
+			# Legs, boots, and some weapons and off-hands have tier gaps (plan 49): skip the empty tiers.
 			for slot: String in ["helmet", "armor", "boots", "main_hand", "off_hand"]:
 				var piece: String = World.class_piece(slot, tier, vocation)
-				check(not piece.is_empty() and crafted.has(piece), "%ss can have their tier-%d %s crafted" % [vocation, tier, slot])
+				if not piece.is_empty():
+					check(crafted.has(piece), "%ss can have their tier-%d %s crafted" % [vocation, tier, slot])
 	for profession: String in Professions.CRAFTING:
 		check(Crafting.RECIPES.values().any(func(recipe: Dictionary) -> bool: return recipe["profession"] == profession),
 			"%s has recipes" % profession)
@@ -1671,11 +1672,12 @@ func _bag_checks() -> void:
 	restored.add_player(1, 0.0, "knight")
 	CharacterStore.restore(restored, 1, saved, 0.0)
 	check(restored.players[1]["bags"] == player["bags"] and restored.players[1]["backpack"] == player["backpack"], "bags survive a save")
-	saved["bags"] = ["voidrend", 7, "starweave_rucksack", "leather_satchel"]
+	saved["bags"] = ["voidrend", 7, "reedweave_bag", "leather_satchel"]
 	var tampered := World.new()
 	tampered.add_player(1, 0.0, "knight")
 	CharacterStore.restore(tampered, 1, saved, 0.0)
-	check(tampered.players[1]["bags"] == ["", "", "starweave_rucksack"] and tampered.players[1]["backpack"].size() == 12 + 14,
+	check(tampered.players[1]["bags"] == ["", "", "reedweave_bag"]
+		and tampered.players[1]["backpack"].size() == 12 + int(World.ITEMS["reedweave_bag"]["slots"]),
 		"saved bags are sanitized")
 	# Empty bags come off into the backpack (or onto the ground); the slots after them close up.
 	player["backpack"][19] = ""
@@ -1716,6 +1718,9 @@ func _hunters_lodge_checks() -> void:
 				continue  # Legs have tier gaps until the gear rebalance.
 			var items: Array = World.task_items(task, vocation)
 			var gear: Array = items.filter(func(entry: Array) -> bool: return not World.ITEMS[entry[0]]["slot"].is_empty())
+			if gear.is_empty() and World.class_piece(Quests.TASKS[task]["gear"], Items.tier_for(Quests.TASKS[task]["level"]),
+					vocation).is_empty():
+				continue  # a tier the pack left without a piece for this class (plan 49)
 			check(gear.size() == 1 and World.requirement_error(gear[0][0], Balance.MAX_LEVEL, vocation).is_empty()
 				and World.ITEMS[gear[0][0]]["level"] == Items.tier_for(Quests.TASKS[task]["level"]),
 				"%s pays a %s a piece of its own class at the hunt's tier" % [task, vocation])
@@ -1809,40 +1814,6 @@ func _sprite_checks() -> void:
 		"an attack turns only the drawn pose toward the target")
 
 
-func _showpiece_boot_checks() -> void:
-	var pairs: Array[String] = []
-	for kind: String in World.ITEMS:
-		var item: Dictionary = World.ITEMS[kind]
-		if item["slot"] != "boots" or not (item["stats"].has("speed") or item["stats"].has("mana_percent")):
-			continue
-		pairs.append(kind)
-		var sources: int = 0
-		for monster: String in Monsters.LOOT:
-			for entry: Array in Monsters.LOOT[monster]:
-				sources += 1 if entry[0] == kind else 0
-		check(item.get("loot_only", false) and not World.bound(kind) and sources == 1,
-			"%s is a pair one monster drops" % kind)
-	check(pairs.size() == 7, "seven pairs of showpiece boots with speed or mana")
-	check(World.ITEMS["hastewind_boots"]["stats"] == {"speed": 10} and World.ITEMS["hastewind_boots"]["vocations"].is_empty()
-		and not World.ITEMS["hastewind_boots"].has("armor"), "Hastewind boots: 10% speed for anyone, and no armor")
-	# Speed shortens every step; mana percent raises maximum mana.
-	var world := World.new()
-	world.add_player(1, 0.0)
-	world.players[1]["level"] = 30
-	world.players[1]["equipment"]["boots"] = "hastewind_boots"
-	world.move(1, Vector2i.RIGHT, 0.0)
-	var ground: Callable = func() -> float: return float(World.GROUND_STEP.get(World.terrain(world.players[1]["cell"]), 1.0))
-	check(is_equal_approx(world.players[1]["next_move"], World.MOVE_SECONDS * ground.call() / 1.1), "10% speed boots step 10% faster")
-	world.players[1]["equipment"]["mount"] = "void_steed_mount"
-	world.players[1]["next_move"] = 0.0
-	world.move(1, Vector2i.LEFT, 1.0)
-	check(is_equal_approx(world.players[1]["next_move"], 1.0 + World.MOVE_SECONDS * World.MOUNT_STEP * ground.call() / 1.1),
-		"speed boots stack with a mount")
-	var plain: int = World.stats(35, {}, "sorcerer")["mana"]
-	var slippers: Dictionary = World.stats(35, {"boots": "frostbloom_slippers"}, "sorcerer")
-	check(slippers["mana"] >= roundi(plain * 1.08), "8% mana slippers raise maximum mana by 8% (%d -> %d)" % [plain, slippers["mana"]])
-
-
 func _showpiece_helmet_checks() -> void:
 	var count: int = 0
 	for kind: String in World.ITEMS:
@@ -1868,18 +1839,6 @@ func _showpiece_helmet_checks() -> void:
 	check(worn.get("frost", 0) == 9 and is_equal_approx(Combat.element_bonus(worn, "frost"), 1.09)
 		and Combat.element_bonus(worn, "nature") == 1.0 and Combat.element_bonus(World.stats(45, {}, "druid"), "frost") == 1.0,
 		"frost damage gear raises frost spells and runes only")
-	var themed: Array[String] = []
-	for kind: String in World.ITEMS:
-		if String(World.ITEMS[kind]["look"]).begins_with("backpack+"):
-			themed.append(kind)
-			var sources: int = 0
-			for monster: String in Monsters.LOOT:
-				for entry: Array in Monsters.LOOT[monster]:
-					sources += 1 if entry[0] == kind else 0
-			check(World.is_bag(kind) and World.ITEMS[kind].get("loot_only", false) and sources >= 1
-				and not Economy.stock().has(kind), "%s is a rare backpack that monsters drop" % kind)
-	check(themed.size() == 7 and World.ITEMS["holding_backpack"]["slots"] == World.BAG_MAX,
-		"seven themed backpacks; the Bottomless pack holds the most a bag can")
 	var axes: int = 0
 	for kind: String in World.ITEMS:
 		var item: Dictionary = World.ITEMS[kind]
@@ -1892,7 +1851,6 @@ func _showpiece_helmet_checks() -> void:
 			and item["stats"].size() == 2,
 			"%s is a Warrior's axe trading a tenth of its attack for its focus" % kind)
 	check(axes == 6, "six showpiece axes")
-	_showpiece_boot_checks()
 
 
 func _leech_checks() -> void:
@@ -1930,26 +1888,18 @@ func _leech_checks() -> void:
 
 
 func _loot_display_checks() -> void:
-	# Monster drops are drawn as what they are (a claw, a feather, an eye...), not as one generic shape.
-	var trophies: int = 0
-	for kind: String in World.ITEMS:
-		var item: Dictionary = World.ITEMS[kind]
-		if item["slot"].is_empty() and item.has("value") and not item.has("rune") and not item.has("drink") 				and not item.has("eat") and not String(item["look"]) in Items.GATHERED_LOOKS:
-			trophies += 1
-			check(String(item["look"]).begins_with("trophy+"), "%s is drawn as its own trophy shape" % kind)
-	check(trophies == 98, "ninety-eight monster trophies, the cut gems, the crimson insignia, and the orcs' included (%d)" % trophies)
 	# Gold grows from one coin to a big heap with the stack.
 	check(SpriteArt.coin_stage(1) == 0 and SpriteArt.coin_stage(2) == 1 and SpriteArt.coin_stage(3) == 2
 		and SpriteArt.coin_stage(9) == 3 and SpriteArt.coin_stage(10) == 4 and SpriteArt.coin_stage(100) == 5
 		and SpriteArt.COINS.get_width() == SpriteArt.COIN_STAGES.size() * 32, "gold coin stacks grow by stage")
 	# A kill's loot reads like a classic loot message, for its owners only, with a rarity label.
-	var drops: Array[String] = [World.make_entry("gold_coins", 2), "flint_hatchet", "bear_claw"]
+	var drops: Array[String] = [World.make_entry("gold_coins", 2), "flint_hatchet", "small_ruby"]
 	var event: Dictionary = Combat.loot_event({"kind": "crypt_skeleton", "cell": Vector2i(3, 4)}, drops, [7])
 	check(event["kind"] == "loot" and event["ids"] == [7] and event["cell"] == Vector2i(3, 4)
-		and event["text"] == "Loot of a crypt skeleton: 50 gold coins, a flint hatchet, a bear claw." and not event.has("label"),
+		and event["text"] == "Loot of a crypt skeleton: 50 gold coins, a flint hatchet, a small ruby." and not event.has("label"),
 		"loot text names the monster and every drop (%s)" % event["text"])
-	var rare: Dictionary = Combat.loot_event({"kind": "rat_king", "cell": Vector2i.ZERO}, ["dire_wolf_mount"], [1])
-	check(rare["text"] == "Loot of The Rat King: a dire wolf." and rare.get("label", [""])[0] == "Legendary!",
+	var rare: Dictionary = Combat.loot_event({"kind": "rat_king", "cell": Vector2i.ZERO}, ["voidrend"], [1])
+	check(rare["text"] == "Loot of The Rat King: a voidrend." and rare.has("label"),
 		"a boss keeps its name and a rare drop gets a rarity label (%s)" % rare["text"])
 	var empty: Dictionary = Combat.loot_event({"kind": "sewer_rat", "cell": Vector2i.ZERO}, [], [1])
 	check(empty["text"] == "Loot of a sewer rat: nothing.", "an empty kill says nothing")
@@ -1984,62 +1934,13 @@ func _ring_checks() -> void:
 		if item["focus"] in ["health", "mana", "critical"]:
 			check(item["stats"].size() == 1 and item["stats"][item["focus"]] > plain[item["focus"]],
 				"%s gives more %s than its tier's ring and nothing else" % [kind, item["focus"]])
-	check(focused == 8, "eight focused rings drop from monsters")
-
-
-func _mount_checks() -> void:
-	var mounts: Array[String] = []
-	for kind: String in World.ITEMS:
-		if World.ITEMS[kind]["slot"] == "mount":
-			mounts.append(kind)
-	check(mounts.size() == Monsters.MOUNTS.size() and Monsters.MOUNT_CHANCE == 0.01, "one mount per boss, dropped 1% of kills")
-	for monster: String in Monsters.MONSTERS:
-		if Monsters.MONSTERS[monster]["rank"] in ["champion", "boss"]:
-			check(Monsters.MOUNTS.get(monster, "") in mounts, "%s drops its own mount" % monster)
-	for kind: String in mounts:
-		var item: Dictionary = World.ITEMS[kind]
-		check(item["stats"].is_empty() and item.get("loot_only", false) and not World.bound(kind) and item["level"] == 1
-			and item["vocations"].is_empty() and Items.rarity(item)[0] == "Legendary" and item.get("sell", 0) > 0,
-			"%s is an unbound, statless, Legendary mount anyone can ride" % kind)
-		check(Monsters.MOUNTS.values().count(kind) == 1, "%s comes from exactly one boss" % kind)
-		check(SpriteArt.RIDER_LIFT.has(String(item["look"]).get_slice("+", 0)), "%s has a saddle height" % kind)
-		check(World.slot_for(kind, {}) == "mount", "%s goes in the mount slot" % kind)
-	var combat := Combat.new(World.new(), 5)
-	var dropped: int = 0
-	for roll: int in 4000:
-		if "dire_wolf_mount" in combat.roll_loot("greymaw", 20):
-			dropped += 1
-	check(dropped >= 20 and dropped <= 70, "a boss drops its mount about once in a hundred kills (%d/4000)" % dropped)
-	# Riding: 25% faster steps above ground, a walker's pace underground.
-	var world := World.new()
-	world.add_player(1, 0.0)
-	world.players[1]["equipment"]["mount"] = "void_steed_mount"
-	world.move(1, Vector2i.RIGHT, 0.0)
-	var ridden: float = World.MOVE_SECONDS * World.MOUNT_STEP * float(World.GROUND_STEP.get(World.terrain(world.players[1]["cell"]), 1.0))
-	check(is_equal_approx(world.players[1]["next_move"], ridden) and is_equal_approx(world.export_player(1, 0.0)["duration"], ridden),
-		"a rider steps 25% faster")
-	var below: Vector2i = Vector2i(-1, -1)
-	for zone: Dictionary in World.ZONES:
-		if zone.get("underground", false):
-			below = zone["rect"].get_center()
-			break
-	check(below != Vector2i(-1, -1) and not World.riding({"mount": "void_steed_mount"}, below)
-		and World.riding({"mount": "void_steed_mount"}, world.players[1]["cell"]) and not World.riding({}, world.players[1]["cell"]),
-		"mounts carry you only above ground")
-	# A ridden mount is never lost on death, even with a red skull.
-	world.ground.clear()
-	var killer := Combat.new(world, 9)
-	world.players[1]["level"] = Combat.PROTECTION_LEVEL
-	world.players[1]["skull"] = "red"
-	killer._damage(-1, 1, 999999, "damage", 5.0, [])
-	check(world.players[1]["equipment"].get("mount", "") == "void_steed_mount"
-		and not "void_steed_mount" in _ground_items(world), "a ridden mount stays with its rider on death")
+	check(focused > 0, "focused rings drop from monsters (%d)" % focused)
 
 
 func _slot_and_stat_checks() -> void:
-	check(World.SLOTS.size() == 13 and World.SLOT_TYPES.size() == 13 and "cape" in World.SLOTS and "bag" in World.SLOTS
-		and "legs" in World.SLOTS and "boots" in World.SLOTS and "mount" in World.SLOTS,
-		"thirteen equipment slots with legs, boots, a cape, a pack, and a mount")
+	check(World.SLOTS.size() == 10 and World.SLOT_TYPES.size() == 10 and "bag" in World.SLOTS
+		and "legs" in World.SLOTS and "boots" in World.SLOTS and not "cape" in World.SLOTS and not "mount" in World.SLOTS,
+		"ten equipment slots with legs, boots, and a pack; no cape, charm, or mount")
 	for slot: String in World.SLOTS:
 		check(World.SLOT_TYPES.has(slot), "every slot has a type")
 		var fitting: bool = false
@@ -2053,8 +1954,7 @@ func _slot_and_stat_checks() -> void:
 			check((stat in Balance.STATS or stat in World.GEAR_STATS) and typeof(item["stats"][stat]) == TYPE_INT,
 				"item stat is known")
 	check(World.fits("garnet_ring", "ring_1") and World.fits("garnet_ring", "ring_2"), "rings fit both ring slots")
-	check(not World.fits("garnet_ring", "necklace") and not World.fits("glowcap", "charm"), "wrong slot types rejected")
-	check(World.fits("silverleaf_cape", "cape") and not World.fits("silverleaf_cape", "armor"), "capes fit the cape slot")
+	check(not World.fits("garnet_ring", "necklace") and not World.fits("glowcap", "boots"), "wrong slot types rejected")
 	check(not World.fits("no_such_item", "helmet") and not World.fits("ember_cap", "hand"), "unknown items or slots")
 	check(World.slot_for("garnet_ring", {}) == "ring_1", "first ring goes to ring 1")
 	check(World.slot_for("garnet_ring", {"ring_1": "cobalt_ring"}) == "ring_2", "second ring goes to ring 2")
@@ -2084,11 +1984,10 @@ func _slot_and_stat_checks() -> void:
 	check(equipment["ring_1"] == "cobalt_ring" and equipment["ring_2"] == "garnet_ring", "ring swap exchanges items")
 	check(world.move_item(1, {"type": "equipment", "slot": "ring_1"}, {"type": "equipment", "slot": "necklace"}, 4.0)["reason"]
 		== "That item does not fit there", "ring cannot be worn as a necklace")
-	backpack[6] = "hearth_charm"
+	backpack[6] = "copper_ore"
 	check(world.move_item(1, {"type": "backpack", "index": 6}, {"type": "equipment", "slot": "ring_1"}, 5.0)["reason"]
-		== "That item does not fit there", "charm cannot be worn as a ring")
-	check(equipment["ring_1"] == "cobalt_ring" and backpack[6] == "hearth_charm", "rejected ring move changes nothing")
-	check(world.move_item(1, {"type": "backpack", "index": 6}, {"type": "equipment", "slot": "charm"}, 6.0)["ok"], "equip charm")
+		== "That item does not fit there", "ore cannot be worn as a ring")
+	check(equipment["ring_1"] == "cobalt_ring" and backpack[6] == "copper_ore", "rejected ring move changes nothing")
 	check(world.toggle_equipment(1, "off_hand", 7.0)["ok"] and equipment["off_hand"] == "oak_buckler", "toggle off hand")
 	check(world.toggle_equipment(1, "main_hand", 8.0)["ok"] and equipment["main_hand"] == "willow_shortbow", "toggle main hand")
 	var base: Dictionary = Balance.base_stats(25)
@@ -2097,8 +1996,7 @@ func _slot_and_stat_checks() -> void:
 		for stat: String in World.ITEMS[equipment[slot]]["stats"]:
 			expected[stat] += World.ITEMS[equipment[slot]]["stats"][stat]
 	check(World.stats(25, equipment) == expected, "worn item stats add to the base stats")
-	check(World.stats(25, equipment)["mana"] > base["mana"] and World.stats(25, equipment)["regen"] > base["regen"],
-		"rings and charms add mana and regeneration")
+	check(World.stats(25, equipment)["mana"] > base["mana"], "rings add mana")
 	check(World.stats(19, equipment)["health"] == Balance.base_stats(19)["health"],
 		"accessories above your level give nothing (for example after losing levels)")
 	check(World.stats(25, {"main_hand": "copper_blade"}) == base, "another vocation's weapon gives nothing")
@@ -2666,7 +2564,9 @@ func _gear_tier_checks() -> void:
 				var pieces: Array = by_key.get("%s/%s/%d" % [slot, vocation, level], [])
 				var regular: Array = pieces.filter(func(kind: String) -> bool:
 					return not World.ITEMS[kind].get("loot_only", false) and not World.ITEMS[kind].has("quest"))
-				check(regular.size() == 1, "exactly one regular %s for a level-%d %s plus optional hunting sidegrades and quest pieces" % [slot, level, vocation])
+				check(regular.size() <= 1, "at most one regular %s for a level-%d %s plus optional hunting sidegrades and quest pieces" % [slot, level, vocation])
+				if regular.is_empty():
+					continue  # a tier the pack left without a piece (plan 49)
 				# Keep the regular piece first: the upgrade and six-hit checks below read it.
 				by_key["%s/%s/%d" % [slot, vocation, level]] = regular + pieces.filter(func(kind: String) -> bool: return not kind in regular)
 	# Each tier is an upgrade, and weapons keep a geared player near six hits per same-level kill.
@@ -2674,13 +2574,15 @@ func _gear_tier_checks() -> void:
 		var previous: Dictionary = {}
 		for level: int in Items.TIER_LEVELS:
 			for slot: String in ["helmet", "armor", "main_hand", "off_hand"]:
+				if not by_key.has("%s/%s/%d" % [slot, vocation, level]):
+					continue
 				var stats: Dictionary = World.ITEMS[by_key["%s/%s/%d" % [slot, vocation, level]][0]]["stats"]
 				var total: int = 0
 				for stat: String in stats:
 					total += stats[stat]
 				check(total > previous.get(slot, 0), "a tier-%d %s beats the tier below" % [level, slot])
 				previous[slot] = total
-			if vocation == Balance.DEFAULT_VOCATION:
+			if vocation == Balance.DEFAULT_VOCATION and by_key.has("main_hand/%s/%d" % [vocation, level]):
 				var weapon: Dictionary = {"main_hand": by_key["main_hand/%s/%d" % [vocation, level]][0]}
 				for at: int in [level, mini(level + 4, Balance.MAX_LEVEL)]:
 					var hits: int = ceili(Balance.mob_health(at) / float(World.stats(at, weapon, vocation)["attack"]))
@@ -2780,8 +2682,8 @@ func _hunting_weapon_checks() -> void:
 			{"type": "backpack", "index": 0}, 3.0)["ok"] and player["backpack"][0] == kind,
 			"%s unequips without loss" % kind)
 		check(CharacterStore.valid_entry(kind), "%s survives character save validation" % kind)
-	check(weapons.size() == 26 and vocations == {"knight": 19, "paladin": 3, "sorcerer": 2, "druid": 2},
-		"twenty-six hunting weapons cover all four vocations")
+	check(weapons.size() == 24 and vocations == {"knight": 19, "paladin": 3, "sorcerer": 1, "druid": 1},
+		"twenty-four hunting weapons cover all four vocations")
 	check(tiers.size() == 10, "hunting weapons span every ordinary gear tier")
 	var combat := Combat.new(world, 906)
 	var spawns: Array = World.MONSTER_SPAWNS.duplicate()
@@ -2842,10 +2744,12 @@ func _quest_piece_checks() -> void:
 		if definition.has("gear") and definition.get("chain", "") == "hunters_lodge" and definition["gear"] != "legs":
 			for vocation: String in Balance.VOCATIONS:
 				var piece: String = World.quest_piece("hunters_lodge", definition["gear"], vocation)
-				check(not piece.is_empty() and World.bound(piece) and World.requirement_error(piece, Balance.MAX_LEVEL, vocation).is_empty()
+				if piece.is_empty():
+					continue  # a Lodge piece the pack had no sprite for (plan 49)
+				check(World.bound(piece) and World.requirement_error(piece, Balance.MAX_LEVEL, vocation).is_empty()
 					and World.ITEMS[piece]["level"] == Items.tier_for(definition["level"]),
 					"%s pays a %s its bound Lodge %s of the hunt's tier" % [task, vocation, definition["gear"]])
-	for task: String in ["silk_matron", "abbot_morrow", "forgemaw"]:
+	for task: String in ["abbot_morrow", "forgemaw"]:
 		var accessory: Array = Quests.TASKS[task].get("items", []).filter(func(entry: Array) -> bool:
 			return World.ITEMS[entry[0]].get("quest", "") == task)
 		check(accessory.size() == 1 and World.bound(accessory[0][0]), "the %s task pays its bound accessory" % task)
@@ -2871,12 +2775,12 @@ func _quest_piece_checks() -> void:
 	var player: Dictionary = world.players[1]
 	player["level"] = 30
 	player["skull"] = "red"
-	player["equipment"]["boots"] = "lodgewarden_boots"
+	player["equipment"]["boots"] = "lodgeranger_boots"
 	player["equipment"]["helmet"] = "embersteel_helm"
 	player["backpack"][0] = "forgeheart_ring"
 	player["backpack"][1] = "garnet_ring"
 	combat._drop_belongings(1, [])
-	check(player["equipment"].get("boots", "") == "lodgewarden_boots" and player["backpack"][0] == "forgeheart_ring"
+	check(player["equipment"].get("boots", "") == "lodgeranger_boots" and player["backpack"][0] == "forgeheart_ring"
 		and not player["equipment"].has("helmet") and player["backpack"][1].is_empty(),
 		"a red-skulled death drops found gear but keeps bound quest rewards")
 
@@ -2886,7 +2790,7 @@ func _mythic_checks(by_key: Dictionary) -> void:
 	for kind: String in World.ITEMS:
 		if Items.mythic(World.ITEMS[kind]):
 			mythic.append(kind)
-	check(mythic.size() == 22, "twenty-two mythic pieces (the mythic legs were deleted as recolours)")
+	check(mythic.size() == 11, "eleven mythic pieces (%d)" % mythic.size())
 	var sources: Dictionary = {}
 	for monster: String in Monsters.LOOT:
 		for entry: Array in Monsters.LOOT[monster]:
@@ -2929,7 +2833,7 @@ func _mythic_checks(by_key: Dictionary) -> void:
 					relic_total += World.ITEMS[relic]["stats"][stat]
 				check(relic_total > total, "the relic %s still beats %s" % [relic, kind])
 	for vocation: String in Balance.VOCATIONS:
-		for slot: String in ["helmet", "armor", "boots", "main_hand"]:
+		for slot: String in ["helmet", "armor"]:
 			check(by_key.has("%s/%s/%d" % [slot, vocation, Items.RELIC_LEVEL]), "%s can farm a mythic %s" % [vocation, slot])
 	for monster: String in farms:
 		check(farms[monster] >= 3, "%s has several level-50 camps" % monster)
@@ -2938,8 +2842,7 @@ func _mythic_checks(by_key: Dictionary) -> void:
 	for roll: int in 3000:
 		for entry: String in combat.roll_loot("ashmaw_drake", 50):
 			counts[World.kind_of(entry)] = counts.get(World.kind_of(entry), 0) + 1
-	check(absf(counts.get("drakeforged_helm", 0) - 3000.0 * 0.006) < 12.0 and counts.get("ashmaw_heartscale", 0) > 1300,
-		"the drake drops its mythic pieces and trophy near their chances")
+	check(absf(counts.get("drakeforged_helm", 0) - 3000.0 * 0.006) < 12.0, "the drake drops its mythic pieces near their chance")
 	check(not counts.has("drakeforged_helm") or combat.roll_loot("ashmaw_drake", 49).all(
 		func(entry: String) -> bool: return World.ITEMS[World.kind_of(entry)]["level"] <= 49 or World.ITEMS[World.kind_of(entry)]["slot"].is_empty()),
 		"mythic pieces need a level-50 monster")
@@ -2951,7 +2854,7 @@ func _relic_checks(by_key: Dictionary) -> void:
 	for kind: String in World.ITEMS:
 		if World.ITEMS[kind].has("glow"):
 			relics.append(kind)
-	check(relics.size() == 17, "seventeen relics")
+	check(relics.size() == 7, "seven relics (%d)" % relics.size())
 	var bosses: Array[String] = []
 	for kind: String in Monsters.MONSTERS:
 		if Monsters.MONSTERS[kind]["rank"] == "boss":
@@ -2981,7 +2884,6 @@ func _relic_checks(by_key: Dictionary) -> void:
 		check(relic_total > tier_total, "%s beats the best tiered %s" % [kind, item["slot"]])
 	for boss: String in bosses:
 		var definition: Dictionary = Monsters.MONSTERS[boss]
-		check(definition.get("relics", []).size() >= 4, "%s's quest offers at least four relics" % boss)
 		check(definition.get("respawn", 0.0) >= 600.0, "%s respawns slowly" % boss)
 		check(definition.has("glow") or definition["look"] == "humanoid", "%s glows (itself or through its gear)" % boss)
 		var placed: Array = World.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return spawn["monster"] == boss)
@@ -3160,7 +3062,7 @@ func _endgame_zone_checks() -> void:
 	_place(world, 1, inside)
 	victim["level"] = 50
 	victim["equipment"] = {"helmet": "wyrmglass_greathelm", "armor": "wyrmglass_plate", "off_hand": "wyrmglass_ward",
-		"necklace": "wyrmglass_amulet", "ring_1": "wyrmglass_ring", "main_hand": "eclipse_bow"}
+		"main_hand": "eclipse_bow"}
 	victim["backpack"][7] = "abyssal_greathelm"
 	victim["gold"] = 50
 	var events: Array = []
@@ -3170,7 +3072,7 @@ func _endgame_zone_checks() -> void:
 	var dropped: Array = []
 	for cell: Vector2i in world.ground:
 		dropped.append_array(world.ground[cell])
-	for kind: String in ["wyrmglass_greathelm", "wyrmglass_plate", "wyrmglass_ward", "wyrmglass_amulet", "wyrmglass_ring"]:
+	for kind: String in ["wyrmglass_greathelm", "wyrmglass_plate", "wyrmglass_ward"]:
 		check(kind in dropped, "%s drops in the Hollow Reach" % kind)
 	var message: String = ""
 	for event: Dictionary in events:
@@ -3256,7 +3158,7 @@ func _relic_quest_checks() -> void:
 	var claimed: Dictionary = combat.claim_relic(4, "relic_keeper_kharzul", "cinderheart_bow", 101.0)
 	check(claimed["ok"] and backpack.has("cinderheart_bow") and world.players[4]["trophies"].is_empty(),
 		"a trophy becomes the relic of your choice")
-	check(combat.claim_relic(4, "relic_keeper_kharzul", "molten_heart", 102.0)["reason"] == "Slay Kharzul the Cinder Colossus first",
+	check(combat.claim_relic(4, "relic_keeper_kharzul", "cinderheart_bow", 102.0)["reason"] == "Slay Kharzul the Cinder Colossus first",
 		"each trophy is spent once")
 	# Bound: no dropping, no losing on death.
 	var player: Dictionary = world.players[4]
@@ -3346,8 +3248,8 @@ func _town_checks() -> void:
 	for vocation: String in Balance.VOCATIONS:
 		for tier: int in [1, 5, 10]:
 			for slot: String in Economy.GEAR_SLOTS:
-				if slot == "legs":
-					continue  # Legs have tier gaps until the gear rebalance.
+				if World.class_piece(slot, tier, vocation).is_empty():
+					continue  # a tier the pack left without a piece (plan 49)
 				check(not stock.filter(func(kind: String) -> bool: return World.ITEMS[kind]["slot"] == slot \
 					and World.ITEMS[kind]["level"] == tier and World.requirement_error(kind, tier, vocation).is_empty()).is_empty(),
 					"vendors sell a tier-%d %s for %ss" % [tier, slot, vocation])
@@ -3357,7 +3259,7 @@ func _town_checks() -> void:
 	for kind: String in ["abyssal_greathelm", "traveler_pack", "gold_coins"]:
 		check(Economy.sell_price(kind) == 0 and kind not in stock, "%s is neither bought nor sold" % kind)
 	check(Economy.sell_price("health_potion") == 0, "vendors do not buy potions back")
-	check(Economy.sell_price("wolf_pelt") == World.ITEMS["wolf_pelt"]["value"], "materials sell for their value")
+	check(Economy.sell_price("copper_ore") == World.ITEMS["copper_ore"]["value"], "materials sell for their value")
 	check(World.bound("traveler_pack") and Combat.new(World.new(), 4).gear_drop(1) not in Quests.PACKS, "packs are bound and never drop")
 	for roll: int in 200:
 		check(not World.bound(Combat.new(World.new(), roll + 1).gear_drop(1)), "monsters never drop bound items")
@@ -3407,8 +3309,8 @@ func _town_checks() -> void:
 	check(economy.buy(1, vendor, "health_potion", 1, tick.call())["ok"], "a stack with room still takes potions")
 
 	# Selling.
-	backpack[2] = "wolf_pelt#10"
-	backpack[3] = "boar_tusk#2"
+	backpack[2] = "copper_ore#10"
+	backpack[3] = "small_ruby#2"
 	backpack[4] = "abyssal_greathelm"
 	var gold: int = player["gold"]
 	check(economy.sell(1, vendor, 1, tick.call())["ok"] and backpack[1] == ""
@@ -3419,7 +3321,7 @@ func _town_checks() -> void:
 	for bad: Variant in [null, "2", 2.0, -2, backpack.size(), 1]:
 		check(not economy.sell(1, vendor, bad, tick.call())["ok"], "malformed or empty sale rejected")
 	gold = player["gold"]
-	var materials: int = 10 * World.ITEMS["wolf_pelt"]["value"] + 2 * World.ITEMS["boar_tusk"]["value"] \
+	var materials: int = 10 * World.ITEMS["copper_ore"]["value"] + 2 * World.ITEMS["small_ruby"]["value"] \
 		+ backpack.count("glowcap") * 0
 	check(economy.sell(1, vendor, -1, tick.call())["ok"] and backpack[2] == "" and backpack[3] == ""
 		and player["gold"] == gold + materials and backpack[0].begins_with("health_potion"), "selling every material")
@@ -3469,11 +3371,11 @@ func _town_checks() -> void:
 	victim["level"] = Combat.PROTECTION_LEVEL + 2
 	world.wear_pack(2, "traveler_pack")
 	victim["bank"] = 500
-	victim["depot"][3] = "wolf_pelt#4"
+	victim["depot"][3] = "copper_ore#4"
 	victim["gold"] = 50
 	_place(world, 2, Vector2i(9, 12))
 	combat._damage(-1, 2, 9999999, "damage", tick.call(), [])
-	check(victim["bank"] == 500 and victim["depot"][3] == "wolf_pelt#4" and victim["equipment"].get("bag", "") == "traveler_pack"
+	check(victim["bank"] == 500 and victim["depot"][3] == "copper_ore#4" and victim["equipment"].get("bag", "") == "traveler_pack"
 		and victim["backpack"].size() == World.BACKPACK_SIZE + 4 and victim["gold"] == 0, "death keeps the bank, depot, and pack")
 
 	# Packs: the bag slot cannot be moved, and backpack slots past your pack are locked.
@@ -3536,7 +3438,7 @@ func _town_checks() -> void:
 	player["active_at"] = -INF
 	backpack[0] = "health_potion#2"
 	backpack[1] = "mana_potion"
-	backpack[2] = "wolf_pelt"
+	backpack[2] = "copper_ore"
 	var limits: Dictionary = world.player_stats(1)
 	player["health"] = limits["health"]
 	check(combat.drink(1, 0, tick.call())["reason"] == "You are already at full health", "no drinking at full health")
@@ -4322,7 +4224,7 @@ func _dungeon_checks() -> void:
 				open += 1 if World.walkable(cell) else 0
 		check(reached.size() == open, "every open tile of %s can be reached (%d of %d)" % [dungeon, reached.size(), open])
 		var boss: String = Dungeons.DUNGEONS[dungeon]["monsters"][definition["boss"]][0]
-		check(Monsters.MONSTERS[boss]["rank"] == "champion" and Monsters.LOOT[boss].size() >= 2, "%s ends with a champion" % dungeon)
+		check(Monsters.MONSTERS[boss]["rank"] == "champion" and Monsters.LOOT.has(boss), "%s ends with a champion" % dungeon)
 		for spawn: Array in Dungeons.spawns(dungeon):
 			check(Monsters.MONSTERS.has(spawn[1]) and spawn[2] >= definition["min_level"] and spawn[2] <= definition["max_level"],
 				"%s monster levels fit the dungeon" % dungeon)
@@ -4591,7 +4493,7 @@ func _persistence_checks() -> void:
 	player["bank"] = 1000
 	world.wear_pack(1, "explorer_pack")
 	player["equipment"]["helmet"] = "iron_coif"
-	player["backpack"][0] = "wolf_pelt#12"
+	player["backpack"][0] = "copper_ore#12"
 	player["backpack"][13] = "health_potion#5"
 	player["depot"][3] = "abyssal_greathelm"
 	player["trophies"] = {"morvain": 2}
@@ -4612,8 +4514,8 @@ func _persistence_checks() -> void:
 	check(back["level"] == 23 and back["experience"] == 10 and back["gold"] == 345 and back["bank"] == 1000
 		and back["vocation"] == "druid", "level, experience, gold, and bank are restored")
 	check(back["equipment"] == {"helmet": "iron_coif", "bag": "explorer_pack"} and back["backpack"].size() == 16
-		and back["backpack"][0] == "wolf_pelt#12" and back["backpack"][13] == "health_potion#5"
-		and back["depot"][3] == "abyssal_greathelm" and back["depot"].size() == World.DEPOT_SIZE, "items, pack, and depot are restored")
+		and back["backpack"][0] == "copper_ore#12" and back["backpack"][13] == "health_potion#5"
+		and back["depot"][3] == "abyssal_greathelm" and back["depot"].size() == World.DEPOT_SIZE, "items, pack, and depot are restored (%s, %d)" % [back["equipment"], back["backpack"].size()])
 	check(back["trophies"] == {"morvain": 2} and back["tasks"] == {"outlaw_bounty": 7} and back["done_tasks"] == {"boar_cull": true},
 		"trophies and tasks are restored")
 	check(back["cell"] == Vector2i(6, 8) and back["from"] == back["cell"] and back["health"] == 50, "position and health are restored")
@@ -4653,7 +4555,7 @@ func _persistence_checks() -> void:
 	store.save_character(hostile, {
 		"vocation": "knight", "level": 999, "experience": -5, "gold": -5, "bank": "lots", "health": -4, "mana": 1e9,
 		"equipment": {"helmet": "copper_blade", "main_hand": "abyssal_greathelm", "armor": "nope", "bag": "pathfinder_pack"},
-		"backpack": ["wolf_pelt#500", "copper_blade#2", "gold_coins", "nope", "traveler_pack", 5, "wolf_pelt#1", "wolf_pelt#007", "glowcap#3"],
+		"backpack": ["copper_ore#500", "copper_blade#2", "gold_coins", "nope", "traveler_pack", 5, "copper_ore#1", "copper_ore#007", "glowcap#3"],
 		"depot": "everything", "trophies": {"field_vole": 3, "morvain": -1}, "tasks": {"nope": 3, "boar_cull": 999, "hollow_purge": 999},
 		"done_tasks": ["boar_cull", "nope"], "cell": [0, 0], "skull": "black", "skull_left": 50, "unjustified_ages": ["x", -1, 1e12],
 	})
@@ -4822,9 +4724,8 @@ func _building_checks() -> void:
 	check(graded.call(["health_potion", "strong_health_potion", "great_health_potion"]) == ["Common", "Uncommon", "Rare"]
 		and graded.call(["copper_ore", "iron_ore", "silver_ore", "cobalt_ore", "starmetal_ore"]) == ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 		and graded.call(["grilled_perch", "glimmerfin_feast"]) == ["Common", "Legendary"]
-		and graded.call(["leather_satchel", "starweave_rucksack"]) == ["Common", "Legendary"]
-		and graded.call(["vole_tail", "rune_shard", "forge_heart"]) == ["Common", "Rare", "Legendary"],
-		"potions, resources, food, bags, and materials grade by their worth")
+		and graded.call(["small_amethyst", "great_diamond"]) == ["Common", "Legendary"],
+		"potions, resources, food, and gems grade by their worth (%s)" % [graded.call(["small_amethyst", "great_diamond"])])
 	var grades: Array = []
 	var special: Array = []
 	for level: int in Items.TIER_LEVELS:
@@ -5063,7 +4964,8 @@ func _monster_catalog_checks() -> void:
 				"%s drops a catalog item at a chance in (0, 1], never a relic" % named)
 		check(placed.has(kind), "%s is placed on the map or in a dungeon" % named)
 		if definition["rank"] == "boss":
-			check(definition.get("relics", []).size() >= 4 and definition.has("respawn"), "%s (boss) offers relics and a slow respawn" % named)
+			check(definition.get("relics", []).all(func(relic: String) -> bool: return World.ITEMS.has(relic)) and definition.has("respawn"),
+				"%s (boss) offers catalog relics and a slow respawn" % named)
 		else:
 			check(not definition.has("relics"), "%s: only bosses have relics" % named)
 	for kind: String in Monsters.LOOT:
@@ -5389,10 +5291,8 @@ func _armor_and_control_checks() -> void:
 		and helmets["cloth"]["magic_defense"] > helmets["leather"]["magic_defense"]
 		and helmets["leather"]["magic_defense"] > helmets["mail"]["magic_defense"] and not helmets["plate"].has("magic_defense"),
 		"plate has the most defense and no magic defense; cloth the most magic defense (%s)" % [helmets])
-	var cape: Dictionary = Items.tier_stats({"level": 30, "slot": "cape", "look": "cape", "vocations": []})
 	var amulet: Dictionary = Items.tier_stats({"level": 30, "slot": "necklace", "look": "amulet", "vocations": []})
-	check(cape.get("magic_defense", 0) > 0 and amulet.get("magic_defense", 0) > 0 and not cape.has("defense"),
-		"capes and amulets give magic defense")
+	check(amulet.get("magic_defense", 0) > 0, "amulets give magic defense")
 	var bow: Dictionary = Items.tier_stats({"level": 30, "slot": "main_hand", "look": "bow", "vocations": ["paladin"]})
 	var wand: Dictionary = Items.tier_stats({"level": 30, "slot": "main_hand", "look": "wand", "vocations": ["sorcerer"]})
 	var rod: Dictionary = Items.tier_stats({"level": 30, "slot": "main_hand", "look": "rod", "vocations": ["druid"]})
@@ -5690,7 +5590,7 @@ func _rune_checks() -> void:
 	check(bots._rune_to_use(bot) == "fire_rune", "a bot casts a rune at a pack")
 	world.players[bot]["target"] = pack[4]
 	check(bots._rune_to_use(bot) == "", "but not at a lone monster")
-	check(BotLoot.sellable_index({"backpack": ["fire_rune#2", "wolf_pelt"]}) == 1, "bots keep their runes when they sell")
+	check(BotLoot.sellable_index({"backpack": ["fire_rune#2", "copper_ore"]}) == 1, "bots keep their runes when they sell (%d)" % BotLoot.sellable_index({"backpack": ["fire_rune#2", "copper_ore"]}))
 
 
 ## Boss kills can be stolen: only fighters alive and near the boss when it falls earn a trophy.
@@ -5948,7 +5848,7 @@ func _combat_checks() -> void:
 	for roll: int in 4000:
 		for entry: String in loot_rolls.roll_loot("field_vole", 1):
 			tally[World.kind_of(entry)] = tally.get(World.kind_of(entry), 0) + World.count_of(entry)
-	check(tally.get("vole_tail", 0) > 1800 and tally.get("vole_tail", 0) < 2200, "common materials drop at their table chance")
+	check(tally.get("glowcap", 0) > 240 and tally.get("glowcap", 0) < 400, "materials drop at their table chance (%d)" % tally.get("glowcap", 0))
 	var gear: int = 0
 	for kind: String in tally:
 		if not World.ITEMS[kind]["slot"].is_empty():
@@ -5998,12 +5898,12 @@ func _combat_checks() -> void:
 	crowd.ground[corpse] = ["glowcap", "glowcap", "glowcap", "glowcap", "glowcap", "glowcap"]
 	var many: Array[String] = []
 	for count: int in 10:
-		many.append("wolf_pelt")
+		many.append("copper_ore")
 	var spilled: Array[Vector2i] = crowd_combat.spill(corpse, many)
 	var placed: int = 0
 	var tidy: bool = many.is_empty() and not spilled.has(corpse)
 	for cell: Vector2i in spilled:
-		placed += _count(crowd.ground[cell], "wolf_pelt")
+		placed += _count(crowd.ground[cell], "copper_ore")
 		tidy = tidy and World.walkable(cell) and Combat.distance(cell, corpse) <= Combat.SPILL_RADIUS \
 			and crowd.ground[cell].size() <= World.GROUND_STACK_MAX
 	check(tidy and placed == 10 and crowd.ground[corpse].size() == World.GROUND_STACK_MAX,

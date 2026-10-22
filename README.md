@@ -148,7 +148,7 @@ make run           # start menu;  make host / make join ADDR=192.168.1.20 / make
 make test          # unit rules + real-ENet scenarios (about 1 minute)
 make check         # import + test + offscreen visual checks
 make playtest      # two-bot full-game playthrough with an HTML report (about 5 minutes)
-make sprites       # regenerate assets/sprites (from game/data/items.json)
+make sprites       # regenerate the generated sheets in assets/sprites (item icons: otsp_export.py items)
 ```
 
 | Doc | Contents |

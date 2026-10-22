@@ -81,7 +81,7 @@ func _run() -> void:
 						break
 			# A dropped stack of junk on the player's tile (decays later).
 			if frame == 1 and World.walkable(cell):
-				game.world.ground[cell] = ["vole_tail#3"]
+				game.world.ground[cell] = ["glowcap#3"]
 				game._publish_ground([cell])
 				drops += 1
 			await process_frame

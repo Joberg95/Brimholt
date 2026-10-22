@@ -135,9 +135,8 @@ static var TILE_REGIONS: Array[Rect2] = _tile_regions()
 ## (make_sprites.py ITEM_COLUMNS; one long row would pass the 16384-pixel texture limit).
 const ITEM_COLUMNS: int = 64
 static var ITEM_ORDER: Array[String] = _item_order()
-## Slots drawn on the character (no cape is drawn when its slot is empty). Rings, necklaces, and charms
-## are too small to show when worn.
-const VISIBLE_SLOTS: Array[String] = ["helmet", "cape", "armor", "legs", "boots", "main_hand", "off_hand"]
+## Slots drawn on the character. Rings and necklaces are too small to show when worn.
+const VISIBLE_SLOTS: Array[String] = ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]
 ## The worn sheet of each item drawn on the body (assets/sprites/gear/<id>.png, the hand-pixelled
 ## worn families of tools/generators/pixel_worn.py); items without one show nothing when worn.
 static var GEAR: Dictionary = _gear_sheets()

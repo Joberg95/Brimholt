@@ -67,7 +67,7 @@ const MAX_CRAFT_COUNT: int = 10
 ## (fibre and dye) with ore (buckles and needles).
 const GEAR_INPUTS: Dictionary = {
 	"armor": [6, 2], "helmet": [4, 1], "legs": [4, 1], "boots": [3, 1], "main_hand": [7, 3], "off_hand": [5, 2],
-	"necklace": [3, 2], "ring": [3, 2], "cape": [4, 1], "charm": [3, 2],
+	"necklace": [3, 2], "ring": [3, 2],
 }
 const MATERIALS: Dictionary = {
 	"smithing": ["mining", "woodcutting"], "woodworking": ["woodcutting", "mining"], "tailoring": ["herbalism", "mining"],
@@ -87,9 +87,6 @@ const CONSUMABLES: Array = [
 	["glimmerfin_feast", 1, "cooking", 40, [["glimmerfin", 2], ["nightcotton", 1]]],
 	["leather_satchel", 1, "tailoring", 1, [["sunflax", 6], ["copper_ore", 2]]],
 	["reedweave_bag", 1, "tailoring", 10, [["mirereed", 8], ["iron_ore", 2]]],
-	["silkthistle_pack", 1, "tailoring", 20, [["silverthistle", 8], ["silver_ore", 3]]],
-	["nightcotton_haversack", 1, "tailoring", 30, [["nightcotton", 10], ["cobalt_ore", 3]]],
-	["starweave_rucksack", 1, "tailoring", 40, [["starpetal", 10], ["starmetal_ore", 4]]],
 ]
 
 
@@ -183,10 +180,6 @@ static func gear_profession(item: Dictionary) -> String:
 			return "tailoring" if item.get("look", "") == "book" else "smithing"
 		"necklace", "ring":
 			return "smithing"
-		"cape":
-			return "tailoring"
-		"charm":
-			return "woodworking"
 	return ""
 
 

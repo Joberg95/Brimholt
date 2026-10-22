@@ -144,7 +144,7 @@ const TASKS: Dictionary = {
 	"hundred_eyed_hollow": {"title": "The Hundred-Eyed Hollow", "giver": "watchman_brega", "monster": "cyclops",
 		"also": ["cyclops_smith"], "target": "cyclopes in the Hollow", "count": 75, "level": 33, "cave": "cyclops_hollow",
 		"reward": "experience", "share": 0.5, "items": [["health_potion", 10], ["mana_potion", 10]],
-		"rare": {"chance": 0.25, "items": ["cyclops_eye_amulet", "hollowforge_hammer", "cyclops_hide_cloak"]},
+		"rare": {"chance": 0.25, "items": ["cyclops_eye_amulet", "hollowforge_hammer"]},
 		"intro": "A whole tribe of cyclopes lives in the Hollow under the fells, and their smiths keep its forges hot. Seventy-five of them, and they will think twice before coming up again."},
 	# The frost isles (Hrimvik, by boat): tundra hunts from Huntswoman Eyra and the Rimewater
 	# Trench from Trenchwarden Olav, none chained.
@@ -244,7 +244,7 @@ const TASKS: Dictionary = {
 		"also": ["venom_weaver"], "target": "Silkhollow spiders", "count": 25, "reward": "experience", "share": 0.5,
 		"intro": "Spiders the size of dogs nest in Silkhollow. Take a torch, it is black as pitch down there."},
 	"silk_matron": {"title": "The Silk Matron", "giver": "trapper_maud", "monster": "silk_matron", "count": 1,
-		"reward": "experience", "share": 1.0, "items": [["matron_silk_cape", 1]],
+		"reward": "experience", "share": 1.0, "items": [],
 		"intro": "Their mother spins at the bottom of the cave. Burn her nest and the wilds are ours again."},
 }
 ## Relic keepers: quest giver -> the final boss whose trophies they trade for relics.

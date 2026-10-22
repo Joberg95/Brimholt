@@ -9,7 +9,7 @@ const Monsters = preload("res://game/data/monsters.gd")
 const PATH: String = "res://game/data/items.json"
 const TIER_LEVELS: Array[int] = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45]
 const ACCESSORY_LEVEL: int = 20
-const ACCESSORY_SLOTS: Array[String] = ["necklace", "cape", "charm", "ring"]
+const ACCESSORY_SLOTS: Array[String] = ["necklace", "ring"]
 ## Relics: glowing level-50 gear that only final bosses drop. They are computed at level 50
 ## (one step past the last tier) and multiplied by RELIC_BONUS.
 const RELIC_LEVEL: int = 50
@@ -257,10 +257,6 @@ static func tier_stats(item: Dictionary) -> Dictionary:
 			return {"defense": _defense(level, "shield")}
 		"necklace":
 			return {"health": roundi(reference_health(level) * AMULET_HEALTH), "magic_defense": _magic(level, "necklace")}
-		"cape":
-			return {"magic_defense": _magic(level, "cape"), "mana": roundi(reference_mana(level) * CAPE_MANA)}
-		"charm":
-			return {"regen": roundi(reference_health(level) * CHARM_REGEN), "healing": roundi(reference_health(level) * CHARM_HEALING)}
 		"ring":
 			var health: int = roundi(reference_health(level) * RING_SHARE)
 			match String(item.get("focus", "")):
@@ -320,9 +316,6 @@ static func quality(item: Dictionary) -> int:
 	var slot: String = item.get("slot", "")
 	if item.is_empty() or item.has("gold"):
 		return -1
-	# Mounts are 1% boss drops: Legendary whatever their level.
-	if slot == "mount":
-		return RARITIES.size() - 2
 	if slot in ["bag", "container"]:
 		var slots: int = int(item.get("slots", 0))
 		return clampi((slots - 6) / 2, 0, 4) if slot == "container" else clampi(slots / 4, 0, 4)
