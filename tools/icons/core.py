@@ -29,6 +29,49 @@ def _norm(v):
 
 L = _norm(LIGHT)
 
+# ------------------------------------------------------------------------- the diagonal
+# Weapons lie on the icon's diagonal like the pack's: AXIS runs from the top-left end towards the
+# bottom-right, ACROSS at right angles towards the upper right.
+AXIS = (math.sqrt(0.5), math.sqrt(0.5))
+ACROSS = (math.sqrt(0.5), -math.sqrt(0.5))
+
+
+def at(origin, along, across=0.0):
+    """The point `along` pixels down the diagonal and `across` pixels to its upper right."""
+    return (origin[0] + AXIS[0] * along + ACROSS[0] * across, origin[1] + AXIS[1] * along + ACROSS[1] * across)
+
+
+def piecewise(points):
+    """A tone profile through (u, value) points, linear between them (u -1 .. 1 across a stroke)."""
+    def f(u, *_):
+        for (u0, v0), (u1, v1) in zip(points, points[1:]):
+            if u <= u1:
+                return v0 + (v1 - v0) * (u - u0) / max(1e-6, u1 - u0)
+        return points[-1][1]
+    return f
+
+
+# A rod lit from above: grips, hafts, shafts, quillons.
+ROUND = piecewise([(-1, 0.15), (-0.35, 0.5), (0.3, 1.0), (1, 0.42)])
+
+
+def to_local(centre, x, y):
+    """(along, across) of pixel (x, y)'s centre from `centre`, along and across the diagonal."""
+    dx, dy = x + 0.5 - centre[0], y + 0.5 - centre[1]
+    return dx * AXIS[0] + dy * AXIS[1], dx * ACROSS[0] + dy * ACROSS[1]
+
+
+def local(centre, inside):
+    """The pixels whose centres satisfy inside(along, across), in coordinates along and across the
+    diagonal from `centre`: shapes drawn square to a haft (axe blades, hammer heads)."""
+    cells = set()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            dx, dy = x + 0.5 - centre[0], y + 0.5 - centre[1]
+            if inside(dx * AXIS[0] + dy * AXIS[1], dx * ACROSS[0] + dy * ACROSS[1]):
+                cells.add((x, y))
+    return cells
+
 
 # ------------------------------------------------------------------------------- materials
 # A material is a ramp from its darkest to its lightest tone: (hue, saturation, lightness) at the
@@ -45,6 +88,19 @@ MATERIALS = {
     "leather": ((0.03, 0.50, 0.07), (0.07, 0.45, 0.55)),
     "bone": ((0.08, 0.30, 0.18), (0.13, 0.45, 0.92)),
     "obsidian": ((0.75, 0.30, 0.04), (0.70, 0.22, 0.60)),
+    # Brimholt's own materials (plan 46 flavour pillars): old stone, bog bronze, ember and lake, the Hollow.
+    "runestone": ((0.36, 0.10, 0.10), (0.20, 0.10, 0.80)),
+    "verdigris": ((0.46, 0.38, 0.12), (0.40, 0.42, 0.70)),
+    "emberglass": ((0.99, 0.75, 0.06), (0.04, 0.85, 0.50)),
+    "glow_ember": ((0.03, 1.00, 0.45), (0.13, 1.00, 0.92)),
+    "hollowglass": ((0.76, 0.40, 0.05), (0.78, 0.35, 0.55)),
+    "glow_hollow": ((0.77, 0.90, 0.45), (0.80, 1.00, 0.92)),
+    "glow_rune": ((0.53, 0.90, 0.45), (0.50, 1.00, 0.92)),
+    "glow_moss": ((0.30, 0.90, 0.40), (0.25, 1.00, 0.88)),
+    "moss": ((0.30, 0.55, 0.10), (0.22, 0.60, 0.55)),
+    "reed": ((0.16, 0.45, 0.14), (0.12, 0.50, 0.72)),
+    "lakestone": ((0.62, 0.70, 0.10), (0.55, 0.65, 0.70)),
+    "banner": ((0.99, 0.70, 0.12), (0.02, 0.75, 0.62)),
 }
 
 
