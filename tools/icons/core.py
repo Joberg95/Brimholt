@@ -55,6 +55,23 @@ def piecewise(points):
 ROUND = piecewise([(-1, 0.15), (-0.35, 0.5), (0.3, 1.0), (1, 0.42)])
 
 
+def polygon(points):
+    """The pixels whose centres fall inside a polygon given in pixel coordinates (hand-placed corners,
+    so the drawing's edges are chosen, not computed)."""
+    cells = set()
+    n = len(points)
+    for y in range(SIZE):
+        for x in range(SIZE):
+            px, py, inside = x + 0.5, y + 0.5, False
+            for i in range(n):
+                (x0, y0), (x1, y1) = points[i], points[(i + 1) % n]
+                if (y0 > py) != (y1 > py) and px < x0 + (py - y0) * (x1 - x0) / (y1 - y0):
+                    inside = not inside
+            if inside:
+                cells.add((x, y))
+    return cells
+
+
 def to_local(centre, x, y):
     """(along, across) of pixel (x, y)'s centre from `centre`, along and across the diagonal."""
     dx, dy = x + 0.5 - centre[0], y + 0.5 - centre[1]
@@ -198,6 +215,12 @@ class Icon:
             k = height / max(1.0, max(depth.values()))
             n = _norm((-hx * k, -hy * k, 1.0))
             self.put(x, y, mat, _lit(n) + base)
+
+    def erase(self, cells):
+        """Cuts pixels out of the drawing (holes, notches)."""
+        for (x, y) in cells:
+            if 0 <= x < SIZE and 0 <= y < SIZE:
+                self.mat[y][x] = None
 
     def shade(self, cells, amount):
         """Darkens (negative) or lightens existing pixels: seams, grooves, inlays."""
