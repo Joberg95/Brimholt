@@ -4,7 +4,7 @@ extends SceneTree
 ## (free, both ways, like a waystone) into an arena outside the overworld, beyond the dungeon
 ## band: a ring of obsidian around a dais, a level-50 full-loot PvP zone with Vaelith on the
 ## throne. The room is open to everyone, so a raid can wipe the raid that is fighting the boss
-## and take the kill (Combat._award_trophies: only fighters alive and near the boss when it dies
+## and take the kill (QuestsSystem.award_trophies: only fighters alive and near the boss when it dies
 ## earn a trophy). Running again changes nothing.
 ##
 ##   godot --headless --path . --script res://tools/generators/void_throne.gd

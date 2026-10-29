@@ -234,11 +234,11 @@ func handle_party(id: int, action: Variant, other: Variant) -> void:
 
 
 func handle_quest(id: int, npc: Variant, relic: Variant) -> void:
-	_events_or_reason(id, game.combat.claim_relic(id, npc, relic, game._now()))
+	_events_or_reason(id, game.combat.quests.claim_relic(id, npc, relic, game._now()))
 
 
 func handle_task(id: int, npc: Variant, task: Variant, action: Variant) -> void:
-	_events_or_reason(id, game.combat.task_action(id, npc, task, action, game._now()))
+	_events_or_reason(id, game.combat.quests.task_action(id, npc, task, action, game._now()))
 
 
 func handle_gather(id: int, cell: Variant) -> void:

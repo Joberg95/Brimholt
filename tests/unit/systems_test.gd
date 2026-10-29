@@ -1,6 +1,7 @@
 extends SceneTree
 ## The systems of plan 48, each tested alone: a system gets only the components and stand-ins it
-## reads, never the whole world: regeneration, the bank (economy), and professions (game/core/systems/).
+## reads, never the whole world: regeneration, the bank (economy), professions, and quests
+## (game/core/systems/).
 ##
 ##   godot --headless --path . --script res://tests/unit/systems_test.gd
 
@@ -14,6 +15,10 @@ const Events = preload("res://game/core/ecs/events.gd")
 const ProfessionState = preload("res://game/core/components/professions.gd")
 const ProfessionsSystem = preload("res://game/core/systems/professions.gd")
 const Professions = preload("res://game/data/professions.gd")
+const QuestState = preload("res://game/core/components/quests.gd")
+const QuestsSystem = preload("res://game/core/systems/quests.gd")
+const Quests = preload("res://game/data/quests.gd")
+const Monsters = preload("res://game/data/monsters.gd")
 
 var checks: int = 0
 var failures: int = 0
@@ -31,6 +36,7 @@ class FakeWorld:
 		store.declare(RegenSystem.COMPONENT, "regen")
 		store.declare(Economy.COMPONENT, "economy")
 		store.declare(ProfessionsSystem.COMPONENT, "professions")
+		store.declare(QuestsSystem.COMPONENT, "quests")
 
 	func add(id: int, cell: Vector2i) -> void:
 		players[id] = {"health": 1, "mana": 0, "cell": cell}
@@ -51,6 +57,11 @@ class FakeCombat:
 	func healing_factor(_id: int, _now: float) -> float:
 		return 1.0
 
+	var titles_checked: int = 0
+
+	func check_title(_id: int, _events: Array) -> void:
+		titles_checked += 1
+
 
 func check(condition: bool, message: String) -> void:
 	checks += 1
@@ -63,6 +74,7 @@ func _initialize() -> void:
 	_regen_checks()
 	_bank_checks()
 	_professions_checks()
+	_quests_checks()
 	print("BRIMHOLT_SYSTEMS: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -167,6 +179,40 @@ func _professions_checks() -> void:
 	var skills: Dictionary = {}
 	check(ProfessionsSystem.train(skills, "fishing", Professions.experience_to_next(1)).contains("Fishing rose to 2")
 		and skills["fishing"] == [2, 0], "experience raises a skill")
+
+
+func _quests_checks() -> void:
+	var world := FakeWorld.new()
+	var combat := FakeCombat.new()
+	var quests := QuestsSystem.new(world, combat)
+	world.players[1] = {"cell": Vector2i(10, 10), "health": 10, "level": 5, "vocation": "knight"}
+	world.store.put(1, QuestsSystem.COMPONENT, QuestState.new())
+	var task: String = ""
+	for id: String in Quests.TASKS:
+		if Quests.TASKS[id].has("monster") and not Quests.TASKS[id].has("cave") and task.is_empty():
+			task = id
+	var monster: String = Quests.TASKS[task]["monster"]
+	quests.of(1).tasks[task] = 0
+	var events: Array = []
+	var credited: Array[int] = [1]
+	quests.credit_tasks(monster, credited, events)
+	check(quests.of(1).tasks[task] == 1 and events.any(func(event: Dictionary) -> bool: return event["kind"] == "message"),
+		"a kill counts toward the task and is announced")
+	quests.credit_tasks("no_such_monster", credited, [])
+	check(quests.of(1).tasks[task] == 1, "other monsters do not count")
+	var boss: String = ""
+	for kind: String in Monsters.MONSTERS:
+		if Monsters.MONSTERS[kind].has("relics") and boss.is_empty():
+			boss = kind
+	world.players[2] = {"cell": Vector2i(10, 40), "health": 10, "level": 5, "vocation": "knight"}
+	world.store.put(2, QuestsSystem.COMPONENT, QuestState.new())
+	quests.award_trophies(boss, {1: true, 2: true}, Vector2i(10, 11), [])
+	check(quests.of(1).trophies == {boss: 1} and quests.of(1).slain.has(boss) and quests.of(2).trophies.is_empty()
+		and combat.titles_checked == 1, "fighters near the boss earn a trophy; titles are checked")
+	quests.of(1).done_tasks[task] = true
+	check(quests.view(1)["done_tasks"].has(task) and quests.view(1)["level"] == 5, "the view shows level and quests")
+	quests.replay(1)
+	check(quests.of(1).done_tasks.is_empty(), "bots replay tasks")
 
 
 static func _outside_town() -> Vector2i:

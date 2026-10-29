@@ -15,6 +15,7 @@ const Store = preload("res://game/core/ecs/store.gd")
 const Regen = preload("res://game/core/components/regen.gd")
 const Bank = preload("res://game/core/components/bank.gd")
 const ProfessionState = preload("res://game/core/components/professions.gd")
+const QuestState = preload("res://game/core/components/quests.gd")
 const Events = preload("res://game/core/ecs/events.gd")
 
 const TILE_SIZE: int = 32
@@ -90,7 +91,7 @@ const ITEM_SECONDS: float = 0.15
 var players: Dictionary = {}
 ## The entities and their components (plan 48), moving out of the player records area by area:
 ## so far "regen" (owned by game/core/systems/regen.gd), "bank" (game/core/systems/economy.gd), and
-## "professions" (game/core/systems/professions.gd).
+## "professions" (game/core/systems/professions.gd), and "quests" (game/core/systems/quests.gd).
 var entities := Entities.new()
 var store := Store.new()
 ## Events between the rules (game/core/ecs/events.gd): "moved" when a player moves or is moved.
@@ -257,6 +258,7 @@ func _init() -> void:
 	store.declare("regen", "regen")
 	store.declare("bank", "economy")
 	store.declare("professions", "professions")
+	store.declare("quests", "quests")
 	for entry: Array in WorldMap.GROUND_ITEMS:
 		var cell: Vector2i = entry[0]
 		if not ground.has(cell):
@@ -444,8 +446,8 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"level": 1, "experience": 0, "vocation": vocation, "gold": START_GOLD, "next_travel": now,
 				"target": 0, "next_attack": now, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
-				"party": 0, "invited": {}, "active_at": -INF, "trophies": {}, "title": 0, "slain": {},
-				"depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
+				"party": 0, "invited": {}, "active_at": -INF, "title": 0,
+				"depot": depot, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
 				"pvp": false, "pvp_toggle_at": -INF,
 				"fed": {}, "bags": ["", "", ""],
 			}
@@ -456,6 +458,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 			store.put(id, "regen", Regen.new(now))
 			store.put(id, "bank", Bank.new())
 			store.put(id, "professions", ProfessionState.new(now))
+			store.put(id, "quests", QuestState.new())
 			return true
 	return false
 
@@ -530,8 +533,9 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 				invites.append(leader)
 		state["invites"] = invites
 		state["invited"] = player["invited"].keys()
-		state["trophies"] = player["trophies"].duplicate()
-		state["slain"] = player.get("slain", {}).keys()
+		var quests: QuestState = store.get_record(id, "quests")
+		state["trophies"] = quests.trophies.duplicate()
+		state["slain"] = quests.slain.keys()
 		state["unjustified"] = player["unjustified"].size()
 		state["mana"] = player["mana"]
 		var regen: Regen = store.get_record(id, "regen")
@@ -550,8 +554,8 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["bags"] = player["bags"].duplicate()
 		state["depot"] = player["depot"].duplicate()
 		state["bank"] = (store.get_record(id, "bank") as Bank).gold
-		state["tasks"] = player["tasks"].duplicate()
-		state["done_tasks"] = player["done_tasks"].keys()
+		state["tasks"] = quests.tasks.duplicate()
+		state["done_tasks"] = quests.done_tasks.keys()
 		state["spell_ranks"] = player["spell_ranks"].duplicate()
 		state["skills"] = (store.get_record(id, "professions") as ProfessionState).skills.duplicate(true)
 		if not player["fed"].is_empty() and player["fed"]["until"] > now:
@@ -981,7 +985,7 @@ func choose_vocation(id: int, trainer: Variant, _now: float) -> Dictionary:
 	var vocation_name: String = Balance.VOCATIONS[vocation]["name"]
 	if player["vocation"] != Balance.ADVENTURER:
 		return {"ok": false, "reason": "You are already a %s" % Balance.profile_of(player["vocation"])["name"]}
-	if not player["done_tasks"].has(Quests.TRIAL_TASK):
+	if not (store.get_record(id, "quests") as QuestState).done_tasks.has(Quests.TRIAL_TASK):
 		return {"ok": false, "reason": "Pass %s first" % Quests.TASKS[Quests.TRIAL_TASK]["title"]}
 	if player["level"] < Balance.CHOOSE_LEVEL:
 		return {"ok": false, "reason": "Reach level %d first" % Balance.CHOOSE_LEVEL}

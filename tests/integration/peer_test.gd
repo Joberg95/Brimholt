@@ -412,7 +412,7 @@ func _dedicated_host_tick() -> void:
 			var player: Dictionary = game.world.players[id]
 			# Between Ysolde and Brannoc, in talking range of both.
 			var beside: Vector2i = WorldMap.QUEST_GIVERS["relic_keeper"]["cell"] + Vector2i(2, 1)
-			player["trophies"] = {"kharzul": 1}
+			game.world.store.get_record(id, "quests").trophies = {"kharzul": 1}
 			player["cell"] = beside
 			player["from"] = beside
 			game.replication.publish_actor(id)
@@ -422,7 +422,7 @@ func _dedicated_host_tick() -> void:
 		if player["backpack"].has("cinderheart_bow") and relic_at < 0.0:
 			relic_at = game._now()
 		saw_relic = saw_relic or player["backpack"].has("cinderheart_bow")
-		saw_task = saw_task or player["tasks"].has("boar_cull")
+		saw_task = saw_task or game.world.store.get_record(id, "quests").tasks.has("boar_cull")
 		# Test-only: carry the client to the vendor (hurt, to test potions), then Reedmere's banker, then
 		# Warden Brask, each once the client has finished its business with the previous one.
 		var next: String = ""
@@ -432,7 +432,7 @@ func _dedicated_host_tick() -> void:
 			next = "reedmere_banker"
 		elif errand == "reedmere_banker" and player["depot"].has("health_potion#2"):
 			next = "warden_brask"
-		elif errand == "warden_brask" and player["tasks"].has("boar_cull"):
+		elif errand == "warden_brask" and game.world.store.get_record(id, "quests").tasks.has("boar_cull"):
 			next = "cinder_cellar"
 		elif errand == "cinder_cellar" and saw_hunting_weapon and not player["equipment"].has("main_hand"):
 			next = "artisan_cinder"

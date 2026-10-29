@@ -9,6 +9,7 @@ extends RefCounted
 const World = preload("res://game/core/world.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
+const QuestsSystem = preload("res://game/core/systems/quests.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Atlas = preload("res://game/data/atlas.gd")
@@ -99,7 +100,7 @@ func enter(id: int, dungeon: String, now: float) -> Array:
 	if world.players[id]["vocation"] == Balance.ADVENTURER:
 		# Choosing a class comes first: the stairways stay shut to Adventurers.
 		_bounce(id, now, events)
-		events.append({"kind": "message", "id": id, "text": Combat.CHOOSE_CLASS_FIRST + "."})
+		events.append({"kind": "message", "id": id, "text": QuestsSystem.CHOOSE_CLASS_FIRST + "."})
 		return events
 	var key: int = owner_key(id)
 	var chosen: int = -1

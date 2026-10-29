@@ -588,13 +588,13 @@ func _check_ferry_and_maps() -> bool:
 			maps.zoom, shown, expected]):
 		return false
 	# With a hunting task, gold rings mark its camps on the world map and the minimap points to them.
-	player["tasks"]["outlaw_bounty"] = 0
+	game.world.store.get_record(1, "quests").tasks["outlaw_bounty"] = 0
 	game.replication.publish_actor(1)
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-map-task.png")
-	player["tasks"].erase("outlaw_bounty")
+	game.world.store.get_record(1, "quests").tasks.erase("outlaw_bounty")
 	game.replication.publish_actor(1)
 	if not _expect(not World.task_targets("outlaw_bounty", {"tasks": {"outlaw_bounty": 0}}).is_empty(),
 			"An outlaw bounty has no camps to point to"):
@@ -805,7 +805,7 @@ func _check_relics() -> bool:
 	player["from"] = beside
 	player["target"] = 0
 	player["level"] = 50
-	player["trophies"] = {"morvain": 1}
+	game.world.store.get_record(1, "quests").trophies = {"morvain": 1}
 	player["backpack"][World.BACKPACK_SIZE - 1] = ""
 	player["next_item"] = 0.0
 	game.replication.publish_actor(1)
@@ -842,7 +842,7 @@ func _check_relics() -> bool:
 	claim.pressed.emit()
 	await process_frame
 	var plate: int = player["backpack"].find("abyssal_plate")
-	if not _expect(plate >= 0 and player["trophies"].is_empty() and not game._travel_panel.visible,
+	if not _expect(plate >= 0 and game.world.store.get_record(1, "quests").trophies.is_empty() and not game._travel_panel.visible,
 			"Claiming did not trade the trophy for the relic"):
 		return false
 	if not _expect(game.world.move_item(1, {"type": "backpack", "index": plate}, {"type": "equipment", "slot": "armor"}, game._now())["ok"],
@@ -1266,11 +1266,11 @@ func _check_micro_menu() -> bool:
 ## chooses Vocation, and becomes a Paladin through the real dialog button.
 func _check_training_hall() -> bool:
 	var player: Dictionary = game.world.players[1]
-	var saved: Dictionary = {"cell": player["cell"], "backpack": player["backpack"].duplicate(), "done": player["done_tasks"].duplicate()}
+	var saved: Dictionary = {"cell": player["cell"], "backpack": player["backpack"].duplicate(), "done": game.world.store.get_record(1, "quests").done_tasks.duplicate()}
 	var trainer: Dictionary = WorldMap.QUEST_GIVERS["trainer_paladin"]
 	var front: Vector2i = trainer["cell"] + trainer["facing"]
 	player["vocation"] = "adventurer"
-	player["done_tasks"][Quests.TRIAL_TASK] = true
+	game.world.store.get_record(1, "quests").done_tasks[Quests.TRIAL_TASK] = true
 	player["backpack"] = player["backpack"].map(func(_entry: String) -> String: return "")
 	player["cell"] = front
 	player["from"] = front
@@ -1294,7 +1294,7 @@ func _check_training_hall() -> bool:
 		and game.client.actors[1]["state"]["vocation"] == "paladin"
 	game.dialogs.close()
 	player["backpack"] = saved["backpack"]
-	player["done_tasks"] = saved["done"]
+	game.world.store.get_record(1, "quests").done_tasks = saved["done"]
 	player["cell"] = saved["cell"]
 	player["from"] = saved["cell"]
 	game.replication.publish_actor(1)
@@ -1324,12 +1324,12 @@ func _check_lexicon_and_marks() -> bool:
 		return false
 	await _press("lexicon")
 	var player: Dictionary = game.world.players[1]
-	var saved: Dictionary = {"cell": player["cell"], "level": player["level"], "tasks": player["tasks"].duplicate(),
-		"done": player["done_tasks"].duplicate()}
+	var saved: Dictionary = {"cell": player["cell"], "level": player["level"], "tasks": game.world.store.get_record(1, "quests").tasks.duplicate(),
+		"done": game.world.store.get_record(1, "quests").done_tasks.duplicate()}
 	var ilse: Dictionary = WorldMap.QUEST_GIVERS["harbourmaster_ilse"]
 	player["level"] = 12
-	player["tasks"] = {}
-	player["done_tasks"] = {}
+	game.world.store.get_record(1, "quests").tasks = {}
+	game.world.store.get_record(1, "quests").done_tasks = {}
 	player["cell"] = ilse["cell"] + Vector2i(0, 2)
 	player["from"] = player["cell"]
 	game.replication.publish_actor(1)
@@ -1340,8 +1340,8 @@ func _check_lexicon_and_marks() -> bool:
 	_texts(game.quest_list, listed)
 	var marked: String = World.quest_mark("harbourmaster_ilse", game.client.actors[1]["state"])
 	player["level"] = saved["level"]
-	player["tasks"] = saved["tasks"]
-	player["done_tasks"] = saved["done"]
+	game.world.store.get_record(1, "quests").tasks = saved["tasks"]
+	game.world.store.get_record(1, "quests").done_tasks = saved["done"]
 	player["cell"] = saved["cell"]
 	player["from"] = saved["cell"]
 	game.replication.publish_actor(1)
@@ -1406,9 +1406,9 @@ func _texts(node: Node, into: PackedStringArray) -> void:
 
 ## The quest list: one task in progress and one ready to turn in, then hidden with its key.
 func _check_quest_list() -> bool:
-	var player: Dictionary = game.world.players[1]
-	var before: Dictionary = player["tasks"].duplicate()
-	player["tasks"] = {"cellar_vermin": 12, "rat_king": 1}
+	var quests: RefCounted = game.world.store.get_record(1, "quests")
+	var before: Dictionary = quests.tasks.duplicate()
+	quests.tasks = {"cellar_vermin": 12, "rat_king": 1}
 	game.replication.publish_actor(1)
 	await process_frame
 	await process_frame
@@ -1426,7 +1426,7 @@ func _check_quest_list() -> bool:
 	await process_frame
 	var hidden: bool = not game.quest_list.visible
 	game.input_controller.run_action("quest_list")
-	player["tasks"] = before
+	quests.tasks = before
 	game.replication.publish_actor(1)
 	await process_frame
 	return _expect(ok, "The quest list should show each task's giver and progress:\n%s" % text) \

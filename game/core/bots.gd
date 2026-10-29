@@ -820,8 +820,8 @@ func run_plan(id: int, now: float, events: Array) -> void:
 		"accept":
 			var giver: Dictionary = WorldMap.QUEST_GIVERS[Quests.TASKS[plan["task"]]["giver"]]
 			if travel(id, giver["cell"], World.TALK_RANGE, now, events):
-				var taken: Dictionary = combat.task_action(id, Quests.TASKS[plan["task"]]["giver"], plan["task"], "accept", now)
-				plan["state"] = "camp" if taken["ok"] or player["tasks"].has(plan["task"]) else "pick"
+				var taken: Dictionary = combat.quests.task_action(id, Quests.TASKS[plan["task"]]["giver"], plan["task"], "accept", now)
+				plan["state"] = "camp" if taken["ok"] or combat.quests.of(id).tasks.has(plan["task"]) else "pick"
 		"camp":
 			if travel(id, plan["camp"], 2, now, events):
 				bot["post"] = plan["camp"]
@@ -829,7 +829,7 @@ func run_plan(id: int, now: float, events: Array) -> void:
 				plan["until"] = now + HUNT_SECONDS
 		"hunt":
 			var task: String = plan.get("task", "")
-			var done: bool = not task.is_empty() and int(player["tasks"].get(task, 0)) >= Quests.TASKS[task]["count"]
+			var done: bool = not task.is_empty() and int(combat.quests.of(id).tasks.get(task, 0)) >= Quests.TASKS[task]["count"]
 			var prey: int = _camp_prey(id)
 			if done or now >= plan["until"]:
 				plan["state"] = "turn_in" if done else "pick"
@@ -841,7 +841,7 @@ func run_plan(id: int, now: float, events: Array) -> void:
 		"turn_in":
 			var giver_id: String = Quests.TASKS[plan["task"]]["giver"]
 			if travel(id, WorldMap.QUEST_GIVERS[giver_id]["cell"], World.TALK_RANGE, now, events):
-				events.append_array(combat.task_action(id, giver_id, plan["task"], "complete", now)["events"])
+				events.append_array(combat.quests.task_action(id, giver_id, plan["task"], "complete", now)["events"])
 				bot["plan"] = {}
 		"ambush":
 			var target: int = plan.get("target", 0)
@@ -875,16 +875,15 @@ func _choose_errand(id: int, now: float) -> Dictionary:
 		if not wild.is_empty():
 			var marker: Vector2i = wild[combat.rng.randi_range(0, wild.size() - 1)]
 			return {"state": "camp", "camp": camp_post(marker), "marker": marker, "until": now + HUNT_SECONDS}
-	var state: Dictionary = {"level": player["level"], "vocation": player["vocation"], "tasks": player["tasks"],
-		"done_tasks": player["done_tasks"].keys()}
+	var state: Dictionary = combat.quests.view(id)
 	var choices: Array[String] = []
 	for task: String in Quests.TASKS:
 		if Quests.TASKS[task].has("monster") and World.task_open(task, state) and World.task_fits(task, player["level"]) \
 				and not _camps_of(Quests.TASKS[task]["monster"], player["level"]).is_empty():
 			choices.append(task)
-	if choices.is_empty() and not player["done_tasks"].is_empty():
+	if choices.is_empty() and not state["done_tasks"].is_empty():
 		# Done everything that fits: the band starts over (bots replay tasks).
-		player["done_tasks"].clear()
+		combat.quests.replay(id)
 		return {}
 	if not choices.is_empty():
 		var task: String = choices[combat.rng.randi_range(0, choices.size() - 1)]

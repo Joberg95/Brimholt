@@ -20,6 +20,7 @@ const Quests = preload("res://game/data/quests.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Titles = preload("res://game/data/titles.gd")
 const RegenSystem = preload("res://game/core/systems/regen.gd")
+const QuestsSystem = preload("res://game/core/systems/quests.gd")
 
 ## Any monster above HOMEWARD_LEVEL may drop a Homeward rune (Spells.RUNES_BY_ELEMENT "home").
 const HOMEWARD_LEVEL: int = 30
@@ -46,8 +47,6 @@ const AGGRESSION_SECONDS: float = 900.0
 const UNJUSTIFIED_WINDOW_SECONDS: float = 86400.0
 const RED_SKULL_KILLS: int = 3
 const CRITICAL_MULTIPLIER: float = 1.5
-## A boss's trophies go only to fighters alive and this close to it when it falls (_award_trophies).
-const TROPHY_RADIUS: int = 15
 ## After a root or slow on a player ends, that player cannot be held again for this long.
 const RESTRAIN_IMMUNITY: float = 6.0
 const VOCATION_RANGE: Dictionary = {"knight": 1, "paladin": 6, "sorcerer": 5, "druid": 5}
@@ -79,12 +78,13 @@ const GEAR_DROP_CHANCE: Dictionary = {"normal": 0.01, "elite": 0.08, "champion":
 const GEAR_LOWER_TIER_CHANCE: float = 0.3
 const PARTY_ACTIONS: Array[String] = ["invite", "revoke", "join", "leave"]
 ## What an Adventurer hears from every giver but the trial master, and at a dungeon stairway.
-const CHOOSE_CLASS_FIRST: String = "Choose your class first: pass the adventurer's trial, then see a trainer in Cinder Crossing's training hall"
 const STEPS: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
 var world: World
 ## Regeneration (game/core/systems/regen.gd), run from each player's tick.
 var regen: RegenSystem
+## Tasks, trophies, and relics (game/core/systems/quests.gd).
+var quests: QuestsSystem
 var rng := RandomNumberGenerator.new()
 ## [due time, spawn index] for monsters waiting to respawn.
 var respawns: Array = []
@@ -125,6 +125,7 @@ var _taken_at: float = NAN
 func _init(owner: World, seed_value: int = 0) -> void:
 	world = owner
 	regen = RegenSystem.new(world, self)
+	quests = QuestsSystem.new(world, self)
 	rng.seed = seed_value if seed_value != 0 else Time.get_ticks_usec()
 
 
@@ -916,9 +917,9 @@ func _kill_monster(id: int, now: float, events: Array) -> void:
 	var definition: Dictionary = monster_def(id)
 	var experience: int = Balance.mob_experience(monster["level"], definition["rank"])
 	var credited: Array[int] = _award_experience(experience, monster["damage_by"], monster["cell"], now, events)
-	_credit_tasks(monster["kind"], credited, events, monster["cell"])
+	quests.credit_tasks(monster["kind"], credited, events, monster["cell"])
 	if definition.has("relics"):
-		_award_trophies(monster["kind"], monster["fought"], monster["cell"], events)
+		quests.award_trophies(monster["kind"], monster["fought"], monster["cell"], events)
 	_drop_loot(monster, credited, now, events)
 	_unindex(id)
 	world.monsters.erase(id)
@@ -962,73 +963,6 @@ func _award_experience(experience: int, damage_by: Dictionary, cell: Vector2i, n
 				credited.append(member)
 	return credited
 
-
-# ---------------------------------------------------------------- relic quests
-
-## Everyone who took part in the fight and is still in it when the boss falls earns one trophy:
-## players who damaged the boss, players it hit (tanks), and players who healed any of them, if
-## they are alive and within TROPHY_RADIUS of it. Standing nearby is not enough, and neither is
-## having fought and died: a raid that wipes the raid fighting a boss and finishes it takes the
-## trophies (the bosses stand in open PvP zones).
-func _award_trophies(boss: String, fought: Dictionary, at: Vector2i, events: Array) -> void:
-	var name: String = Monsters.MONSTERS[boss]["name"]
-	for id: int in fought:
-		if not world.players.has(id) or world.players[id]["health"] <= 0 or distance(world.players[id]["cell"], at) > TROPHY_RADIUS:
-			continue
-		var player: Dictionary = world.players[id]
-		player["trophies"][boss] = player["trophies"].get(boss, 0) + 1
-		player["slain"][boss] = true
-		events.append({"kind": "message", "id": id, "text": "You helped slay %s. Claim a relic from %s." % [name, relic_keeper_text(boss)]})
-		events.append({"kind": "player", "id": id})
-		check_title(id, events)
-
-
-## Who trades `boss`'s trophies for relics, for messages ("Ysolde in Reedmere").
-static func relic_keeper_text(boss: String) -> String:
-	for id: String in WorldMap.QUEST_GIVERS:
-		if WorldMap.QUEST_GIVERS[id]["boss"] == boss:
-			return "%s in %s" % [WorldMap.QUEST_GIVERS[id]["name"], WorldMap.QUEST_GIVERS[id]["place"]]
-	return "the relic keepers"
-
-
-## The boss whose quest rewards a relic, or "".
-static func relic_boss(relic: String) -> String:
-	for boss: String in Monsters.MONSTERS:
-		if relic in Monsters.MONSTERS[boss].get("relics", []):
-			return boss
-	return ""
-
-
-## Trades one of the boss's trophies for a relic, in range of a quest giver, into the backpack.
-func claim_relic(id: int, npc: Variant, relic: Variant, _now: float) -> Dictionary:
-	if not world.players.has(id):
-		return {"ok": false, "reason": "Unknown player", "events": []}
-	if typeof(npc) != TYPE_STRING or not WorldMap.QUEST_GIVERS.has(npc) or WorldMap.QUEST_GIVERS[npc]["boss"].is_empty():
-		return {"ok": false, "reason": "Unknown quest giver", "events": []}
-	var player: Dictionary = world.players[id]
-	var keeper: Dictionary = WorldMap.QUEST_GIVERS[npc]
-	if not World.in_talk_range(player["cell"], keeper["cell"]):
-		return {"ok": false, "reason": "Walk closer to %s" % keeper["name"], "events": []}
-	var boss: String = relic_boss(relic) if typeof(relic) == TYPE_STRING else ""
-	if boss.is_empty():
-		return {"ok": false, "reason": "Unknown relic", "events": []}
-	if boss != keeper["boss"]:
-		return {"ok": false, "reason": "%s only keeps %s's relics; see %s" % [keeper["name"],
-			Monsters.MONSTERS[keeper["boss"]]["name"], relic_keeper_text(boss)], "events": []}
-	if player["trophies"].get(boss, 0) <= 0:
-		return {"ok": false, "reason": "Slay %s first" % Monsters.MONSTERS[boss]["name"], "events": []}
-	var slot: int = player["backpack"].find("")
-	if slot < 0:
-		return {"ok": false, "reason": "Your backpack is full", "events": []}
-	player["trophies"][boss] -= 1
-	if player["trophies"][boss] == 0:
-		player["trophies"].erase(boss)
-	player["backpack"][slot] = relic
-	var events: Array = [{"kind": "player", "id": id},
-		{"kind": "message", "id": id, "text": "%s hands you the %s." % [keeper["name"], World.ITEMS[relic]["name"]]}]
-	return {"ok": true, "events": events}
-
-
 # ---------------------------------------------------------------- spell ranks
 
 ## A class trainer in range raises one of your known spells a rank for rune shards from your
@@ -1062,120 +996,11 @@ func empower_spell(id: int, npc: Variant, spell: Variant, _now: float) -> Dictio
 	return {"ok": true, "events": [{"kind": "player", "id": id}, {"kind": "message", "id": id, "text": text},
 		{"kind": "area", "cells": flash, "color": definition["color"]}]}
 
-
-# ---------------------------------------------------------------- town tasks
-
-## Accepts ("accept") or turns in ("complete") the hunting task of a quest giver in range.
-## Turning in a finished task replaces your pack with the next, bigger one.
-func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: float) -> Dictionary:
-	if not world.players.has(id):
-		return {"ok": false, "reason": "Unknown player", "events": []}
-	var player: Dictionary = world.players[id]
-	if not World.serves(npc, "quests", player["cell"]) or WorldMap.QUEST_GIVERS[npc]["tasks"].is_empty():
-		return {"ok": false, "reason": "Walk closer to a quest giver", "events": []}
-	if typeof(task) != TYPE_STRING or task not in WorldMap.QUEST_GIVERS[npc]["tasks"]:
-		return {"ok": false, "reason": "%s has no such task" % WorldMap.QUEST_GIVERS[npc]["name"], "events": []}
-	var definition: Dictionary = Quests.TASKS[task]
-	var giver: String = WorldMap.QUEST_GIVERS[npc]["name"]
-	if player["done_tasks"].has(task):
-		return {"ok": false, "reason": "You already finished %s" % definition["title"], "events": []}
-	var target: String = Quests.target_name(task)
-	var text: String = ""
-	var events: Array = [{"kind": "player", "id": id}]
-	match action:
-		"accept":
-			if player["tasks"].has(task):
-				return {"ok": false, "reason": "You are already on that task", "events": []}
-			var requires: String = definition.get("requires", "")
-			if not requires.is_empty() and not player["done_tasks"].has(requires):
-				return {"ok": false, "reason": "Finish %s first" % Quests.TASKS[requires]["title"], "events": []}
-			if not World.task_open(task, player):
-				return {"ok": false, "reason": CHOOSE_CLASS_FIRST if player["vocation"] == Balance.ADVENTURER
-					else "That task is for Adventurers", "events": []}
-			player["tasks"][task] = 0
-			text = "%s: slay %s, then return to %s." % [definition["title"],
-				target if definition["count"] == 1 else "%d %s" % [definition["count"], target], giver]
-		"complete":
-			if player["tasks"].get(task, 0) < definition["count"]:
-				return {"ok": false, "reason": "Slay %s first" % (target if definition["count"] == 1
-					else "%d %s" % [definition["count"], target]), "events": []}
-			var items: Array = World.task_items(task, player["vocation"])
-			# A pack task's supplies go into the pack it gives: the backpack as it will be once worn.
-			var pack: String = "" if definition["reward"] == "experience" else Quests.next_pack(player["equipment"].get("bag", ""))
-			var room: Array = player["backpack"].duplicate()
-			if not pack.is_empty():
-				var before: int = World.main_size(player)
-				var grown: int = mini(World.BACKPACK_MAX, World.BACKPACK_SIZE + int(World.ITEMS[pack].get("slots", 0))) - before
-				for added: int in maxi(0, grown):
-					room.insert(before, "")
-			# Gear and trophies need backpack room; potions and food that do not fit go to the ground
-			# at your feet. A rare roll needs a slot ready for its prize, whether or not it comes.
-			var needed: Array = items.filter(func(entry: Array) -> bool: return not _supply(entry[0]))
-			var supplies: Array = items.filter(func(entry: Array) -> bool: return _supply(entry[0]))
-			var rare: Dictionary = definition.get("rare", {})
-			if not rare.is_empty() and World.with_items(room, needed + [[rare["items"][0], 1]]).is_empty():
-				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % (needed.size() + 1),
-					"events": []}
-			if not rare.is_empty() and rng.randf() < float(rare["chance"]):
-				var prize: Array = [rare["items"][rng.randi_range(0, rare["items"].size() - 1)], 1]
-				needed.append(prize)
-				items.append(prize)
-			var packed: Array = World.with_items(room, needed) if not needed.is_empty() else room
-			if packed.is_empty():
-				return {"ok": false, "reason": "Make room in your backpack for the reward (%d free slots)" % needed.size(),
-					"events": []}
-			var left: Array[String] = []
-			for entry: Array in supplies:
-				var fitted: Array = World.with_items(packed, [entry])
-				if fitted.is_empty():
-					left.append(World.make_entry(entry[0], entry[1]))
-				else:
-					packed = fitted
-			player["tasks"].erase(task)
-			player["done_tasks"][task] = true
-			if not pack.is_empty():
-				world.wear_pack(id, pack)
-			# Filled in place: the pack was worn on this same array.
-			(player["backpack"] as Array).assign(packed)
-			if not left.is_empty():
-				var dropped: Array[Vector2i] = spill(player["cell"], left)
-				if not dropped.is_empty():
-					events.append({"kind": "ground", "cells": dropped})
-			if definition["reward"] == "experience":
-				var reward: Dictionary = Quests.reward(task)
-				player["gold"] += reward["gold"]
-				text = "%s rewards you with %d gold%s." % [giver, reward["gold"], World.items_text(items)]
-				grant_experience(id, reward["experience"], events)
-			else:
-				if pack.is_empty():
-					text = "%s thanks you. Your pack is already the largest there is." % giver
-				else:
-					text = "%s gives you a %s: %d backpack slots." % [giver, World.ITEMS[pack]["name"], World.main_size(player)]
-				if not items.is_empty():
-					text += " Supplies: %s." % World.items_text(items).substr(2)
-			if not left.is_empty():
-				text += " Your backpack is full, so the rest lies at your feet."
-		_:
-			return {"ok": false, "reason": "Unknown task request", "events": []}
-	if action == "complete":
-		text += next_task_hint(player, npc)
-	events.append({"kind": "message", "id": id, "text": text})
-	if action == "complete":
-		check_title(id, events)
-	return {"ok": true, "events": events}
-
-
-## Whether a reward item is a supply (a potion or food: Quests.supplies) that may go to the ground
-## when the backpack is full.
-static func _supply(kind: String) -> bool:
-	return World.ITEMS[kind].has("drink") or World.ITEMS[kind].has("eat")
-
-
 ## Raises a player's title (game/data/titles.gd) to the highest tier their record now earns; a
 ## title once earned is kept. Called on task turn-ins, final boss kills, and level-ups.
 func check_title(id: int, events: Array) -> void:
 	var player: Dictionary = world.players[id]
-	var tier: int = Titles.tier_for(player["level"], player["done_tasks"], player["slain"])
+	var tier: int = Titles.tier_for(player["level"], quests.of(id).done_tasks, quests.of(id).slain)
 	if tier <= player["title"]:
 		return
 	player["title"] = tier
@@ -1183,33 +1008,6 @@ func check_title(id: int, events: Array) -> void:
 	if not name.is_empty():
 		events.append({"kind": "message", "id": id, "text": "You have earned the title %s." % name})
 	events.append({"kind": "player", "id": id})
-
-
-## " Next: ..." pointing to the task World.next_task suggests, when another giver offers it.
-static func next_task_hint(player: Dictionary, current_giver: String) -> String:
-	var next: String = World.next_task(player)
-	if next.is_empty() or Quests.TASKS[next]["giver"] == current_giver:
-		return ""
-	var giver: Dictionary = WorldMap.QUEST_GIVERS[Quests.TASKS[next]["giver"]]
-	var band: Vector2i = World.task_levels(next)
-	return " Next: %s in %s has work for levels %d-%d." % [giver["name"], giver["place"], band.x, band.y]
-
-
-## Counts a kill toward the credited players' tasks; a task bound to a cave ("cave") counts only
-## kills at `at` inside it.
-func _credit_tasks(kind: String, credited: Array[int], events: Array, at: Vector2i = Vector2i(-1, -1)) -> void:
-	for id: int in credited:
-		var tasks: Dictionary = world.players[id]["tasks"]
-		for task: String in tasks:
-			var definition: Dictionary = Quests.TASKS[task]
-			if definition.has("cave") and Caves.at(at) != definition["cave"]:
-				continue
-			if Quests.counts(task, kind) and tasks[task] < definition["count"]:
-				tasks[task] += 1
-				var done: bool = tasks[task] == definition["count"]
-				events.append({"kind": "message", "id": id, "text": "%s: %d/%d%s" % [definition["title"], tasks[task],
-					definition["count"], ". Return to the quest giver." if done else ""]})
-				events.append({"kind": "player", "id": id})
 
 
 # ---------------------------------------------------------------- potions

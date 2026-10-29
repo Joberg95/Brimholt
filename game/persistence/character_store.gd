@@ -135,9 +135,9 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 		"health": player["health"], "mana": player["mana"], "gold": player["gold"], "bank": world.store.get_record(id, "bank").gold,
 		"cell": [player["cell"].x, player["cell"].y],
 		"equipment": player["equipment"].duplicate(), "bags": player["bags"].duplicate(), "backpack": player["backpack"].duplicate(),
-		"depot": player["depot"].duplicate(), "trophies": player["trophies"].duplicate(),
-		"title": player.get("title", 0), "slain": player.get("slain", {}).keys(),
-		"tasks": player["tasks"].duplicate(), "done_tasks": player["done_tasks"].keys(),
+		"depot": player["depot"].duplicate(), "trophies": world.store.get_record(id, "quests").trophies.duplicate(),
+		"title": player.get("title", 0), "slain": world.store.get_record(id, "quests").slain.keys(),
+		"tasks": world.store.get_record(id, "quests").tasks.duplicate(), "done_tasks": world.store.get_record(id, "quests").done_tasks.keys(),
 		"spell_ranks": player["spell_ranks"].duplicate(),
 		"skills": world.store.get_record(id, "professions").skills.duplicate(true),
 		"skull": player["skull"], "skull_left": maxf(0.0, player["skull_until"] - now) if not player["skull"].is_empty() else 0.0,
@@ -203,27 +203,28 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 				slots[index] = saved[index]
 	if _int(data.get("version"), VERSION) < 2:
 		_migrate_armor(player)
+	var quests: RefCounted = world.store.get_record(id, "quests")
 	var trophies: Variant = data.get("trophies")
 	if typeof(trophies) == TYPE_DICTIONARY:
 		for boss: Variant in trophies:
 			if typeof(boss) == TYPE_STRING and Monsters.MONSTERS.get(boss, {}).has("relics") and _int(trophies[boss], 0) > 0:
-				player["trophies"][boss] = _int(trophies[boss], 0)
+				quests.trophies[boss] = _int(trophies[boss], 0)
 	player["title"] = clampi(_int(data.get("title"), 0), 0, 3)
 	var slain: Variant = data.get("slain")
 	if typeof(slain) == TYPE_ARRAY:
 		for boss: Variant in slain:
 			if typeof(boss) == TYPE_STRING and Monsters.MONSTERS.get(boss, {}).has("relics"):
-				player["slain"][boss] = true
+				quests.slain[boss] = true
 	var done: Variant = data.get("done_tasks")
 	if typeof(done) == TYPE_ARRAY:
 		for task: Variant in done:
 			if typeof(task) == TYPE_STRING and Quests.TASKS.has(task):
-				player["done_tasks"][task] = true
+				quests.done_tasks[task] = true
 	var tasks: Variant = data.get("tasks")
 	if typeof(tasks) == TYPE_DICTIONARY:
 		for task: Variant in tasks:
-			if typeof(task) == TYPE_STRING and Quests.TASKS.has(task) and not player["done_tasks"].has(task):
-				player["tasks"][task] = clampi(_int(tasks[task], 0), 0, Quests.TASKS[task]["count"])
+			if typeof(task) == TYPE_STRING and Quests.TASKS.has(task) and not quests.done_tasks.has(task):
+				quests.tasks[task] = clampi(_int(tasks[task], 0), 0, Quests.TASKS[task]["count"])
 	var ranks: Variant = data.get("spell_ranks")
 	if typeof(ranks) == TYPE_DICTIONARY:
 		for spell: Variant in ranks:

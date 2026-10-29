@@ -9,6 +9,7 @@ const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Items = preload("res://game/data/items.gd")
 const Combat = preload("res://game/core/combat.gd")
+const QuestsSystem = preload("res://game/core/systems/quests.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Professions = preload("res://game/data/professions.gd")
 const Spells = preload("res://game/data/spells.gd")
@@ -279,7 +280,7 @@ func requirement_for(kind: String) -> String:
 
 ## The boss whose quest rewards a relic.
 func _relic_source(kind: String) -> String:
-	var boss: String = Combat.relic_boss(kind)
+	var boss: String = QuestsSystem.relic_boss(kind)
 	return Monsters.MONSTERS[boss]["name"] if not boss.is_empty() else "a final boss"
 
 
