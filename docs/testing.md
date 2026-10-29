@@ -6,7 +6,7 @@ Run these through `make` (see `make help`) or directly. Every check uses Godot 4
 | --- | --- | --- |
 | `make import` | Headless import; parses every script and resource | ~10 s |
 | `make lint` | `tools/testing/lint.gd`: parses every script with the strict warnings in `project.godot` | ~5 s |
-| `make test-unit` | `tests/unit/rules_test.gd`: deterministic rule checks (about 1,330 assertions); `ecs_test.gd`: the ECS core; `golden_test.gd`: the refactor safety net | ~10 s |
+| `make test-unit` | `tests/unit/rules_test.gd`: deterministic rule checks (about 1,330 assertions); `ecs_test.gd`: the ECS core; `systems_test.gd`: each system alone; `golden_test.gd`: the refactor safety net | ~10 s |
 | `make golden` | Records `tests/unit/golden.txt` after a deliberate rule change (its own commit) | ~5 s |
 | `make test-lan` | `tools/testing/test_lan.py`: five real ENet scenarios | ~1 min |
 | `make test` | Lint, unit, and LAN | ~1 min |
@@ -69,6 +69,11 @@ for diffing. A refactor must leave every section unchanged; a rule change record
 peer ids, records are stored and listed by entity in insertion order, each component has one owner,
 events are delivered in raise order with reactions after what was queued, and systems run in a fixed
 order with the bus drained after each.
+
+**The systems** (`tests/unit/systems_test.gd`): each system of plan 48 with only the components and
+stand-ins it reads. Regeneration: health and mana return on schedule and the player is published,
+nothing before it is time, resting and meals speed it up, and a town rest starts (announced), heals
+faster, ends when full, and waits out its cooldown.
 
 Each `check()` call site is one assertion, however many cases a loop feeds it (every item,
 spawn, tile, or pose): the summary reads `BRIMHOLT_RULES: <assertions> checks, <failures>

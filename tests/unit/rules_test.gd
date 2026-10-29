@@ -8,6 +8,7 @@ const WallArt = preload("res://game/render/wall_art.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
+const RegenSystem = preload("res://game/core/systems/regen.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Lexicon = preload("res://game/core/lexicon.gd")
 const Bots = preload("res://game/core/bots.gd")
@@ -1346,7 +1347,7 @@ func _crafting_checks() -> void:
 	for world_case: World in [hungry, fed]:
 		world_case.players[1]["health"] = 1
 		world_case.players[1]["mana"] = 0
-		world_case.players[1]["next_regen"] = 0.0
+		world_case.store.get_record(1, "regen").next_regen = 0.0
 	hungry_combat.tick(10.0)
 	fed_combat.tick(10.0)
 	check(fed.players[1]["health"] > hungry.players[1]["health"] and fed.players[1]["mana"] > hungry.players[1]["mana"],
@@ -5226,6 +5227,7 @@ func _spawn_and_rest_checks() -> void:
 	town.monsters.clear()
 	town.add_player(1, 0.0, "knight")
 	var player: Dictionary = town.players[1]
+	var regen: RefCounted = town.store.get_record(1, "regen")
 	var limits: Dictionary = town.player_stats(1)
 	var outside: Vector2i = Vector2i(-1, -1)
 	for dy: int in range(0, 40):
@@ -5236,40 +5238,40 @@ func _spawn_and_rest_checks() -> void:
 	var clock_now: float = 100.0
 	rest.tick(clock_now)
 	var outside_gain: int = player["health"] - 1
-	check(not player["town_rest"], "no town rest outside a town")
+	check(not regen.town_rest, "no town rest outside a town")
 	_place(town, 1, WorldMap.SPAWNS[0])
 	player["health"] = 1
-	player["next_regen"] = 0.0
+	regen.next_regen = 0.0
 	var events: Array = []
 	clock_now += 1.0
 	rest._player_tick(1, clock_now, events)
 	var town_gain: int = player["health"] - 1
-	check(player["town_rest"] and town_gain >= outside_gain * 3 and events.any(func(event: Dictionary) -> bool:
+	check(regen.town_rest and town_gain >= outside_gain * 3 and events.any(func(event: Dictionary) -> bool:
 		return event["kind"] == "message" and event["text"].contains("rest")), "a town rest starts, announced, and heals much faster")
 	var seconds: float = 0.0
 	while player["health"] < limits["health"] and seconds < 60.0:
-		seconds += Combat.REGEN_SECONDS
-		player["next_regen"] = 0.0
+		seconds += RegenSystem.REGEN_SECONDS
+		regen.next_regen = 0.0
 		rest._player_tick(1, clock_now + seconds, [])
 	check(seconds <= 32.0, "a town rest takes you from empty to full in about half a minute (%.0f s)" % seconds)
 	player["mana"] = limits["mana"]
-	player["next_regen"] = 0.0
+	regen.next_regen = 0.0
 	rest._player_tick(1, clock_now + seconds + 0.1, [])
-	check(not player["town_rest"] and is_equal_approx(player["town_rest_ready"], clock_now + seconds + 0.1 + Combat.TOWN_REST_COOLDOWN),
+	check(not regen.town_rest and is_equal_approx(regen.town_rest_ready, clock_now + seconds + 0.1 + RegenSystem.TOWN_REST_COOLDOWN),
 		"a full player's rest ends and starts its cooldown")
 	player["health"] = 1
-	player["next_regen"] = 0.0
+	regen.next_regen = 0.0
 	rest._player_tick(1, clock_now + seconds + 10.0, [])
-	check(not player["town_rest"] and player["health"] < 1 + town_gain, "town rest waits for its cooldown")
+	check(not regen.town_rest and player["health"] < 1 + town_gain, "town rest waits for its cooldown")
 	check(town.export_player(1, clock_now + seconds + 10.0, true)["town_rest_left"] > 0.0
 		and not town.export_player(1, clock_now + seconds + 10.0).has("town_rest_left"), "the owner sees when rest is ready")
-	player["next_regen"] = 0.0
-	rest._player_tick(1, clock_now + seconds + 0.2 + Combat.TOWN_REST_COOLDOWN, [])
-	check(player["town_rest"], "after the cooldown a town rest starts again")
+	regen.next_regen = 0.0
+	rest._player_tick(1, clock_now + seconds + 0.2 + RegenSystem.TOWN_REST_COOLDOWN, [])
+	check(regen.town_rest, "after the cooldown a town rest starts again")
 	_place(town, 1, outside)
-	player["next_regen"] = 0.0
-	rest._player_tick(1, clock_now + seconds + 1.0 + Combat.TOWN_REST_COOLDOWN, [])
-	check(not player["town_rest"] and player["town_rest_ready"] > clock_now + seconds + Combat.TOWN_REST_COOLDOWN,
+	regen.next_regen = 0.0
+	rest._player_tick(1, clock_now + seconds + 1.0 + RegenSystem.TOWN_REST_COOLDOWN, [])
+	check(not regen.town_rest and regen.town_rest_ready > clock_now + seconds + RegenSystem.TOWN_REST_COOLDOWN,
 		"leaving town ends the rest and starts its cooldown")
 
 
@@ -5930,13 +5932,13 @@ func _combat_checks() -> void:
 	rester["health"] = 1
 	rester["mana"] = 0
 	rester["last_combat"] = time
-	rester["next_regen"] = 0.0
+	world.store.get_record(1, "regen").next_regen = 0.0
 	combat.tick(time + 1.0)
 	var fighting_gain: int = rester["health"] - 1
 	rester["health"] = 1
-	rester["next_regen"] = 0.0
-	combat.tick(time + Combat.RESTING_SECONDS + 2.0)
-	check(not combat.resting(1, time + 1.0) and combat.resting(1, time + Combat.RESTING_SECONDS + 2.0)
+	world.store.get_record(1, "regen").next_regen = 0.0
+	combat.tick(time + RegenSystem.RESTING_SECONDS + 2.0)
+	check(not combat.regen.resting(1, time + 1.0) and combat.regen.resting(1, time + RegenSystem.RESTING_SECONDS + 2.0)
 		and rester["health"] - 1 > fighting_gain, "resting out of combat regenerates faster")
 
 	# Spells: vocation, level, target, mana, cooldowns, groups, heals, and areas.
@@ -6023,7 +6025,7 @@ func _combat_checks() -> void:
 	# Regeneration.
 	paladin["health"] = 10
 	paladin["mana"] = 0
-	paladin["next_regen"] = 0.0
+	world.store.get_record(1, "regen").next_regen = 0.0
 	combat.tick(time + 30.0)
 	check(paladin["health"] > 10 and paladin["mana"] > 0, "health and mana regenerate")
 

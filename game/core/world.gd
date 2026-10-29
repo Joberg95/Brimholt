@@ -10,6 +10,9 @@ const Dungeons = preload("res://game/data/dungeons.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Spells = preload("res://game/data/spells.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
+const Entities = preload("res://game/core/ecs/entities.gd")
+const Store = preload("res://game/core/ecs/store.gd")
+const Regen = preload("res://game/core/components/regen.gd")
 
 const TILE_SIZE: int = 32
 const WORLD_NAME: String = "Cinder Crossing"
@@ -82,6 +85,10 @@ const STACK_MAX: int = 100
 const ITEM_SECONDS: float = 0.15
 
 var players: Dictionary = {}
+## The entities and their components (plan 48), moving out of the player records area by area:
+## so far "regen" (game/core/components/regen.gd, owned by game/core/systems/regen.gd).
+var entities := Entities.new()
+var store := Store.new()
 ## Live monsters by negative id; game/core/combat.gd owns their behaviour.
 var monsters: Dictionary = {}
 var ground: Dictionary = {}
@@ -241,6 +248,7 @@ static func task_targets(task: String, state: Dictionary) -> Array[Vector2i]:
 
 
 func _init() -> void:
+	store.declare("regen", "regen")
 	for entry: Array in WorldMap.GROUND_ITEMS:
 		var cell: Vector2i = entry[0]
 		if not ground.has(cell):
@@ -426,7 +434,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"id": id, "cell": cell, "from": cell, "next_move": now,
 				"facing": Vector2i.DOWN, "equipment": {}, "backpack": backpack, "next_item": now,
 				"level": 1, "experience": 0, "vocation": vocation, "gold": START_GOLD, "next_travel": now,
-				"target": 0, "next_attack": now, "next_regen": now, "town_rest": false, "town_rest_ready": -INF, "cooldowns": {}, "groups": {},
+				"target": 0, "next_attack": now, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {}, "title": 0, "slain": {},
 				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
@@ -436,12 +444,16 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 			var limits: Dictionary = stats(1, {}, vocation)
 			players[id]["health"] = limits["health"]
 			players[id]["mana"] = limits["mana"]
+			entities.claim(id, "player")
+			store.put(id, "regen", Regen.new(now))
 			return true
 	return false
 
 
 func remove_player(id: int) -> void:
 	players.erase(id)
+	entities.destroy(id)
+	store.remove_all(id)
 
 
 ## Whether a player fights other players (Combat.set_pvp at Reedmere's warden; off for new
@@ -505,8 +517,9 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["slain"] = player.get("slain", {}).keys()
 		state["unjustified"] = player["unjustified"].size()
 		state["mana"] = player["mana"]
-		state["town_rest"] = player["town_rest"]
-		state["town_rest_left"] = maxf(0.0, player["town_rest_ready"] - now)
+		var regen: Regen = store.get_record(id, "regen")
+		state["town_rest"] = regen.town_rest
+		state["town_rest_left"] = maxf(0.0, regen.town_rest_ready - now)
 		state["pvp_toggle_left"] = maxf(0.0, player["pvp_toggle_at"] - now)
 		state["max_mana"] = player_stats(id)["mana"]
 		state["target"] = player["target"]

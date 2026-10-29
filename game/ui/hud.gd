@@ -246,7 +246,7 @@ func _update_space(zone: Dictionary, continent: String) -> void:
 	tween.tween_property(curtain, "modulate:a", 0.0, CURTAIN_FADE)
 
 
-## " · resting", " · rest ready", or " · rest in 2:31" (town rest, combat.gd TOWN_REST_*).
+## " · resting", " · rest ready", or " · rest in 2:31" (town rest, systems/regen.gd TOWN_REST_*).
 func _rest_text(state: Dictionary, view: Dictionary) -> String:
 	if state.get("town_rest", false):
 		return " · resting"

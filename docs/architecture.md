@@ -33,7 +33,9 @@ game/
     nav.gd               Long-range bot navigation: AStarGrid2D over the walkable overworld
     ecs/                 Plan 48's component core: entities.gd (ids), store.gd (components by entity,
                          one owner each), events.gd (the event bus), scheduler.gd (system order);
-                         not used by the game yet
+                         World holds the entities and store
+    components/          Plain data records, one per area: regen.gd (next regeneration, town rest)
+    systems/             One rule set each, owning its components: regen.gd (regeneration, resting, town rest)
     ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/;
                          pvp_brain.gd and policy_net.gd run the trained PvP policy (docs/bot-training.md)
   data/                  Static catalogs and curves

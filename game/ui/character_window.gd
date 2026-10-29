@@ -9,6 +9,7 @@ const WorldMap = preload("res://game/world_map/world_map.gd")
 const Titles = preload("res://game/data/titles.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Combat = preload("res://game/core/combat.gd")
+const RegenSystem = preload("res://game/core/systems/regen.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Spells = preload("res://game/data/spells.gd")
@@ -140,7 +141,7 @@ func _write(state: Dictionary, rest_left: int, meal_left: int) -> void:
 			100 - Balance.damage_taken(100, stats["magic_defense"])),
 		"critical": "Chance per hit to deal %s× damage." % Spells.number(Combat.CRITICAL_MULTIPLIER),
 		"regen": "Health regained every 10 s; %s× after %d s out of combat, %d× resting in town." % [
-			Spells.number(Combat.RESTING_MULTIPLIER), int(Combat.RESTING_SECONDS), Combat.TOWN_REST_MULTIPLIER],
+			Spells.number(RegenSystem.RESTING_MULTIPLIER), int(RegenSystem.RESTING_SECONDS), RegenSystem.TOWN_REST_MULTIPLIER],
 		"healing": "Strength of heals you cast on others (Mass mend, Wild growth)." if stats["healing"] > 0
 			else "Only healers (Druids, and a little for Hunters) heal others.",
 	}
@@ -191,7 +192,7 @@ func _status_lines(state: Dictionary, rest_left: int, meal_left: int) -> PackedS
 	if state.get("unjustified", 0) > 0:
 		lines.append("Unjustified kills: %d of %d before a red skull." % [state["unjustified"], Combat.RED_SKULL_KILLS])
 	if state.get("town_rest", false):
-		lines.append("Town rest: resting (%d× regeneration until full)." % Combat.TOWN_REST_MULTIPLIER)
+		lines.append("Town rest: resting (%d× regeneration until full)." % RegenSystem.TOWN_REST_MULTIPLIER)
 	elif rest_left > 0:
 		lines.append("Town rest: ready again in %d:%02d." % [rest_left / 60, rest_left % 60])
 	else:

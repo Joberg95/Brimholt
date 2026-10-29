@@ -47,6 +47,7 @@ test-unit: ## Deterministic rule checks
 		echo "$$out" | grep -E 'BRIMHOLT_RULES|FAIL|ERROR|SCRIPT'; \
 		echo "$$out" | grep -q 'BRIMHOLT_RULES: [0-9]* checks, 0 failures'
 	$(GODOT) --headless --path . --script res://tests/unit/ecs_test.gd
+	$(GODOT) --headless --path . --script res://tests/unit/systems_test.gd
 	$(GODOT) --headless --path . --script res://tests/unit/golden_test.gd
 
 golden: ## Record the refactor safety net's golden digests (only with a deliberate rule change)

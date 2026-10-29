@@ -19,6 +19,7 @@ const Items = preload("res://game/data/items.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Titles = preload("res://game/data/titles.gd")
+const RegenSystem = preload("res://game/core/systems/regen.gd")
 
 ## Any monster above HOMEWARD_LEVEL may drop a Homeward rune (Spells.RUNES_BY_ELEMENT "home").
 const HOMEWARD_LEVEL: int = 30
@@ -26,17 +27,6 @@ const HOMEWARD_CHANCE: float = 0.015
 ## Loot of this rarity (Items.RARITIES index: Rare) or better gets a "Rare!" label over the body.
 const LOOT_LABEL_GRADE: int = 2
 const TICK_SECONDS: float = 0.1
-const REGEN_SECONDS: float = 2.0
-## Mana restored per 10 seconds, as a fraction of max mana.
-const MANA_REGEN_FRACTION: float = 0.08
-## Out of combat for this long, health and mana regenerate RESTING_MULTIPLIER times faster.
-const RESTING_SECONDS: float = 8.0
-const RESTING_MULTIPLIER: float = 3.0
-## Town rest: in a town and missing health or mana, you regenerate TOWN_REST_MULTIPLIER times the
-## base rate (about 25 s from empty to full) until you are full or leave; then it needs
-## TOWN_REST_COOLDOWN before it starts again, so towns are not a free mid-fight heal.
-const TOWN_REST_MULTIPLIER: float = 10.0
-const TOWN_REST_COOLDOWN: float = 180.0
 ## A spawn that finds no free tile (or a player standing on its camp) tries again this much later.
 const SPAWN_RETRY_SECONDS: float = 5.0
 ## Below this level, dying never drops items or gold, so new players cannot be stranded.
@@ -93,6 +83,8 @@ const CHOOSE_CLASS_FIRST: String = "Choose your class first: pass the adventurer
 const STEPS: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
 var world: World
+## Regeneration (game/core/systems/regen.gd), run from each player's tick.
+var regen: RegenSystem
 var rng := RandomNumberGenerator.new()
 ## [due time, spawn index] for monsters waiting to respawn.
 var respawns: Array = []
@@ -132,6 +124,7 @@ var _taken_at: float = NAN
 
 func _init(owner: World, seed_value: int = 0) -> void:
 	world = owner
+	regen = RegenSystem.new(world, self)
 	rng.seed = seed_value if seed_value != 0 else Time.get_ticks_usec()
 
 
@@ -1720,18 +1713,7 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 	if not player["skull"].is_empty() and now >= player["skull_until"]:
 		player["skull"] = ""
 		events.append({"kind": "player", "id": id})
-	if now >= player["next_regen"]:
-		player["next_regen"] = now + REGEN_SECONDS
-		var limits: Dictionary = world.player_stats(id)
-		var before: Array = [player["health"], player["mana"]]
-		var rate: float = REGEN_SECONDS / 10.0 * (RESTING_MULTIPLIER if resting(id, now) else 1.0)
-		if _town_rest(id, limits, now, events):
-			rate = REGEN_SECONDS / 10.0 * TOWN_REST_MULTIPLIER
-		rate *= 1.0 + meal_bonus(id, now)
-		player["health"] = mini(limits["health"], player["health"] + maxi(1, roundi(limits["regen"] * rate * healing_factor(id, now))))
-		player["mana"] = mini(limits["mana"], player["mana"] + maxi(1, roundi(limits["mana"] * MANA_REGEN_FRACTION * rate)))
-		if [player["health"], player["mana"]] != before:
-			events.append({"kind": "player", "id": id})
+	regen.tick_player(id, now, events)
 	var target: int = player["target"]
 	if target == 0:
 		return
@@ -1745,29 +1727,6 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 			_missile(player["cell"], creature(target)["cell"], MISSILE_COLORS.get(attack_style(player["vocation"],
 				player["equipment"]), Color.WHITE), events)
 		_hit(id, target, 1.0, now, events)
-
-
-## Starts, keeps, or ends a player's town rest; returns whether it boosts this regeneration tick.
-func _town_rest(id: int, limits: Dictionary, now: float, events: Array) -> bool:
-	var player: Dictionary = world.players[id]
-	var in_town: bool = WorldMap.zone_at(player["cell"]).get("town", false)
-	var missing: bool = player["health"] < limits["health"] or player["mana"] < limits["mana"]
-	if player["town_rest"]:
-		if in_town and missing:
-			return true
-		player["town_rest"] = false
-		player["town_rest_ready"] = now + TOWN_REST_COOLDOWN
-		events.append({"kind": "player", "id": id})
-		return false
-	if in_town and missing and now >= player["town_rest_ready"]:
-		player["town_rest"] = true
-		events.append({"kind": "message", "id": id, "text": "You rest in town and recover quickly."})
-		return true
-	return false
-
-
-func resting(id: int, now: float) -> bool:
-	return now - world.players[id].get("last_combat", -INF) >= RESTING_SECONDS
 
 
 ## Monsters sleep at home with nobody near: no target search or AI runs for them. A monster

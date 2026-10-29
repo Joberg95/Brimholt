@@ -185,3 +185,14 @@ sound (plan 20), and balance passes.
   hash, and their lookups (`terrain`, `walkable`, `zone_at`, `region_at`, `npc`, `width`, ...).
   Every `World.<map>` reference now reads `WorldMap.<map>`. `world.gd` keeps only the item catalog
   and a task-level cache as static state; `World.TALK_RANGE` reads `WorldMap.TALK_RANGE`.
+- **Step 4, the facade (2026-10-29):** a facade that keeps `world.players[id]["key"]` reading moved
+  data is not possible in GDScript: the player record is a Dictionary read with `.get(key, default)`
+  in about 200 places, and an object cannot override `get`. So each area moves whole: its keys leave
+  the player record, and every host-side reader goes through the component. The replicated view on
+  the clients (`state["health"]` ...) is unchanged; `World.export_player` builds it from both.
+  World holds the `entities` and the `store`; each player is an entity with its peer id.
+- **Step 4, regen (2026-10-29):** `components/regen.gd` (next regeneration, town rest, its cooldown),
+  owned by `systems/regen.gd` (regeneration, resting, town rest), run from each player's tick in
+  combat so the order is unchanged. Health and mana stay in the player record until attacks and
+  death move (until then the regen system writes them there). `tests/unit/systems_test.gd` tests it
+  with stand-ins only.
