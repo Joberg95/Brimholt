@@ -132,7 +132,7 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 		ages.append(maxf(0.0, now - time))
 	return {
 		"vocation": player["vocation"], "level": player["level"], "experience": player["experience"],
-		"health": player["health"], "mana": player["mana"], "gold": player["gold"], "bank": player["bank"],
+		"health": player["health"], "mana": player["mana"], "gold": player["gold"], "bank": world.store.get_record(id, "bank").gold,
 		"cell": [player["cell"].x, player["cell"].y],
 		"equipment": player["equipment"].duplicate(), "bags": player["bags"].duplicate(), "backpack": player["backpack"].duplicate(),
 		"depot": player["depot"].duplicate(), "trophies": player["trophies"].duplicate(),
@@ -173,7 +173,8 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 	var next: int = Balance.experience_to_next(player["level"])
 	player["experience"] = clampi(_int(data.get("experience"), 0), 0, maxi(0, next - 1))
 	player["gold"] = maxi(0, _int(data.get("gold"), 0))
-	player["bank"] = maxi(0, _int(data.get("bank"), 0))
+	# Saves restore every component directly (plan 48 step 5 gives them their own load and save).
+	world.store.get_record(id, "bank").gold = maxi(0, _int(data.get("bank"), 0))
 	player["equipment"].clear()
 	var equipment: Variant = data.get("equipment")
 	if typeof(equipment) == TYPE_DICTIONARY:

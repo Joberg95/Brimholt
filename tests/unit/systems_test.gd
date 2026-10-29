@@ -1,6 +1,7 @@
 extends SceneTree
 ## The systems of plan 48, each tested alone: a system gets only the components and stand-ins it
-## reads, never the whole world. So far: regeneration (game/core/systems/regen.gd).
+## reads, never the whole world. So far: regeneration (game/core/systems/regen.gd) and the bank
+## (game/core/systems/economy.gd).
 ##
 ##   godot --headless --path . --script res://tests/unit/systems_test.gd
 
@@ -8,6 +9,8 @@ const Store = preload("res://game/core/ecs/store.gd")
 const Regen = preload("res://game/core/components/regen.gd")
 const RegenSystem = preload("res://game/core/systems/regen.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
+const Bank = preload("res://game/core/components/bank.gd")
+const Economy = preload("res://game/core/systems/economy.gd")
 
 var checks: int = 0
 var failures: int = 0
@@ -22,6 +25,7 @@ class FakeWorld:
 
 	func _init() -> void:
 		store.declare(RegenSystem.COMPONENT, "regen")
+		store.declare(Economy.COMPONENT, "economy")
 
 	func add(id: int, cell: Vector2i) -> void:
 		players[id] = {"health": 1, "mana": 0, "cell": cell}
@@ -52,6 +56,7 @@ func check(condition: bool, message: String) -> void:
 
 func _initialize() -> void:
 	_regen_checks()
+	_bank_checks()
 	print("BRIMHOLT_SYSTEMS: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -99,6 +104,32 @@ func _regen_checks() -> void:
 	regen.of(2).next_regen = 0.0
 	regen.tick_player(2, 10.0, [])
 	check(not regen.of(2).town_rest, "a town rest waits for its cooldown")
+
+
+func _bank_checks() -> void:
+	var world := FakeWorld.new()
+	var economy := Economy.new(world)
+	var banker: String = ""
+	for id: String in WorldMap.TOWNSFOLK:
+		if WorldMap.TOWNSFOLK[id]["role"] == "banker":
+			banker = id
+	var at: Vector2i = WorldMap.TOWNSFOLK[banker]["cell"]
+	var cell: Vector2i = at
+	for dy: int in range(-2, 3):
+		for dx: int in range(-2, 3):
+			var spot: Vector2i = at + Vector2i(dx, dy)
+			if cell == at and WorldMap.walkable(spot) and WorldMap.same_room(spot, at):
+				cell = spot
+	world.players[1] = {"cell": cell, "gold": 100, "next_item": 0.0}
+	world.store.put(1, Economy.COMPONENT, Bank.new())
+	check(economy.bank(1, banker, "deposit", 60, 1.0)["ok"] and economy.account_of(1).gold == 60 and world.players[1]["gold"] == 40,
+		"a deposit moves gold from the purse to the account")
+	check(not economy.bank(1, banker, "withdraw", 61, 2.0)["ok"] and economy.account_of(1).gold == 60, "no overdraft")
+	check(economy.bank(1, banker, "withdraw", 10, 3.0)["message"].ends_with("Balance: 50 gold.")
+		and world.players[1]["gold"] == 50, "a withdrawal reports the balance")
+	check(not economy.bank(1, banker, "deposit", 1, 3.01)["ok"], "the item cooldown applies")
+	world.players[1]["cell"] = cell + Vector2i(0, 20)
+	check(economy.bank(1, banker, "deposit", 1, 9.0)["reason"] == "Walk closer to a banker", "only beside the banker")
 
 
 static func _outside_town() -> Vector2i:

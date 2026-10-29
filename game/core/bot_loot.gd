@@ -22,7 +22,7 @@ extends RefCounted
 const World = preload("res://game/core/world.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
-const Economy = preload("res://game/core/economy.gd")
+const Economy = preload("res://game/core/systems/economy.gd")
 
 ## Bots collect claimed stacks within LOOT_RADIUS tiles, and give up on one they have not taken
 ## anything from for GIVE_UP_SECONDS (out of reach behind water or rock).

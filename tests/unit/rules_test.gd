@@ -15,7 +15,7 @@ const Bots = preload("res://game/core/bots.gd")
 const BotLoot = preload("res://game/core/bot_loot.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Items = preload("res://game/data/items.gd")
-const Economy = preload("res://game/core/economy.gd")
+const Economy = preload("res://game/core/systems/economy.gd")
 const Quests = preload("res://game/data/quests.gd")
 const CharacterStore = preload("res://game/persistence/character_store.gd")
 const Identity = preload("res://game/persistence/identity.gd")
@@ -3336,9 +3336,9 @@ func _town_checks() -> void:
 			["withdraw", 1]]:
 		check(not economy.bank(1, banker, bad[0], bad[1], tick.call())["ok"], "malformed bank request rejected: %s" % [bad])
 	check(economy.bank(1, vendor, "deposit", 10, tick.call())["reason"] == "Walk closer to a banker", "vendors do not bank")
-	check(economy.bank(1, banker, "deposit", 300, tick.call())["ok"] and player["bank"] == 300 and player["gold"] == gold - 300,
+	check(economy.bank(1, banker, "deposit", 300, tick.call())["ok"] and economy.account_of(1).gold == 300 and player["gold"] == gold - 300,
 		"depositing gold")
-	check(economy.bank(1, banker, "withdraw", 100, tick.call())["ok"] and player["bank"] == 200 and player["gold"] == gold - 200,
+	check(economy.bank(1, banker, "withdraw", 100, tick.call())["ok"] and economy.account_of(1).gold == 200 and player["gold"] == gold - 200,
 		"withdrawing gold")
 	check(world.export_player(1, 0.0, true)["bank"] == 200 and not world.export_player(1, 0.0).has("bank"), "the bank balance is private")
 
@@ -3371,12 +3371,12 @@ func _town_checks() -> void:
 	var victim: Dictionary = world.players[2]
 	victim["level"] = Combat.PROTECTION_LEVEL + 2
 	world.wear_pack(2, "traveler_pack")
-	victim["bank"] = 500
+	world.store.get_record(2, "bank").gold = 500
 	victim["depot"][3] = "copper_ore#4"
 	victim["gold"] = 50
 	_place(world, 2, Vector2i(9, 12))
 	combat._damage(-1, 2, 9999999, "damage", tick.call(), [])
-	check(victim["bank"] == 500 and victim["depot"][3] == "copper_ore#4" and victim["equipment"].get("bag", "") == "traveler_pack"
+	check(world.store.get_record(2, "bank").gold == 500 and victim["depot"][3] == "copper_ore#4" and victim["equipment"].get("bag", "") == "traveler_pack"
 		and victim["backpack"].size() == World.BACKPACK_SIZE + 4 and victim["gold"] == 0, "death keeps the bank, depot, and pack")
 
 	# Packs: the bag slot cannot be moved, and backpack slots past your pack are locked.
@@ -4489,7 +4489,7 @@ func _persistence_checks() -> void:
 	player["level"] = 23
 	player["experience"] = 10
 	player["gold"] = 345
-	player["bank"] = 1000
+	world.store.get_record(1, "bank").gold = 1000
 	world.wear_pack(1, "explorer_pack")
 	player["equipment"]["helmet"] = "iron_coif"
 	player["backpack"][0] = "copper_ore#12"
@@ -4510,7 +4510,7 @@ func _persistence_checks() -> void:
 	later.add_player(5, 0.0, CharacterStore.saved_vocation(loaded["data"]))
 	CharacterStore.restore(later, 5, loaded["data"], 1000.0)
 	var back: Dictionary = later.players[5]
-	check(back["level"] == 23 and back["experience"] == 10 and back["gold"] == 345 and back["bank"] == 1000
+	check(back["level"] == 23 and back["experience"] == 10 and back["gold"] == 345 and later.store.get_record(5, "bank").gold == 1000
 		and back["vocation"] == "druid", "level, experience, gold, and bank are restored")
 	check(back["equipment"] == {"helmet": "iron_coif", "bag": "explorer_pack"} and back["backpack"].size() == 16
 		and back["backpack"][0] == "copper_ore#12" and back["backpack"][13] == "health_potion#5"
@@ -4564,7 +4564,7 @@ func _persistence_checks() -> void:
 	CharacterStore.restore(sane, 3, bad, 0.0)
 	var cleaned: Dictionary = sane.players[3]
 	var limits: Dictionary = sane.player_stats(3)
-	check(cleaned["level"] == Balance.MAX_LEVEL and cleaned["experience"] == 0 and cleaned["gold"] == 0 and cleaned["bank"] == 0,
+	check(cleaned["level"] == Balance.MAX_LEVEL and cleaned["experience"] == 0 and cleaned["gold"] == 0 and sane.store.get_record(3, "bank").gold == 0,
 		"numbers are clamped")
 	check(cleaned["equipment"] == {"bag": "pathfinder_pack"} and cleaned["backpack"].size() == World.BACKPACK_MAX,
 		"only fitting known equipment is restored")

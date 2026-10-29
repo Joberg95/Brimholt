@@ -13,6 +13,7 @@ const WorldMap = preload("res://game/world_map/world_map.gd")
 const Entities = preload("res://game/core/ecs/entities.gd")
 const Store = preload("res://game/core/ecs/store.gd")
 const Regen = preload("res://game/core/components/regen.gd")
+const Bank = preload("res://game/core/components/bank.gd")
 
 const TILE_SIZE: int = 32
 const WORLD_NAME: String = "Cinder Crossing"
@@ -86,7 +87,7 @@ const ITEM_SECONDS: float = 0.15
 
 var players: Dictionary = {}
 ## The entities and their components (plan 48), moving out of the player records area by area:
-## so far "regen" (game/core/components/regen.gd, owned by game/core/systems/regen.gd).
+## so far "regen" (owned by game/core/systems/regen.gd) and "bank" (game/core/systems/economy.gd).
 var entities := Entities.new()
 var store := Store.new()
 ## Live monsters by negative id; game/core/combat.gd owns their behaviour.
@@ -249,6 +250,7 @@ static func task_targets(task: String, state: Dictionary) -> Array[Vector2i]:
 
 func _init() -> void:
 	store.declare("regen", "regen")
+	store.declare("bank", "economy")
 	for entry: Array in WorldMap.GROUND_ITEMS:
 		var cell: Vector2i = entry[0]
 		if not ground.has(cell):
@@ -437,7 +439,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"target": 0, "next_attack": now, "cooldowns": {}, "groups": {},
 				"skull": "", "skull_until": 0.0, "unjustified": [], "aggressors": {},
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {}, "title": 0, "slain": {},
-				"bank": 0, "depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
+				"depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
 				"pvp": false, "pvp_toggle_at": -INF,
 				"skills": {}, "gathering": {}, "next_craft": now, "fed": {}, "bags": ["", "", ""],
 			}
@@ -446,6 +448,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 			players[id]["mana"] = limits["mana"]
 			entities.claim(id, "player")
 			store.put(id, "regen", Regen.new(now))
+			store.put(id, "bank", Bank.new())
 			return true
 	return false
 
@@ -532,7 +535,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["backpack"] = player["backpack"].duplicate()
 		state["bags"] = player["bags"].duplicate()
 		state["depot"] = player["depot"].duplicate()
-		state["bank"] = player["bank"]
+		state["bank"] = (store.get_record(id, "bank") as Bank).gold
 		state["tasks"] = player["tasks"].duplicate()
 		state["done_tasks"] = player["done_tasks"].keys()
 		state["spell_ranks"] = player["spell_ranks"].duplicate()

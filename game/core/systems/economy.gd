@@ -5,6 +5,10 @@ extends RefCounted
 ## prices, gold, and backpack room. Results are {ok, reason} or {ok, message}.
 
 const World = preload("res://game/core/world.gd")
+const Bank = preload("res://game/core/components/bank.gd")
+
+## The component this system owns: each player's bank account.
+const COMPONENT: String = "bank"
 
 ## Vendors stock every potion and the helmet, armor, legs, boots, weapon, and off-hand of each tier up to
 ## MAX_TIER: gear for levelling a new character. Better gear comes from monsters and quests.
@@ -13,10 +17,11 @@ const GEAR_SLOTS: Array[String] = ["helmet", "armor", "legs", "boots", "main_han
 ## Most of one stackable a single purchase may buy (one backpack stack).
 const BUY_MAX: int = 100
 
-var world: World
+## The world (its player records and component store; a stand-in in tests).
+var world: RefCounted
 
 
-func _init(owner: World) -> void:
+func _init(owner: RefCounted) -> void:
 	world = owner
 
 
@@ -116,14 +121,21 @@ func bank(id: int, npc: Variant, action: Variant, amount: Variant, now: float) -
 		return _refuse("Choose an amount of gold")
 	if now < player["next_item"]:
 		return _refuse("Item cooldown")
-	var source: String = "gold" if action == "deposit" else "bank"
-	if player[source] < amount:
-		return _refuse("You only have %d gold %s" % [player[source], "with you" if source == "gold" else "in the bank"])
-	player[source] -= amount
-	player["bank" if action == "deposit" else "gold"] += amount
+	var account: Bank = account_of(id)
+	var deposit: bool = action == "deposit"
+	var have: int = player["gold"] if deposit else account.gold
+	if have < amount:
+		return _refuse("You only have %d gold %s" % [have, "with you" if deposit else "in the bank"])
+	player["gold"] += -amount if deposit else amount
+	account.gold += amount if deposit else -amount
 	player["next_item"] = now + World.ITEM_SECONDS
 	return {"ok": true, "message": "You %s %d gold. Balance: %d gold." % [
-		"deposited" if action == "deposit" else "withdrew", amount, player["bank"]]}
+		"deposited" if deposit else "withdrew", amount, account.gold]}
+
+
+## A player's bank account (game/core/components/bank.gd), owned by this system.
+func account_of(id: int) -> Bank:
+	return world.store.get_record(id, COMPONENT)
 
 
 static func _amount(kind: String, count: int) -> String:

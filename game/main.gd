@@ -8,7 +8,7 @@ extends Node2D
 const World = preload("res://game/core/world.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Combat = preload("res://game/core/combat.gd")
-const Economy = preload("res://game/core/economy.gd")
+const Economy = preload("res://game/core/systems/economy.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Instances = preload("res://game/core/instances.gd")
 const Layout = preload("res://game/ui/layout.gd")
