@@ -23,8 +23,6 @@ game/
   core/                  Server-authoritative simulation shared by every peer (no nodes)
     world.gd             Item catalog, movement, inventory and depot, packs, bag slots, travel, vocations, tasks
     combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
-    economy.gd           Vendors (stock, buying, selling) and the banker (gold accounts)
-    crafting.gd          Professions on the host: herb patches, gathering (nodes, regrowth), crafting at artisans, skill training
     instances.gd         Instanced dungeon copies: entry, party ownership, exits, and resets
     lexicon.gd           Monster lexicon: levels, places, tasks, and drop tables from the catalogs
     bots.gd              Host player bots: hunter, PvP, dummy, companion, and rival stances through the real rules
@@ -34,8 +32,10 @@ game/
     ecs/                 Plan 48's component core: entities.gd (ids), store.gd (components by entity,
                          one owner each), events.gd (the event bus), scheduler.gd (system order);
                          World holds the entities and store
-    components/          Plain data records, one per area: regen.gd (next regeneration, town rest)
-    systems/             One rule set each, owning its components: regen.gd (regeneration, resting, town rest)
+    components/          Plain data records, one per area: regen, bank, professions, quests
+    systems/             One rule set each, owning its components: regen.gd (regeneration, town rest),
+                         economy.gd (vendors and the bank), professions.gd (gathering, crafting, skills),
+                         quests.gd (tasks, trophies, relics)
     ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/;
                          pvp_brain.gd and policy_net.gd run the trained PvP policy (docs/bot-training.md)
   data/                  Static catalogs and curves

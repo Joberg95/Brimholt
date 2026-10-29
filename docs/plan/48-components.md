@@ -196,3 +196,15 @@ sound (plan 20), and balance passes.
   combat so the order is unchanged. Health and mana stay in the player record until attacks and
   death move (until then the regen system writes them there). `tests/unit/systems_test.gd` tests it
   with stand-ins only.
+- **Step 4 order (owner, 2026-10-29):** the small, self-contained areas first (bank, professions,
+  quests, PvP, party), movement and inventory last: a player's cell is read in about 170 places.
+- **Step 4, bank:** `components/bank.gd` (the account's gold), owned by the economy system, now
+  `systems/economy.gd`. The depot moves with the inventory (item moves address it like the backpack).
+- **Step 4, professions:** `components/professions.gd` (skills, the work in hand, crafting pace),
+  owned by `systems/professions.gd` (was `core/crafting.gd`). The world's event bus (`World.bus`) is
+  in use: `World.moved(id)` raises "moved" on a step or a jump, and professions cancels the work.
+- **Step 4, quests:** `components/quests.gd` (tasks, done tasks, trophies, bosses slain), owned by
+  `systems/quests.gd`, which takes task turn-ins, kill credit, trophies, and relics out of combat.gd
+  (2,067 -> 1,825 lines). The task rules that take a state (`World.task_open`, `next_task`) get
+  `quests.view(id)` on the host. Titles stay with combat until progression moves.
+- Systems hold combat (their owner) weakly, so the two never keep each other alive.

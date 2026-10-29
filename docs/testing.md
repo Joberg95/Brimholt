@@ -73,7 +73,10 @@ order with the bus drained after each.
 **The systems** (`tests/unit/systems_test.gd`): each system of plan 48 with only the components and
 stand-ins it reads. Regeneration: health and mana return on schedule and the player is published,
 nothing before it is time, resting and meals speed it up, and a town rest starts (announced), heals
-faster, ends when full, and waits out its cooldown.
+faster, ends when full, and waits out its cooldown. The bank: deposits, withdrawals, no overdraft, the
+item cooldown, only beside a banker. Professions: gathering a vein (facing it, timed, ore, skill, regrowth),
+a moved event cancels the work, training. Quests: kill credit, trophies for fighters near the boss,
+the view the task rules read, and bots replaying tasks.
 
 Each `check()` call site is one assertion, however many cases a loop feeds it (every item,
 spawn, tile, or pose): the summary reads `BRIMHOLT_RULES: <assertions> checks, <failures>
