@@ -999,7 +999,7 @@ func _check_town_lamps() -> bool:
 	var jump: String = ""
 	for frame: int in 36:
 		if frame % 12 == 0:
-			game._handle_move(1, Vector2i.LEFT)
+			game.gateway.handle_move(1, Vector2i.LEFT)
 		await RenderingServer.frame_post_draw
 		var at: Vector2 = game.map_to_screen((Vector2(lamp) + Vector2(0.5, -0.5)) * World.TILE_SIZE)
 		var frame_image: Image = screen.get_texture().get_image()
@@ -1103,7 +1103,7 @@ func _check_rune_bar() -> bool:
 	player["mana"] = 999999
 	player["groups"] = {}
 	player["backpack"][1] = World.make_entry("sudden_death_rune", 1)
-	game._handle_spell(1, "glacier_wall")
+	game.gateway.handle_spell(1, "glacier_wall")
 	await create_timer(1.0).timeout
 	var used: Dictionary = game.combat.use_rune(1, "sudden_death_rune", game._now())
 	game._handle_events(used.get("events", []))

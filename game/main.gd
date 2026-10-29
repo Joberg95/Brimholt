@@ -34,6 +34,7 @@ const MicroMenu = preload("res://game/ui/micro_menu.gd")
 const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 const Bots = preload("res://game/core/bots.gd")
 const Solo = preload("res://game/core/solo.gd")
+const Gateway = preload("res://game/net/gateway.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -62,6 +63,8 @@ var profiling: bool = false
 var frame_profile: Dictionary = {}
 ## What this peer draws: the players, client.monsters, ground, and client.effects the host sent (game/client/).
 var client := ClientState.new()
+## Every request a player sends the host (game/net/gateway.gd), at /root/Main/Gateway on every peer.
+var gateway: Gateway
 ## How long a kill's green loot text stays over the body.
 const LOOT_TEXT_SECONDS: float = 4.0
 var connected: bool = false
@@ -75,7 +78,6 @@ var last_action_message: String = ""
 var peer: ENetMultiplayerPeer
 var _pending_peers: Dictionary = {}
 var _closing_peers: Dictionary = {}
-var _request_windows: Dictionary = {}
 var _joining_since: float = -1.0
 var _leaving: bool = false
 var _move_pending_since: float = -1.0
@@ -152,6 +154,10 @@ var _npc_menu_target: String:
 
 
 func _ready() -> void:
+	gateway = Gateway.new()
+	gateway.name = "Gateway"
+	gateway.game = self
+	add_child(gateway)
 	keybinds.load_saved()
 	# Menus and dialogs read small and minimal: every control without its own size uses this.
 	ThemeDB.get_default_theme().default_font_size = UiTheme.FONT_SIZE
@@ -397,9 +403,9 @@ func rune_local(kind: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_rune(1, kind)
+		gateway.handle_rune(1, kind)
 	else:
-		request_rune.rpc_id(1, kind)
+		gateway.request_rune.rpc_id(1, kind)
 
 
 func _run_action(action: String) -> void:
@@ -456,7 +462,8 @@ func _reset_session() -> void:
 		_world_map.hide()
 	_pending_peers.clear()
 	_closing_peers.clear()
-	_request_windows.clear()
+	if gateway != null:
+		gateway.reset()
 	hosting = false
 	connected = false
 	_remembered = ""
@@ -738,7 +745,7 @@ func _peer_left(id: int) -> void:
 		return
 	_pending_peers.erase(id)
 	_closing_peers.erase(id)
-	_request_windows.erase(id)
+	gateway.forget(id)
 	_known_monsters.erase(id)
 	_greetings.erase(id)
 	if world.players.has(id):
@@ -828,9 +835,9 @@ func move_local(direction: Vector2i) -> void:
 	_move_pending_since = _now()
 	_next_move_attempt = _now() + World.MOVE_SECONDS
 	if hosting:
-		_handle_move(1, direction)
+		gateway.handle_move(1, direction)
 	else:
-		request_move.rpc_id(1, direction)
+		gateway.request_move.rpc_id(1, direction)
 
 
 ## Party actions: "invite", "revoke", "join" (with the inviting leader), or "leave" (other = 0).
@@ -838,27 +845,27 @@ func party_local(action: String, other: int) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_party(1, action, other)
+		gateway.handle_party(1, action, other)
 	else:
-		request_party.rpc_id(1, action, other)
+		gateway.request_party.rpc_id(1, action, other)
 
 
 func equip_local(slot: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_equipment(1, slot)
+		gateway.handle_equipment(1, slot)
 	else:
-		request_equipment.rpc_id(1, slot)
+		gateway.request_equipment.rpc_id(1, slot)
 
 
 func move_item_local(source: Dictionary, target: Dictionary) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_item_move(1, source, target)
+		gateway.handle_item_move(1, source, target)
 	else:
-		request_item_move.rpc_id(1, source, target)
+		gateway.request_item_move.rpc_id(1, source, target)
 
 
 ## Picks up the top item on your tile, or else on the tile you face.
@@ -876,18 +883,18 @@ func travel_local(ferryman: String, destination: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_travel(1, ferryman, destination)
+		gateway.handle_travel(1, ferryman, destination)
 	else:
-		request_travel.rpc_id(1, ferryman, destination)
+		gateway.request_travel.rpc_id(1, ferryman, destination)
 
 
 func quest_local(npc: String, relic: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_quest(1, npc, relic)
+		gateway.handle_quest(1, npc, relic)
 	else:
-		request_quest.rpc_id(1, npc, relic)
+		gateway.request_quest.rpc_id(1, npc, relic)
 
 
 # ---------------------------------------------------------------- town services
@@ -896,9 +903,9 @@ func task_local(npc: String, task: String, action: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_task(1, npc, task, action)
+		gateway.handle_task(1, npc, task, action)
 	else:
-		request_task.rpc_id(1, npc, task, action)
+		gateway.request_task.rpc_id(1, npc, task, action)
 
 
 ## Whether this peer knows a gathering node is regrowing.
@@ -911,9 +918,9 @@ func gather_local(cell: Vector2i) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_gather(1, cell)
+		gateway.handle_gather(1, cell)
 	else:
-		request_gather.rpc_id(1, cell)
+		gateway.request_gather.rpc_id(1, cell)
 
 
 ## Gathers from the nearest unworked node within reach: the tile you face first.
@@ -946,9 +953,9 @@ func craft_local(npc: String, recipe: String, count: int) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_craft(1, npc, recipe, count)
+		gateway.handle_craft(1, npc, recipe, count)
 	else:
-		request_craft.rpc_id(1, npc, recipe, count)
+		gateway.request_craft.rpc_id(1, npc, recipe, count)
 
 
 ## Asks your class trainer to raise a spell's rank for rune shards (the host checks everything).
@@ -956,9 +963,9 @@ func empower_local(npc: String, spell: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_empower(1, npc, spell)
+		gateway.handle_empower(1, npc, spell)
 	else:
-		request_empower.rpc_id(1, npc, spell)
+		gateway.request_empower.rpc_id(1, npc, spell)
 
 
 ## Asks a trainer to make you their vocation (permanent; the host checks the trial and level).
@@ -966,9 +973,9 @@ func vocation_local(npc: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_vocation(1, npc)
+		gateway.handle_vocation(1, npc)
 	else:
-		request_vocation.rpc_id(1, npc)
+		gateway.request_vocation.rpc_id(1, npc)
 
 
 ## Turns your PvP on or off at the warden (Combat.set_pvp checks reach, skull, fight, and cooldown).
@@ -976,18 +983,18 @@ func pvp_local(npc: String, on: bool) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_pvp(1, npc, on)
+		gateway.handle_pvp(1, npc, on)
 	else:
-		request_pvp.rpc_id(1, npc, on)
+		gateway.request_pvp.rpc_id(1, npc, on)
 
 
 func buy_local(npc: String, kind: String, count: int) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_buy(1, npc, kind, count)
+		gateway.handle_buy(1, npc, kind, count)
 	else:
-		request_buy.rpc_id(1, npc, kind, count)
+		gateway.request_buy.rpc_id(1, npc, kind, count)
 
 
 ## Sells the backpack stack at `index`, or with -1 every monster material.
@@ -995,27 +1002,27 @@ func sell_local(npc: String, index: int) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_sell(1, npc, index)
+		gateway.handle_sell(1, npc, index)
 	else:
-		request_sell.rpc_id(1, npc, index)
+		gateway.request_sell.rpc_id(1, npc, index)
 
 
 func bank_local(npc: String, action: String, amount: int) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_bank(1, npc, action, amount)
+		gateway.handle_bank(1, npc, action, amount)
 	else:
-		request_bank.rpc_id(1, npc, action, amount)
+		gateway.request_bank.rpc_id(1, npc, action, amount)
 
 
 func drink_local(index: int) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_drink(1, index)
+		gateway.handle_drink(1, index)
 	else:
-		request_drink.rpc_id(1, index)
+		gateway.request_drink.rpc_id(1, index)
 
 
 ## Drinks the strongest potion sharing `kind`'s timer in the backpack (the potion keys: a
@@ -1047,18 +1054,18 @@ func target_local(target: int) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_target(1, target)
+		gateway.handle_target(1, target)
 	else:
-		request_target.rpc_id(1, target)
+		gateway.request_target.rpc_id(1, target)
 
 
 func cast_local(spell: String) -> void:
 	if not connected or client.self_id == 0:
 		return
 	if hosting:
-		_handle_spell(1, spell)
+		gateway.handle_spell(1, spell)
 	else:
-		request_spell.rpc_id(1, spell)
+		gateway.request_spell.rpc_id(1, spell)
 
 
 ## Locks the nearest monster within targeting range.
@@ -1077,238 +1084,12 @@ func target_nearest() -> void:
 		target_local(best)
 
 
-@rpc("any_peer", "call_remote", "reliable")
-func request_target(target: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_target(sender, target)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_party(action: Variant, other: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_party(sender, action, other)
-
-
-func _handle_party(id: int, action: Variant, other: Variant) -> void:
-	var result: Dictionary = combat.party_action(id, action, other, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_quest(npc: Variant, relic: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_quest(sender, npc, relic)
-
-
-func _handle_quest(id: int, npc: Variant, relic: Variant) -> void:
-	var result: Dictionary = combat.claim_relic(id, npc, relic, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_task(npc: Variant, task: Variant, action: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_task(sender, npc, task, action)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_empower(npc: Variant, spell: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_empower(sender, npc, spell)
-
-
-func _handle_empower(id: int, npc: Variant, spell: Variant) -> void:
-	var result: Dictionary = combat.empower_spell(id, npc, spell, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-		_save_player(id)
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_gather(cell: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_gather(sender, cell)
-
-
-func _handle_gather(id: int, cell: Variant) -> void:
-	var result: Dictionary = crafting.start_gather(id, cell, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_craft(npc: Variant, recipe: Variant, count: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_craft(sender, npc, recipe, count)
-
-
-func _handle_craft(id: int, npc: Variant, recipe: Variant, count: Variant) -> void:
-	var result: Dictionary = crafting.craft(id, npc, recipe, count, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-		_save_player(id)
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
 ## Nodes being worked, with seconds until they regrow (one when worked, all on joining).
 @rpc("authority", "call_remote", "reliable")
 func nodes_worked(regrowing: Dictionary) -> void:
 	for cell: Variant in regrowing:
 		if typeof(cell) == TYPE_VECTOR2I and typeof(regrowing[cell]) in [TYPE_INT, TYPE_FLOAT]:
 			worked_nodes[cell] = _now() + float(regrowing[cell])
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_vocation(npc: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_vocation(sender, npc)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_pvp(npc: Variant, on: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_pvp(sender, npc, on)
-
-
-func _handle_pvp(id: int, npc: Variant, on: Variant) -> void:
-	var result: Dictionary = combat.set_pvp(id, npc, on, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-		_save_player(id)
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-func _handle_vocation(id: int, npc: Variant) -> void:
-	var result: Dictionary = world.choose_vocation(id, npc, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-		_save_player(id)
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-func _handle_task(id: int, npc: Variant, task: Variant, action: Variant) -> void:
-	var result: Dictionary = combat.task_action(id, npc, task, action, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_drink(index: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_drink(sender, index)
-
-
-func _handle_drink(id: int, index: Variant) -> void:
-	var result: Dictionary = combat.drink(id, index, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_buy(npc: Variant, kind: Variant, count: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_buy(sender, npc, kind, count)
-
-
-func _handle_buy(id: int, npc: Variant, kind: Variant, count: Variant) -> void:
-	_publish_service(id, economy.buy(id, npc, kind, count, _now()))
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_sell(npc: Variant, index: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_sell(sender, npc, index)
-
-
-func _handle_sell(id: int, npc: Variant, index: Variant) -> void:
-	_publish_service(id, economy.sell(id, npc, index, _now()))
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_bank(npc: Variant, action: Variant, amount: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_bank(sender, npc, action, amount)
-
-
-func _handle_bank(id: int, npc: Variant, action: Variant, amount: Variant) -> void:
-	_publish_service(id, economy.bank(id, npc, action, amount, _now()))
-
-
-## Vendor and bank results change only the requesting player's private state.
-func _publish_service(id: int, result: Dictionary) -> void:
-	if result["ok"]:
-		_publish_actor(id)
-		_send_feedback(id, result["message"], 0.0, false)
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_spell(spell: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_spell(sender, spell)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_rune(kind: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_rune(sender, kind)
-
-
-func _handle_rune(id: int, kind: Variant) -> void:
-	var result: Dictionary = combat.use_rune(id, kind, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-func _handle_target(id: int, target: Variant) -> void:
-	var result: Dictionary = combat.set_target(id, target, _now())
-	if result["ok"]:
-		_publish_actor(id)
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-func _handle_spell(id: int, spell: Variant) -> void:
-	var result: Dictionary = combat.cast(id, spell, _now())
-	if result["ok"]:
-		_handle_events(result["events"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
 
 
 ## Replicates combat events: visuals immediately, then each changed creature once, then messages.
@@ -1511,83 +1292,6 @@ func _show_effect(event: Dictionary) -> void:
 			client.effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born,
 				"element": event.get("element", ""), "life": maxf(1.1, float(event.get("life", 0.0)))})
 			_world_view.fx.area(event["cells"], event["color"])
-
-
-func _valid_sender(sender: int) -> bool:
-	if not hosting or sender <= 1 or not world.players.has(sender) or _closing_peers.has(sender):
-		return false
-	var now: float = _now()
-	var window: Dictionary = _request_windows.get(sender, {"start": now, "count": 0})
-	if now - window["start"] >= 1.0:
-		window = {"start": now, "count": 0}
-	window["count"] += 1
-	_request_windows[sender] = window
-	if window["count"] > 30:
-		_reject_connection(sender, "Too many commands. Reconnect and slow down.")
-		return false
-	return true
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_move(direction: Vector2i) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_move(sender, direction)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_equipment(slot: String) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_equipment(sender, slot)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_item_move(source: Variant, target: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_item_move(sender, source, target)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func request_travel(ferryman: Variant, destination: Variant) -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if _valid_sender(sender):
-		_handle_travel(sender, ferryman, destination)
-
-
-func _handle_travel(id: int, ferryman: Variant, destination: Variant) -> void:
-	var result: Dictionary = world.travel(id, ferryman, destination, _now())
-	if result["ok"]:
-		_publish_actor(id)
-		_send_feedback(id, result["message"], 0.0, false)
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
-
-
-func _handle_move(id: int, direction: Vector2i) -> void:
-	var result: Dictionary = world.move(id, direction, _now())
-	if result["ok"]:
-		_publish_actor(id, true)
-		_handle_events(instances.after_move(id, _now()))
-	else:
-		_send_feedback(id, result["reason"], result["retry"], true)
-
-
-func _handle_equipment(id: int, slot: String) -> void:
-	_publish_item_result(id, world.toggle_equipment(id, slot, _now()))
-
-
-func _handle_item_move(id: int, source: Variant, target: Variant) -> void:
-	_publish_item_result(id, world.move_item(id, source, target, _now()))
-
-
-func _publish_item_result(id: int, result: Dictionary) -> void:
-	if result["ok"]:
-		_publish_actor(id)
-		_publish_ground(result["ground"])
-	else:
-		_send_feedback(id, result["reason"], 0.0, false)
 
 
 func _send_feedback(id: int, reason: String, retry: float, movement: bool) -> void:

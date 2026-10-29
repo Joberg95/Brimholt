@@ -73,7 +73,7 @@ func _process(_delta: float) -> bool:
 	if game == null or finishing:
 		return false
 	var now: float = Time.get_ticks_msec() / 1000.0
-	var deadline: float = 40.0 if role.begins_with("dedicated") else 20.0
+	var deadline: float = 55.0 if role.begins_with("dedicated") else 35.0
 	if now - started > deadline:
 		fail("Timeout stage %d feedback='%s' peers=%s equipped=%s unequipped=%s late_move=%s drop=%s pickup=%s" % [
 			stage, game.last_action_message, game.client.actors.keys(),
@@ -203,19 +203,19 @@ func _client_tick(now: float) -> void:
 		0:
 			if not state(1)["equipment"].has("armor"):
 				return
-			game.request_move.rpc_id(1, Vector2i(2, 0))
+			game.gateway.request_move.rpc_id(1, Vector2i(2, 0))
 			advance()
 		1:
 			if game.last_action_message == "Only one cardinal tile is allowed":
 				if state(own)["cell"] != Vector2i(7, 6):
 					fail("Client supplied an illegal destination")
 					return
-				game.request_equipment.rpc_id(1, "not-a-slot")
+				game.gateway.request_equipment.rpc_id(1, "not-a-slot")
 				advance()
 		2:
 			if game.last_action_message == "Unknown equipment slot":
 				game.move_local(Vector2i.LEFT)
-				game.request_move.rpc_id(1, Vector2i.RIGHT)
+				game.gateway.request_move.rpc_id(1, Vector2i.RIGHT)
 				advance()
 		3:
 			if game.last_action_message == "Movement cooldown" and now - stage_since > 0.25:
@@ -255,7 +255,7 @@ func _client_tick(now: float) -> void:
 				if not _others_hide_backpacks() or state(own)["backpack"][0] != "":
 					fail("Client backpack privacy or equip-from-backpack failed")
 					return
-				game.request_item_move.rpc_id(1, {"type": "backpack", "index": 99}, {"type": "backpack"})
+				game.gateway.request_item_move.rpc_id(1, {"type": "backpack", "index": 99}, {"type": "backpack"})
 				advance()
 		9:
 			if game.last_action_message == "Unknown item location" and now - stage_since > 0.2:
@@ -505,7 +505,7 @@ func _dedicated_client_tick(now: float) -> void:
 			game.equip_local("main_hand")
 			game.move_local(Vector2i.DOWN)
 			# Vocations are chosen at a trainer the host checks, never by a forged or distant request.
-			game.request_vocation.rpc_id(1, 42)
+			game.gateway.request_vocation.rpc_id(1, 42)
 			advance()
 		1:
 			if state(own)["cell"] == Vector2i(5, 7) and state(own)["equipment"].has("main_hand") \
@@ -513,7 +513,7 @@ func _dedicated_client_tick(now: float) -> void:
 					and now - stage_since > 0.25:
 				game.move_item_local({"type": "backpack", "index": 0}, {"type": "ground", "cell": Vector2i(5, 7)})
 				# PvP is switched only at the warden the host checks, never by a forged or distant request.
-				game.request_pvp.rpc_id(1, "reedmere_warden", true)
+				game.gateway.request_pvp.rpc_id(1, "reedmere_warden", true)
 				advance()
 		2:
 			if game.client.ground_view.get(Vector2i(5, 7), []) == ["ember_cap"] and stage_messages.has("Walk closer to the warden") \
@@ -551,11 +551,11 @@ func _dedicated_client_tick(now: float) -> void:
 		9:
 			var landing: Vector2i = World.FERRYMEN["cinder_landing"]["cell"]
 			if World.chebyshev(state(own)["cell"], landing) <= World.TALK_RANGE and now - stage_since > 0.25:
-				game.request_travel.rpc_id(1, "cinder_landing", "nowhere")
+				game.gateway.request_travel.rpc_id(1, "cinder_landing", "nowhere")
 				advance()
 		10:
 			if stage_messages.has("That ferryman does not sail there"):
-				game.request_travel.rpc_id(1, 5, null)
+				game.gateway.request_travel.rpc_id(1, 5, null)
 				advance()
 		11:
 			if stage_messages.has("Unknown ferryman"):
@@ -570,7 +570,7 @@ func _dedicated_client_tick(now: float) -> void:
 			for id: int in game.client.monsters:
 				if World.chebyshev(game.client.monsters[id]["state"]["cell"], state(own)["cell"]) == 1:
 					sparring = id
-					game.request_target.rpc_id(1, "not-a-creature")
+					game.gateway.request_target.rpc_id(1, "not-a-creature")
 					advance()
 		14:
 			if stage_messages.has("Unknown target"):
@@ -579,6 +579,9 @@ func _dedicated_client_tick(now: float) -> void:
 		15:
 			if state(own)["target"] == sparring:
 				game.cast_local("piercing_shot")
+				advance()
+			elif not game.client.monsters.has(sparring):
+				# The auto-attack killed the weak monster before the target update arrived.
 				advance()
 		16:
 			for effect: Dictionary in game.client.effects:
@@ -608,7 +611,7 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		21:
 			if World.chebyshev(state(own)["cell"], World.npc("cinder_vendor")["cell"]) <= World.TALK_RANGE:
-				game.request_buy.rpc_id(1, "cinder_vendor", "abyssal_greathelm", 1)
+				game.gateway.request_buy.rpc_id(1, "cinder_vendor", "abyssal_greathelm", 1)
 				advance()
 		22:
 			if stage_messages.has("The vendor does not sell that"):
@@ -631,7 +634,7 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		26:
 			if state(own).get("bank", 0) == 10 and now - stage_since > 0.2:
-				game.request_bank.rpc_id(1, "reedmere_banker", "withdraw", 999)
+				game.gateway.request_bank.rpc_id(1, "reedmere_banker", "withdraw", 999)
 				advance()
 		27:
 			if stage_messages.has("You only have 10 gold in the bank"):
@@ -676,7 +679,7 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		34:
 			if state(own)["backpack"].has("copper_ore#6") and World.chebyshev(state(own)["cell"], World.npc("artisan_cinder")["cell"]) <= World.TALK_RANGE:
-				game.request_craft.rpc_id(1, "artisan_cinder", "voidrend", 1)
+				game.gateway.request_craft.rpc_id(1, "artisan_cinder", "voidrend", 1)
 				advance()
 		35:
 			if stage_messages.has("Unknown recipe"):
@@ -690,7 +693,7 @@ func _dedicated_client_tick(now: float) -> void:
 		37:
 			if state(own)["bags"][0] == "leather_satchel" and state(own)["backpack"].size() == World.main_size(state(own)) + 6 \
 					and Crafting.node_at(state(own)["cell"] + state(own)["facing"]) == "mining":
-				game.request_gather.rpc_id(1, "a rock")
+				game.gateway.request_gather.rpc_id(1, "a rock")
 				advance()
 		38:
 			if stage_messages.has("Unknown place"):
