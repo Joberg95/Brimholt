@@ -17,7 +17,7 @@ const Fx = preload("res://game/render/fx.gd")
 const FloorLayer = preload("res://game/render/floor_layer.gd")
 const WallArt = preload("res://game/render/wall_art.gd")
 const ObjectArt = preload("res://game/render/object_art.gd")
-const Crafting = preload("res://game/core/crafting.gd")
+const Crafting = preload("res://game/core/systems/professions.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const NPC_NAME: Color = Color("#9fe0c8")
 ## Quest givers stand out: gold cloth and a gold name.

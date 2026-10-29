@@ -6,7 +6,7 @@ extends Node
 const World = preload("res://game/core/world.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
-const Crafting = preload("res://game/core/crafting.gd")
+const Crafting = preload("res://game/core/systems/professions.gd")
 const Layout = preload("res://game/ui/layout.gd")
 
 ## The main node (game/main.gd).

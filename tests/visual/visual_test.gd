@@ -18,7 +18,7 @@ const Biomes = preload("res://game/data/biomes.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Layout = preload("res://game/ui/layout.gd")
-const Crafting = preload("res://game/core/crafting.gd")
+const Crafting = preload("res://game/core/systems/professions.gd")
 const TEST_ITEM_CELL: Vector2i = Vector2i(6, 8)
 ## Slots the checks equip and unequip (shown in the paperdoll; gear is not drawn on the body).
 const WORN_SLOTS: Array[String] = ["helmet", "armor", "legs", "boots", "main_hand", "off_hand"]

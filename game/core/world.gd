@@ -14,6 +14,8 @@ const Entities = preload("res://game/core/ecs/entities.gd")
 const Store = preload("res://game/core/ecs/store.gd")
 const Regen = preload("res://game/core/components/regen.gd")
 const Bank = preload("res://game/core/components/bank.gd")
+const ProfessionState = preload("res://game/core/components/professions.gd")
+const Events = preload("res://game/core/ecs/events.gd")
 
 const TILE_SIZE: int = 32
 const WORLD_NAME: String = "Cinder Crossing"
@@ -87,9 +89,12 @@ const ITEM_SECONDS: float = 0.15
 
 var players: Dictionary = {}
 ## The entities and their components (plan 48), moving out of the player records area by area:
-## so far "regen" (owned by game/core/systems/regen.gd) and "bank" (game/core/systems/economy.gd).
+## so far "regen" (owned by game/core/systems/regen.gd), "bank" (game/core/systems/economy.gd), and
+## "professions" (game/core/systems/professions.gd).
 var entities := Entities.new()
 var store := Store.new()
+## Events between the rules (game/core/ecs/events.gd): "moved" when a player moves or is moved.
+var bus := Events.new()
 ## Live monsters by negative id; game/core/combat.gd owns their behaviour.
 var monsters: Dictionary = {}
 var ground: Dictionary = {}
@@ -251,6 +256,7 @@ static func task_targets(task: String, state: Dictionary) -> Array[Vector2i]:
 func _init() -> void:
 	store.declare("regen", "regen")
 	store.declare("bank", "economy")
+	store.declare("professions", "professions")
 	for entry: Array in WorldMap.GROUND_ITEMS:
 		var cell: Vector2i = entry[0]
 		if not ground.has(cell):
@@ -441,7 +447,7 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 				"party": 0, "invited": {}, "active_at": -INF, "trophies": {}, "title": 0, "slain": {},
 				"depot": depot, "tasks": {}, "done_tasks": {}, "spell_ranks": {}, "pvp_until": -INF, "pvp_since": -INF,
 				"pvp": false, "pvp_toggle_at": -INF,
-				"skills": {}, "gathering": {}, "next_craft": now, "fed": {}, "bags": ["", "", ""],
+				"fed": {}, "bags": ["", "", ""],
 			}
 			var limits: Dictionary = stats(1, {}, vocation)
 			players[id]["health"] = limits["health"]
@@ -449,8 +455,15 @@ func add_player(id: int, now: float, vocation: String = Balance.DEFAULT_VOCATION
 			entities.claim(id, "player")
 			store.put(id, "regen", Regen.new(now))
 			store.put(id, "bank", Bank.new())
+			store.put(id, "professions", ProfessionState.new(now))
 			return true
 	return false
+
+
+## Tells the rules a player moved or was moved (a step, a jump): working a node stops.
+func moved(id: int) -> void:
+	bus.raise("moved", {"id": id})
+	bus.drain()
 
 
 func remove_player(id: int) -> void:
@@ -507,8 +520,9 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["bot"] = true
 		if player.has("name"):
 			state["name"] = player["name"]
-	if not player["gathering"].is_empty():
-		state["gathering"] = [player["gathering"]["cell"], maxf(0.0, player["gathering"]["until"] - now), player["gathering"]["profession"]]
+	var work: Dictionary = (store.get_record(id, "professions") as ProfessionState).gathering
+	if not work.is_empty():
+		state["gathering"] = [work["cell"], maxf(0.0, work["until"] - now), work["profession"]]
 	if include_private:
 		var invites: Array[int] = []
 		for leader: int in players:
@@ -539,7 +553,7 @@ func export_player(id: int, now: float, include_private: bool = false) -> Dictio
 		state["tasks"] = player["tasks"].duplicate()
 		state["done_tasks"] = player["done_tasks"].keys()
 		state["spell_ranks"] = player["spell_ranks"].duplicate()
-		state["skills"] = player["skills"].duplicate(true)
+		state["skills"] = (store.get_record(id, "professions") as ProfessionState).skills.duplicate(true)
 		if not player["fed"].is_empty() and player["fed"]["until"] > now:
 			state["fed"] = [player["fed"]["kind"], player["fed"]["until"] - now]
 		# Spell effects on you (buffs, a mark) by spell id: seconds left, for the buff bar.
@@ -594,7 +608,7 @@ func move(id: int, direction: Vector2i, now: float) -> Dictionary:
 	pace *= speed_factor(player_stats(id)) / (1.0 + maxf(0.0, effect_power(player, "haste", now)))
 	player["step"] = MOVE_SECONDS * pace
 	player["next_move"] = now + player["step"]
-	player["gathering"] = {}
+	moved(id)
 	return {"ok": true, "state": export_player(id, now)}
 
 

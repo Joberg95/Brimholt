@@ -139,7 +139,7 @@ static func capture(world: World, id: int, now: float) -> Dictionary:
 		"title": player.get("title", 0), "slain": player.get("slain", {}).keys(),
 		"tasks": player["tasks"].duplicate(), "done_tasks": player["done_tasks"].keys(),
 		"spell_ranks": player["spell_ranks"].duplicate(),
-		"skills": player["skills"].duplicate(true),
+		"skills": world.store.get_record(id, "professions").skills.duplicate(true),
 		"skull": player["skull"], "skull_left": maxf(0.0, player["skull_until"] - now) if not player["skull"].is_empty() else 0.0,
 		"unjustified_ages": ages,
 		"pvp": player["pvp"], "pvp_toggle_left": maxf(0.0, player["pvp_toggle_at"] - now),
@@ -238,7 +238,7 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 				var skill: int = clampi(_int(entry[0], 1), 1, Professions.SKILL_MAX)
 				var progress: int = clampi(_int(entry[1], 0), 0, maxi(0, Professions.experience_to_next(skill) - 1))
 				if skill > 1 or progress > 0:
-					player["skills"][profession] = [skill, progress]
+					world.store.get_record(id, "professions").skills[profession] = [skill, progress]
 	var skull: Variant = data.get("skull")
 	var left: float = _float(data.get("skull_left"))
 	if skull in ["white", "red"] and left > 0.0:

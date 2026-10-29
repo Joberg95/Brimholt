@@ -4,7 +4,7 @@ extends PanelContainer
 ## next. Gather with the gather key (F) or by right-clicking a rock, tree, herb patch, or water;
 ## craft at any town's artisan. Rewritten only when your skills change, and only while open.
 
-const Crafting = preload("res://game/core/crafting.gd")
+const Crafting = preload("res://game/core/systems/professions.gd")
 const Professions = preload("res://game/data/professions.gd")
 const World = preload("res://game/core/world.gd")
 const Layout = preload("res://game/ui/layout.gd")

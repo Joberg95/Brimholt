@@ -39,7 +39,7 @@ const Regions = preload("res://game/data/regions.gd")
 const PolicyNet = preload("res://game/core/ai/policy_net.gd")
 const PvpBrain = preload("res://game/core/ai/pvp_brain.gd")
 const DuelArena = preload("res://tools/training/duel_arena.gd")
-const Crafting = preload("res://game/core/crafting.gd")
+const Crafting = preload("res://game/core/systems/professions.gd")
 const Professions = preload("res://game/data/professions.gd")
 const Solo = preload("res://game/core/solo.gd")
 const Nav = preload("res://game/core/nav.gd")
@@ -1191,14 +1191,14 @@ func _gathering_checks() -> void:
 		"the work takes GATHER_SECONDS")
 	var events: Array = crafting.tick(1.0 + Professions.GATHER_SECONDS)
 	var mined: int = _count(player["backpack"], "copper_ore")
-	check(mined >= 1 and mined <= 5 and player["gathering"].is_empty() and crafting.worked(rock[0], 5.0)
+	check(mined >= 1 and mined <= 5 and crafting.profile(1).gathering.is_empty() and crafting.worked(rock[0], 5.0)
 		and events.any(func(event: Dictionary) -> bool: return event["kind"] == "node" and event["cell"] == rock[0]),
 		"finished work yields copper ore and the rock regrows")
-	check(player["skills"]["mining"] == [1, Professions.gather_gain(1, 0)], "a gather trains the skill")
+	check(crafting.profile(1).skills["mining"] == [1, Professions.gather_gain(1, 0)], "a gather trains the skill")
 	check(crafting.start_gather(1, rock[0], 6.0)["reason"].begins_with("It has been worked"), "a worked node waits to regrow")
 	crafting.tick(6.0 + Professions.REGROW_SECONDS)
 	check(crafting.start_gather(1, rock[0], 7.0 + Professions.REGROW_SECONDS)["ok"], "a regrown node can be worked again")
-	check(world.move(1, rock[2], 7.5 + Professions.REGROW_SECONDS)["ok"] and player["gathering"].is_empty(), "moving cancels gathering")
+	check(world.move(1, rock[2], 7.5 + Professions.REGROW_SECONDS)["ok"] and crafting.profile(1).gathering.is_empty(), "moving cancels gathering")
 	crafting.tick(20.0 + Professions.REGROW_SECONDS)
 	check(_count(player["backpack"], "copper_ore") == mined, "cancelled work yields nothing")
 	_place(world, 1, rock[1])
@@ -1206,7 +1206,7 @@ func _gathering_checks() -> void:
 	var deep: Array = _node_spot("mining", 2)
 	_place(world, 1, deep[1])
 	check(crafting.start_gather(1, deep[0], 100.0)["reason"].begins_with("Mining 20 needed"), "high bands need the skill")
-	player["skills"]["mining"] = [20, 0]
+	crafting.profile(1).skills["mining"] = [20, 0]
 	check(crafting.start_gather(1, deep[0], 100.0)["ok"], "the skill opens the band")
 	crafting.tick(100.0 + Professions.GATHER_SECONDS)
 	check(_count(player["backpack"], "silver_ore") >= 1, "band-2 rock yields silver ore")
@@ -1260,26 +1260,26 @@ func _gathering_checks() -> void:
 	check(crafting.start_gather(2, water[0], 400.0)["ok"], "fishing reaches water a few tiles away")
 	check(Crafting.node_at(Dungeons.origin("silkhollow", 0)) == "", "dungeon rock is not a node")
 	# Training: each level needs experience_to_next, and the skill stops at SKILL_MAX.
-	var trainee: Dictionary = {"skills": {}}
+	var trainee: Dictionary = {}
 	check(Crafting.train(trainee, "fishing", Professions.experience_to_next(1)).contains("Fishing rose to 2")
-		and trainee["skills"]["fishing"] == [2, 0], "experience raises a skill")
-	trainee["skills"]["fishing"] = [Professions.SKILL_MAX, 0]
+		and trainee["fishing"] == [2, 0], "experience raises a skill")
+	trainee["fishing"] = [Professions.SKILL_MAX, 0]
 	Crafting.train(trainee, "fishing", 1000)
-	check(trainee["skills"]["fishing"] == [Professions.SKILL_MAX, 0], "skills stop at their maximum")
+	check(trainee["fishing"] == [Professions.SKILL_MAX, 0], "skills stop at their maximum")
 	check(Professions.gather_gain(1, 0) == 4 and Professions.gather_gain(30, 0) == 0 and Professions.gather_gain(20, 2) == 4,
 		"easy bands stop teaching")
 	# Skills are saved and sanitized.
-	player["skills"] = {"mining": [12, 3], "cooking": [5, 1]}
+	crafting.profile(1).skills = {"mining": [12, 3], "cooking": [5, 1]}
 	var saved: Dictionary = CharacterStore.capture(world, 1, 500.0)
 	var restored := World.new()
 	restored.add_player(1, 0.0, "knight")
 	CharacterStore.restore(restored, 1, JSON.parse_string(JSON.stringify(saved)), 0.0)
-	check(restored.players[1]["skills"] == {"mining": [12, 3], "cooking": [5, 1]}, "skills survive a save")
+	check(restored.store.get_record(1, "professions").skills == {"mining": [12, 3], "cooking": [5, 1]}, "skills survive a save")
 	saved["skills"] = {"mining": [999, 999], "jumping": [9, 0], "fishing": "x", "cooking": [3, -5]}
 	var tampered := World.new()
 	tampered.add_player(1, 0.0, "knight")
 	CharacterStore.restore(tampered, 1, saved, 0.0)
-	check(tampered.players[1]["skills"] == {"mining": [Professions.SKILL_MAX, 0], "cooking": [3, 0]}, "saved skills are sanitized")
+	check(tampered.store.get_record(1, "professions").skills == {"mining": [Professions.SKILL_MAX, 0], "cooking": [3, 0]}, "saved skills are sanitized")
 
 
 func _crafting_checks() -> void:
@@ -1309,10 +1309,10 @@ func _crafting_checks() -> void:
 		"missing resources refuse the craft and change nothing")
 	var result: Dictionary = crafting.craft(1, artisan, "rusted_breastplate", 1, 1.0)
 	check(result["ok"] and _count(player["backpack"], "rusted_breastplate") == 1 and _count(player["backpack"], "copper_ore") == 4
-		and _count(player["backpack"], "pine_log") == 1 and int(player["skills"]["smithing"][0]) > 1, "crafting spends resources, makes gear, and trains")
+		and _count(player["backpack"], "pine_log") == 1 and int(crafting.profile(1).skills["smithing"][0]) > 1, "crafting spends resources, makes gear, and trains")
 	check(crafting.craft(1, artisan, "rusted_breastplate", 1, 1.2)["reason"] == "You are still working", "crafts are paced")
 	player["backpack"][2] = "sunflax#5"
-	player["skills"]["alchemy"] = [3, 0]
+	crafting.profile(1).skills["alchemy"] = [3, 0]
 	result = crafting.craft(1, artisan, "health_potion", 5, 5.0)
 	check(result["ok"] and _count(player["backpack"], "health_potion") == 2 and _count(player["backpack"], "sunflax") == 1,
 		"a batch makes as many as the resources allow")

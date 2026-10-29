@@ -733,7 +733,7 @@ func jump(id: int, cell: Vector2i, now: float, events: Array) -> void:
 	player["from"] = spot
 	player["next_move"] = now
 	player["target"] = 0
-	player["gathering"] = {}
+	world.moved(id)
 	bots[id]["last_cell"] = spot
 	bots[id]["route"] = []
 	events.append({"kind": "player", "id": id})

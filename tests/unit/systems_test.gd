@@ -1,7 +1,6 @@
 extends SceneTree
 ## The systems of plan 48, each tested alone: a system gets only the components and stand-ins it
-## reads, never the whole world. So far: regeneration (game/core/systems/regen.gd) and the bank
-## (game/core/systems/economy.gd).
+## reads, never the whole world: regeneration, the bank (economy), and professions (game/core/systems/).
 ##
 ##   godot --headless --path . --script res://tests/unit/systems_test.gd
 
@@ -11,6 +10,10 @@ const RegenSystem = preload("res://game/core/systems/regen.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
 const Bank = preload("res://game/core/components/bank.gd")
 const Economy = preload("res://game/core/systems/economy.gd")
+const Events = preload("res://game/core/ecs/events.gd")
+const ProfessionState = preload("res://game/core/components/professions.gd")
+const ProfessionsSystem = preload("res://game/core/systems/professions.gd")
+const Professions = preload("res://game/data/professions.gd")
 
 var checks: int = 0
 var failures: int = 0
@@ -21,11 +24,13 @@ class FakeWorld:
 	extends RefCounted
 	var players: Dictionary = {}
 	var store := Store.new()
+	var bus := Events.new()
 	var limits: Dictionary = {"health": 100, "mana": 50, "regen": 10}
 
 	func _init() -> void:
 		store.declare(RegenSystem.COMPONENT, "regen")
 		store.declare(Economy.COMPONENT, "economy")
+		store.declare(ProfessionsSystem.COMPONENT, "professions")
 
 	func add(id: int, cell: Vector2i) -> void:
 		players[id] = {"health": 1, "mana": 0, "cell": cell}
@@ -57,6 +62,7 @@ func check(condition: bool, message: String) -> void:
 func _initialize() -> void:
 	_regen_checks()
 	_bank_checks()
+	_professions_checks()
 	print("BRIMHOLT_SYSTEMS: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -130,6 +136,37 @@ func _bank_checks() -> void:
 	check(not economy.bank(1, banker, "deposit", 1, 3.01)["ok"], "the item cooldown applies")
 	world.players[1]["cell"] = cell + Vector2i(0, 20)
 	check(economy.bank(1, banker, "deposit", 1, 9.0)["reason"] == "Walk closer to a banker", "only beside the banker")
+
+
+func _professions_checks() -> void:
+	var world := FakeWorld.new()
+	var professions := ProfessionsSystem.new(world, 5)
+	var vein: Vector2i = Vector2i(-1, -1)
+	for cell: Vector2i in ProfessionsSystem.ORES:
+		if ProfessionsSystem.ORES[cell] == 0 and WorldMap.walkable(cell + Vector2i.DOWN):
+			vein = cell
+			break
+	var stand: Vector2i = vein + Vector2i.DOWN
+	var backpack: Array = []
+	backpack.resize(8)
+	backpack.fill("")
+	world.players[1] = {"cell": stand, "health": 10, "backpack": backpack, "facing": Vector2i.DOWN}
+	world.store.put(1, ProfessionsSystem.COMPONENT, ProfessionState.new(0.0))
+	check(professions.start_gather(1, vein, 1.0)["ok"] and not professions.profile(1).gathering.is_empty()
+		and world.players[1]["facing"] == Vector2i.UP, "gathering starts, facing the node")
+	check(professions.tick(1.0 + Professions.GATHER_SECONDS - 0.01).is_empty(), "the work takes GATHER_SECONDS")
+	professions.tick(1.0 + Professions.GATHER_SECONDS)
+	check(backpack[0].begins_with("copper_ore") and professions.profile(1).gathering.is_empty()
+		and int(professions.profile(1).skills["mining"][1]) > 0 and professions.worked(vein, 5.0),
+		"finished work yields ore, trains mining, and the vein regrows")
+	world.players[1]["cell"] = stand
+	check(professions.start_gather(1, vein, 1.0 + Professions.GATHER_SECONDS + Professions.REGROW_SECONDS)["ok"], "a regrown vein can be worked again")
+	world.bus.raise("moved", {"id": 1})
+	world.bus.drain()
+	check(professions.profile(1).gathering.is_empty(), "a moved event cancels the work")
+	var skills: Dictionary = {}
+	check(ProfessionsSystem.train(skills, "fishing", Professions.experience_to_next(1)).contains("Fishing rose to 2")
+		and skills["fishing"] == [2, 0], "experience raises a skill")
 
 
 static func _outside_town() -> Vector2i:

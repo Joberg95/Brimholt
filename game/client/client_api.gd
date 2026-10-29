@@ -6,7 +6,7 @@ extends RefCounted
 
 const World = preload("res://game/core/world.gd")
 const Combat = preload("res://game/core/combat.gd")
-const Crafting = preload("res://game/core/crafting.gd")
+const Crafting = preload("res://game/core/systems/professions.gd")
 const Professions = preload("res://game/data/professions.gd")
 
 ## Seconds without an answer to a move before the host is treated as gone.

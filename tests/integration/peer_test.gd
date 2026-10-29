@@ -4,7 +4,7 @@ const World = preload("res://game/core/world.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Items = preload("res://game/data/items.gd")
-const Crafting = preload("res://game/core/crafting.gd")
+const Crafting = preload("res://game/core/systems/professions.gd")
 ## The druid client drops its spare armor for the late-joining paladin to pick up and wear.
 const DROPPED: String = "moss_coat"
 const DROPPED_INDEX: int = 1

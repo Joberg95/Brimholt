@@ -5,12 +5,17 @@ extends RefCounted
 ## 1-5 of the land's band's resource (Professions.gather_count) land in the backpack. One cell
 ## in ten rests and is never a node (Professions.resting). Crafting happens at a town artisan
 ## (World service "craft"): the recipe's resources leave the backpack and its output arrives.
-## Skills are player["skills"]: profession -> [level, experience]. Results are {ok, events} or
-## {ok: false, reason, events}, like Combat.
+## Owns the "professions" component (game/core/components/professions.gd): skills (profession ->
+## [level, experience]), the work in hand, and the crafting pace; a "moved" event on the world's bus
+## cancels the work. Results are {ok, events} or {ok: false, reason, events}, like Combat.
 
 const World = preload("res://game/core/world.gd")
 const WorldMap = preload("res://game/world_map/world_map.gd")
 const Professions = preload("res://game/data/professions.gd")
+const ProfessionState = preload("res://game/core/components/professions.gd")
+
+## The component this system owns.
+const COMPONENT: String = "professions"
 
 ## Every recipe by id (Professions.build_recipes).
 static var RECIPES: Dictionary = Professions.build_recipes(World.ITEMS)
@@ -20,15 +25,17 @@ static var HERBS: Dictionary = _find_herbs()
 ## the wilds (not in towns or dungeons); the rest of the rock is scenery.
 static var ORES: Dictionary = _find_ores()
 
-var world: World
+## The world (its player records, component store, and event bus; a stand-in in tests).
+var world: RefCounted
 ## Worked nodes: cell -> host time when they regrow.
 var depleted: Dictionary = {}
 ## Gather yields; tests seed it for repeatable rolls.
 var rng := RandomNumberGenerator.new()
 
 
-func _init(owner: World, seed_value: int = -1) -> void:
+func _init(owner: RefCounted, seed_value: int = -1) -> void:
 	world = owner
+	world.bus.subscribe("moved", _on_moved)
 	if seed_value >= 0:
 		rng.seed = seed_value
 	else:
@@ -112,8 +119,20 @@ static func resource_at(cell: Vector2i, profession: String) -> String:
 	return Professions.RESOURCES[profession][HERBS[cell] if profession == "herbalism" else band_at(cell)]
 
 
-static func skill_of(player: Dictionary, profession: String) -> int:
-	return int(player["skills"].get(profession, [1, 0])[0])
+## A player's professions (game/core/components/professions.gd).
+func profile(id: int) -> ProfessionState:
+	return world.store.get_record(id, COMPONENT)
+
+
+## A skill's level in `skills` (profession -> [level, experience]).
+static func skill_of(skills: Dictionary, profession: String) -> int:
+	return int(skills.get(profession, [1, 0])[0])
+
+
+## A player who moved (or was moved) stops working a node.
+func _on_moved(event: Dictionary) -> void:
+	if world.store.has_record(event["id"], COMPONENT):
+		profile(event["id"]).gathering = {}
 
 
 ## Whether a node is regrowing at `now`.
@@ -138,12 +157,12 @@ func start_gather(id: int, cell: Variant, now: float) -> Dictionary:
 	if worked(cell, now):
 		return _refused("It has been worked; it regrows in %d s" % ceili(depleted[cell] - now))
 	var band: int = HERBS[cell] if profession == "herbalism" else band_at(cell)
-	if skill_of(player, profession) < Professions.BAND_LEVELS[band]:
+	if skill_of(profile(id).skills, profession) < Professions.BAND_LEVELS[band]:
 		return _refused("%s %d needed to gather %s here" % [Professions.NAMES[profession], Professions.BAND_LEVELS[band],
 			World.ITEMS[resource_at(cell, profession)]["name"]])
 	if World.receiving_slot(player["backpack"], resource_at(cell, profession), 1) < 0:
 		return _refused("Your backpack is full")
-	player["gathering"] = {"cell": cell, "profession": profession, "from": player["cell"],
+	profile(id).gathering = {"cell": cell, "profession": profession, "from": player["cell"],
 		"until": now + Professions.GATHER_SECONDS}
 	if cell != player["cell"]:
 		var offset: Vector2i = cell - player["cell"]
@@ -155,7 +174,7 @@ func start_gather(id: int, cell: Variant, now: float) -> Dictionary:
 func tick(now: float) -> Array:
 	var events: Array = []
 	for id: int in world.players:
-		var work: Dictionary = world.players[id].get("gathering", {})
+		var work: Dictionary = profile(id).gathering
 		if not work.is_empty() and now >= work["until"]:
 			_finish_gather(id, now, events)
 	for cell: Vector2i in depleted.keys():
@@ -166,8 +185,9 @@ func tick(now: float) -> Array:
 
 func _finish_gather(id: int, now: float, events: Array) -> void:
 	var player: Dictionary = world.players[id]
-	var work: Dictionary = player["gathering"]
-	player["gathering"] = {}
+	var state: ProfessionState = profile(id)
+	var work: Dictionary = state.gathering
+	state.gathering = {}
 	events.append({"kind": "player", "id": id})
 	var cell: Vector2i = work["cell"]
 	var profession: String = work["profession"]
@@ -175,7 +195,7 @@ func _finish_gather(id: int, now: float, events: Array) -> void:
 		return
 	var kind: String = resource_at(cell, profession)
 	var band: int = HERBS[cell] if profession == "herbalism" else band_at(cell)
-	var count: int = Professions.gather_count(rng.randf(), skill_of(player, profession), band)
+	var count: int = Professions.gather_count(rng.randf(), skill_of(state.skills, profession), band)
 	var gathered: int = 0
 	while gathered < count:
 		var slot: int = World.receiving_slot(player["backpack"], kind, 1)
@@ -190,14 +210,14 @@ func _finish_gather(id: int, now: float, events: Array) -> void:
 	var text: String = "You gather %d %s." % [gathered, World.ITEMS[kind]["name"]]
 	if gathered < count:
 		text += " Your backpack is full; %d more stay behind." % (count - gathered)
-	text += train(player, profession, Professions.gather_gain(skill_of(player, profession), band))
+	text += train(state.skills, profession, Professions.gather_gain(skill_of(state.skills, profession), band))
 	events.append({"kind": "message", "id": id, "text": text})
 	events.append({"kind": "node", "cell": cell, "seconds": Professions.REGROW_SECONDS})
 
 
-## Adds skill experience; returns " Your Mining rose to 12." for each level gained, or "".
-static func train(player: Dictionary, profession: String, gain: int) -> String:
-	var entry: Array = player["skills"].get(profession, [1, 0]).duplicate()
+## Adds skill experience to `skills`; returns " Your Mining rose to 12." for each level gained, or "".
+static func train(skills: Dictionary, profession: String, gain: int) -> String:
+	var entry: Array = skills.get(profession, [1, 0]).duplicate()
 	var text: String = ""
 	entry[1] += gain
 	while entry[0] < Professions.SKILL_MAX and entry[1] >= Professions.experience_to_next(entry[0]):
@@ -206,7 +226,7 @@ static func train(player: Dictionary, profession: String, gain: int) -> String:
 		text += " Your %s rose to %d." % [Professions.NAMES[profession], entry[0]]
 	if entry[0] >= Professions.SKILL_MAX:
 		entry[1] = 0
-	player["skills"][profession] = entry
+	skills[profession] = entry
 	return text
 
 
@@ -220,12 +240,13 @@ func craft(id: int, npc: Variant, recipe_id: Variant, count: Variant, now: float
 	if typeof(recipe_id) != TYPE_STRING or not RECIPES.has(recipe_id) or typeof(count) != TYPE_INT \
 			or count < 1 or count > Professions.MAX_CRAFT_COUNT:
 		return _refused("Unknown recipe")
-	if now < player["next_craft"]:
+	var state: ProfessionState = profile(id)
+	if now < state.next_craft:
 		return _refused("You are still working")
 	var recipe: Dictionary = RECIPES[recipe_id]
 	var output: Array = recipe["output"]
 	var profession: String = recipe["profession"]
-	if skill_of(player, profession) < recipe["skill"]:
+	if skill_of(state.skills, profession) < recipe["skill"]:
 		return _refused("%s %d needed" % [Professions.NAMES[profession], recipe["skill"]])
 	var made: int = 0
 	var text: String = ""
@@ -249,8 +270,8 @@ func craft(id: int, npc: Variant, recipe_id: Variant, count: Variant, now: float
 		for index: int in filled.size():
 			player["backpack"][index] = filled[index]
 		made += 1
-		text += train(player, profession, Professions.craft_gain(skill_of(player, profession), recipe))
-	player["next_craft"] = now + Professions.CRAFT_SECONDS
+		text += train(state.skills, profession, Professions.craft_gain(skill_of(state.skills, profession), recipe))
+	state.next_craft = now + Professions.CRAFT_SECONDS
 	var title: String = World.ITEMS[output[0]]["name"]
 	var message: String = "You craft %s." % (title if made * output[1] == 1 else "%d %ss" % [made * output[1], title])
 	var flash: Array[Vector2i] = [player["cell"]]
