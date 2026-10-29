@@ -13,6 +13,7 @@ extends RefCounted
 ## leaving the PvP zones, and -STEP_PENALTY every step.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Bots = preload("res://game/core/bots.gd")
 const PvpBrain = preload("res://game/core/ai/pvp_brain.gd")
@@ -146,7 +147,7 @@ func _ended(before: Array[Vector2i]) -> bool:
 		result = "win"
 	elif Combat.distance(world.players[learner]["cell"], before[0]) > JUMP:
 		result = "loss"
-	elif not World.zone_at(world.players[learner]["cell"]).get("pvp", false):
+	elif not WorldMap.zone_at(world.players[learner]["cell"]).get("pvp", false):
 		result = "fled"
 	return not result.is_empty()
 
@@ -160,7 +161,7 @@ func _aim() -> void:
 ## Two walkable PvP-zone cells `distance` apart (Chebyshev), on the same side of every dungeon border.
 func _pair(distance: int) -> Array[Vector2i]:
 	if _cells.is_empty():
-		for zone: Dictionary in World.ZONES:
+		for zone: Dictionary in WorldMap.ZONES:
 			if not zone["pvp"]:
 				continue
 			for y: int in range(zone["rect"].position.y, zone["rect"].end.y):
@@ -174,10 +175,10 @@ func _pair(distance: int) -> Array[Vector2i]:
 		if maxi(absi(offset.x), absi(offset.y)) != distance:
 			offset[rng.randi() % 2] = distance * (1 if rng.randf() < 0.5 else -1)
 		var second: Vector2i = first + offset
-		if _open(second) and World.dungeon_at(first) == World.dungeon_at(second):
+		if _open(second) and WorldMap.dungeon_at(first) == WorldMap.dungeon_at(second):
 			return [first, second]
 	return [_cells[0], _cells[0] + Vector2i.RIGHT]
 
 
 static func _open(cell: Vector2i) -> bool:
-	return World.walkable(cell) and World.zone_at(cell).get("pvp", false) and World.terrain(cell) not in ["v", "^"]
+	return WorldMap.walkable(cell) and WorldMap.zone_at(cell).get("pvp", false) and WorldMap.terrain(cell) not in ["v", "^"]

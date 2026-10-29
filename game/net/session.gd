@@ -5,6 +5,7 @@ extends Node
 ## line options are read here (configure).
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const CharacterStore = preload("res://game/persistence/character_store.gd")
 const Identity = preload("res://game/persistence/identity.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -368,7 +369,7 @@ func spawn_bot(vocation: String, level: int, stance: String) -> String:
 	if not hosting:
 		return "Only the host can add bots"
 	var self_id: int = game.client.self_id
-	var near: Vector2i = game.world.players[self_id]["cell"] if game.world.players.has(self_id) else World.SPAWNS[0]
+	var near: Vector2i = game.world.players[self_id]["cell"] if game.world.players.has(self_id) else WorldMap.SPAWNS[0]
 	var added: Dictionary = game.bots.add(vocation, level, stance, near, game._now())
 	if not added["ok"]:
 		return added["reason"]

@@ -1,6 +1,6 @@
 extends SceneTree
 ## Clears the stone walls ("#") that belong to nothing. A wall stays when it is part of a
-## building (a run touching one: World.ROOF_AT), a castle keep's (a run beside its sandstone floor
+## building (a run touching one: WorldMap.ROOF_AT), a castle keep's (a run beside its sandstone floor
 ## or carpet: keeps stand open, so they are no buildings), a monster fort's (FORTS), or a town's own wall: the cells within EDGE of
 ## its town zone's border, in a run with at least TOWN_WALL of them. Everything else goes: stubs
 ## inside towns, the arms a town wall pushes inward, the dry-stone pens and loose wall bits of the
@@ -10,6 +10,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/clear_walls.gd
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 const EDGE: int = 1
@@ -26,7 +27,7 @@ func _initialize() -> void:
 	var cleared: Array[Vector2i] = stray_walls()
 	var layer: TileMapLayer = scene_root.get_node("Terrain")
 	for cell: Vector2i in cleared:
-		layer.set_cell(cell, 0, Vector2i(World.TERRAINS.find(ground_for(cell, cleared)), 0))
+		layer.set_cell(cell, 0, Vector2i(WorldMap.TERRAINS.find(ground_for(cell, cleared)), 0))
 	var error: Error = OK
 	if not cleared.is_empty():
 		error = MapIO.save_scene(scene_root)
@@ -39,10 +40,10 @@ func _initialize() -> void:
 static func stray_walls() -> Array[Vector2i]:
 	var stray: Array[Vector2i] = []
 	var seen: Dictionary = {}
-	for y: int in World.PAINTED.end.y:
-		for x: int in World.PAINTED.end.x:
+	for y: int in WorldMap.PAINTED.end.y:
+		for x: int in WorldMap.PAINTED.end.x:
 			var start := Vector2i(x, y)
-			if seen.has(start) or World.terrain(start) != "#":
+			if seen.has(start) or WorldMap.terrain(start) != "#":
 				continue
 			var run: Array[Vector2i] = [start]
 			seen[start] = true
@@ -50,11 +51,11 @@ static func stray_walls() -> Array[Vector2i]:
 			while index < run.size():
 				for side: Vector2i in SIDES:
 					var next: Vector2i = run[index] + side
-					if not seen.has(next) and World.terrain(next) == "#":
+					if not seen.has(next) and WorldMap.terrain(next) == "#":
 						seen[next] = true
 						run.append(next)
 				index += 1
-			if run.any(func(cell: Vector2i) -> bool: return World.ROOF_AT.has(cell) or _keep_wall(cell) or _fort_wall(cell)):
+			if run.any(func(cell: Vector2i) -> bool: return WorldMap.ROOF_AT.has(cell) or _keep_wall(cell) or _fort_wall(cell)):
 				continue
 			var edge: Array[Vector2i] = run.filter(func(cell: Vector2i) -> bool: return on_town_edge(cell))
 			var keep: bool = edge.size() >= TOWN_WALL
@@ -76,14 +77,14 @@ static func _fort_wall(cell: Vector2i) -> bool:
 static func _keep_wall(cell: Vector2i) -> bool:
 	for dy: int in range(-1, 2):
 		for dx: int in range(-1, 2):
-			if World.terrain(cell + Vector2i(dx, dy)) in ["F", "Y"]:
+			if WorldMap.terrain(cell + Vector2i(dx, dy)) in ["F", "Y"]:
 				return true
 	return false
 
 
 ## Whether a cell lies within EDGE of its town zone's border.
 static func on_town_edge(cell: Vector2i) -> bool:
-	var zone: Dictionary = World.zone_at(cell)
+	var zone: Dictionary = WorldMap.zone_at(cell)
 	if not zone.get("town", false):
 		return false
 	var rect: Rect2i = zone["rect"]
@@ -97,7 +98,7 @@ static func ground_for(cell: Vector2i, cleared: Array[Vector2i]) -> String:
 	for dy: int in range(-1, 2):
 		for dx: int in range(-1, 2):
 			var near: Vector2i = cell + Vector2i(dx, dy)
-			var tile: String = World.terrain(near)
+			var tile: String = WorldMap.terrain(near)
 			if near != cell and not tile.is_empty() and tile in GROUND and not cleared.has(near):
 				counts[tile] = counts.get(tile, 0) + 1
 	var best: String = "."

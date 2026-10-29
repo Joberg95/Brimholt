@@ -7,7 +7,7 @@ extends SceneTree
 ##
 ## tools/generators/make_map.gd applies the same painter to a freshly generated map.
 
-## Must match World.TERRAINS (the rules check verifies it).
+## Must match WorldMap.TERRAINS (the rules check verifies it).
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"

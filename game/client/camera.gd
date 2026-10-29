@@ -3,6 +3,7 @@ extends RefCounted
 ## screen positions. The world view is moved each frame (follow).
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Layout = preload("res://game/ui/layout.gd")
 
 ## The main node (game/main.gd).
@@ -19,9 +20,9 @@ func focus() -> Vector2:
 	if client.actors.has(client.self_id):
 		return (client.actors[client.self_id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 	if game.session.dedicated:
-		return Vector2(World.width(), World.height()) * World.TILE_SIZE / 2.0
+		return Vector2(WorldMap.width(), WorldMap.height()) * World.TILE_SIZE / 2.0
 	# Before joining, show the starting town rather than the middle of the map.
-	return (Vector2(World.SPAWNS[0]) + Vector2(4.5, 2.5)) * World.TILE_SIZE
+	return (Vector2(WorldMap.SPAWNS[0]) + Vector2(4.5, 2.5)) * World.TILE_SIZE
 
 
 ## Moves the world view so the focus sits in the middle of the game window.

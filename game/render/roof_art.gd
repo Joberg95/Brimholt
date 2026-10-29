@@ -1,10 +1,11 @@
 extends RefCounted
-## Roofs for town buildings (World.BUILDINGS) from the OpenTibia sprite pack (plan 49), as Tibia
+## Roofs for town buildings (WorldMap.BUILDINGS) from the OpenTibia sprite pack (plan 49), as Tibia
 ## shows them: the building's floor one level up, covered in roof tiles (its north row the tiles with
 ## the ridge's edge) and drawn a tile up and left, where a floor above sits in the pack's view. Each
 ## roof is composed once into an image.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const PackAtlas = preload("res://game/render/pack_atlas.gd")
 const GroundArt = preload("res://game/render/ground_art.gd")
@@ -21,7 +22,7 @@ const SLATE_TOWN: String = "Reedmere"
 
 ## The roof material of a building's rect.
 static func material_of(rect: Rect2i) -> String:
-	if World.zone_at(rect.position).get("name", "") == SLATE_TOWN:
+	if WorldMap.zone_at(rect.position).get("name", "") == SLATE_TOWN:
 		return "slate"
 	if Biomes.in_isles(rect.position):
 		return "snow"

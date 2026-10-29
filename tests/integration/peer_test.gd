@@ -1,6 +1,7 @@
 extends SceneTree
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Items = preload("res://game/data/items.gd")
 const Crafting = preload("res://game/core/crafting.gd")
@@ -326,7 +327,7 @@ func _late_tick(now: float) -> void:
 			var own_cell: Vector2i = state(game.client.self_id)["cell"]
 			# Monsters must arrive when a camp lies well inside the interest radius; the start town's
 			# camps are outside its walls, and then none of the map's monsters may arrive at all.
-			var camp_near: bool = World.MONSTER_SPAWNS.any(func(spawn: Dictionary) -> bool:
+			var camp_near: bool = WorldMap.MONSTER_SPAWNS.any(func(spawn: Dictionary) -> bool:
 				return Combat.distance(spawn["cell"], own_cell) + int(spawn["radius"]) + 2 < game.replication.INTEREST_RADIUS)
 			if (camp_near and game.client.monsters.is_empty()) or game.client.monsters.keys().any(func(id: int) -> bool:
 					return id >= 0 or Combat.distance(game.client.monsters[id]["state"]["cell"], own_cell) > game.replication.INTEREST_RADIUS):
@@ -392,7 +393,7 @@ func _dedicated_host_tick() -> void:
 			player["from"] = dock
 			game.replication.publish_actor(id)
 			ferried = true
-		var lastlight: Vector2i = World.FERRYMEN["lastlight"]["cell"]
+		var lastlight: Vector2i = WorldMap.FERRYMEN["lastlight"]["cell"]
 		if ferried and World.chebyshev(player["cell"], lastlight) <= World.TALK_RANGE:
 			saw_voyage = true
 	# Test-only: put a weak monster next to the client once it has landed in Lastlight.
@@ -400,7 +401,7 @@ func _dedicated_host_tick() -> void:
 		for id: int in game.world.players:
 			var cell: Vector2i = game.world.players[id]["cell"]
 			for step: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-				if sparring == 0 and World.walkable(cell + step) and not game.world.occupied(cell + step, game._now()):
+				if sparring == 0 and WorldMap.walkable(cell + step) and not game.world.occupied(cell + step, game._now()):
 					var events: Array = []
 					sparring = game.combat.spawn_monster("black_cat", 1, cell + step, game._now(), -1, events)
 					game.world.monsters[sparring]["health"] = 6
@@ -410,7 +411,7 @@ func _dedicated_host_tick() -> void:
 		for id: int in game.world.players:
 			var player: Dictionary = game.world.players[id]
 			# Between Ysolde and Brannoc, in talking range of both.
-			var beside: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"] + Vector2i(2, 1)
+			var beside: Vector2i = WorldMap.QUEST_GIVERS["relic_keeper"]["cell"] + Vector2i(2, 1)
 			player["trophies"] = {"kharzul": 1}
 			player["cell"] = beside
 			player["from"] = beside
@@ -452,7 +453,7 @@ func _dedicated_host_tick() -> void:
 						var rock := Vector2i(30, 30) + Vector2i(dx, dy)
 						if errand != "copper_rock" and Crafting.node_at(rock) == "mining" and Crafting.band_at(rock) == 0:
 							for step: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
-								if errand != "copper_rock" and World.walkable(rock + step) and World.zone_at(rock + step).is_empty() \
+								if errand != "copper_rock" and WorldMap.walkable(rock + step) and WorldMap.zone_at(rock + step).is_empty() \
 										and not game.world.occupied(rock + step, game._now()):
 									player["cell"] = rock + step
 									player["from"] = rock + step
@@ -460,8 +461,8 @@ func _dedicated_host_tick() -> void:
 									errand = "copper_rock"
 			game.replication.publish_actor(id)
 			next = ""
-		saw_dungeon = saw_dungeon or World.dungeon_at(player["cell"]) == ["cinder_cellar", 0]
-		if saw_dungeon and World.OVERWORLD.has_point(player["cell"]) and not hunting_weapon_given:
+		saw_dungeon = saw_dungeon or WorldMap.dungeon_at(player["cell"]) == ["cinder_cellar", 0]
+		if saw_dungeon and WorldMap.OVERWORLD.has_point(player["cell"]) and not hunting_weapon_given:
 			var free: int = player["backpack"].find("")
 			if free < 0:
 				fail("No room for the hunting weapon fixture")
@@ -471,14 +472,14 @@ func _dedicated_host_tick() -> void:
 			game.replication.publish_actor(id)
 		saw_hunting_weapon = saw_hunting_weapon or player["equipment"].get("main_hand", "") == "alder_crook"
 		if not next.is_empty():
-			var cell: Vector2i = World.ENTRANCE_OF[next] if next == "cinder_cellar" else World.npc(next)["cell"]
+			var cell: Vector2i = WorldMap.ENTRANCE_OF[next] if next == "cinder_cellar" else WorldMap.npc(next)["cell"]
 			var goal: Vector2i = cell
 			# A free tile beside the stairs, or in talking range on the keeper's side of a counter.
 			for distance: int in range(1, World.TALK_RANGE + 1):
 				for dy: int in range(-distance, distance + 1):
 					for dx: int in range(-distance, distance + 1):
 						var spot: Vector2i = goal + Vector2i(dx, dy)
-						if cell == goal and World.walkable(spot) and (next == "cinder_cellar"
+						if cell == goal and WorldMap.walkable(spot) and (next == "cinder_cellar"
 								and absi(dx) + absi(dy) == 1 or next != "cinder_cellar" and World.in_talk_range(spot, goal)):
 							cell = spot
 			player["cell"] = cell
@@ -549,7 +550,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.api.move_local(Vector2i.RIGHT)
 				advance()
 		9:
-			var landing: Vector2i = World.FERRYMEN["cinder_landing"]["cell"]
+			var landing: Vector2i = WorldMap.FERRYMEN["cinder_landing"]["cell"]
 			if World.chebyshev(state(own)["cell"], landing) <= World.TALK_RANGE and now - stage_since > 0.25:
 				game.gateway.request_travel.rpc_id(1, "cinder_landing", "nowhere")
 				advance()
@@ -562,8 +563,8 @@ func _dedicated_client_tick(now: float) -> void:
 				game.api.travel_local("cinder_landing", "lastlight")
 				advance()
 		12:
-			var fare: int = World.FERRYMEN["cinder_landing"]["routes"]["lastlight"]
-			if World.chebyshev(state(own)["cell"], World.FERRYMEN["lastlight"]["cell"]) <= World.TALK_RANGE \
+			var fare: int = WorldMap.FERRYMEN["cinder_landing"]["routes"]["lastlight"]
+			if World.chebyshev(state(own)["cell"], WorldMap.FERRYMEN["lastlight"]["cell"]) <= World.TALK_RANGE \
 					and state(own)["gold"] == World.START_GOLD - fare and _saw_part("Lastlight"):
 				advance()
 		13:
@@ -589,7 +590,7 @@ func _dedicated_client_tick(now: float) -> void:
 			if not game.client.monsters.has(sparring) and state(own)["experience"] > 0 and state(own)["target"] == 0 and saw_hit:
 				advance()
 		17:
-			var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper_kharzul"]["cell"]
+			var keeper: Vector2i = WorldMap.QUEST_GIVERS["relic_keeper_kharzul"]["cell"]
 			if state(own)["trophies"].get("kharzul", 0) == 1 and World.chebyshev(state(own)["cell"], keeper) <= World.TALK_RANGE:
 				# Ysolde keeps only Morvain's relics and sends the client to Brannoc.
 				game.api.quest_local("relic_keeper", "cinderheart_bow")
@@ -610,7 +611,7 @@ func _dedicated_client_tick(now: float) -> void:
 					return
 				advance()
 		21:
-			if World.chebyshev(state(own)["cell"], World.npc("cinder_vendor")["cell"]) <= World.TALK_RANGE:
+			if World.chebyshev(state(own)["cell"], WorldMap.npc("cinder_vendor")["cell"]) <= World.TALK_RANGE:
 				game.gateway.request_buy.rpc_id(1, "cinder_vendor", "abyssal_greathelm", 1)
 				advance()
 		22:
@@ -623,13 +624,13 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		24:
 			var potions: int = state(own)["backpack"].find("health_potion#3")
-			if potions >= 0 and state(own)["gold"] == World.START_GOLD - World.FERRYMEN["cinder_landing"]["routes"]["lastlight"] + 200 - 60 \
+			if potions >= 0 and state(own)["gold"] == World.START_GOLD - WorldMap.FERRYMEN["cinder_landing"]["routes"]["lastlight"] + 200 - 60 \
 					and now - stage_since > 0.2:
 				game.api.drink_local(potions)
 				advance()
 		25:
 			if state(own)["backpack"].has("health_potion#2") and state(own)["health"] > 1 \
-					and World.chebyshev(state(own)["cell"], World.npc("reedmere_banker")["cell"]) <= World.TALK_RANGE:
+					and World.chebyshev(state(own)["cell"], WorldMap.npc("reedmere_banker")["cell"]) <= World.TALK_RANGE:
 				game.api.bank_local("reedmere_banker", "deposit", 10)
 				advance()
 		26:
@@ -642,33 +643,33 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		28:
 			if state(own)["depot"][0] == "health_potion#2" and not state(own)["backpack"].has("health_potion#2") \
-					and World.chebyshev(state(own)["cell"], World.npc("warden_brask")["cell"]) <= World.TALK_RANGE:
+					and World.chebyshev(state(own)["cell"], WorldMap.npc("warden_brask")["cell"]) <= World.TALK_RANGE:
 				game.api.task_local("warden_brask", "boar_cull", "accept")
 				advance()
 		29:
 			if state(own)["tasks"].get("boar_cull", -1) == 0 and _saw_start("Boar cull"):
 				advance()
 		30:
-			var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
+			var stairway: Vector2i = WorldMap.ENTRANCE_OF["cinder_cellar"]
 			if World.chebyshev(state(own)["cell"], stairway) == 1 and now - stage_since > 0.2:
 				game.api.move_local(stairway - state(own)["cell"])
 				advance()
 		31:
-			var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
-			if World.dungeon_at(state(own)["cell"]) == ["cinder_cellar", 0] and _only_dungeon_monsters(state(own)["cell"]) \
+			var stairway: Vector2i = WorldMap.ENTRANCE_OF["cinder_cellar"]
+			if WorldMap.dungeon_at(state(own)["cell"]) == ["cinder_cellar", 0] and _only_dungeon_monsters(state(own)["cell"]) \
 					and now - stage_since > World.MOVE_SECONDS + 0.05:
 				game.api.move_local(Vector2i.LEFT)
 				advance()
 			elif now - stage_since > 4.0:
 				var cells: Array = game.client.monsters.values().map(func(monster: Dictionary) -> Vector2i: return monster["state"]["cell"])
 				fail("Stuck entering the cellar at %s (%s), message '%s', monsters %s" % [state(own)["cell"],
-					World.dungeon_at(state(own)["cell"]), game.last_action_message, cells])
+					WorldMap.dungeon_at(state(own)["cell"]), game.last_action_message, cells])
 			elif World.chebyshev(state(own)["cell"], stairway) == 1 and now - stage_since > 0.5:
 				# The first step may hit the movement cooldown; try again.
 				game.api.move_local(stairway - state(own)["cell"])
 				stage_since = now
 		32:
-			if World.OVERWORLD.has_point(state(own)["cell"]) and _saw_part("Cinder Crossing") \
+			if WorldMap.OVERWORLD.has_point(state(own)["cell"]) and _saw_part("Cinder Crossing") \
 					and not _has_dungeon_monster() and state(own)["backpack"].has("alder_crook"):
 				game.api.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("alder_crook")},
 					{"type": "equipment", "slot": "main_hand"})
@@ -678,7 +679,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.api.move_item_local({"type": "equipment", "slot": "main_hand"}, {"type": "backpack"})
 				advance()
 		34:
-			if state(own)["backpack"].has("copper_ore#6") and World.chebyshev(state(own)["cell"], World.npc("artisan_cinder")["cell"]) <= World.TALK_RANGE:
+			if state(own)["backpack"].has("copper_ore#6") and World.chebyshev(state(own)["cell"], WorldMap.npc("artisan_cinder")["cell"]) <= World.TALK_RANGE:
 				game.gateway.request_craft.rpc_id(1, "artisan_cinder", "voidrend", 1)
 				advance()
 		35:
@@ -777,14 +778,14 @@ func _only_dungeon_monsters(own_cell: Vector2i) -> bool:
 		return false
 	for id: int in game.client.monsters:
 		var cell: Vector2i = game.client.monsters[id]["state"]["cell"]
-		if World.dungeon_at(cell) != World.dungeon_at(own_cell) or World.chebyshev(cell, own_cell) > game.replication.INTEREST_RADIUS:
+		if WorldMap.dungeon_at(cell) != WorldMap.dungeon_at(own_cell) or World.chebyshev(cell, own_cell) > game.replication.INTEREST_RADIUS:
 			return false
 	return true
 
 
 func _has_dungeon_monster() -> bool:
 	for id: int in game.client.monsters:
-		if not World.dungeon_at(game.client.monsters[id]["state"]["cell"]).is_empty():
+		if not WorldMap.dungeon_at(game.client.monsters[id]["state"]["cell"]).is_empty():
 			return true
 	return false
 

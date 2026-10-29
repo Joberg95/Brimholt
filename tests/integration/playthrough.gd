@@ -9,6 +9,7 @@ extends SceneTree
 ## Output lines: PLAYTEST <role> <phase> <ok|fail|info|finding> <detail>, PLAYTEST_SHOT <file> <caption>.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Balance = preload("res://game/data/balance.gd")
 const ATTACK_SPELLS: Dictionary = {"knight": "brutal_blow", "sorcerer": "ember_bolt", "paladin": "piercing_shot", "druid": "frost_bolt"}
@@ -76,19 +77,19 @@ func _start() -> void:
 	set_multiplayer(MultiplayerAPI.create_default_interface(), screen.get_path())
 	# The path grid covers the whole overworld and takes seconds to build: build it before the game
 	# starts joining, so the join deadline does not run out while it blocks.
-	astar.region = Rect2i(0, 0, World.width(), World.height())
+	astar.region = Rect2i(0, 0, WorldMap.width(), WorldMap.height())
 	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
 	astar.update()
-	for y: int in World.height():
-		for x: int in World.width():
+	for y: int in WorldMap.height():
+		for x: int in WorldMap.width():
 			var cell := Vector2i(x, y)
-			if not World.walkable(cell):
+			if not WorldMap.walkable(cell):
 				astar.set_point_solid(cell)
 	game = load("res://game/main.tscn").instantiate()
 	game.close_ends_session = false
 	screen.add_child(game)
-	var spawns: Array = World.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return World.zone_at(spawn["cell"]).is_empty())
+	var spawns: Array = WorldMap.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return WorldMap.zone_at(spawn["cell"]).is_empty())
 	spawns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return Vector2(a["cell"]).distance_to(Vector2(11, 18)) < Vector2(b["cell"]).distance_to(Vector2(11, 18)))
 	for spawn: Dictionary in spawns.slice(0, 3):
@@ -151,7 +152,7 @@ func throttle(seconds: float = 0.35) -> bool:
 
 ## Spawn neighbourhoods cost more so travel routes avoid monsters a level-1 party cannot fight.
 func avoid_monsters(enabled: bool) -> void:
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
 		for dy: int in range(-9, 10):
 			for dx: int in range(-9, 10):
 				var cell: Vector2i = spawn["cell"] + Vector2i(dx, dy)
@@ -180,7 +181,7 @@ func walk_to(target: Vector2i, reach: int = 0) -> bool:
 		stuck_since = now()
 		path.clear()
 		for step: Vector2i in [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]:
-			if World.walkable(cell + step):
+			if WorldMap.walkable(cell + step):
 				game.api.move_local(step)
 				break
 		return false
@@ -207,11 +208,11 @@ func nearest_monster(radius: int) -> int:
 
 
 func dock_cell(ferryman: String) -> Vector2i:
-	var center: Vector2i = World.FERRYMEN[ferryman]["cell"]
+	var center: Vector2i = WorldMap.FERRYMEN[ferryman]["cell"]
 	for radius: int in range(1, World.TALK_RANGE + 1):
 		for dy: int in range(-radius, radius + 1):
 			for dx: int in range(-radius, radius + 1):
-				if World.walkable(center + Vector2i(dx, dy)):
+				if WorldMap.walkable(center + Vector2i(dx, dy)):
 					return center + Vector2i(dx, dy)
 	return center
 
@@ -220,7 +221,7 @@ func dock_cell(ferryman: String) -> Vector2i:
 func sail(ferryman: String, destination: String) -> bool:
 	game.talk_to(ferryman)
 	for child: Node in game._travel_list.get_children():
-		if child is Button and child.text.begins_with(World.FERRYMEN[destination]["place"]):
+		if child is Button and child.text.begins_with(WorldMap.FERRYMEN[destination]["place"]):
 			if child.disabled:
 				report("fail", "cannot afford the fare to %s (gold %d)" % [destination, me().get("gold", 0)])
 				game._close_travel()
@@ -471,7 +472,7 @@ func _to_port() -> void:
 
 ## Travels by waystone across the world to Reedmere (fast travel), like a player would.
 func _sail_coast() -> void:
-	if Combat.distance(me()["cell"], World.FERRYMEN["reedmere_coach"]["cell"]) <= World.TALK_RANGE:
+	if Combat.distance(me()["cell"], WorldMap.FERRYMEN["reedmere_coach"]["cell"]) <= World.TALK_RANGE:
 		report("ok", "travelled by waystone to Reedmere; gold now %d" % me()["gold"])
 		shot("coach", "Arrived at Reedmere through the waystones")
 		_enter("to_warden")
@@ -491,7 +492,7 @@ func _to_warden() -> void:
 		shot("warden", "PvP switched on at Warden Kessa in Reedmere")
 		_enter("to_reedmere")
 		return
-	var warden: Dictionary = World.TOWNSFOLK["reedmere_warden"]
+	var warden: Dictionary = WorldMap.TOWNSFOLK["reedmere_warden"]
 	if walk_to(warden["cell"] + warden["facing"]):
 		if throttle(1.2):
 			game.api.pvp_local("reedmere_warden", true)
@@ -512,7 +513,7 @@ func _to_reedmere() -> void:
 
 
 func _sail_isle() -> void:
-	if World.zone_at(me()["cell"]).get("pvp", false):
+	if WorldMap.zone_at(me()["cell"]).get("pvp", false):
 		report("ok", "sailed to Blackreed Isle; banner says: %s" % game._zone_label.text)
 		shot("island", "Arrived on Blackreed Isle: PvP banner")
 		_enter("duel")
@@ -535,7 +536,7 @@ func _duel() -> void:
 		return
 	# The duel clock starts once both have arrived on the island.
 	if not flags.get("both_here", false):
-		if not them.is_empty() and World.zone_at(them["cell"]).get("pvp", false):
+		if not them.is_empty() and WorldMap.zone_at(them["cell"]).get("pvp", false):
 			flags["both_here"] = true
 			phase_since = now()
 		elif now() - phase_since > 240.0 or them.is_empty():
@@ -551,7 +552,7 @@ func _duel() -> void:
 		return
 	if role == "knight":
 		if not flags.get("victim_down", false):
-			if them.is_empty() or not World.zone_at(them["cell"]).get("pvp", false):
+			if them.is_empty() or not WorldMap.zone_at(them["cell"]).get("pvp", false):
 				if flags.get("attacked", false):
 					flags["victim_down"] = true
 					flags["drop_near"] = partner_last_cell
@@ -582,7 +583,7 @@ func _duel() -> void:
 				flags["kill_reported"] = true
 				report("ok", "unjustified kill counted (%d of 3 before a red skull); message: %s" % [me()["unjustified"], game.last_action_message])
 			for cell: Vector2i in game.client.ground_view:
-				if Combat.distance(cell, flags["drop_near"]) <= Combat.SPILL_RADIUS and World.zone_at(cell).get("pvp", false):
+				if Combat.distance(cell, flags["drop_near"]) <= Combat.SPILL_RADIUS and WorldMap.zone_at(cell).get("pvp", false):
 					if walk_to(cell, 1) and throttle(0.4):
 						report("info", "pick up %s from %s at %s (gold %d, last message '%s')" % [game.client.ground_view[cell].back(), cell,
 							me()["cell"], me()["gold"], game.last_action_message])
@@ -611,7 +612,7 @@ func _duel() -> void:
 		return
 	# Sorcerer.
 	if not flags.get("died", false):
-		if flags.get("death_seen", false) or (deaths > 0 and not World.zone_at(me()["cell"]).get("pvp", false)):
+		if flags.get("death_seen", false) or (deaths > 0 and not WorldMap.zone_at(me()["cell"]).get("pvp", false)):
 			flags["died"] = true
 			var state: Dictionary = me()
 			var protected: bool = flags.get("level_before", 1) < Combat.PROTECTION_LEVEL

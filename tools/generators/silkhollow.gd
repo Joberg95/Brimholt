@@ -6,7 +6,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/generators/silkhollow.gd
 
-## Must match World.TERRAINS (the rules check verifies it).
+## Must match WorldMap.TERRAINS (the rules check verifies it).
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"

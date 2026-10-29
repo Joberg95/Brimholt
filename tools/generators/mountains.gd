@@ -13,6 +13,7 @@ extends "res://tools/generators/landscape.gd"
 ##   godot --headless --path . --script res://tools/generators/mountains.gd
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Towns = preload("res://tools/generators/towns.gd")
 
@@ -135,7 +136,7 @@ func _settle() -> void:
 static func _fitting(cell: Vector2i, ground: String) -> String:
 	if Biomes.desert_distance(cell) < 1.0:
 		return ":"
-	if ground == "m" and World.region_at(cell) != Biomes.SWAMP_REGION:
+	if ground == "m" and WorldMap.region_at(cell) != Biomes.SWAMP_REGION:
 		return "."
 	return ground
 

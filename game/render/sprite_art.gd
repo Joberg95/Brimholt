@@ -5,6 +5,7 @@ extends RefCounted
 ## unarmoured characters stand about 38 pixels tall; their feet remain at frame y=53.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Caves = preload("res://game/data/caves.gd")
@@ -132,7 +133,7 @@ static func _anim_sheets() -> Dictionary:
 
 
 static func tile_at(cell: Vector2i) -> String:
-	return World.terrain(cell)
+	return WorldMap.terrain(cell)
 
 
 static func noise(cell: Vector2i, salt: int) -> int:
@@ -147,7 +148,7 @@ static func ground_under(cell: Vector2i) -> String:
 	for dy: int in range(-1, 2):
 		for dx: int in range(-1, 2):
 			var next: String = tile_at(cell + Vector2i(dx, dy))
-			if not next.is_empty() and next in World.LAND and next not in ["v", "^"]:
+			if not next.is_empty() and next in WorldMap.LAND and next not in ["v", "^"]:
 				counts[next] = counts.get(next, 0) + (2 if dx == 0 or dy == 0 else 1)
 	var best: String = "."
 	for kind: String in counts:
@@ -182,7 +183,7 @@ static func natural_rock(cell: Vector2i) -> bool:
 static func rock_cave(cell: Vector2i) -> bool:
 	if not Caves.at(cell).is_empty() or Atlas.below_ground(cell):
 		return true
-	var place: Array = World.dungeon_at(cell)
+	var place: Array = WorldMap.dungeon_at(cell)
 	return not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] in ["L", "C"]
 
 
@@ -195,7 +196,7 @@ static func thin_wall_mask(cell: Vector2i) -> int:
 		var tile: String = tile_at(next)
 		# Only a building's doorway joins the wall over it: a one-tile corridor between two walls
 		# (dungeons, alleys) looks like a doorway too, but there the walls stay apart.
-		if (not tile.is_empty() and tile in World.WALLS) or (World.ROOM_AT.has(next) or castle_stone(next) and World.OVERWORLD.has_point(next)) 				and Buildings.is_door(World.terrain, next):
+		if (not tile.is_empty() and tile in WorldMap.WALLS) or (WorldMap.ROOM_AT.has(next) or castle_stone(next) and WorldMap.OVERWORLD.has_point(next)) 				and Buildings.is_door(WorldMap.terrain, next):
 			mask |= 1 << bit
 	return mask
 
@@ -211,7 +212,7 @@ static func castle_stone(cell: Vector2i) -> bool:
 
 ## The theme of the dungeon copy a cell lies in ("" on the overworld).
 static func theme_at(cell: Vector2i) -> String:
-	var place: Array = World.dungeon_at(cell)
+	var place: Array = WorldMap.dungeon_at(cell)
 	return "" if place.is_empty() else Dungeons.theme_at(place[0])
 
 

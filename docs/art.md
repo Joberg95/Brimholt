@@ -162,11 +162,11 @@ shelf, weapon rack, barrel, and crate; the bank a counter, bookshelves, and stro
 (`World.FURNISHINGS`, placed around the keeper at load). Furniture blocks movement and is skipped
 wherever it would cut off part of the room or every tile in talking range.
 
-**Roofs and signs.** `World.BUILDINGS` are the town rooms enclosed by walls with a door
+**Roofs and signs.** `WorldMap.BUILDINGS` are the town rooms enclosed by walls with a door
 (`game/data/buildings.gd`). `world_view.gd` draws each roof right after its building's south
 wall row, so whoever stands south of it covers the eave, and fades it out while the local
 character is inside (rooms or doorway). Names, bars, and glows of anyone under an opaque roof
-are hidden. Signs hang on the wall beside a shop's or bank's door (`World.SIGNS`).
+are hidden. Signs hang on the wall beside a shop's or bank's door (`WorldMap.SIGNS`).
 
 **Weather** (`game/render/weather.gd`) is cosmetic and a pure function of the host clock, so
 every peer sees the same sky without any RPC. The day is split into 4-minute slots, each

@@ -8,6 +8,7 @@ extends RefCounted
 ## grass and a one-tile road keeps its width. game/render/floor_layer.gd composes chunks from layers().
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const Caves = preload("res://game/data/caves.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
@@ -110,11 +111,11 @@ static func ground_of(tile: String, cell: Vector2i, indoors: bool = false) -> St
 			if Biomes.in_sunreach(cell):
 				return "sandstone"
 			# Houses have plank floors, as in Tibia.
-			if indoors or World.ROOM_AT.has(cell):
+			if indoors or WorldMap.ROOM_AT.has(cell):
 				return "planks"
 			return "snow_street" if Biomes.in_isles(cell) else "street"
 		"c", "C":
-			if tile == "C" and World.OVERWORLD.has_point(cell):
+			if tile == "C" and WorldMap.OVERWORLD.has_point(cell):
 				return "grass"
 			if Caves.at(cell) == SpriteArt.ICE_CAVE:
 				return "ice"
@@ -143,10 +144,10 @@ static func _wall_sides(cell: Vector2i) -> Array[String]:
 	var inside: String = ""
 	for side: Vector2i in SpriteArt.EDGES:
 		var next: String = SpriteArt.tile_at(cell + side)
-		if next.is_empty() or next in World.WALLS or next in World.TREES or next in ["~", "b", "v", "^", " "]:
+		if next.is_empty() or next in WorldMap.WALLS or next in WorldMap.TREES or next in ["~", "b", "v", "^", " "]:
 			continue
 		if _inner(cell + side):
-			inside = next if inside.is_empty() and next in World.LAND and next != "v" else inside
+			inside = next if inside.is_empty() and next in WorldMap.LAND and next != "v" else inside
 		elif outside == ".":
 			outside = next
 	# A wall with nothing open on its outer side (a dungeon's outer wall) stands on its inside floor.
@@ -157,7 +158,7 @@ static func _wall_sides(cell: Vector2i) -> Array[String]:
 	if outside == "." and inside.is_empty() and Atlas.below_ground(cell):
 		for corner: Vector2i in DIAGONALS:
 			var floor_beside: String = SpriteArt.tile_at(cell + corner)
-			if floor_beside in World.LAND and floor_beside not in ["v", "^"]:
+			if floor_beside in WorldMap.LAND and floor_beside not in ["v", "^"]:
 				outside = floor_beside
 				break
 	return [outside, inside]
@@ -165,7 +166,7 @@ static func _wall_sides(cell: Vector2i) -> Array[String]:
 
 ## Inside a building or a castle keep: a wall's floor shows the inside there and the ground outside.
 static func _inner(cell: Vector2i) -> bool:
-	return World.ROOM_AT.has(cell) or SpriteArt.tile_at(cell) in ["F", "Y"]
+	return WorldMap.ROOM_AT.has(cell) or SpriteArt.tile_at(cell) in ["F", "Y"]
 
 
 ## The atlas piece of pack thing `id` at a cell (its position pattern) in animation frame `frame`.
@@ -252,7 +253,7 @@ static func rock_style(cell: Vector2i) -> String:
 		return "snow"
 	if Biomes.in_sunreach(cell):
 		return "sand"
-	return "grey" if World.OVERWORLD.has_point(cell) else "cave"
+	return "grey" if WorldMap.OVERWORLD.has_point(cell) else "cave"
 
 
 ## The border pieces higher grounds lay over this cell, lowest ground first.
@@ -300,14 +301,14 @@ static func _borders(cell: Vector2i, base: String, out: Array) -> void:
 ## out of a cave a rope spot.
 static func way_of(cell: Vector2i) -> int:
 	var tile: String = SpriteArt.tile_at(cell)
-	if tile == "^" and World.HOLES.has(cell):
-		var town: bool = World.zone_at(cell).get("town", false) or World.zone_at(World.HOLES[cell]).get("town", false)
+	if tile == "^" and WorldMap.HOLES.has(cell):
+		var town: bool = WorldMap.zone_at(cell).get("town", false) or WorldMap.zone_at(WorldMap.HOLES[cell]).get("town", false)
 		return LADDER if town else ROPE_SPOT
 	if tile == "^":
-		var place: Array = World.dungeon_at(cell)
+		var place: Array = WorldMap.dungeon_at(cell)
 		return LADDER if not place.is_empty() and Dungeons.DUNGEONS[place[0]]["wall"] == "#" else ROPE_SPOT
-	if World.DUNGEON_ENTRANCES.has(cell):
-		return STAIRS_DOWN if Dungeons.DUNGEONS[World.DUNGEON_ENTRANCES[cell]]["wall"] == "#" else HOLE
-	if World.CAVE_MOUTHS.has(cell) or not World.zone_at(cell).get("town", false):
+	if WorldMap.DUNGEON_ENTRANCES.has(cell):
+		return STAIRS_DOWN if Dungeons.DUNGEONS[WorldMap.DUNGEON_ENTRANCES[cell]]["wall"] == "#" else HOLE
+	if WorldMap.CAVE_MOUTHS.has(cell) or not WorldMap.zone_at(cell).get("town", false):
 		return HOLE
-	return STAIRS_DOWN if World.ROOM_AT.has(cell) else SEWER_GRATE
+	return STAIRS_DOWN if WorldMap.ROOM_AT.has(cell) else SEWER_GRATE

@@ -3,7 +3,7 @@ extends SceneTree
 ## in the existing overworld scene, and removes bankers from other towns. Buildings are found
 ## from the walls (game/data/buildings.gd); the patches below add the buildings a town lacks:
 ## Cinder Crossing's shop and a second house, and Reedmere's bank. Each keeper stands at the back of their building, facing the door; the
-## game hangs a sign beside that door (World.SIGNS) and draws roofs over every building.
+## game hangs a sign beside that door (WorldMap.SIGNS) and draws roofs over every building.
 ##
 ##   godot --headless --path . --script res://tools/generators/towns.gd
 ##
@@ -11,7 +11,7 @@ extends SceneTree
 ## it again changes nothing.
 
 const Buildings = preload("res://game/data/buildings.gd")
-## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
+## Must match WorldMap.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const MapIO = preload("res://game/maps/map_io.gd")
@@ -22,7 +22,7 @@ const TILE: int = 32
 const QUEST_SCRIPT: Script = preload("res://game/maps/markers/quest_giver.gd")
 const TOWNSFOLK_SCRIPT: Script = preload("res://game/maps/markers/townsfolk.gd")
 ## Artisans (World role "artisan", service "craft"): one per town, in a free building of their
-## own like the vendors, with a workshop (World.FURNISHINGS): node name, display name, town.
+## own like the vendors, with a workshop (WorldMap.FURNISHINGS): node name, display name, town.
 const ARTISANS: Array = [
 	["artisan_cinder", "Artisan Brenna", "Cinder Crossing"],
 	["artisan_lastlight", "Artisan Odo", "Lastlight"],

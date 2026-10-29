@@ -6,6 +6,7 @@ extends Node
 ## authority RPCs apply those updates to the replicated view (game.client).
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Titles = preload("res://game/data/titles.gd")
 
@@ -149,7 +150,7 @@ func _near_peer(peer_id: int, cell: Vector2i) -> bool:
 	if not game.world.players.has(peer_id):
 		return false
 	var own: Vector2i = game.world.players[peer_id]["cell"]
-	return Combat.distance(own, cell) <= INTEREST_RADIUS and World.dungeon_at(own) == World.dungeon_at(cell)
+	return Combat.distance(own, cell) <= INTEREST_RADIUS and WorldMap.dungeon_at(own) == WorldMap.dungeon_at(cell)
 
 
 ## Sends a monster's state to the host's view and to remote players near it; peers it left

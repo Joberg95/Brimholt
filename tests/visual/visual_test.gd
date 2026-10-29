@@ -1,6 +1,7 @@
 extends SceneTree
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const GroundArt = preload("res://game/render/ground_art.gd")
 const PackAtlas = preload("res://game/render/pack_atlas.gd")
@@ -305,7 +306,7 @@ func _check_mouse_inventory() -> bool:
 
 ## Right-clicks an NPC and chooses one of their services from the real menu.
 func _open_service(npc: String, service: String) -> bool:
-	var cell: Vector2i = World.npc(npc)["cell"]
+	var cell: Vector2i = WorldMap.npc(npc)["cell"]
 	await _push_mouse(_tile_center(cell), MOUSE_BUTTON_RIGHT, true)
 	await _push_mouse(_tile_center(cell), MOUSE_BUTTON_RIGHT, false)
 	if not _expect(game._npc_menu.visible and game._npc_menu_target == npc, "Right-clicking %s opened no menu" % npc):
@@ -322,13 +323,13 @@ func _open_service(npc: String, service: String) -> bool:
 
 func _move_beside(npc: String) -> void:
 	var player: Dictionary = game.world.players[1]
-	var cell: Vector2i = World.npc(npc)["cell"]
+	var cell: Vector2i = WorldMap.npc(npc)["cell"]
 	# The nearest free tile in talking range on the keeper's side of any wall (counters may be between).
 	var best: Vector2i = cell
 	for dy: int in range(-World.TALK_RANGE, World.TALK_RANGE + 1):
 		for dx: int in range(-World.TALK_RANGE, World.TALK_RANGE + 1):
 			var spot: Vector2i = cell + Vector2i(dx, dy)
-			if World.walkable(spot) and World.in_talk_range(spot, cell) and (best == cell
+			if WorldMap.walkable(spot) and World.in_talk_range(spot, cell) and (best == cell
 					or absi(dx) + absi(dy) < absi(best.x - cell.x) + absi(best.y - cell.y)):
 				best = spot
 	player["cell"] = best
@@ -481,22 +482,22 @@ func _matches_texel(image: Image, texture: Texture2D, region: Rect2, map_origin:
 ## A tree whose canopy no tree, wall, or ferryman in front covers, and a free tile beside or
 ## behind it for the camera to centre on.
 func _forest_spot() -> Array:
-	for y: int in range(20, World.height() - 4):
-		for x: int in range(30, World.width() - 4):
+	for y: int in range(20, WorldMap.height() - 4):
+		for x: int in range(30, WorldMap.width() - 4):
 			var tree := Vector2i(x, y)
-			if World.terrain(tree) != "T":
+			if WorldMap.terrain(tree) != "T":
 				continue
 			var clear: bool = true
 			for ox: int in range(-2, 3):
 				for oy: int in range(1, 4):
 					var front: Vector2i = tree + Vector2i(ox, oy)
-					clear = clear and World.terrain(front) not in ["T", "#", " "] and not World.NPC_CELLS.has(front)
+					clear = clear and WorldMap.terrain(front) not in ["T", "#", " "] and not WorldMap.NPC_CELLS.has(front)
 			if not clear:
 				continue
 			for dy: int in range(-4, 1):
 				for dx: int in range(-4, 5):
 					var stand: Vector2i = tree + Vector2i(dx, dy)
-					if (absi(dx) >= 3 or dy <= -3) and World.walkable(stand) and not game.world.occupied(stand, game._now()):
+					if (absi(dx) >= 3 or dy <= -3) and WorldMap.walkable(stand) and not game.world.occupied(stand, game._now()):
 						return [tree, stand]
 	return []
 
@@ -525,7 +526,7 @@ func _check_ferry_and_maps() -> bool:
 	await RenderingServer.frame_post_draw
 	var forest: Image = screen.get_texture().get_image()
 	forest.save_png("res://.tools/visual-forest.png")
-	var kinds: Array = ObjectArt.TREES.get(World.terrain(spot[0]), ObjectArt.TREES["T"])
+	var kinds: Array = ObjectArt.TREES.get(WorldMap.terrain(spot[0]), ObjectArt.TREES["T"])
 	var tree: int = kinds[SpriteArt.noise(spot[0], 7) % kinds.size()]
 	var piece: int = GroundArt.piece(tree, spot[0])
 	var tree_size := Vector2(PackAtlas.THINGS[tree][3], PackAtlas.THINGS[tree][4])
@@ -556,7 +557,7 @@ func _check_ferry_and_maps() -> bool:
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-isle.png")
 	if not _expect(game._zone_label.visible and game._zone_label.text.contains("PvP") and game._zone_label.text.contains("40-50")
-			and player["gold"] == gold - World.FERRYMEN["reedmere"]["routes"]["blackreed_isle"],
+			and player["gold"] == gold - WorldMap.FERRYMEN["reedmere"]["routes"]["blackreed_isle"],
 			"Arriving on Blackreed Isle did not show the PvP zone banner"):
 		return false
 	var spells_only: bool = game.keybinds.bar.all(func(entry: String) -> bool:
@@ -600,13 +601,13 @@ func _check_ferry_and_maps() -> bool:
 		return false
 	# Page Down shows the floor below in the tiles of the land above: a tunnel's earth where it lies.
 	var tunnel: Vector2i = Vector2i(-1, -1)
-	for stairs: Vector2i in World.HOLES:
-		if World.terrain(stairs) == "^" and tunnel.x < 0:
+	for stairs: Vector2i in WorldMap.HOLES:
+		if WorldMap.terrain(stairs) == "^" and tunnel.x < 0:
 			for dy: int in range(-6, 7):
 				for dx: int in range(-6, 7):
 					var probe_cell: Vector2i = stairs + Vector2i(dx, dy)
 					if tunnel.x < 0 and [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT].all(
-							func(side: Vector2i) -> bool: return World.terrain(probe_cell + side) == "c"):
+							func(side: Vector2i) -> bool: return WorldMap.terrain(probe_cell + side) == "c"):
 						tunnel = probe_cell
 	var page_down := InputEventKey.new()
 	page_down.keycode = KEY_PAGEDOWN
@@ -694,7 +695,7 @@ func _check_ferry_and_maps() -> bool:
 func _sail(from: String, to: String) -> bool:
 	var player: Dictionary = game.world.players[1]
 	var gold: int = player["gold"]
-	var ferryman: Vector2i = World.FERRYMEN[from]["cell"]
+	var ferryman: Vector2i = WorldMap.FERRYMEN[from]["cell"]
 	await _push_mouse(_tile_center(ferryman), MOUSE_BUTTON_RIGHT, true)
 	await _push_mouse(_tile_center(ferryman), MOUSE_BUTTON_RIGHT, false)
 	if not _expect(game._npc_menu.visible and game._npc_menu_target == from, "Right-clicking %s opened no menu" % from):
@@ -710,12 +711,12 @@ func _sail(from: String, to: String) -> bool:
 		return false
 	var pressed: bool = false
 	for child: Node in game._travel_list.get_children():
-		if child is Button and child.text.begins_with(World.FERRYMEN[to]["place"]) and not child.disabled:
+		if child is Button and child.text.begins_with(WorldMap.FERRYMEN[to]["place"]) and not child.disabled:
 			child.pressed.emit()
 			pressed = true
 	await process_frame
-	return _expect(pressed and not game._travel_panel.visible and player["gold"] == gold - World.FERRYMEN[from]["routes"][to]
-		and World.chebyshev(player["cell"], World.FERRYMEN[to]["cell"]) <= World.TALK_RANGE,
+	return _expect(pressed and not game._travel_panel.visible and player["gold"] == gold - WorldMap.FERRYMEN[from]["routes"][to]
+		and World.chebyshev(player["cell"], WorldMap.FERRYMEN[to]["cell"]) <= World.TALK_RANGE,
 		"The ferry did not sail from %s to %s (pressed %s, panel %s, gold %d of %d, at %s, feedback %s)" % [from, to, pressed,
 			game._travel_panel.visible, player["gold"], gold, player["cell"], game.last_action_message])
 
@@ -730,7 +731,7 @@ func _check_combat() -> bool:
 	var spawned: Array[int] = []
 	for step: Vector2i in [Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN, Vector2i.RIGHT]:
 		var cell: Vector2i = player["cell"] + step * 2
-		if spawned.size() < 2 and World.walkable(cell) and not game.world.occupied(cell, game._now()):
+		if spawned.size() < 2 and WorldMap.walkable(cell) and not game.world.occupied(cell, game._now()):
 			var events: Array = []
 			var id: int = game.combat.spawn_monster("black_cat" if spawned.is_empty() else "stone_gargoyle", 1, cell,
 				game._now(), -1, events)
@@ -798,7 +799,7 @@ func _check_relics() -> bool:
 	game.world.monsters.clear()
 	game.client.monsters.clear()
 	var player: Dictionary = game.world.players[1]
-	var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"]
+	var keeper: Vector2i = WorldMap.QUEST_GIVERS["relic_keeper"]["cell"]
 	var beside: Vector2i = keeper + Vector2i.DOWN
 	player["cell"] = beside
 	player["from"] = beside
@@ -855,7 +856,7 @@ func _check_relics() -> bool:
 	for dy: int in range(-3, 4):
 		for dx: int in range(-4, 5):
 			var cell: Vector2i = beside + Vector2i(dx, dy)
-			if absi(dx) >= 2 and World.walkable(cell) and not game.world.occupied(cell, game._now()) and not game.world.ground.has(cell):
+			if absi(dx) >= 2 and WorldMap.walkable(cell) and not game.world.occupied(cell, game._now()) and not game.world.ground.has(cell):
 				free.append(cell)
 	if not _expect(free.size() >= 3, "No room around the Relic keeper for the relic showcase"):
 		return false
@@ -903,10 +904,10 @@ func _check_dungeons() -> bool:
 	game.client.ground_view.clear()
 	var player: Dictionary = game.world.players[1]
 	# Every dungeon's stairway from the overworld, as you find it: one hole per entrance.
-	for dungeon: String in World.ENTRANCE_OF:
-		var hole: Vector2i = World.ENTRANCE_OF[dungeon]
+	for dungeon: String in WorldMap.ENTRANCE_OF:
+		var hole: Vector2i = WorldMap.ENTRANCE_OF[dungeon]
 		for side: Vector2i in [Vector2i(0, 2), Vector2i(0, -2), Vector2i(2, 0), Vector2i(-2, 0), Vector2i(0, 1), Vector2i(1, 0)]:
-			if World.walkable(hole + side) and World.terrain(hole + side) != "v":
+			if WorldMap.walkable(hole + side) and WorldMap.terrain(hole + side) != "v":
 				player["cell"] = hole + side
 				break
 		player["from"] = player["cell"]
@@ -914,10 +915,10 @@ func _check_dungeons() -> bool:
 		await create_timer(0.4).timeout
 		await RenderingServer.frame_post_draw
 		screen.get_texture().get_image().save_png("res://.tools/visual-entrance-%s.png" % dungeon)
-	var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
+	var stairway: Vector2i = WorldMap.ENTRANCE_OF["cinder_cellar"]
 	var step: Vector2i = Vector2i.ZERO
 	for candidate: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
-		if step == Vector2i.ZERO and World.walkable(stairway + candidate):
+		if step == Vector2i.ZERO and WorldMap.walkable(stairway + candidate):
 			step = -candidate
 	player["cell"] = stairway - step
 	player["from"] = player["cell"]
@@ -927,7 +928,7 @@ func _check_dungeons() -> bool:
 	# Held movement keys are polled from the OS keyboard, so step through the same client request.
 	game.api.move_local(step)
 	await create_timer(0.3).timeout
-	var place: Array = World.dungeon_at(player["cell"])
+	var place: Array = WorldMap.dungeon_at(player["cell"])
 	if not _expect(place.size() == 2 and place[0] == "cinder_cellar" and game.last_action_message.contains("Cinder cellar")
 			and game.client.monsters.size() > 3, "The cellar stairway did not open a copy with rats: %s %s '%s' %d" % [
 				player["cell"], place, game.last_action_message, game.client.monsters.size()]):
@@ -961,7 +962,7 @@ func _check_dungeons() -> bool:
 ## The waystone outside Cinder Crossing: a standing stone (not a person) with its name.
 func _check_waystone() -> bool:
 	var player: Dictionary = game.world.players[1]
-	var stone: Vector2i = World.FERRYMEN["cinder_coach"]["cell"]
+	var stone: Vector2i = WorldMap.FERRYMEN["cinder_coach"]["cell"]
 	player["cell"] = stone + Vector2i(-2, 1)
 	player["from"] = player["cell"]
 	game.replication.publish_actor(1)
@@ -969,19 +970,19 @@ func _check_waystone() -> bool:
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-waystone.png")
 	var named: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == "Waystone")
-	return _expect(World.FERRYMEN["cinder_coach"]["vehicle"] == "waystone" and named, "The Cinder Crossing waystone is not drawn")
+	return _expect(WorldMap.FERRYMEN["cinder_coach"]["vehicle"] == "waystone" and named, "The Cinder Crossing waystone is not drawn")
 
 
 ## Lamp posts: at night the street beside a lamp is lit well above the darkest ground on screen.
 func _check_town_lamps() -> bool:
-	var lamp: Vector2i = World.LAMPS[0]
-	for cell: Vector2i in World.LAMPS:
-		if Vector2(cell).distance_to(Vector2(World.SPAWNS[0])) < Vector2(lamp).distance_to(Vector2(World.SPAWNS[0])):
+	var lamp: Vector2i = WorldMap.LAMPS[0]
+	for cell: Vector2i in WorldMap.LAMPS:
+		if Vector2(cell).distance_to(Vector2(WorldMap.SPAWNS[0])) < Vector2(lamp).distance_to(Vector2(WorldMap.SPAWNS[0])):
 			lamp = cell
 	var player: Dictionary = game.world.players[1]
 	var stand: Vector2i = lamp + Vector2i.DOWN
 	for offset: Vector2i in [Vector2i(3, 2), Vector2i(-3, 2), Vector2i(2, 3), Vector2i(-2, 3), Vector2i(0, 3), Vector2i(3, 1), Vector2i(-3, 1)]:
-		if World.walkable(lamp + offset):
+		if WorldMap.walkable(lamp + offset):
 			stand = lamp + offset
 			break
 	player["cell"] = stand
@@ -1018,7 +1019,7 @@ func _check_town_lamps() -> bool:
 		return false
 	# The ground on screen farthest from every light: lamps, lantern-carrying NPCs, and characters
 	# (held torches and glowing gear light the ground around them too).
-	var lights: Array = World.LAMPS + World.NPC_CELLS.keys()
+	var lights: Array = WorldMap.LAMPS + WorldMap.NPC_CELLS.keys()
 	for id: int in game.client.actors:
 		lights.append(Vector2i(game.client.actors[id]["visual"].round()))
 	var far: Vector2i = lamp
@@ -1028,7 +1029,7 @@ func _check_town_lamps() -> bool:
 		for dx: int in range(-12, 13):
 			var cell: Vector2i = stand + Vector2i(dx, dy)
 			var at: Vector2 = game.camera.to_screen((Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE)
-			if not World.terrain(cell) in World.LAND or not visible_area.has_point(at):
+			if not WorldMap.terrain(cell) in WorldMap.LAND or not visible_area.has_point(at):
 				continue
 			var gap: int = 99
 			for other: Vector2i in lights:
@@ -1060,11 +1061,11 @@ func _patch_luminance(image: Image, at: Vector2) -> float:
 func _check_rune_bar() -> bool:
 	var player: Dictionary = game.world.players[1]
 	var field := Vector2i(-1, -1)
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		var clear: bool = World.zone_at(spawn["cell"]).is_empty() and field.x < 0
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
+		var clear: bool = WorldMap.zone_at(spawn["cell"]).is_empty() and field.x < 0
 		for dy: int in range(-4, 5):
 			for dx: int in range(-4, 5):
-				clear = clear and World.walkable(spawn["cell"] + Vector2i(dx, dy))
+				clear = clear and WorldMap.walkable(spawn["cell"] + Vector2i(dx, dy))
 		if clear:
 			field = spawn["cell"]
 	game.world.monsters.clear()
@@ -1155,7 +1156,7 @@ func _check_dark_cave() -> bool:
 		game.combat.despawn(id, gone)
 	game.replication.handle_events(gone)
 	# The cave mouth in Thornfield Wilds, by day.
-	var mouth: Vector2i = World.ENTRANCE_OF["silkhollow"] + Vector2i(0, 3)
+	var mouth: Vector2i = WorldMap.ENTRANCE_OF["silkhollow"] + Vector2i(0, 3)
 	player["cell"] = mouth
 	player["from"] = mouth
 	game.replication.publish_actor(1)
@@ -1266,7 +1267,7 @@ func _check_micro_menu() -> bool:
 func _check_training_hall() -> bool:
 	var player: Dictionary = game.world.players[1]
 	var saved: Dictionary = {"cell": player["cell"], "backpack": player["backpack"].duplicate(), "done": player["done_tasks"].duplicate()}
-	var trainer: Dictionary = World.QUEST_GIVERS["trainer_paladin"]
+	var trainer: Dictionary = WorldMap.QUEST_GIVERS["trainer_paladin"]
 	var front: Vector2i = trainer["cell"] + trainer["facing"]
 	player["vocation"] = "adventurer"
 	player["done_tasks"][Quests.TRIAL_TASK] = true
@@ -1325,7 +1326,7 @@ func _check_lexicon_and_marks() -> bool:
 	var player: Dictionary = game.world.players[1]
 	var saved: Dictionary = {"cell": player["cell"], "level": player["level"], "tasks": player["tasks"].duplicate(),
 		"done": player["done_tasks"].duplicate()}
-	var ilse: Dictionary = World.QUEST_GIVERS["harbourmaster_ilse"]
+	var ilse: Dictionary = WorldMap.QUEST_GIVERS["harbourmaster_ilse"]
 	player["level"] = 12
 	player["tasks"] = {}
 	player["done_tasks"] = {}
@@ -1437,14 +1438,14 @@ func _check_quest_list() -> bool:
 ## inside (the roof has faded and the merchant shows).
 func _check_roofs_and_signs() -> bool:
 	var player: Dictionary = game.world.players[1]
-	var keeper: Vector2i = World.npc("ashford_vendor")["cell"]
-	var building: Dictionary = World.BUILDINGS[World.ROOM_AT.get(keeper, 0)]
+	var keeper: Vector2i = WorldMap.npc("ashford_vendor")["cell"]
+	var building: Dictionary = WorldMap.BUILDINGS[WorldMap.ROOM_AT.get(keeper, 0)]
 	var door: Vector2i = building["doors"][0]
 	var sign: Dictionary = {}
-	for entry: Dictionary in World.SIGNS:
-		if World.ROOF_AT.get(entry["cell"], -1) == World.ROOM_AT.get(keeper, -2):
+	for entry: Dictionary in WorldMap.SIGNS:
+		if WorldMap.ROOF_AT.get(entry["cell"], -1) == WorldMap.ROOM_AT.get(keeper, -2):
 			sign = entry
-	if not _expect(World.ROOM_AT.has(keeper) and not sign.is_empty(), "Ashford's merchant has no shop with a sign"):
+	if not _expect(WorldMap.ROOM_AT.has(keeper) and not sign.is_empty(), "Ashford's merchant has no shop with a sign"):
 		return false
 	player["cell"] = door + building["outward"][door] * (WorldViewScript.ROOF_NEAR + 1)
 	player["from"] = player["cell"]
@@ -1453,7 +1454,7 @@ func _check_roofs_and_signs() -> bool:
 	await RenderingServer.frame_post_draw
 	var outside: Image = screen.get_texture().get_image()
 	outside.save_png("res://.tools/visual-roofs.png")
-	var named_outside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
+	var named_outside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == WorldMap.npc("ashford_vendor")["name"])
 	player["cell"] = door + building["outward"][door] * 2
 	player["from"] = player["cell"]
 	game.replication.publish_actor(1)
@@ -1461,8 +1462,8 @@ func _check_roofs_and_signs() -> bool:
 	await RenderingServer.frame_post_draw
 	var near: Image = screen.get_texture().get_image()
 	near.save_png("res://.tools/visual-roofs-near.png")
-	var near_alpha: float = game._world_view._roof_alpha.get(World.ROOM_AT[keeper], 1.0)
-	var named_near: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
+	var near_alpha: float = game._world_view._roof_alpha.get(WorldMap.ROOM_AT[keeper], 1.0)
+	var named_near: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == WorldMap.npc("ashford_vendor")["name"])
 	var door_spot: Vector2 = game.camera.to_screen((Vector2(door) + Vector2(0.5, 0.55)) * World.TILE_SIZE)
 	# Pack doors rise up and left from their cell, like the walls they are set into.
 	var door_area := Rect2(door_spot - Vector2(24, 28), Vector2(40, 32))
@@ -1473,7 +1474,7 @@ func _check_roofs_and_signs() -> bool:
 	await RenderingServer.frame_post_draw
 	var inside: Image = screen.get_texture().get_image()
 	inside.save_png("res://.tools/visual-shop-inside.png")
-	var named_inside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
+	var named_inside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == WorldMap.npc("ashford_vendor")["name"])
 	var spot: Vector2 = game.camera.to_screen((Vector2(keeper) + Vector2(0.5, 0.2)) * World.TILE_SIZE)
 	var keeper_area := Rect2i(Vector2i(spot) - Vector2i(10, 10), Vector2i(20, 20))
 	# Pack signs hang on the wall's face, which rises up and left of the wall's cell.
@@ -1483,7 +1484,7 @@ func _check_roofs_and_signs() -> bool:
 		and _expect(is_equal_approx(near_alpha, WorldViewScript.ROOF_NEAR_ALPHA) and named_near,
 			"Beside the door the roof must turn see-through (alpha %.2f, name shown %s)" % [near_alpha, named_near]) \
 		and _expect(_brown(near, door_area) > 20, "The shop's wooden door is not drawn (%d brown pixels)" % _brown(near, door_area)) \
-		and _expect(not game._world_view.covered(keeper) and game._world_view.inside_building() == World.ROOM_AT[keeper],
+		and _expect(not game._world_view.covered(keeper) and game._world_view.inside_building() == WorldMap.ROOM_AT[keeper],
 			"The roof must fade while you are inside") \
 		and _expect(_colours(inside, Rect2(sign_centre - Vector2(16, 12), Vector2(32, 24))) > 8, "The shop sign is not drawn (%d colours at %s)"
 			% [_colours(inside, Rect2(sign_centre - Vector2(16, 12), Vector2(32, 24))), sign_centre]) \
@@ -1500,7 +1501,7 @@ func _check_ore_vein() -> bool:
 			vein = cell
 	var player: Dictionary = game.world.players[1]
 	for offset: Vector2i in [Vector2i(2, 1), Vector2i(-2, 1), Vector2i(0, 2), Vector2i(0, 1)]:
-		if World.walkable(vein + offset):
+		if WorldMap.walkable(vein + offset):
 			player["cell"] = vein + offset
 			break
 	player["from"] = player["cell"]
@@ -1541,7 +1542,7 @@ func _brown(image: Image, area: Rect2) -> int:
 ## Gold heaps that grow with the stack, and a kill's green loot text over them.
 func _check_loot_display() -> bool:
 	var player: Dictionary = game.world.players[1]
-	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
+	player["cell"] = WorldMap.SPAWNS[0] + Vector2i(1, 2)
 	player["from"] = player["cell"]
 	game.replication.publish_actor(1)
 	var cells: Array = []
@@ -1576,7 +1577,7 @@ func _check_weather_and_desert() -> bool:
 	game.world.monsters.clear()
 	game.client.monsters.clear()
 	var player: Dictionary = game.world.players[1]
-	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
+	player["cell"] = WorldMap.SPAWNS[0] + Vector2i(1, 2)
 	player["from"] = player["cell"]
 	game.replication.publish_actor(1)
 	# Floor chunks around a new spot build one per frame; let them finish before comparing.
@@ -1608,7 +1609,7 @@ func _check_weather_and_desert() -> bool:
 	var plant: Vector2i = Vector2i(-1, -1)
 	for y: int in range(Biomes.DESERT_AREA.position.y + 20, Biomes.DESERT_AREA.end.y - 20):
 		for x: int in range(Biomes.DESERT_AREA.position.x + 20, Biomes.DESERT_AREA.end.x - 20):
-			if plant.x < 0 and World.terrain(Vector2i(x, y)) == "K" and World.walkable(Vector2i(x - 2, y)) \
+			if plant.x < 0 and WorldMap.terrain(Vector2i(x, y)) == "K" and WorldMap.walkable(Vector2i(x - 2, y)) \
 					and Biomes.desert_distance(Vector2i(x, y)) < 0.6:
 				plant = Vector2i(x, y)
 	if not _expect(plant.x >= 0, "No cactus found inside the desert"):
@@ -1652,7 +1653,7 @@ func _check_hollow_reach() -> bool:
 	game.world.ground.clear()
 	game.client.ground_view.clear()
 	var player: Dictionary = game.world.players[1]
-	var zone: Dictionary = World.ZONES.filter(func(candidate: Dictionary) -> bool: return candidate["name"] == "The Hollow Reach")[0]
+	var zone: Dictionary = WorldMap.ZONES.filter(func(candidate: Dictionary) -> bool: return candidate["name"] == "The Hollow Reach")[0]
 	var gate: Vector2i = Vector2i(zone["rect"].position.x - 3, EndgameZone.GATE_Y)
 	for stop: Array in [[gate, "visual-hollow-gate.png"], [EndgameZone.THRONE_SEAT + Vector2i(-5, 0), "visual-hollow-throne.png"]]:
 		player["cell"] = stop[0]
@@ -1698,8 +1699,8 @@ func _check_night_and_particles() -> bool:
 	game.world.monsters.clear()
 	game.client.monsters.clear()
 	var player: Dictionary = game.world.players[1]
-	player["cell"] = World.SPAWNS[0]
-	player["from"] = World.SPAWNS[0]
+	player["cell"] = WorldMap.SPAWNS[0]
+	player["from"] = WorldMap.SPAWNS[0]
 	game.replication.publish_actor(1)
 	var lighting: Node2D = game._world_view.lighting
 	await create_timer(0.2).timeout
@@ -1711,8 +1712,8 @@ func _check_night_and_particles() -> bool:
 	await RenderingServer.frame_post_draw
 	var night: Image = screen.get_texture().get_image()
 	night.save_png("res://.tools/visual-night.png")
-	var near: Vector2i = Vector2i(game.camera.to_screen((Vector2(World.SPAWNS[0]) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
-	var far: Vector2i = Vector2i(game.camera.to_screen((Vector2(World.SPAWNS[0]) + Vector2(6.5, -2.5)) * World.TILE_SIZE))
+	var near: Vector2i = Vector2i(game.camera.to_screen((Vector2(WorldMap.SPAWNS[0]) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
+	var far: Vector2i = Vector2i(game.camera.to_screen((Vector2(WorldMap.SPAWNS[0]) + Vector2(6.5, -2.5)) * World.TILE_SIZE))
 	var panel: Vector2i = Vector2i(game.PANEL_ORIGIN + Vector2(4, 300))
 	if not _expect(night.get_pixelv(far).get_luminance() < day.get_pixelv(far).get_luminance() * 0.75,
 			"Night does not darken the world"):
@@ -1735,7 +1736,7 @@ func _check_night_and_particles() -> bool:
 	var fx: Node2D = game._world_view.fx
 	var before: int = fx.get_child_count()
 	game.effect_view.show({"kind": "hit", "target": 1, "amount": 12, "style": "critical"})
-	game.effect_view.show({"kind": "area", "cells": [World.SPAWNS[0] + Vector2i(2, 0), World.SPAWNS[0] + Vector2i(2, 1)],
+	game.effect_view.show({"kind": "area", "cells": [WorldMap.SPAWNS[0] + Vector2i(2, 0), WorldMap.SPAWNS[0] + Vector2i(2, 1)],
 		"color": Color("#ff9a5a")})
 	if not _expect(fx.get_child_count() >= before + 3, "Hits and spells did not emit particles"):
 		return false

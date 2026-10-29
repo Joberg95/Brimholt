@@ -10,6 +10,7 @@ extends SceneTree
 ##       [--pairs=knight-paladin,...]
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Spells = preload("res://game/data/spells.gd")
 const FightSim = preload("res://tools/testing/fight_sim.gd")
@@ -42,12 +43,12 @@ func _initialize() -> void:
 
 
 func _arena() -> Vector2i:
-	for zone: Dictionary in World.ZONES:
+	for zone: Dictionary in WorldMap.ZONES:
 		if zone["pvp"]:
 			for y: int in range(zone["rect"].position.y, zone["rect"].end.y):
 				for x: int in range(zone["rect"].position.x, zone["rect"].end.x):
 					var cell := Vector2i(x, y)
-					if World.walkable(cell) and World.walkable(cell + Vector2i.RIGHT) and World.zone_at(cell + Vector2i.RIGHT)["pvp"]:
+					if WorldMap.walkable(cell) and WorldMap.walkable(cell + Vector2i.RIGHT) and WorldMap.zone_at(cell + Vector2i.RIGHT)["pvp"]:
 						return cell
 	return Vector2i(-1, -1)
 

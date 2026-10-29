@@ -18,7 +18,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/generators/landscape.gd
 
-## Must match World.TERRAINS (the rules check verifies it).
+## Must match WorldMap.TERRAINS (the rules check verifies it).
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const Regions = preload("res://game/data/regions.gd")
 const MapIO = preload("res://game/maps/map_io.gd")

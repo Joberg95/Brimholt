@@ -8,6 +8,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/town_paths.gd
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Buildings = preload("res://game/data/buildings.gd")
 const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
@@ -42,9 +43,9 @@ static func apply(scene_root: Node) -> Dictionary:
 		if painted.has(cell):
 			return painted[cell]
 		var index: int = layer.get_cell_atlas_coords(cell).x
-		return "" if index < 0 else World.TERRAINS[index]
+		return "" if index < 0 else WorldMap.TERRAINS[index]
 	var result: Dictionary = {"doors": 0, "painted": 0, "stuck": []}
-	for zone: Dictionary in World.ZONES:
+	for zone: Dictionary in WorldMap.ZONES:
 		if not zone["town"]:
 			continue
 		var buildings: Array = Buildings.find(terrain_of, zone["rect"].grow(1))
@@ -58,7 +59,7 @@ static func apply(scene_root: Node) -> Dictionary:
 			result["doors"] += 1
 			for cell: Vector2i in found["cells"]:
 				painted[cell] = "="
-				layer.set_cell(cell, 0, Vector2i(World.TERRAINS.find("="), 0))
+				layer.set_cell(cell, 0, Vector2i(WorldMap.TERRAINS.find("="), 0))
 				result["painted"] += 1
 	return result
 
@@ -94,7 +95,7 @@ static func path_to_street(front: Vector2i, terrain_of: Callable, area: Rect2i, 
 			for cell: Vector2i in frontier:
 				for side: Vector2i in SIDES:
 					var near: Vector2i = cell + side
-					if from.has(near) or not area.has_point(near) or footprint.has(near) or World.NPC_CELLS.has(near):
+					if from.has(near) or not area.has_point(near) or footprint.has(near) or WorldMap.NPC_CELLS.has(near):
 						continue
 					if network.has(near):
 						var cells: Array[Vector2i] = []

@@ -10,7 +10,7 @@ extends SceneTree
 ## it again changes nothing.
 
 const Biomes = preload("res://game/data/biomes.gd")
-## Must match World.TERRAINS (the rules check verifies it). World itself is not loaded here
+## Must match WorldMap.TERRAINS (the rules check verifies it). World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const MapIO = preload("res://game/maps/map_io.gd")

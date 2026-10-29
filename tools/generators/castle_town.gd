@@ -9,7 +9,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/generators/castle_town.gd
 
-## Must match World.TERRAINS (the rules check verifies it).
+## Must match WorldMap.TERRAINS (the rules check verifies it).
 const CobbleTowns = preload("res://tools/generators/cobble_towns.gd")
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const MapIO = preload("res://game/maps/map_io.gd")

@@ -23,7 +23,7 @@ const HEARTLAND: Rect2i = Rect2i(0, 0, 384, 384)
 ## at a fixed x (FLOOR_X, on sector boundaries, a void gap between planes), so the cell over or
 ## under surface (x, y) on floor z is (x + FLOOR_X[z], y). Only the surface is full; the other
 ## floors are void wherever nothing is painted. Stairs up ("^") on floor z with a hole or ladder
-## ("v") right above them on floor z + 1 join the two (World.HOLES). The dungeon and cave bands
+## ("v") right above them on floor z + 1 join the two (WorldMap.HOLES). The dungeon and cave bands
 ## (x 1924-2560) lie on no floor: floor_of() is NO_FLOOR there.
 const TOP: int = 3
 const BOTTOM: int = -2
@@ -42,7 +42,7 @@ const CONTINENTS: Array = [
 ]
 ## The baked world map: one PNG per page (<sx>_<sy>.png, MAP_SCALE pixels per cell), a small
 ## overview of the whole overworld (one pixel per cell) for zooming far out, and pages.json with
-## the scale and each page's terrain hash (World.page_hash), so a page edited since shows stale.
+## the scale and each page's terrain hash (WorldMap.page_hash), so a page edited since shows stale.
 const MAP_DIR: String = "res://assets/sprites/world_map"
 const MAP_META: String = "res://assets/sprites/world_map/pages.json"
 const MAP_OVERVIEW: String = "res://assets/sprites/world_map/overview.png"

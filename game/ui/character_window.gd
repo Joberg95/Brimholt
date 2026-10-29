@@ -5,6 +5,7 @@ extends PanelContainer
 ## only their text changes, and only while it is open.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Titles = preload("res://game/data/titles.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Combat = preload("res://game/core/combat.gd")
@@ -161,7 +162,7 @@ func _write(state: Dictionary, rest_left: int, meal_left: int) -> void:
 
 func _status_lines(state: Dictionary, rest_left: int, meal_left: int) -> PackedStringArray:
 	var lines: PackedStringArray = []
-	lines.append("Gold %d carried · %d in the bank (%s)" % [state.get("gold", 0), state.get("bank", 0), World.bank_place()])
+	lines.append("Gold %d carried · %d in the bank (%s)" % [state.get("gold", 0), state.get("bank", 0), WorldMap.bank_place()])
 	var done: Dictionary = {}
 	for task: String in state.get("done_tasks", []):
 		done[task] = true
@@ -204,8 +205,8 @@ func _status_lines(state: Dictionary, rest_left: int, meal_left: int) -> PackedS
 	for boss: String in trophies:
 		var keeper: String = ""
 		for giver: String in Quests.RELIC_KEEPERS:
-			if Quests.RELIC_KEEPERS[giver] == boss and World.QUEST_GIVERS.has(giver):
-				keeper = " in %s" % World.QUEST_GIVERS[giver]["place"]
+			if Quests.RELIC_KEEPERS[giver] == boss and WorldMap.QUEST_GIVERS.has(giver):
+				keeper = " in %s" % WorldMap.QUEST_GIVERS[giver]["place"]
 		lines.append("%d trophy from %s: trade it for a relic at its relic keeper%s." % [trophies[boss],
 			Monsters.MONSTERS.get(boss, {}).get("name", boss), keeper])
 	return lines

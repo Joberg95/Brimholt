@@ -20,6 +20,7 @@ extends RefCounted
 ##   "trip"  {vendor, state, until}  a selling trip: "go" to the counter, "sell", "back" to the post
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Economy = preload("res://game/core/economy.gd")
 
@@ -114,7 +115,7 @@ func choose_stack(id: int, now: float) -> Vector2i:
 		if gap >= nearest or skip.has(cell) or not earned(combat.loot_claims[cell]["owners"], group):
 			continue
 		var stack: Array = world.ground.get(cell, [])
-		if stack.is_empty() or not fits(player, stack.back()) or World.dungeon_at(cell) != World.dungeon_at(own):
+		if stack.is_empty() or not fits(player, stack.back()) or WorldMap.dungeon_at(cell) != WorldMap.dungeon_at(own):
 			continue
 		best = cell
 		nearest = gap
@@ -156,7 +157,7 @@ func sell(id: int, now: float, events: Array) -> bool:
 		return false
 	var trip: Dictionary = bot.get("trip", {})
 	if trip.is_empty():
-		if not wants_to_sell(id) or not World.dungeon_at(player["cell"]).is_empty():
+		if not wants_to_sell(id) or not WorldMap.dungeon_at(player["cell"]).is_empty():
 			return false
 		var vendor: String = nearest_vendor(player["cell"])
 		if vendor.is_empty():
@@ -250,13 +251,13 @@ static func follower(id: int, bot: Dictionary) -> bool:
 ## The overworld vendor nearest to `cell`, or "".
 static func nearest_vendor(cell: Vector2i) -> String:
 	if _vendors.is_empty():
-		for npc: String in World.TOWNSFOLK:
-			if "trade" in World.TOWNSFOLK[npc]["services"] and World.dungeon_at(World.TOWNSFOLK[npc]["cell"]).is_empty():
+		for npc: String in WorldMap.TOWNSFOLK:
+			if "trade" in WorldMap.TOWNSFOLK[npc]["services"] and WorldMap.dungeon_at(WorldMap.TOWNSFOLK[npc]["cell"]).is_empty():
 				_vendors.append(npc)
 	var best: String = ""
 	var nearest: int = 1 << 30
 	for npc: String in _vendors:
-		var gap: int = Combat.distance(cell, World.TOWNSFOLK[npc]["cell"])
+		var gap: int = Combat.distance(cell, WorldMap.TOWNSFOLK[npc]["cell"])
 		if gap < nearest:
 			best = npc
 			nearest = gap
@@ -265,5 +266,5 @@ static func nearest_vendor(cell: Vector2i) -> String:
 
 ## The tile in front of a keeper's counter, inside their shop: where a customer stands.
 static func counter(vendor: String) -> Vector2i:
-	var keeper: Dictionary = World.npc(vendor)
+	var keeper: Dictionary = WorldMap.npc(vendor)
 	return keeper["cell"] + keeper["facing"]

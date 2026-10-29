@@ -7,6 +7,7 @@ extends Node2D
 ## missiles; they fade in as the ambient darkens. Day and night follow the host's clock.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Weather = preload("res://game/render/weather.gd")
 const Biomes = preload("res://game/data/biomes.gd")
@@ -87,7 +88,7 @@ func ambient() -> Color:
 	var light: Color = daylight(time_of_day())
 	var game: Node = view.game
 	var focus: Vector2i = Vector2i((game.camera.focus() / World.TILE_SIZE).floor())
-	var zone: Dictionary = World.zone_at(focus)
+	var zone: Dictionary = WorldMap.zone_at(focus)
 	if zone.has("ambient"):
 		light = light * zone["ambient"]
 	if Biomes.in_isles(focus):
@@ -120,18 +121,18 @@ func _process(delta: float) -> void:
 			if area.has_point(Vector2i(actor["visual"])) and holds_torch(actor["state"]["equipment"]):
 				var flicker: float = 0.92 + 0.08 * sin(time * 8.0 + id) * sin(time * 4.7)
 				_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness, "torch%d" % id)
-		for cell: Vector2i in World.NPC_CELLS:
-			if area.has_point(cell) and not World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
+		for cell: Vector2i in WorldMap.NPC_CELLS:
+			if area.has_point(cell) and not WorldMap.npc(WorldMap.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
 				_light(_centre(Vector2(cell)), LANTERN, 3.0, 0.9 * darkness, "npc%s" % cell)
 	var lamps: float = lamp_strength(darkness)
 	if lamps > 0.0:
-		for cell: Vector2i in World.LAMPS:
+		for cell: Vector2i in WorldMap.LAMPS:
 			if area.has_point(cell):
 				_light(_centre(Vector2(cell)) - Vector2(0, 30), LANTERN, 3.6, lamps * darkness, "lamp%s" % cell)
 	# Coloured light from relics, glowing bosses, and waystone runes, faint even by day.
 	var tint: float = maxf(darkness, 0.18)
-	for id: String in World.FERRYMEN:
-		var stone: Dictionary = World.FERRYMEN[id]
+	for id: String in WorldMap.FERRYMEN:
+		var stone: Dictionary = WorldMap.FERRYMEN[id]
 		if stone["vehicle"] in ["waystone", "gate"] and area.has_point(stone["cell"]):
 			_light(_centre(Vector2(stone["cell"])) - Vector2(0, 12), WAYSTONE_GLOW, 2.0, 0.8 * tint)
 	for id: int in game.client.actors:

@@ -5,7 +5,7 @@ extends SceneTree
 ## of surf, green land with soft painted variation, forests as clumps of canopy lit from the top-left,
 ## grey ridges with a lit and a shaded side, sandy plains and desert, dark brown for the Hollow Reach,
 ## and towns as red roofs on paved streets inside their walls. The game tints PvP zones and draws the
-## markers on top (game/ui/world_maps.gd). Each page's terrain hash (World.page_hash) goes to
+## markers on top (game/ui/world_maps.gd). Each page's terrain hash (WorldMap.page_hash) goes to
 ## pages.json: only pages whose terrain changed are painted again (FORCE=1 paints them all), and
 ## the rules check notices a page edited since the last bake. overview.png, the whole overworld
 ## at one pixel per cell for zooming far out, is shrunk from the pages.
@@ -13,6 +13,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/world_map.gd [-- --force]
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Atlas = preload("res://game/data/atlas.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const SCALE: int = Atlas.MAP_SCALE
@@ -61,9 +62,9 @@ func _initialize() -> void:
 	var pages: Dictionary = {}
 	var painted: int = 0
 	var error: Error = OK
-	for sector: Vector2i in World.map_pages():
+	for sector: Vector2i in WorldMap.map_pages():
 		var key: String = "%d_%d" % [sector.x, sector.y]
-		var digest: String = World.page_hash(sector)
+		var digest: String = WorldMap.page_hash(sector)
 		pages[key] = digest
 		if not force and old.get(key, "") == digest and FileAccess.file_exists(Atlas.page_path(sector)):
 			continue
@@ -106,7 +107,7 @@ static func _overview(keys: Array) -> Image:
 
 
 func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
-	var tile: String = World.terrain(cell)
+	var tile: String = WorldMap.terrain(cell)
 	match tile:
 		"~":
 			var shore: int = _distance_to_land(cell, 3)
@@ -117,7 +118,7 @@ func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
 			if shore == 1:
 				# Surf along the shore, on the side facing the land.
 				for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-					if World.terrain(cell + side) not in ["~", "b", ""]:
+					if WorldMap.terrain(cell + side) not in ["~", "b", ""]:
 						_edge(image, corner, side, SURF)
 		"T", "D":
 			_fill(image, corner, _vary(FOREST[2] if tile == "T" else DEAD_FOREST[2], cell, 0.05))
@@ -154,9 +155,9 @@ func _paint_tile(image: Image, cell: Vector2i, corner: Vector2i) -> void:
 			_fill(image, corner, _vary(GRASS, cell, 0.06))
 			image.fill_rect(Rect2i(corner + Vector2i(1, 1), Vector2i(2, 2)), STAIRS)
 		_:
-			var ground: Color = TOWN_GROUND if World.zone_at(cell).get("town", false) else GRASS
+			var ground: Color = TOWN_GROUND if WorldMap.zone_at(cell).get("town", false) else GRASS
 			_fill(image, corner, _vary(ground, cell, 0.06))
-	if World.ROOF_AT.has(cell):
+	if WorldMap.ROOF_AT.has(cell):
 		_roof(image, corner, cell)
 
 
@@ -189,14 +190,14 @@ func _canopy(image: Image, corner: Vector2i, cell: Vector2i, tones: Array[Color]
 			elif dx + dy > 1.2:
 				tone = tones[2]
 			image.set_pixelv(corner + Vector2i(x, y), tone)
-	if World.terrain(cell + Vector2i.DOWN) not in ["T", "D", "P"]:
+	if WorldMap.terrain(cell + Vector2i.DOWN) not in ["T", "D", "P"]:
 		image.set_pixelv(corner + Vector2i(2, SCALE - 1), tones[3])
 
 
 ## Rock and mountain: grey, lit where open ground lies to the north or west, shaded to the south or east.
 func _ridge(image: Image, corner: Vector2i, cell: Vector2i) -> void:
 	_fill(image, corner, _vary(ROCK[1], cell, 0.05))
-	var rocky: Callable = func(side: Vector2i) -> bool: return World.terrain(cell + side) in ["C", "L", "R"]
+	var rocky: Callable = func(side: Vector2i) -> bool: return WorldMap.terrain(cell + side) in ["C", "L", "R"]
 	if not rocky.call(Vector2i.UP):
 		_edge(image, corner, Vector2i.UP, ROCK[0])
 	if not rocky.call(Vector2i.LEFT):
@@ -209,13 +210,13 @@ func _ridge(image: Image, corner: Vector2i, cell: Vector2i) -> void:
 
 ## A roof: terracotta, with a lit ridge row and a dark edge where the building ends.
 func _roof(image: Image, corner: Vector2i, cell: Vector2i) -> void:
-	var index: int = World.ROOF_AT[cell]
+	var index: int = WorldMap.ROOF_AT[cell]
 	var tones: Array[Color] = SNOW_ROOF if Biomes.in_isles(cell) else SAND_ROOF if Biomes.in_sunreach(cell) else ROOF
 	for y: int in SCALE:
 		for x: int in SCALE:
 			image.set_pixelv(corner + Vector2i(x, y), tones[1] if (y + corner.y + _page_pixel.y) % 3 else tones[0])
 	for side: Vector2i in [Vector2i.RIGHT, Vector2i.DOWN]:
-		if World.ROOF_AT.get(cell + side, -1) != index:
+		if WorldMap.ROOF_AT.get(cell + side, -1) != index:
 			_edge(image, corner, side, tones[2])
 
 
@@ -232,6 +233,6 @@ static func _distance_to_land(cell: Vector2i, limit: int) -> int:
 	for radius: int in range(1, limit + 1):
 		for dy: int in range(-radius, radius + 1):
 			for dx: int in range(-radius, radius + 1):
-				if maxi(absi(dx), absi(dy)) == radius and World.terrain(cell + Vector2i(dx, dy)) not in ["~", "", " "]:
+				if maxi(absi(dx), absi(dy)) == radius and WorldMap.terrain(cell + Vector2i(dx, dy)) not in ["~", "", " "]:
 					return radius
 	return 0

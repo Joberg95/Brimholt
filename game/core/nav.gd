@@ -6,6 +6,7 @@ extends RefCounted
 ## route is re-planned when they stray. There is no way between spaces on foot (boats cross).
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Atlas = preload("res://game/data/atlas.gd")
 
 static var _grids: Dictionary = {}
@@ -16,11 +17,11 @@ static var _grids: Dictionary = {}
 static func space_of(cell: Vector2i) -> Array:
 	var z: int = Atlas.floor_of(cell)
 	if z != 0 and z != Atlas.NO_FLOOR:
-		return ["floor %d" % z, World.floor_bounds(z)]
+		return ["floor %d" % z, WorldMap.floor_bounds(z)]
 	for continent: Dictionary in Atlas.CONTINENTS:
 		if (continent["cells"] as Rect2i).has_point(cell):
 			return [continent["name"], continent["cells"]]
-	return ["", World.PAINTED]
+	return ["", WorldMap.PAINTED]
 
 
 ## The navigation grid of the space holding `cell`.
@@ -38,11 +39,11 @@ static func grid(cell: Vector2i) -> AStarGrid2D:
 	for y: int in range(rect.position.y, rect.end.y):
 		for x: int in range(rect.position.x, rect.end.x):
 			var at := Vector2i(x, y)
-			if not World.walkable(at) or World.terrain(at) in ["v", "^"]:
+			if not WorldMap.walkable(at) or WorldMap.terrain(at) in ["v", "^"]:
 				made.set_point_solid(at, true)
-			elif World.GROUND_STEP.has(World.terrain(at)):
+			elif World.GROUND_STEP.has(WorldMap.terrain(at)):
 				# Roads are quicker to walk, so routes follow them (World.GROUND_STEP).
-				made.set_point_weight_scale(at, World.GROUND_STEP[World.terrain(at)])
+				made.set_point_weight_scale(at, World.GROUND_STEP[WorldMap.terrain(at)])
 	_grids[space[0]] = made
 	return made
 

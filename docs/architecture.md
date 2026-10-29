@@ -17,8 +17,11 @@ game/
     input_controller.gd  /root/Main/InputController: keys, walking and chasing, action bar, map clicks and drags
     camera.gd            The camera: its focus and map/screen conversions
     effect_view.gd       How combat events look: floating numbers, loot text, missiles, areas, bursts
+  world_map/             The map, read-only at runtime (plan 48 step 3)
+    world_map.gd         Loads the baked map: terrain grid, markers, NPCs, zones, camps, stairways, floors,
+                         buildings with signs and furniture, regions; terrain, walkable, zone_at, region_at, npc
   core/                  Server-authoritative simulation shared by every peer (no nodes)
-    world.gd             Map loading, item catalog, movement, inventory and depot, packs, bag slots, travel
+    world.gd             Item catalog, movement, inventory and depot, packs, bag slots, travel, vocations, tasks
     combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
     economy.gd           Vendors (stock, buying, selling) and the banker (gold accounts)
     crafting.gd          Professions on the host: herb patches, gathering (nodes, regrowth), crafting at artisans, skill training
@@ -142,8 +145,9 @@ flowchart LR
 
 ## Authority and networking
 
-`game/core/world.gd` loads the map scene (terrain from its sectors, spawns, items, ferrymen,
-zones, monster spawns) and owns the item catalog and authoritative movement, inventory, and travel rules.
+`game/world_map/world_map.gd` loads the map (the bake of the map scene: terrain from its sectors, spawns,
+items, ferrymen, zones, monster spawns, buildings, regions) and answers questions about it;
+`game/core/world.gd` owns the item catalog and authoritative movement, inventory, and travel rules.
 Floors are slots on the one 2D grid: each floor z from `Atlas.BOTTOM` (−2) to `Atlas.TOP` (+3) is an
 overworld-sized plane at x = `Atlas.FLOOR_X[z]` (the surface at 0, floor −1 at 2560), lined up so a
 cell maps to the same surface cell on every floor (`Atlas.to_floor`, `floor_of`, `below`, `above`).
@@ -164,7 +168,7 @@ where water animates (visible chunks first, two per frame, far chunks freed). `w
 trees, and NPCs around the view and each frame visits only cells with content, sorted by
 depth. On the host, monster steps share one occupied-tile set per tick
 (`World.occupied_cells`) and monsters sleep at home unless a player is in a nearby 16-tile chunk.
-Instanced dungeon copies live outside `World.OVERWORLD`; `game/core/instances.gd` assigns a
+Instanced dungeon copies live outside `WorldMap.OVERWORLD`; `game/core/instances.gd` assigns a
 party a copy, spawns its monsters only then, and resets it after it has been empty for 60 s.
 Clients receive monsters and combat effects only within 24 tiles in the same space (the
 overworld or the same copy); `net/replication.gd` tracks what each peer knows and sends arrivals and
@@ -201,7 +205,7 @@ cannot bind its UDP port or the supplied join address is empty.
 
 The map can grow without the game slowing down, because only what is near a player costs
 anything. The static map is kept whole: the 1920×1920 overworld (`Atlas.OVERWORLD_SIZE`) plus the
-dungeon and cave bands right of it is one byte per cell in `World.GRID` (about 4 MB), loaded from
+dungeon and cave bands right of it is one byte per cell in `WorldMap.GRID` (about 4 MB), loaded from
 128×128 sector scenes (`game/maps/map_io.gd`) in under two seconds. Live entities and their work
 follow the players:
 
@@ -212,7 +216,7 @@ follow the players:
 - **Spaces**: each continent has its own bot navigation grid, built on first use (`Nav.grid`);
   crossing into another space shows a short travel curtain (`hud.gd`).
 - **Painted, not whole**: passes over all the land (bot navigation's `AStarGrid2D`, gathering
-  nodes, the region grid, the checks) cover `World.PAINTED`, the bounding box of every painted
+  nodes, the region grid, the checks) cover `WorldMap.PAINTED`, the bounding box of every painted
   overworld cell, not the open sea round it; it grows as new regions are painted.
 - **World map pages**: the world map is baked per sector and the map window loads the pages it
   looks at (at most `MAX_PAGES`), or the one-pixel-per-tile overview when zoomed far out.
@@ -237,7 +241,7 @@ Per-frame and per-tick code must still never scan every monster or ground stack:
 - Rendering asks `main.monsters_in(area)` and `main.ground_in(area)` (chunked
   `game/render/cell_index.gd`) for what is near the camera; keep the index current when adding
   ways to create or remove monsters or ground stacks on the client.
-- `World.terrain` reads a byte grid (`World.GRID`); `ROWS` is for whole-row passes.
+- `WorldMap.terrain` reads a byte grid (`WorldMap.GRID`); `ROWS` is for whole-row passes.
 - Monster steps use `Combat._occupancy`, built once per tick and updated as monsters move;
   invalidate it (`_taken_at = NAN`) when monsters are created or removed.
 - Static per-cell drawing is cached (tall objects per view area, floors per chunk, roofs per

@@ -5,6 +5,7 @@ extends Node2D
 ## near the camera are built a few per frame and far ones are freed.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const GroundArt = preload("res://game/render/ground_art.gd")
 const PackAtlas = preload("res://game/render/pack_atlas.gd")
@@ -53,7 +54,7 @@ func _process(_delta: float) -> void:
 		for cy: int in range(wanted.position.y, wanted.end.y):
 			for cx: int in range(wanted.position.x, wanted.end.x):
 				var key := Vector2i(cx, cy)
-				var area := Rect2i(key * CHUNK, Vector2i.ONE * CHUNK).intersection(Rect2i(0, 0, World.width(), World.height()))
+				var area := Rect2i(key * CHUNK, Vector2i.ONE * CHUNK).intersection(Rect2i(0, 0, WorldMap.width(), WorldMap.height()))
 				if _chunks.has(key) or not area.has_area():
 					continue
 				if pass_index == 0 and not area.intersects(shown):

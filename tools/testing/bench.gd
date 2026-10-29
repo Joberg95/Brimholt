@@ -11,6 +11,7 @@ extends SceneTree
 
 const Weather = preload("res://game/render/weather.gd")
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Balance = preload("res://game/data/balance.gd")
 const SECONDS: float = 8.0
 const WARMUP: float = 2.0
@@ -106,17 +107,17 @@ func _line(text: String) -> void:
 
 
 func _camp_of(monster: String) -> Vector2i:
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
 		if spawn["monster"] == monster:
 			return spawn["cell"]
-	return World.SPAWNS[0]
+	return WorldMap.SPAWNS[0]
 
 
 ## Puts you (and so your companions) beside `cell`.
 func _place(cell: Vector2i) -> void:
 	var me: Dictionary = game.world.players[game.client.self_id]
 	for offset: Vector2i in [Vector2i(0, 3), Vector2i(3, 0), Vector2i(0, -3), Vector2i(-3, 0)]:
-		if World.walkable(cell + offset):
+		if WorldMap.walkable(cell + offset):
 			me["cell"] = cell + offset
 			me["from"] = me["cell"]
 			break

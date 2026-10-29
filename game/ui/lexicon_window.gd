@@ -5,6 +5,7 @@ extends PanelContainer
 ## each drop's chance and what a vendor pays, plus gold, tier gear, and a boss's relics.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Items = preload("res://game/data/items.gd")
 const Lexicon = preload("res://game/core/lexicon.gd")
 const Quests = preload("res://game/data/quests.gd")
@@ -143,7 +144,7 @@ func select(kind: String) -> void:
 	if not found["tasks"].is_empty():
 		_section("Counts toward")
 		for task: String in found["tasks"]:
-			var giver: Dictionary = World.QUEST_GIVERS.get(Quests.TASKS[task]["giver"], {"name": "?", "place": "?"})
+			var giver: Dictionary = WorldMap.QUEST_GIVERS.get(Quests.TASKS[task]["giver"], {"name": "?", "place": "?"})
 			_details.add_child(_label("%s — %s, %s" % [Quests.TASKS[task]["title"], giver["name"], giver["place"]], 13, TEXT))
 	_section("Drops")
 	for drop: Array in found["drops"]:

@@ -9,6 +9,7 @@ extends RefCounted
 ## {ok: false, reason, events}, like Combat.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Professions = preload("res://game/data/professions.gd")
 
 ## Every recipe by id (Professions.build_recipes).
@@ -37,22 +38,22 @@ func _init(owner: World, seed_value: int = -1) -> void:
 static func _find_herbs() -> Dictionary:
 	var herbs: Dictionary = {}
 	var blocked: Dictionary = {}
-	for cell: Vector2i in World.SPAWNS:
+	for cell: Vector2i in WorldMap.SPAWNS:
 		blocked[cell] = true
-	for entry: Array in World.GROUND_ITEMS:
+	for entry: Array in WorldMap.GROUND_ITEMS:
 		blocked[entry[0]] = true
-	for group: Dictionary in [World.NPC_CELLS, World.FURNITURE, World.DUNGEON_ENTRANCES, World.CAVE_MOUTHS]:
+	for group: Dictionary in [WorldMap.NPC_CELLS, WorldMap.FURNITURE, WorldMap.DUNGEON_ENTRANCES, WorldMap.CAVE_MOUTHS]:
 		for cell: Vector2i in group:
 			blocked[cell] = true
 	var ground: PackedByteArray = Professions.HERB_GROUND.to_ascii_buffer()
-	var rect: Rect2i = World.PAINTED
+	var rect: Rect2i = WorldMap.PAINTED
 	for y: int in range(rect.position.y, rect.end.y):
 		for x: int in range(rect.position.x, rect.end.x):
-			var code: int = World.GRID[y * World.GRID_SIZE.x + x]
+			var code: int = WorldMap.GRID[y * WorldMap.GRID_SIZE.x + x]
 			if not code in ground:
 				continue
 			var cell := Vector2i(x, y)
-			if Professions.herb_at(cell, World.terrain(cell)) and not blocked.has(cell) and World.zone_at(cell).is_empty() \
+			if Professions.herb_at(cell, WorldMap.terrain(cell)) and not blocked.has(cell) and WorldMap.zone_at(cell).is_empty() \
 					and not Professions.resting(cell):
 				herbs[cell] = band_at(cell)
 	return herbs
@@ -60,18 +61,18 @@ static func _find_herbs() -> Dictionary:
 
 static func _find_ores() -> Dictionary:
 	var ores: Dictionary = {}
-	var rect: Rect2i = World.PAINTED
+	var rect: Rect2i = WorldMap.PAINTED
 	for y: int in range(rect.position.y, rect.end.y):
 		for x: int in range(rect.position.x, rect.end.x):
 			var cell := Vector2i(x, y)
-			var tile: String = World.terrain(cell)
+			var tile: String = WorldMap.terrain(cell)
 			# The terrain first: it rules out nearly every cell before the zone lookup.
 			if tile.is_empty() or not tile in Professions.SOURCES["mining"]:
 				continue
-			var zone: Dictionary = World.zone_at(cell)
+			var zone: Dictionary = WorldMap.zone_at(cell)
 			if zone.get("town", false) \
 					or zone.get("underground", false) or Professions.resting(cell) \
-					or not Professions.ore_at(cell, tile, World.walkable(cell + Vector2i.DOWN), band_at(cell)):
+					or not Professions.ore_at(cell, tile, WorldMap.walkable(cell + Vector2i.DOWN), band_at(cell)):
 				continue
 			var crowded: bool = false
 			for dy: int in range(-Professions.ORE_GAP, 1):
@@ -84,26 +85,26 @@ static func _find_ores() -> Dictionary:
 
 ## The resource band of the land at a cell: the middle of its zone's (or region's) monster levels.
 static func band_at(cell: Vector2i) -> int:
-	var zone: Dictionary = World.zone_at(cell)
+	var zone: Dictionary = WorldMap.zone_at(cell)
 	var levels := Vector2i.ZERO
 	if not zone.is_empty() and not zone["town"] and zone["max_level"] > 0:
 		levels = Vector2i(zone["min_level"], zone["max_level"])
 	else:
-		var region: String = World.region_at(cell)
+		var region: String = WorldMap.region_at(cell)
 		if not region.is_empty():
-			levels = Vector2i(World.REGION_INFO[region]["min_level"], World.REGION_INFO[region]["max_level"])
+			levels = Vector2i(WorldMap.REGION_INFO[region]["min_level"], WorldMap.REGION_INFO[region]["max_level"])
 	return Professions.band_for_level((levels.x + levels.y) / 2)
 
 
 ## The gathering skill a cell serves as a node ("" for none): overworld only, never in dungeons.
 static func node_at(cell: Vector2i) -> String:
-	if not World.OVERWORLD.has_point(cell) or World.zone_at(cell).get("underground", false):
+	if not WorldMap.OVERWORLD.has_point(cell) or WorldMap.zone_at(cell).get("underground", false):
 		return ""
 	if HERBS.has(cell):
 		return "herbalism"
 	if ORES.has(cell):
 		return "mining"
-	return "" if Professions.resting(cell) else Professions.source_of(World.terrain(cell))
+	return "" if Professions.resting(cell) else Professions.source_of(WorldMap.terrain(cell))
 
 
 ## What a node yields, by its land's band.

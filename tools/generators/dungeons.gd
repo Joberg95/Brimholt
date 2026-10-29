@@ -9,7 +9,7 @@ extends SceneTree
 ## calls apply() with the default entrances for a freshly generated map. After changing a
 ## layout, run this and the rules check.
 
-## Must match World.TERRAINS (the rules check verifies it); World itself is not loaded here
+## Must match WorldMap.TERRAINS (the rules check verifies it); World itself is not loaded here
 ## because its static map loading needs the scene this tool is editing.
 const TERRAINS: String = ".,~#T:=bdoODcCv^KRLWmUsPFY"
 const TILE_SIZE: int = 32

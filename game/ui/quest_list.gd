@@ -5,6 +5,7 @@ extends PanelContainer
 ## toggled off with the quest list key (Keybinds "quest_list").
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Quests = preload("res://game/data/quests.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
@@ -67,7 +68,7 @@ func refresh() -> void:
 		if not Quests.TASKS.has(task):
 			continue
 		var definition: Dictionary = Quests.TASKS[task]
-		var giver: Dictionary = World.QUEST_GIVERS.get(definition["giver"], {"name": "?", "place": "?"})
+		var giver: Dictionary = WorldMap.QUEST_GIVERS.get(definition["giver"], {"name": "?", "place": "?"})
 		var done: int = mini(int(tasks[task]), definition["count"])
 		_line(definition["title"], 12, TITLE)
 		_line("  %s, %s" % [giver["name"], giver["place"]], 10, GIVER)
@@ -78,7 +79,7 @@ func refresh() -> void:
 		else:
 			_line("  %d/%d %s" % [done, definition["count"], Quests.target_name(task)], 11, PROGRESS)
 	if not next.is_empty():
-		var giver: Dictionary = World.QUEST_GIVERS[Quests.TASKS[next]["giver"]]
+		var giver: Dictionary = WorldMap.QUEST_GIVERS[Quests.TASKS[next]["giver"]]
 		var band: Vector2i = World.task_levels(next)
 		_line("Next: %s" % Quests.TASKS[next]["title"], 12, NEXT)
 		_line("  %s, %s" % [giver["name"], giver["place"]], 10, GIVER)

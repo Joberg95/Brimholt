@@ -35,6 +35,7 @@ extends RefCounted
 ## what it costs a player (they wake with the level and experience left), never more.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Spells = preload("res://game/data/spells.gd")
@@ -218,8 +219,8 @@ func free_cell_near(near: Vector2i, now: float, except_id: int = 0) -> Vector2i:
 		for dy: int in range(-radius, radius + 1):
 			for dx: int in range(-radius, radius + 1):
 				var cell: Vector2i = near + Vector2i(dx, dy)
-				if maxi(absi(dx), absi(dy)) == radius and World.walkable(cell) and not world.occupied(cell, now, except_id) \
-						and World.terrain(cell) not in ["v", "^"]:
+				if maxi(absi(dx), absi(dy)) == radius and WorldMap.walkable(cell) and not world.occupied(cell, now, except_id) \
+						and WorldMap.terrain(cell) not in ["v", "^"]:
 					return cell
 	return near
 
@@ -522,7 +523,7 @@ func _step(id: int, direction: Vector2i, now: float, events: Array) -> void:
 
 ## Stairways block a bot's path (bots never take stairs on their own); creatures never do.
 func _blocked_for(_id: int, _now: float) -> Callable:
-	return func(cell: Vector2i) -> bool: return World.terrain(cell) in ["v", "^"]
+	return func(cell: Vector2i) -> bool: return WorldMap.terrain(cell) in ["v", "^"]
 
 
 
@@ -719,7 +720,7 @@ func join_leader(id: int, now: float, events: Array) -> void:
 func seen(cell: Vector2i) -> bool:
 	for other: int in world.players:
 		if not world.players[other].get("bot", false) and Combat.distance(world.players[other]["cell"], cell) <= SEEN_RADIUS \
-				and World.dungeon_at(world.players[other]["cell"]) == World.dungeon_at(cell):
+				and WorldMap.dungeon_at(world.players[other]["cell"]) == WorldMap.dungeon_at(cell):
 			return true
 	return false
 
@@ -747,8 +748,8 @@ func follow(id: int, now: float, events: Array) -> bool:
 		return false
 	var player: Dictionary = world.players[id]
 	var there: Vector2i = world.players[leader]["cell"]
-	var place: Array = World.dungeon_at(there)
-	var apart: bool = World.dungeon_at(player["cell"]) != place or Combat.distance(player["cell"], there) > TELEPORT_RANGE
+	var place: Array = WorldMap.dungeon_at(there)
+	var apart: bool = WorldMap.dungeon_at(player["cell"]) != place or Combat.distance(player["cell"], there) > TELEPORT_RANGE
 	if apart and (bot["stance"] == "companion" or not seen(player["cell"]) and not seen(there)):
 		if not place.is_empty() and instances != null and bot["stance"] == "companion":
 			events.append_array(instances.enter(id, place[0], now))
@@ -776,7 +777,7 @@ func travel(id: int, goal: Vector2i, reach: int, now: float, events: Array) -> b
 		bot["route"] = []
 		return true
 	if Combat.distance(player["cell"], goal) > FAST_TRAVEL_DISTANCE and not seen(player["cell"]) and not seen(goal):
-		jump(id, Nav.open_beside(goal) if not World.walkable(goal) else goal, now, events)
+		jump(id, Nav.open_beside(goal) if not WorldMap.walkable(goal) else goal, now, events)
 		return Combat.distance(world.players[id]["cell"], goal) <= reach
 	var route: Array = bot["route"]
 	bot["unroutable"] = false
@@ -817,7 +818,7 @@ func run_plan(id: int, now: float, events: Array) -> void:
 		"pick":
 			bot["plan"] = _choose_errand(id, now)
 		"accept":
-			var giver: Dictionary = World.QUEST_GIVERS[Quests.TASKS[plan["task"]]["giver"]]
+			var giver: Dictionary = WorldMap.QUEST_GIVERS[Quests.TASKS[plan["task"]]["giver"]]
 			if travel(id, giver["cell"], World.TALK_RANGE, now, events):
 				var taken: Dictionary = combat.task_action(id, Quests.TASKS[plan["task"]]["giver"], plan["task"], "accept", now)
 				plan["state"] = "camp" if taken["ok"] or player["tasks"].has(plan["task"]) else "pick"
@@ -839,7 +840,7 @@ func run_plan(id: int, now: float, events: Array) -> void:
 				travel(id, bot["post"], 1, now, events)
 		"turn_in":
 			var giver_id: String = Quests.TASKS[plan["task"]]["giver"]
-			if travel(id, World.QUEST_GIVERS[giver_id]["cell"], World.TALK_RANGE, now, events):
+			if travel(id, WorldMap.QUEST_GIVERS[giver_id]["cell"], World.TALK_RANGE, now, events):
 				events.append_array(combat.task_action(id, giver_id, plan["task"], "complete", now)["events"])
 				bot["plan"] = {}
 		"ambush":
@@ -850,7 +851,7 @@ func run_plan(id: int, now: float, events: Array) -> void:
 				travel(id, world.players[target]["cell"], 2, now, events)
 		"warden":
 			var warden: String = plan["npc"]
-			if travel(id, World.TOWNSFOLK[warden]["cell"], World.TALK_RANGE, now, events):
+			if travel(id, WorldMap.TOWNSFOLK[warden]["cell"], World.TALK_RANGE, now, events):
 				events.append_array(combat.set_pvp(id, warden, plan["on"], now).get("events", []))
 				bot["plan"] = {}
 	# A giver, camp, or warden it cannot walk to while seen (across water): choose another errand.
@@ -891,8 +892,8 @@ func _choose_errand(id: int, now: float) -> Dictionary:
 		var marker: Vector2i = camps[combat.rng.randi_range(0, camps.size() - 1)]
 		return {"state": "accept", "task": task, "camp": camp_post(marker), "marker": marker}
 	var near: Array[Vector2i] = []
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		if absi(spawn["level"] - player["level"]) <= LEVEL_MARGIN and World.zone_at(spawn["cell"]).is_empty() \
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
+		if absi(spawn["level"] - player["level"]) <= LEVEL_MARGIN and WorldMap.zone_at(spawn["cell"]).is_empty() \
 				and Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal" and camp_post(spawn["cell"]).x >= 0:
 			near.append(spawn["cell"])
 	if near.is_empty():
@@ -906,8 +907,8 @@ func _pvp_errand(id: int, now: float) -> Dictionary:
 	var player: Dictionary = world.players[id]
 	if not player["skull"].is_empty() or now < player["pvp_until"] or now < player.get("pvp_toggle_at", -INF):
 		return {}
-	for npc: String in World.TOWNSFOLK:
-		if "pvp" in World.TOWNSFOLK[npc]["services"]:
+	for npc: String in WorldMap.TOWNSFOLK:
+		if "pvp" in WorldMap.TOWNSFOLK[npc]["services"]:
 			return {"state": "warden", "npc": npc, "on": not player.get("pvp", false)}
 	return {}
 
@@ -915,8 +916,8 @@ func _pvp_errand(id: int, now: float) -> Dictionary:
 ## Camp markers of normal monsters in PvP zones open to `level`, within LEVEL_MARGIN of it.
 static func pvp_camps(level: int) -> Array[Vector2i]:
 	var camps: Array[Vector2i] = []
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		var zone: Dictionary = World.zone_at(spawn["cell"])
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
+		var zone: Dictionary = WorldMap.zone_at(spawn["cell"])
 		if zone.get("pvp", false) and level >= int(zone["min_level"]) and absi(spawn["level"] - level) <= LEVEL_MARGIN \
 				and Monsters.MONSTERS[spawn["monster"]]["rank"] == "normal" and camp_post(spawn["cell"]).x >= 0:
 			camps.append(spawn["cell"])
@@ -943,8 +944,8 @@ func _camp_prey(id: int) -> int:
 ## LEVEL_MARGIN levels above `level`.
 func _camps_of(monster: String, level: int) -> Array[Vector2i]:
 	var camps: Array[Vector2i] = []
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		if spawn["monster"] == monster and spawn["level"] <= level + LEVEL_MARGIN and World.zone_at(spawn["cell"]).is_empty() \
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
+		if spawn["monster"] == monster and spawn["level"] <= level + LEVEL_MARGIN and WorldMap.zone_at(spawn["cell"]).is_empty() \
 				and camp_post(spawn["cell"]).x >= 0:
 			camps.append(spawn["cell"])
 	return camps
@@ -965,7 +966,7 @@ static func _find_post(camp: Vector2i) -> Vector2i:
 			Vector2i(CAMP_DISTANCE, CAMP_DISTANCE - 2), Vector2i(-CAMP_DISTANCE, CAMP_DISTANCE - 2),
 			Vector2i(CAMP_DISTANCE, 2 - CAMP_DISTANCE), Vector2i(-CAMP_DISTANCE, 2 - CAMP_DISTANCE)]:
 		var cell: Vector2i = camp + step
-		if World.walkable(cell) and World.zone_at(cell) == World.zone_at(camp) and not Nav.grid(cell).is_point_solid(cell):
+		if WorldMap.walkable(cell) and WorldMap.zone_at(cell) == WorldMap.zone_at(camp) and not Nav.grid(cell).is_point_solid(cell):
 			var way: Array[Vector2i] = Nav.route(cell, camp)
 			if not way.is_empty() and way.size() <= CAMP_DISTANCE * 2:
 				return cell

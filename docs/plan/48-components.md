@@ -179,3 +179,9 @@ sound (plan 20), and balance passes.
   `last_action_message` once a frame and misses a refusal that a zone message overwrites in the
   same frame); still to fix. Two test fixes on the way: LAN deadlines for a 6.5 s scene load,
   and the playthrough builds its path grid before joining.
+- **Step 3 (2026-10-29):** the map moves out of `world.gd` into `game/world_map/world_map.gd`
+  (`WorldMap`): the terrain grid, every marker table (spawns, ground items, NPCs, zones, camps,
+  stairways, cave mouths, holes, floors), buildings with their signs and furniture, regions, the map
+  hash, and their lookups (`terrain`, `walkable`, `zone_at`, `region_at`, `npc`, `width`, ...).
+  Every `World.<map>` reference now reads `WorldMap.<map>`. `world.gd` keeps only the item catalog
+  and a task-level cache as static state; `World.TALK_RANGE` reads `WorldMap.TALK_RANGE`.

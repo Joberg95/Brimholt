@@ -11,6 +11,7 @@ extends SceneTree
 ## the same layout. tools/generators/make_map.gd calls apply() for a freshly generated map.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const ZONE_SCRIPT: Script = preload("res://game/maps/markers/zone.gd")
 const MONSTER_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
 const MapIO = preload("res://game/maps/map_io.gd")
@@ -103,20 +104,20 @@ static func layout() -> Dictionary:
 static func apply(scene_root: Node) -> void:
 	var layer: TileMapLayer = scene_root.get_node("Terrain")
 	var source: TileSetAtlasSource = layer.tile_set.get_source(0)
-	for index: int in World.TERRAINS.length():
+	for index: int in WorldMap.TERRAINS.length():
 		if not source.has_tile(Vector2i(index, 0)):
 			source.create_tile(Vector2i(index, 0))
-			source.get_tile_data(Vector2i(index, 0), 0).set_custom_data("terrain", World.TERRAINS[index])
+			source.get_tile_data(Vector2i(index, 0), 0).set_custom_data("terrain", WorldMap.TERRAINS[index])
 	ResourceSaver.save(layer.tile_set, layer.tile_set.resource_path)
 	var cells: Dictionary = layout()
 	for cell: Vector2i in cells:
-		layer.set_cell(cell, 0, Vector2i(World.TERRAINS.find(cells[cell]), 0))
+		layer.set_cell(cell, 0, Vector2i(WorldMap.TERRAINS.find(cells[cell]), 0))
 	# An approach clearing outside the gate, so the forest path reaches it.
 	for y: int in range(GATE_Y - 4, GATE_Y + 5):
 		for x: int in range(AREA.position.x - 8, AREA.position.x):
 			var coords: Vector2i = layer.get_cell_atlas_coords(Vector2i(x, y))
-			if coords.x >= 0 and World.TERRAINS[coords.x] in World.TREES:
-				layer.set_cell(Vector2i(x, y), 0, Vector2i(World.TERRAINS.find("."), 0))
+			if coords.x >= 0 and WorldMap.TERRAINS[coords.x] in WorldMap.TREES:
+				layer.set_cell(Vector2i(x, y), 0, Vector2i(WorldMap.TERRAINS.find("."), 0))
 	var spawns: Node = scene_root.get_node("MonsterSpawns")
 	for marker: Node in spawns.get_children():
 		if AREA.has_point(Vector2i((marker as Node2D).position / World.TILE_SIZE)):

@@ -14,6 +14,7 @@ extends RefCounted
 ## Results are events like Combat.tick; {"kind": "bot_left", "id"} asks the host to drop a bot.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Bots = preload("res://game/core/bots.gd")
@@ -404,14 +405,14 @@ func _ambush(band: int, now: float, events: Array) -> void:
 	var state: Dictionary = bands[band]
 	var head: int = state["leader"]
 	var you: Vector2i = world.players[leader]["cell"]
-	var zone: Dictionary = World.zone_at(you)
+	var zone: Dictionary = WorldMap.zone_at(you)
 	var best := Vector2i(-1, -1)
 	var rect: Rect2i = zone.get("rect", Rect2i())
 	for distance: int in [Bots.SEEN_RADIUS + 4, Bots.SEEN_RADIUS + 2, Bots.SEEN_RADIUS + 1]:
 		for step: int in 32:
 			var angle: float = step * TAU / 32.0
 			var cell: Vector2i = you + Vector2i(roundi(cos(angle) * distance), roundi(sin(angle) * distance))
-			if best.x < 0 and rect.has_point(cell) and World.walkable(cell) and World.zone_at(cell) == zone \
+			if best.x < 0 and rect.has_point(cell) and WorldMap.walkable(cell) and WorldMap.zone_at(cell) == zone \
 					and not _near_camp(cell) and not Nav.route(cell, you).is_empty():
 				best = cell
 		if best.x >= 0:
@@ -429,7 +430,7 @@ func _ambush(band: int, now: float, events: Array) -> void:
 
 ## Whether a monster camp is within CAMP_GAP tiles: rivals arrive away from monsters.
 static func _near_camp(cell: Vector2i) -> bool:
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
 		if Combat.distance(spawn["cell"], cell) <= CAMP_GAP:
 			return true
 	return false
@@ -438,8 +439,8 @@ static func _near_camp(cell: Vector2i) -> bool:
 ## A town far from you (towns are zones flagged "town"), different for each band; roamers
 ## (`skip` = the bands' count) spread over the next ones, never the town nearest you.
 func _far_town(band: int, skip: int = 0) -> Vector2i:
-	var you: Vector2i = world.players[leader]["cell"] if world.players.has(leader) else World.SPAWNS[0]
-	var towns: Array = World.ZONES.filter(func(zone: Dictionary) -> bool: return zone["town"])
+	var you: Vector2i = world.players[leader]["cell"] if world.players.has(leader) else WorldMap.SPAWNS[0]
+	var towns: Array = WorldMap.ZONES.filter(func(zone: Dictionary) -> bool: return zone["town"])
 	towns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return Combat.distance(a["rect"].get_center(), you) > Combat.distance(b["rect"].get_center(), you))
 	var town: Dictionary = towns[mini(band, towns.size() - 1)] if skip == 0 \
@@ -449,6 +450,6 @@ func _far_town(band: int, skip: int = 0) -> Vector2i:
 		for dy: int in range(-radius, radius + 1):
 			for dx: int in range(-radius, radius + 1):
 				var cell: Vector2i = centre + Vector2i(dx, dy)
-				if World.walkable(cell) and not World.ROOM_AT.has(cell):
+				if WorldMap.walkable(cell) and not WorldMap.ROOM_AT.has(cell):
 					return cell
 	return centre

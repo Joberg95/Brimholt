@@ -7,6 +7,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/cobble_towns.gd
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const MapIO = preload("res://game/maps/map_io.gd")
 const SCENE_PATH: String = "res://game/maps/overworld.tscn"
 ## Ground a town paves over, and how near a pier the shore becomes a quay instead.
@@ -20,7 +21,7 @@ func _initialize() -> void:
 	var layer: TileMapLayer = scene_root.get_node("Terrain")
 	var changes: Dictionary = paving()
 	for cell: Vector2i in changes:
-		layer.set_cell(cell, 0, Vector2i(World.TERRAINS.find(changes[cell]), 0))
+		layer.set_cell(cell, 0, Vector2i(WorldMap.TERRAINS.find(changes[cell]), 0))
 	var error: Error = OK
 	if not changes.is_empty():
 		error = MapIO.save_scene(scene_root)
@@ -34,9 +35,9 @@ func _initialize() -> void:
 ## {cell: new terrain} for every town tile still unpaved, read from the baked map or from
 ## terrain_of (cell -> terrain letter; a region rebuild reads its scene).
 static func paving(terrain_of: Callable = Callable()) -> Dictionary:
-	var terrain: Callable = terrain_of if terrain_of.is_valid() else func(cell: Vector2i) -> String: return World.terrain(cell)
+	var terrain: Callable = terrain_of if terrain_of.is_valid() else func(cell: Vector2i) -> String: return WorldMap.terrain(cell)
 	var changes: Dictionary = {}
-	for zone: Dictionary in World.ZONES:
+	for zone: Dictionary in WorldMap.ZONES:
 		if not zone["town"]:
 			continue
 		var rect: Rect2i = zone["rect"]
@@ -57,7 +58,7 @@ static func paving(terrain_of: Callable = Callable()) -> Dictionary:
 
 ## Whether a cell lies in a town zone (the ground this paves).
 static func in_town(cell: Vector2i) -> bool:
-	return World.zone_at(cell).get("town", false)
+	return WorldMap.zone_at(cell).get("town", false)
 
 
 ## Whether a town tile is shore beside water within QUAY_REACH of one of the town's piers.

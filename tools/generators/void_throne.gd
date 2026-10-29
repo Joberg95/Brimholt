@@ -10,6 +10,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/generators/void_throne.gd
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const EndgameZone = preload("res://tools/generators/endgame_zone.gd")
 const MONSTER_SCRIPT: Script = preload("res://game/maps/markers/monster_spawn.gd")
@@ -62,7 +63,7 @@ static func apply(scene_root: Node) -> int:
 	var layer: TileMapLayer = scene_root.get_node("Terrain")
 	var cells: Dictionary = layout()
 	for cell: Vector2i in cells:
-		var index: int = World.TERRAINS.find(cells[cell])
+		var index: int = WorldMap.TERRAINS.find(cells[cell])
 		if layer.get_cell_atlas_coords(cell).x != index:
 			layer.set_cell(cell, 0, Vector2i(index, 0))
 			changed += 1

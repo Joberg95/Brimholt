@@ -9,13 +9,14 @@ extends Node
 ## tile; the mouse wheel (or + and −) zooms around the cursor, dragging pans (over the painted
 ## land and a margin of sea), and its key, Esc, or Close closes it. Quest givers show their
 ## "!"/"?" marks. The floor buttons (or Page Up and Page Down) step through the floors that have
-## anything painted (Atlas.FLOOR_X, World.floor_bounds), each drawn in the same tiles as the
+## anything painted (Atlas.FLOOR_X, WorldMap.floor_bounds), each drawn in the same tiles as the
 ## surface over or under it: one pixel per tile, the zones' names, and the ways up and down. It
 ## opens on the floor you stand on, and the minimap names your floor off the surface. Right-click the world map to place your own marker (an icon and a
 ## label) or remove one; markers are kept on this computer (marker_file), as Tibia keeps its
 ## minimap markers, and show on the world map and the minimap on their own floor.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Atlas = preload("res://game/data/atlas.gd")
@@ -62,7 +63,7 @@ var world_map: Control
 ## last drawn in (oldest first).
 var _pages: Dictionary = {}
 var _page_order: Array[Vector2i] = []
-## Sectors that need a page (World.map_pages), and each baked page's hash (pages.json).
+## Sectors that need a page (WorldMap.map_pages), and each baked page's hash (pages.json).
 var _needed: Dictionary = {}
 var _baked: Dictionary = {}
 var _overview: ImageTexture
@@ -94,7 +95,7 @@ var _warned: bool = false
 
 func build(game_node: Node, layer: CanvasLayer) -> void:
 	game = game_node
-	for sector: Vector2i in World.map_pages():
+	for sector: Vector2i in WorldMap.map_pages():
 		_needed[sector] = true
 	if FileAccess.file_exists(Atlas.MAP_META):
 		var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(Atlas.MAP_META))
@@ -256,7 +257,7 @@ func _draw_player_markers(canvas: Control, origin: Vector2, scale: float, area: 
 			_draw_label(font, at, marker["label"], 12, Color("#f4ecd8"), Vector2(0, 18), true)
 
 
-## A page: the bake if it matches the map (World.page_hash), else a flat one; PvP zones tinted.
+## A page: the bake if it matches the map (WorldMap.page_hash), else a flat one; PvP zones tinted.
 ## {} for sectors that are open sea.
 func _page(sector: Vector2i) -> Dictionary:
 	if not _needed.has(sector):
@@ -267,7 +268,7 @@ func _page(sector: Vector2i) -> Dictionary:
 		return _pages[sector]
 	var area: Rect2i = Atlas.sector_rect(sector)
 	var image: Image = null
-	if _baked.get("%d_%d" % [sector.x, sector.y], "") == World.page_hash(sector):
+	if _baked.get("%d_%d" % [sector.x, sector.y], "") == WorldMap.page_hash(sector):
 		image = _load_image(Atlas.page_path(sector))
 	if image == null:
 		_warn_stale()
@@ -297,13 +298,13 @@ func _overview_texture() -> ImageTexture:
 	for sector: Vector2i in _needed:
 		if stale:
 			break
-		stale = _baked.get("%d_%d" % [sector.x, sector.y], "") != World.page_hash(sector)
+		stale = _baked.get("%d_%d" % [sector.x, sector.y], "") != WorldMap.page_hash(sector)
 	if stale:
 		_warn_stale()
 		image = Image.create(Atlas.OVERWORLD_SIZE.x, Atlas.OVERWORLD_SIZE.y, false, Image.FORMAT_RGB8)
 		image.fill(SEA)
-		image.blit_rect(_flat(World.PAINTED), Rect2i(Vector2i.ZERO, World.PAINTED.size), World.PAINTED.position)
-	_tint_pvp(image, World.OVERWORLD, 1)
+		image.blit_rect(_flat(WorldMap.PAINTED), Rect2i(Vector2i.ZERO, WorldMap.PAINTED.size), WorldMap.PAINTED.position)
+	_tint_pvp(image, WorldMap.OVERWORLD, 1)
 	_overview = ImageTexture.create_from_image(image)
 	return _overview
 
@@ -325,13 +326,13 @@ static func _load_image(path: String) -> Image:
 
 ## Reddens the land of PvP zones inside `area` on an image of it (`texel` pixels per tile).
 static func _tint_pvp(image: Image, area: Rect2i, texel: int) -> void:
-	for zone: Dictionary in World.ZONES:
+	for zone: Dictionary in WorldMap.ZONES:
 		if not zone["pvp"]:
 			continue
-		var tinted: Rect2i = zone["rect"].intersection(area).intersection(World.OVERWORLD)
+		var tinted: Rect2i = zone["rect"].intersection(area).intersection(WorldMap.OVERWORLD)
 		for y: int in range(tinted.position.y, tinted.end.y):
 			for x: int in range(tinted.position.x, tinted.end.x):
-				if World.terrain(Vector2i(x, y)) in ["~", " "]:
+				if WorldMap.terrain(Vector2i(x, y)) in ["~", " "]:
 					continue
 				var corner := (Vector2i(x, y) - area.position) * texel
 				for py: int in texel:
@@ -351,14 +352,14 @@ static func _flat(area: Rect2i) -> Image:
 		lookup[at] = color.r8
 		lookup[at + 1] = color.g8
 		lookup[at + 2] = color.b8
-	var inside: Rect2i = area.intersection(Rect2i(Vector2i.ZERO, World.GRID_SIZE))
+	var inside: Rect2i = area.intersection(Rect2i(Vector2i.ZERO, WorldMap.GRID_SIZE))
 	var pixels := PackedByteArray()
 	pixels.resize(area.size.x * area.size.y * 3)
 	for y: int in range(inside.position.y, inside.end.y):
-		var row: int = y * World.GRID_SIZE.x
+		var row: int = y * WorldMap.GRID_SIZE.x
 		var base: int = ((y - area.position.y) * area.size.x - area.position.x) * 3
 		for x: int in range(inside.position.x, inside.end.x):
-			var source: int = (World.GRID[row + x] & 127) * 3
+			var source: int = (WorldMap.GRID[row + x] & 127) * 3
 			pixels[base + x * 3] = lookup[source]
 			pixels[base + x * 3 + 1] = lookup[source + 1]
 			pixels[base + x * 3 + 2] = lookup[source + 2]
@@ -378,7 +379,7 @@ func color_at(tile: Vector2) -> Color:
 ## Draws the overworld's terrain inside `tiles` onto `canvas`, `origin` being where tile (0, 0)
 ## lands and `scale` pixels per tile: the pages, or the overview when `far`.
 func _draw_terrain(canvas: Control, origin: Vector2, scale: float, tiles: Rect2, far: bool) -> void:
-	tiles = tiles.intersection(Rect2(World.OVERWORLD))
+	tiles = tiles.intersection(Rect2(WorldMap.OVERWORLD))
 	if not tiles.has_area():
 		return
 	if far:
@@ -409,7 +410,7 @@ func _flat_map_of(area: Rect2i) -> ImageTexture:
 
 ## What the world map shows: the painted land and a margin of sea round it.
 static func bounds() -> Rect2:
-	return Rect2(World.PAINTED.grow(SEA_MARGIN).intersection(World.OVERWORLD))
+	return Rect2(WorldMap.PAINTED.grow(SEA_MARGIN).intersection(WorldMap.OVERWORLD))
 
 
 func _build_controls(layer: CanvasLayer) -> void:
@@ -437,7 +438,7 @@ func _build_controls(layer: CanvasLayer) -> void:
 			var level: int = Atlas.floor_of(Vector2i(here))
 			if level != Atlas.NO_FLOOR:
 				here -= Vector2(Atlas.FLOOR_X[level], 0)
-			center = here if World.OVERWORLD.has_point(Vector2i(here)) else bounds().get_center()
+			center = here if WorldMap.OVERWORLD.has_point(Vector2i(here)) else bounds().get_center()
 			_show_floor(level if level != Atlas.NO_FLOOR else 0)
 			_clamp_view())
 	layer.add_child(world_map)
@@ -464,7 +465,7 @@ func _build_controls(layer: CanvasLayer) -> void:
 static func mapped_floors() -> Array[int]:
 	var found: Array[int] = []
 	for level: int in range(Atlas.TOP, Atlas.BOTTOM - 1, -1):
-		if level == 0 or World.floor_bounds(level).has_area():
+		if level == 0 or WorldMap.floor_bounds(level).has_area():
 			found.append(level)
 	return found
 
@@ -489,8 +490,8 @@ func _step_floor(direction: int) -> void:
 
 ## A floor off the surface at one pixel per tile, over its painted part.
 func _floor_texture(level: int) -> ImageTexture:
-	if not _floor_textures.has(level) and World.floor_bounds(level).has_area():
-		_floor_textures[level] = ImageTexture.create_from_image(_flat(World.floor_bounds(level)))
+	if not _floor_textures.has(level) and WorldMap.floor_bounds(level).has_area():
+		_floor_textures[level] = ImageTexture.create_from_image(_flat(WorldMap.floor_bounds(level)))
 	return _floor_textures.get(level)
 
 
@@ -590,23 +591,23 @@ func _marker_at(cell: Vector2, origin: Vector2, scale: float, folded: bool) -> V
 
 
 func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2, folded: bool = false) -> void:
-	for id: String in World.FERRYMEN:
-		var at: Vector2 = _marker_at(Vector2(World.FERRYMEN[id]["cell"]), origin, scale, folded)
+	for id: String in WorldMap.FERRYMEN:
+		var at: Vector2 = _marker_at(Vector2(WorldMap.FERRYMEN[id]["cell"]), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#7fe0d0"))
-	for id: String in World.QUEST_GIVERS:
-		var at: Vector2 = _marker_at(Vector2(World.QUEST_GIVERS[id]["cell"]), origin, scale, folded)
+	for id: String in WorldMap.QUEST_GIVERS:
+		var at: Vector2 = _marker_at(Vector2(WorldMap.QUEST_GIVERS[id]["cell"]), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#ffcf6a"))
 	# Ways down and up: stairways, cave mouths, and the holes, ladders, and stairs between the floors.
-	for cell: Vector2i in World.DUNGEON_ENTRANCES.keys() + World.CAVE_MOUTHS.keys() + World.HOLES.keys():
+	for cell: Vector2i in WorldMap.DUNGEON_ENTRANCES.keys() + WorldMap.CAVE_MOUTHS.keys() + WorldMap.HOLES.keys():
 		var at: Vector2 = _marker_at(Vector2(cell), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), Color("#c9884a"))
-	for id: String in World.TOWNSFOLK:
-		var at: Vector2 = _marker_at(Vector2(World.TOWNSFOLK[id]["cell"]), origin, scale, folded)
+	for id: String in WorldMap.TOWNSFOLK:
+		var at: Vector2 = _marker_at(Vector2(WorldMap.TOWNSFOLK[id]["cell"]), origin, scale, folded)
 		if area.has_point(at):
-			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), TOWNSFOLK_COLORS[World.TOWNSFOLK[id]["role"]])
+			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), TOWNSFOLK_COLORS[WorldMap.TOWNSFOLK[id]["role"]])
 	var actors: Dictionary = game.client.actors
 	for id: int in actors:
 		var at: Vector2 = _marker_at(actors[id]["visual"], origin, scale, folded)
@@ -674,11 +675,11 @@ func _draw_minimap() -> void:
 	var cell := Vector2i(focus / World.TILE_SIZE)
 	var region := Rect2(focus / World.TILE_SIZE - tiles / 2.0, tiles)
 	var origin: Vector2 = -region.position * MINIMAP_SCALE
-	var away: bool = not World.OVERWORLD.has_point(cell)
+	var away: bool = not WorldMap.OVERWORLD.has_point(cell)
 	if away:
 		# Off the overworld (a dungeon copy, a cave, the Void Throne): the flat map of the area you
 		# are in only, never the copies next to it.
-		var area: Rect2i = World.zone_at(cell).get("rect", Rect2i(cell - Vector2i(64, 64), Vector2i(128, 128)))
+		var area: Rect2i = WorldMap.zone_at(cell).get("rect", Rect2i(cell - Vector2i(64, 64), Vector2i(128, 128)))
 		var visible: Rect2 = region.intersection(Rect2(area))
 		if visible.has_area():
 			minimap.draw_texture_rect_region(_flat_map_of(area), Rect2(origin + visible.position * MINIMAP_SCALE,
@@ -715,24 +716,24 @@ func _draw_world_map() -> void:
 	_draw_markers(world_map, origin, scale, shown, true)
 	_draw_player_markers(world_map, origin, scale, shown, true)
 	_draw_quest_marks(origin, scale, shown)
-	var labels: Array = [[World.WORLD_NAME, Vector2(World.SPAWNS[0]) + Vector2(4, -3)]]
-	for id: String in World.FERRYMEN:
-		var place: String = World.FERRYMEN[id]["place"]
-		if World.zone_at(World.FERRYMEN[id]["cell"]).get("name", "") != place:
-			labels.append([place, Vector2(World.FERRYMEN[id]["cell"]) + Vector2(0, -3)])
-	for dungeon: String in World.ENTRANCE_OF:
-		labels.append([Dungeons.DUNGEONS[dungeon]["name"], Vector2(World.ENTRANCE_OF[dungeon]) + Vector2(0, 4), Color("#e0a870")])
-	for cave: String in World.MOUTH_OF:
-		labels.append([World.Caves.CAVES[cave]["name"], Vector2(World.MOUTH_OF[cave]) + Vector2(0, 4), Color("#e0a870")])
+	var labels: Array = [[World.WORLD_NAME, Vector2(WorldMap.SPAWNS[0]) + Vector2(4, -3)]]
+	for id: String in WorldMap.FERRYMEN:
+		var place: String = WorldMap.FERRYMEN[id]["place"]
+		if WorldMap.zone_at(WorldMap.FERRYMEN[id]["cell"]).get("name", "") != place:
+			labels.append([place, Vector2(WorldMap.FERRYMEN[id]["cell"]) + Vector2(0, -3)])
+	for dungeon: String in WorldMap.ENTRANCE_OF:
+		labels.append([Dungeons.DUNGEONS[dungeon]["name"], Vector2(WorldMap.ENTRANCE_OF[dungeon]) + Vector2(0, 4), Color("#e0a870")])
+	for cave: String in WorldMap.MOUTH_OF:
+		labels.append([World.Caves.CAVES[cave]["name"], Vector2(WorldMap.MOUTH_OF[cave]) + Vector2(0, 4), Color("#e0a870")])
 	# Named regions first, so towns and ports draw over them where they meet.
-	for region: String in World.REGION_NAMES:
-		var info: Dictionary = World.REGION_INFO[region]
+	for region: String in WorldMap.REGION_NAMES:
+		var info: Dictionary = WorldMap.REGION_INFO[region]
 		if info["max_level"] == 0:
 			continue
 		var centre := Vector2(info["centre"])
 		labels.append([region.to_upper(), centre, REGION_TINT, 12])
 		labels.append(["levels %d–%d" % [info["min_level"], info["max_level"]], centre, REGION_TINT, 11])
-	for zone: Dictionary in World.ZONES:
+	for zone: Dictionary in WorldMap.ZONES:
 		if zone.get("underground", false):
 			continue
 		var text: String = zone["name"] if zone["town"] else "%s (%s, level %d-%d)" % [zone["name"],
@@ -776,7 +777,7 @@ func _draw_other_floor(origin: Vector2, scale: float, shown: Rect2, font: Font) 
 	if texture == null:
 		return
 	var shift := Vector2i(Atlas.FLOOR_X[shown_floor], 0)
-	var area: Rect2i = World.floor_bounds(shown_floor)
+	var area: Rect2i = WorldMap.floor_bounds(shown_floor)
 	var above := Rect2(Vector2(area.position - shift), Vector2(area.size))
 	var visible: Rect2 = Rect2((shown.position - origin) / scale, shown.size / scale).intersection(above)
 	if visible.has_area():
@@ -784,8 +785,8 @@ func _draw_other_floor(origin: Vector2, scale: float, shown: Rect2, font: Font) 
 			Rect2(visible.position - above.position, visible.size))
 	_draw_markers(world_map, origin, scale, shown, true)
 	_draw_player_markers(world_map, origin, scale, shown, true)
-	for zone: Dictionary in World.ZONES:
-		if World.floor_of_rect(zone["rect"]) != shown_floor:
+	for zone: Dictionary in WorldMap.ZONES:
+		if WorldMap.floor_of_rect(zone["rect"]) != shown_floor:
 			continue
 		var at: Vector2 = origin + Vector2(zone["rect"].get_center() - shift) * scale
 		if shown.has_point(at):
@@ -799,9 +800,9 @@ func _draw_quest_marks(origin: Vector2, scale: float, area: Rect2) -> void:
 		return
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var font: Font = ThemeDB.fallback_font
-	for id: String in World.QUEST_GIVERS:
+	for id: String in WorldMap.QUEST_GIVERS:
 		var mark: String = World.quest_mark(id, state)
-		var at: Vector2 = origin + (Vector2(World.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
+		var at: Vector2 = origin + (Vector2(WorldMap.QUEST_GIVERS[id]["cell"]) + Vector2(0.5, 0.5)) * scale
 		if mark.is_empty() or not area.has_point(at):
 			continue
 		var corner: Vector2 = at + Vector2(-4, -5)

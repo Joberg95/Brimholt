@@ -3,6 +3,7 @@ extends RefCounted
 ## a pack thing drawn as the pack places it (WallArt.draw) in the world's row-major depth order.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const WallArt = preload("res://game/render/wall_art.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 
@@ -17,7 +18,7 @@ const TREES: Dictionary = {
 	"U": [1585, 1586],
 	"P": [1505, 1508, 1565, 1566],
 }
-## Furniture kinds (World.FURNITURE) -> pack thing.
+## Furniture kinds (WorldMap.FURNITURE) -> pack thing.
 const FURNITURE: Dictionary = {
 	"counter_shop": 1189, "counter_bank": 1193, "shelf_potions": 1211, "shelf_books": 1209, "weapon_rack": 1175,
 	"barrel": 1110, "crate": 1109, "strongbox": 1113, "anvil": 1138, "workbench": 1197, "cauldron": 1153, "loom": 1213,
@@ -71,6 +72,6 @@ static func draw_sign(canvas: CanvasItem, sign: Dictionary) -> void:
 static func _north_south(cell: Vector2i) -> bool:
 	for side: Vector2i in [Vector2i.UP, Vector2i.DOWN]:
 		var tile: String = SpriteArt.tile_at(cell + side)
-		if not tile.is_empty() and tile in World.WALLS:
+		if not tile.is_empty() and tile in WorldMap.WALLS:
 			return true
 	return false

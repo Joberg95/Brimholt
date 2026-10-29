@@ -4,6 +4,7 @@ extends Node
 ## panel toggles, and clicks, drags, and drops on the map. Requests go through game.api.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
 const Crafting = preload("res://game/core/crafting.gd")
 const Layout = preload("res://game/ui/layout.gd")
@@ -166,7 +167,7 @@ func map_input(event: InputEvent) -> void:
 		return
 	get_viewport().gui_release_focus()
 	var cell: Vector2i = game.camera.map_location(event.position)["cell"]
-	var npc: String = World.NPC_CELLS.get(cell, World.NPC_CELLS.get(cell + Vector2i.DOWN, ""))
+	var npc: String = WorldMap.NPC_CELLS.get(cell, WorldMap.NPC_CELLS.get(cell + Vector2i.DOWN, ""))
 	if event.button_index == MOUSE_BUTTON_RIGHT and not npc.is_empty():
 		game.dialogs.open_npc_menu(npc, Vector2i(Layout.VIEW_ORIGIN + event.position))
 		return

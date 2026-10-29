@@ -13,6 +13,7 @@ extends SceneTree
 ## Reference bands (normal rank, same level) live in .github/skills/monster-authoring/SKILL.md.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Items = preload("res://game/data/items.gd")
@@ -72,7 +73,7 @@ func _initialize() -> void:
 ## and potions. Elites fight alone and in pairs (camps hold two at a time); champions alone.
 func _survey(vocations: PackedStringArray) -> void:
 	var levels: Dictionary = {}
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
 		levels[spawn["monster"]] = mini(levels.get(spawn["monster"], Balance.MAX_LEVEL), spawn["level"])
 	for dungeon: String in Dungeons.DUNGEONS:
 		for placement: Array in Dungeons.spawns(dungeon):
@@ -126,15 +127,15 @@ static func wear(gear: Dictionary, pieces: Dictionary, vocation: String, level: 
 
 ## An open overworld field outside towns, with room for the fight.
 func _arena() -> Vector2i:
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
-		var clear: bool = World.dungeon_at(spawn["cell"]).is_empty()
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
+		var clear: bool = WorldMap.dungeon_at(spawn["cell"]).is_empty()
 		for dy: int in range(-3, 4):
 			for dx: int in range(-3, 4):
 				var cell: Vector2i = spawn["cell"] + Vector2i(dx, dy)
-				clear = clear and World.walkable(cell) and World.zone_at(cell).is_empty()
+				clear = clear and WorldMap.walkable(cell) and WorldMap.zone_at(cell).is_empty()
 		if clear:
 			return spawn["cell"]
-	return World.SPAWNS[0]
+	return WorldMap.SPAWNS[0]
 
 
 func _fight(level: int, monster_level: int, vocation: String, count: int, kind: String, full: bool) -> String:

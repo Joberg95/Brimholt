@@ -6,6 +6,7 @@ extends RefCounted
 ## window (game/ui/lexicon_window.gd).
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
@@ -34,12 +35,12 @@ static func entry(kind: String) -> Dictionary:
 	var definition: Dictionary = Monsters.MONSTERS[kind]
 	var levels := Vector2i(UNPLACED, 0)
 	var places: Array[String] = []
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
 		if spawn["monster"] != kind:
 			continue
 		levels = Vector2i(mini(levels.x, spawn["level"]), maxi(levels.y, spawn["level"]))
-		var zone: Dictionary = World.zone_at(spawn["cell"])
-		var place: String = zone["name"] if not zone.is_empty() else World.region_at(spawn["cell"])
+		var zone: Dictionary = WorldMap.zone_at(spawn["cell"])
+		var place: String = zone["name"] if not zone.is_empty() else WorldMap.region_at(spawn["cell"])
 		if not place in places:
 			places.append(place)
 	for dungeon: String in Dungeons.ORDER:

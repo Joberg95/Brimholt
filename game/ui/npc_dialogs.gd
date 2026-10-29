@@ -6,6 +6,7 @@ extends Node
 ## and quest dialogs rebuild when your gold, items, or task progress change.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Quests = preload("res://game/data/quests.gd")
@@ -78,7 +79,7 @@ func refresh() -> void:
 	var actors: Dictionary = game.client.actors
 	var self_id: int = game.client.self_id
 	if not talking_to.is_empty() and (not actors.has(self_id) or not World.in_talk_range(
-			actors[self_id]["state"]["cell"], World.npc(talking_to)["cell"])):
+			actors[self_id]["state"]["cell"], WorldMap.npc(talking_to)["cell"])):
 		close()
 	elif not talking_to.is_empty() and mode in ["trade", "bank", "quests", "vocation", "runes", "craft"] and _state_key() != _shown_state:
 		_open(mode, talking_to)
@@ -125,11 +126,11 @@ func _open(kind: String, npc: String) -> void:
 
 ## Right-clicking a person opens their services; there is no typed dialogue.
 func open_npc_menu(npc: String, at: Vector2i) -> void:
-	if World.npc(npc).is_empty():
+	if WorldMap.npc(npc).is_empty():
 		return
 	npc_menu.clear()
-	npc_menu.add_separator(World.npc(npc)["name"])
-	var services: Array = World.npc(npc)["services"]
+	npc_menu.add_separator(WorldMap.npc(npc)["name"])
+	var services: Array = WorldMap.npc(npc)["services"]
 	for index: int in services.size():
 		npc_menu.add_item(NPC_SERVICES.get(services[index], String(services[index]).capitalize()), index)
 		npc_menu.set_item_metadata(npc_menu.get_item_index(index), services[index])
@@ -188,9 +189,9 @@ func open_player_menu(person: int, at: Vector2i) -> bool:
 func talk_to(ferryman: String) -> void:
 	var actors: Dictionary = game.client.actors
 	var self_id: int = game.client.self_id
-	if not actors.has(self_id) or not World.FERRYMEN.has(ferryman):
+	if not actors.has(self_id) or not WorldMap.FERRYMEN.has(ferryman):
 		return
-	var npc: Dictionary = World.FERRYMEN[ferryman]
+	var npc: Dictionary = WorldMap.FERRYMEN[ferryman]
 	if not World.in_talk_range(actors[self_id]["state"]["cell"], npc["cell"]):
 		game.last_action_message = "Walk closer to %s." % npc["name"]
 		return
@@ -203,7 +204,7 @@ func talk_to(ferryman: String) -> void:
 	for destination: String in npc["routes"]:
 		var fare: int = npc["routes"][destination]
 		var button := Button.new()
-		button.text = "%s  —  %d gold" % [World.FERRYMEN[destination]["place"], fare]
+		button.text = "%s  —  %d gold" % [WorldMap.FERRYMEN[destination]["place"], fare]
 		button.disabled = gold < fare
 		button.pressed.connect(func() -> void:
 			game.api.travel_local(ferryman, destination)
@@ -220,10 +221,10 @@ func talk_to(ferryman: String) -> void:
 func _begin(npc: String) -> bool:
 	var actors: Dictionary = game.client.actors
 	var self_id: int = game.client.self_id
-	if not actors.has(self_id) or World.npc(npc).is_empty():
+	if not actors.has(self_id) or WorldMap.npc(npc).is_empty():
 		return false
-	if not World.in_talk_range(actors[self_id]["state"]["cell"], World.npc(npc)["cell"]):
-		game.last_action_message = "Walk closer to %s." % World.npc(npc)["name"]
+	if not World.in_talk_range(actors[self_id]["state"]["cell"], WorldMap.npc(npc)["cell"]):
+		game.last_action_message = "Walk closer to %s." % WorldMap.npc(npc)["name"]
 		return false
 	var scroll: ScrollContainer = _list_scroll()
 	_scroll_page = _page() if scroll != null and panel.visible else ""
@@ -299,7 +300,7 @@ static func icon(kind: String) -> Texture2D:
 func open_vocation(npc: String) -> void:
 	if not _begin(npc) or not Quests.TRAINERS.has(npc):
 		return
-	var trainer: Dictionary = World.npc(npc)
+	var trainer: Dictionary = WorldMap.npc(npc)
 	var vocation: String = Quests.TRAINERS[npc][0]
 	var profile: Dictionary = Balance.VOCATIONS[vocation]
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
@@ -329,12 +330,12 @@ func open_vocation(npc: String) -> void:
 
 ## The warden's PvP switch (Combat.set_pvp): what it means, where you stand, and the one button.
 func open_pvp(npc: String) -> void:
-	if not _begin(npc) or not "pvp" in World.npc(npc).get("services", []):
+	if not _begin(npc) or not "pvp" in WorldMap.npc(npc).get("services", []):
 		return
 	var view: Dictionary = game.client.actors[game.client.self_id]
 	var state: Dictionary = view["state"]
 	var on: bool = state.get("pvp", false)
-	_wrapped("%s, %s\n\"Steel or peace? Choose, and the isles will know.\"" % [World.npc(npc)["name"], World.npc(npc)["place"]])
+	_wrapped("%s, %s\n\"Steel or peace? Choose, and the isles will know.\"" % [WorldMap.npc(npc)["name"], WorldMap.npc(npc)["place"]])
 	_wrapped("With PvP on, other players with PvP on can attack you in PvP zones (Blackreed Isle, The Hollow Reach), "
 		+ "and you them. With it off, no player can harm you anywhere. Towns are always safe.", Color("#a7b0b8"))
 	_label("Your PvP is %s." % ("ON" if on else "OFF"), Color("#ff8a7a") if on else Color("#9fe07a"))
@@ -357,7 +358,7 @@ func open_pvp(npc: String) -> void:
 func open_runes(npc: String) -> void:
 	if not _begin(npc) or not Quests.TRAINERS.has(npc):
 		return
-	var trainer: Dictionary = World.npc(npc)
+	var trainer: Dictionary = WorldMap.npc(npc)
 	var vocation: String = Quests.TRAINERS[npc][0]
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var shards: int = World.carried(state.get("backpack", []), Spells.SHARD)
@@ -391,13 +392,13 @@ func open_runes(npc: String) -> void:
 ## An artisan's workshop: pick a crafting profession (and, for gear, a tier), then craft any
 ## recipe your skill allows from the resources in your backpack. The host checks everything.
 func open_craft(npc: String) -> void:
-	if not _begin(npc) or not "craft" in World.npc(npc).get("services", []):
+	if not _begin(npc) or not "craft" in WorldMap.npc(npc).get("services", []):
 		return
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var backpack: Array = state.get("backpack", [])
 	var skills: Dictionary = state.get("skills", {})
 	_wrapped("%s, artisan of %s\n\"Bring me what you gather in the wilds and use my tools. Practice makes the master.\"" % [
-		World.npc(npc)["name"], World.npc(npc)["place"]])
+		WorldMap.npc(npc)["name"], WorldMap.npc(npc)["place"]])
 	var tabs := HBoxContainer.new()
 	list.add_child(tabs)
 	for profession: String in Professions.CRAFTING:
@@ -491,7 +492,7 @@ func _wrapped(text: String, color: Color = Color.TRANSPARENT) -> Label:
 func open_trade(npc: String) -> void:
 	if not _begin(npc):
 		return
-	var vendor: Dictionary = World.npc(npc)
+	var vendor: Dictionary = WorldMap.npc(npc)
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var gold: int = state.get("gold", 0)
 	var vocation: String = state.get("vocation", Balance.DEFAULT_VOCATION)
@@ -567,7 +568,7 @@ func open_trade(npc: String) -> void:
 func open_bank(npc: String) -> void:
 	if not _begin(npc):
 		return
-	var banker: Dictionary = World.npc(npc)
+	var banker: Dictionary = WorldMap.npc(npc)
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var gold: int = state.get("gold", 0)
 	var balance: int = state.get("bank", 0)
@@ -600,7 +601,7 @@ func open_bank(npc: String) -> void:
 func _open_task(npc: String) -> void:
 	if not _begin(npc):
 		return
-	var giver: Dictionary = World.QUEST_GIVERS[npc]
+	var giver: Dictionary = WorldMap.QUEST_GIVERS[npc]
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var tasks: Dictionary = state.get("tasks", {})
 	var done: Array = state.get("done_tasks", [])
@@ -668,12 +669,12 @@ func _reward_label(task: String, state: Dictionary) -> void:
 func open_quests(npc: String) -> void:
 	var actors: Dictionary = game.client.actors
 	var self_id: int = game.client.self_id
-	if not actors.has(self_id) or not World.QUEST_GIVERS.has(npc):
+	if not actors.has(self_id) or not WorldMap.QUEST_GIVERS.has(npc):
 		return
-	if not World.QUEST_GIVERS[npc]["tasks"].is_empty():
+	if not WorldMap.QUEST_GIVERS[npc]["tasks"].is_empty():
 		_open_task(npc)
 		return
-	var keeper: Dictionary = World.QUEST_GIVERS[npc]
+	var keeper: Dictionary = WorldMap.QUEST_GIVERS[npc]
 	if not World.in_talk_range(actors[self_id]["state"]["cell"], keeper["cell"]):
 		game.last_action_message = "Walk closer to %s." % keeper["name"]
 		return

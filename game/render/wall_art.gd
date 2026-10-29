@@ -8,6 +8,7 @@ extends RefCounted
 ## reaches into the rows above.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const PackAtlas = preload("res://game/render/pack_atlas.gd")
 const GroundArt = preload("res://game/render/ground_art.gd")
@@ -69,7 +70,7 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 	var west: bool = mask & 2 != 0
 	var id: int = piece_of(pieces, north, west)
 	# Some straight overworld walls get a window.
-	if north != west and SpriteArt.tile_at(cell) == "#" and World.OVERWORLD.has_point(cell) \
+	if north != west and SpriteArt.tile_at(cell) == "#" and WorldMap.OVERWORLD.has_point(cell) \
 			and SpriteArt.noise(cell, 17) % WINDOW_EVERY == 0 and pieces[4 if north else 5] != 0:
 		id = pieces[4 if north else 5]
 	draw(canvas, id, cell)
@@ -78,7 +79,7 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i) -> void:
 ## A doorway in a wall: the style's door, set into a north-south or a west-east wall.
 static func draw_door(canvas: CanvasItem, cell: Vector2i) -> void:
 	var north: String = SpriteArt.tile_at(cell + Vector2i.UP)
-	var vertical: bool = not north.is_empty() and north in World.WALLS
+	var vertical: bool = not north.is_empty() and north in WorldMap.WALLS
 	var pieces: Array = WALLS[wall_style(cell)]
 	draw(canvas, pieces[6] if vertical else pieces[7], cell)
 
@@ -117,4 +118,4 @@ static func wall_style(cell: Vector2i) -> String:
 		return "logs"
 	if SpriteArt.theme_at(cell) == "cellar":
 		return "brick"
-	return "stone" if World.OVERWORLD.has_point(cell) else "dungeon"
+	return "stone" if WorldMap.OVERWORLD.has_point(cell) else "dungeon"

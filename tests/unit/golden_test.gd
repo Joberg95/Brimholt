@@ -11,6 +11,7 @@ extends SceneTree
 ## diffed against a run of the previous commit.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Spells = preload("res://game/data/spells.gd")
 const CharacterStore = preload("res://game/persistence/character_store.gd")
@@ -154,7 +155,7 @@ func _act(id: int, now: float) -> void:
 func _spawn(arena: Vector2i, now: float) -> void:
 	for entry: Array in PACK:
 		var cell: Vector2i = arena + entry[2]
-		if World.walkable(cell) and not world.occupied(cell, now):
+		if WorldMap.walkable(cell) and not world.occupied(cell, now):
 			combat.spawn_monster(entry[0], entry[1], cell, now, -1, events)
 
 
@@ -165,7 +166,7 @@ func _note(result: Dictionary) -> void:
 
 ## The first open field near the first spawn: a 9x9 square of walkable ground outside every zone.
 func _arena() -> Vector2i:
-	var origin: Vector2i = World.SPAWNS[0]
+	var origin: Vector2i = WorldMap.SPAWNS[0]
 	for radius: int in range(10, 200):
 		for dy: int in range(-radius, radius + 1):
 			for dx: int in range(-radius, radius + 1):
@@ -181,7 +182,7 @@ func _open(centre: Vector2i) -> bool:
 	for dy: int in range(-4, 5):
 		for dx: int in range(-4, 5):
 			var cell: Vector2i = centre + Vector2i(dx, dy)
-			if not World.walkable(cell) or not World.zone_at(cell).is_empty():
+			if not WorldMap.walkable(cell) or not WorldMap.zone_at(cell).is_empty():
 				return false
 	return true
 

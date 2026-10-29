@@ -9,6 +9,7 @@ extends RefCounted
 ## (game/data/biomes.gd); its sky only clouds over a little.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Biomes = preload("res://game/data/biomes.gd")
 const SLOT_SECONDS: float = 240.0
 const BLEND_SECONDS: float = 30.0
@@ -60,9 +61,9 @@ static func at(clock: float) -> Dictionary:
 ## Hollow Reach lies in the fen's region but keeps the sky's own weather).
 static func local(clock: float, cell: Vector2i) -> Dictionary:
 	var weather: Dictionary = at(clock)
-	if World.zone_at(cell).get("underground", false):
+	if WorldMap.zone_at(cell).get("underground", false):
 		return {"kind": "underground", "cloud": 0.0, "rain": 0.0, "storm": 0.0, "flash": 0.0}
-	if World.region_at(cell) == Biomes.SWAMP_REGION and World.zone_at(cell).is_empty():
+	if WorldMap.region_at(cell) == Biomes.SWAMP_REGION and WorldMap.zone_at(cell).is_empty():
 		# The fen: low cloud nearly always, and rain more often than not.
 		weather["cloud"] = maxf(weather["cloud"], 0.55)
 		weather["rain"] = maxf(weather["rain"], 0.3)

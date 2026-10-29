@@ -7,6 +7,7 @@ extends RefCounted
 ## again. Results carry events for main.gd to publish, like Combat.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Dungeons = preload("res://game/data/dungeons.gd")
 const Caves = preload("res://game/data/caves.gd")
@@ -40,32 +41,32 @@ func after_move(id: int, now: float) -> Array:
 	if not world.players.has(id):
 		return []
 	var cell: Vector2i = world.players[id]["cell"]
-	if World.DUNGEON_ENTRANCES.has(cell):
-		return enter(id, World.DUNGEON_ENTRANCES[cell], now)
-	if World.terrain(cell) == "^" and not World.dungeon_at(cell).is_empty():
+	if WorldMap.DUNGEON_ENTRANCES.has(cell):
+		return enter(id, WorldMap.DUNGEON_ENTRANCES[cell], now)
+	if WorldMap.terrain(cell) == "^" and not WorldMap.dungeon_at(cell).is_empty():
 		return leave(id, now)
-	if World.CAVE_MOUTHS.has(cell):
-		return enter_cave(id, World.CAVE_MOUTHS[cell], now)
-	if World.terrain(cell) == "^" and World.zone_at(cell).has("cave"):
-		return leave_cave(id, World.zone_at(cell)["cave"], now)
-	if World.HOLES.has(cell):
+	if WorldMap.CAVE_MOUTHS.has(cell):
+		return enter_cave(id, WorldMap.CAVE_MOUTHS[cell], now)
+	if WorldMap.terrain(cell) == "^" and WorldMap.zone_at(cell).has("cave"):
+		return leave_cave(id, WorldMap.zone_at(cell)["cave"], now)
+	if WorldMap.HOLES.has(cell):
 		return climb(id, cell, now)
 	return []
 
 
-## Down a hole or ladder to the floor below, or up its stairs to the floor above (World.HOLES): out
+## Down a hole or ladder to the floor below, or up its stairs to the floor above (WorldMap.HOLES): out
 ## beside the way at the other end, so the next step does not take you back.
 func climb(id: int, cell: Vector2i, now: float) -> Array:
-	var other: Vector2i = World.HOLES[cell]
+	var other: Vector2i = WorldMap.HOLES[cell]
 	var events: Array = []
 	_bounce_to(id, other, now, events)
-	var place: Dictionary = World.location_at(world.players[id]["cell"])
+	var place: Dictionary = WorldMap.location_at(world.players[id]["cell"])
 	var text: String
 	var to: int = Atlas.floor_of(other)
-	if World.terrain(other) == "^" and to < 0:
+	if WorldMap.terrain(other) == "^" and to < 0:
 		text = "You climb down into %s (levels %d-%d)." % [place.get("name", "the dark"), place.get("min_level", 0),
 			place.get("max_level", 0)]
-	elif World.terrain(other) == "^":
+	elif WorldMap.terrain(other) == "^":
 		text = "You climb down to %s." % Atlas.floor_name(to).to_lower()
 	elif to == 0:
 		text = "You climb back up into %s." % place.get("name", "the open air")
@@ -79,7 +80,7 @@ func climb(id: int, cell: Vector2i, now: float) -> Array:
 func enter_cave(id: int, cave: String, now: float) -> Array:
 	var definition: Dictionary = Caves.CAVES[cave]
 	var events: Array = []
-	_bounce_to(id, World.CAVE_STAIRS[cave], now, events)
+	_bounce_to(id, WorldMap.CAVE_STAIRS[cave], now, events)
 	events.append({"kind": "message", "id": id, "text": "You climb down into the %s (levels %d-%d)." % [
 		definition["name"], definition["min_level"], definition["max_level"]]})
 	return events
@@ -87,7 +88,7 @@ func enter_cave(id: int, cave: String, now: float) -> Array:
 
 func leave_cave(id: int, cave: String, now: float) -> Array:
 	var events: Array = []
-	_bounce_to(id, World.MOUTH_OF[cave], now, events)
+	_bounce_to(id, WorldMap.MOUTH_OF[cave], now, events)
 	events.append({"kind": "message", "id": id, "text": "You climb back out into %s." % Caves.CAVES[cave]["region"]})
 	return events
 
@@ -123,19 +124,19 @@ func enter(id: int, dungeon: String, now: float) -> Array:
 
 
 func leave(id: int, now: float) -> Array:
-	var place: Array = World.dungeon_at(world.players[id]["cell"])
+	var place: Array = WorldMap.dungeon_at(world.players[id]["cell"])
 	var events: Array = []
-	_bounce_to(id, World.ENTRANCE_OF[place[0]], now, events)
+	_bounce_to(id, WorldMap.ENTRANCE_OF[place[0]], now, events)
 	events.append({"kind": "message", "id": id, "text": "You climb back up to %s." % Dungeons.DUNGEONS[place[0]]["town"]})
 	return events
 
 
 ## Moves a player standing in a dungeon (after a host restart, say) back to its stairway.
 func evacuate(id: int, now: float) -> Array:
-	var place: Array = World.dungeon_at(world.players[id]["cell"])
+	var place: Array = WorldMap.dungeon_at(world.players[id]["cell"])
 	var events: Array = []
 	if not place.is_empty() and copies[place[0]][place[1]]["owner"] == 0:
-		_bounce_to(id, World.ENTRANCE_OF[place[0]], now, events)
+		_bounce_to(id, WorldMap.ENTRANCE_OF[place[0]], now, events)
 	return events
 
 
@@ -144,7 +145,7 @@ func tick(now: float) -> Array:
 	var events: Array = []
 	var occupied: Dictionary = {}
 	for id: int in world.players:
-		var place: Array = World.dungeon_at(world.players[id]["cell"])
+		var place: Array = WorldMap.dungeon_at(world.players[id]["cell"])
 		if not place.is_empty():
 			occupied[place] = true
 	for dungeon: String in copies:
@@ -216,7 +217,7 @@ func _free_cell_near(center: Vector2i, now: float, id: int, avoid_center: bool =
 		for dy: int in range(-radius, radius + 1):
 			for dx: int in range(-radius, radius + 1):
 				var cell: Vector2i = center + Vector2i(dx, dy)
-				if maxi(absi(dx), absi(dy)) == radius and World.walkable(cell) and World.terrain(cell) not in ["v", "^"] \
+				if maxi(absi(dx), absi(dy)) == radius and WorldMap.walkable(cell) and WorldMap.terrain(cell) not in ["v", "^"] \
 						and not world.occupied(cell, now, id):
 					return cell
 	return center

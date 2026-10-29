@@ -13,6 +13,7 @@ extends RefCounted
 ## hand-made data cannot create invalid items.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Quests = preload("res://game/data/quests.gd")
@@ -268,7 +269,7 @@ static func restore(world: World, id: int, data: Dictionary, now: float) -> void
 			if Caves.CAVES[cave].has("below") and Caves.band_rect(cave).has_point(saved_cell):
 				saved_cell += Caves.rect(cave).position - Caves.band_rect(cave).position
 				break
-		if World.walkable(saved_cell) and not world.occupied(saved_cell, now, id):
+		if WorldMap.walkable(saved_cell) and not world.occupied(saved_cell, now, id):
 			player["cell"] = saved_cell
 			player["from"] = saved_cell
 	var limits: Dictionary = world.player_stats(id)

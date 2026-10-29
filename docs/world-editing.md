@@ -224,7 +224,7 @@ size of the overworld beside it from `Atlas.UNDER_X`, lined up cell for cell und
 (`Atlas.below`, `Atlas.above`). Paint it in its sectors like the surface: cave earth (`c`) and
 cave rock (`C`) for tunnels, cobbles (`=`), water, planks, and brick (`#`) for sewers, void where
 nothing is painted. A way between the floors is a `v` on the surface with a `^` right below it
-(`World.HOLES` pairs them at load; a `v` without its `^` does nothing): a hole in the wilds, a
+(`WorldMap.HOLES` pairs them at load; a `v` without its `^` does nothing): a hole in the wilds, a
 ladder opening in a town. Each network or sewer needs a Zone marker on the plane covering it
 (zones there are underground: dim, dry, no mounts) and its camps inside that zone.
 
@@ -244,7 +244,7 @@ copying the nearest normal camp of its region, monster and level, so the region'
 stay the same. Run it after adding land; existing camps are kept.
 
 **Clearing stray walls** (`tools/generators/clear_walls.gd`, `make clear-walls`): a stone wall
-(`#`) stays only as part of a building (a run touching a roof, `World.ROOF_AT`) or as a town's own
+(`#`) stays only as part of a building (a run touching a roof, `WorldMap.ROOF_AT`) or as a town's own
 wall (the cells within one tile of its zone's border, in a run of at least 8). Stubs inside towns,
 the arms a town wall pushes inward, dry-stone pens, and loose bits in the countryside are cleared
 to the ground most common round them. A re-run changes nothing; the rules check fails while any

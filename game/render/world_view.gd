@@ -7,6 +7,7 @@ extends Node2D
 ## (fx.gd). Names, bars, and floating numbers are drawn unlit by world_overlay.gd.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const SpriteArt = preload("res://game/render/sprite_art.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -44,7 +45,7 @@ const TALL_MARGIN: int = 8
 var _tall: Dictionary = {}
 var _tall_area: Rect2i = Rect2i()
 var floor_layer: Node2D
-## Roof opacity by building index (World.BUILDINGS): the roof of the building you stand in
+## Roof opacity by building index (WorldMap.BUILDINGS): the roof of the building you stand in
 ## fades out, the roofs of buildings within ROOF_NEAR tiles of you turn see-through (ROOF_NEAR_ALPHA)
 ## so their doors and rooms show as you approach, and the rest fade back in. Signs by building index.
 const ROOF_FADE_PER_SECOND: float = 5.0
@@ -81,12 +82,12 @@ func visible_cells() -> Rect2i:
 	var half: Vector2 = Vector2(game.VIEW_TILES) / 2.0
 	var area := Rect2i(Vector2i((focus - half).floor()) + MARGIN.position,
 		Vector2i((half * 2.0).ceil()) + Vector2i.ONE + MARGIN.size)
-	return area.intersection(Rect2i(0, 0, World.width(), World.height()))
+	return area.intersection(Rect2i(0, 0, WorldMap.width(), WorldMap.height()))
 
 
 ## Whether a cell inside a building is hidden by its roof (anyone there is not shown).
 func covered(cell: Vector2i) -> bool:
-	return World.ROOM_AT.has(cell) and _roof_alpha.get(World.ROOM_AT[cell], 1.0) > 0.5
+	return WorldMap.ROOM_AT.has(cell) and _roof_alpha.get(WorldMap.ROOM_AT[cell], 1.0) > 0.5
 
 
 ## The building the local character stands in (or its doorway), or -1.
@@ -94,7 +95,7 @@ func inside_building() -> int:
 	if not game.client.actors.has(game.client.self_id):
 		return -1
 	var visual: Vector2 = game.client.actors[game.client.self_id]["visual"]
-	return World.ROOM_AT.get(Vector2i(roundi(visual.x), roundi(visual.y)), -1)
+	return WorldMap.ROOM_AT.get(Vector2i(roundi(visual.x), roundi(visual.y)), -1)
 
 
 ## The local character's tile (rounded from where it is drawn), or (-1000, -1000) without one.
@@ -115,8 +116,8 @@ static func near_building(cell: Vector2i, rect: Rect2i) -> bool:
 ## Buildings in the area, fading their roofs; returns [bottom row, index] sorted by row.
 func _roofs_in(area: Rect2i, time: float) -> Array:
 	if _signs_of.is_empty():
-		for sign: Dictionary in World.SIGNS:
-			var building: int = World.ROOF_AT.get(sign["cell"], -1)
+		for sign: Dictionary in WorldMap.SIGNS:
+			var building: int = WorldMap.ROOF_AT.get(sign["cell"], -1)
 			if not _signs_of.has(building):
 				_signs_of[building] = []
 			_signs_of[building].append(sign)
@@ -125,8 +126,8 @@ func _roofs_in(area: Rect2i, time: float) -> Array:
 	var inside: int = inside_building()
 	var here: Vector2i = own_cell()
 	var roofs: Array = []
-	for index: int in World.BUILDINGS.size():
-		var rect: Rect2i = World.BUILDINGS[index]["rect"]
+	for index: int in WorldMap.BUILDINGS.size():
+		var rect: Rect2i = WorldMap.BUILDINGS[index]["rect"]
 		var target: float = 0.0 if index == inside else ROOF_NEAR_ALPHA if near_building(here, rect) else 1.0
 		if not rect.intersects(area):
 			_roof_alpha[index] = target
@@ -140,7 +141,7 @@ func _roofs_in(area: Rect2i, time: float) -> Array:
 func _draw_roof(index: int) -> void:
 	var alpha: float = _roof_alpha.get(index, 1.0)
 	if alpha > 0.01:
-		SpriteArt.draw_roof(self, index, World.BUILDINGS[index], alpha)
+		SpriteArt.draw_roof(self, index, WorldMap.BUILDINGS[index], alpha)
 	for sign: Dictionary in _signs_of.get(index, []):
 		ObjectArt.draw_sign(self, sign)
 
@@ -152,7 +153,7 @@ func _draw() -> void:
 	var roofs: Array = _roofs_in(area, time)
 	var next_roof: int = 0
 	if not _tall_area.encloses(area):
-		_cache_tall(area.grow(TALL_MARGIN).intersection(Rect2i(0, 0, World.width(), World.height())))
+		_cache_tall(area.grow(TALL_MARGIN).intersection(Rect2i(0, 0, WorldMap.width(), WorldMap.height())))
 	for effect: Dictionary in game.client.effects:
 		if effect["kind"] == "area" and not effect.get("element", "").is_empty():
 			continue
@@ -163,7 +164,7 @@ func _draw() -> void:
 	# Only cells with something standing on them are visited, in row-major (depth) order.
 	var occupants: Dictionary = {}
 	var keys := PackedInt32Array()
-	var width: int = World.width()
+	var width: int = WorldMap.width()
 	for cell: Vector2i in _tall:
 		if area.has_point(cell):
 			keys.append(cell.y * width + cell.x)
@@ -193,10 +194,10 @@ func _draw() -> void:
 			_draw_roof(roofs[next_roof][1])
 			next_roof += 1
 		var tile: String = _tall.get(cell, "")
-		if tile in World.WALLS and not tile.is_empty():
+		if tile in WorldMap.WALLS and not tile.is_empty():
 			WallArt.draw_wall(self, cell)
-			if World.WALL_DECOR.has(cell):
-				ObjectArt.draw_wall_decor(self, cell, World.WALL_DECOR[cell])
+			if WorldMap.WALL_DECOR.has(cell):
+				ObjectArt.draw_wall_decor(self, cell, WorldMap.WALL_DECOR[cell])
 			if Crafting.ORES.has(cell) and not game.api.node_worked(cell):
 				# Veins catch the eye: each glints for a moment every few seconds.
 				WallArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
@@ -206,24 +207,24 @@ func _draw() -> void:
 		if game.client.ground_view.has(cell):
 			_draw_stack(cell, game.client.ground_view[cell])
 		if tile == "furniture":
-			ObjectArt.draw_furniture(self, cell, World.FURNITURE[cell])
+			ObjectArt.draw_furniture(self, cell, WorldMap.FURNITURE[cell])
 		elif tile == "herb" and not game.api.node_worked(cell):
 			ObjectArt.draw_herb(self, cell, Crafting.HERBS[cell])
-		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
+		if tile == "npc" and WorldMap.npc(WorldMap.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
 			ObjectArt.draw_waystone(self, cell)
 			if not covered(cell):
 				# The stone stands taller than a person: its name sits above it.
 				names.append([(Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE - Vector2(0, 24), "Waystone", WAYSTONE_NAME])
 		elif tile == "npc":
-			var npc: Dictionary = World.npc(World.NPC_CELLS[cell])
+			var npc: Dictionary = WorldMap.npc(WorldMap.NPC_CELLS[cell])
 			var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
 			var keeper: bool = "quests" in npc["services"] or "vocation" in npc["services"]
 			var tint: Color = TOWNSFOLK_TINTS.get(npc.get("role", ""), QUEST_GIVER_TINT if keeper else SpriteArt.NPC_TINT)
 			SpriteArt.draw_actor(self, center, {"facing": npc["facing"], "outfit": SpriteArt.TOWNSFOLK_OUTFIT}, false, 0.0, tint)
 			if not covered(cell):
-				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME, World.NPC_CELLS[cell]])
+				names.append([center, npc["name"], QUEST_GIVER_NAME if keeper else NPC_NAME, WorldMap.NPC_CELLS[cell]])
 		_draw_occupants(cell)
-		if tile in World.TREES and not tile.is_empty():
+		if tile in WorldMap.TREES and not tile.is_empty():
 			ObjectArt.draw_tree(self, cell)
 	while next_roof < roofs.size():
 		_draw_roof(roofs[next_roof][1])
@@ -243,24 +244,24 @@ func _cache_tall(area: Rect2i) -> void:
 	_tall_area = area
 	for y: int in range(area.position.y, area.end.y):
 		for x: int in range(area.position.x, area.end.x):
-			var tile: String = World.terrain(Vector2i(x, y))
-			if not tile.is_empty() and (tile in World.WALLS or tile in World.TREES):
+			var tile: String = WorldMap.terrain(Vector2i(x, y))
+			if not tile.is_empty() and (tile in WorldMap.WALLS or tile in WorldMap.TREES):
 				_tall[Vector2i(x, y)] = tile
 	# A castle keep's doorways (keeps are not buildings, see Buildings.find) get doors too.
 	for y: int in range(area.position.y, area.end.y):
 		for x: int in range(area.position.x, area.end.x):
 			var cell := Vector2i(x, y)
-			if World.terrain(cell) in ["F", "Y"] and World.OVERWORLD.has_point(cell) and Buildings.is_door(World.terrain, cell):
+			if WorldMap.terrain(cell) in ["F", "Y"] and WorldMap.OVERWORLD.has_point(cell) and Buildings.is_door(WorldMap.terrain, cell):
 				_tall[cell] = "door"
-	for building: Dictionary in World.BUILDINGS:
+	for building: Dictionary in WorldMap.BUILDINGS:
 		if building["rect"].intersects(area):
 			for cell: Vector2i in building["doors"]:
 				if area.has_point(cell):
 					_tall[cell] = "door"
-	for cell: Vector2i in World.NPC_CELLS:
+	for cell: Vector2i in WorldMap.NPC_CELLS:
 		if area.has_point(cell):
 			_tall[cell] = "npc"
-	for cell: Vector2i in World.FURNITURE:
+	for cell: Vector2i in WorldMap.FURNITURE:
 		if area.has_point(cell):
 			_tall[cell] = "furniture"
 	for y: int in range(area.position.y, area.end.y):

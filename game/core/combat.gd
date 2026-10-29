@@ -11,6 +11,7 @@ extends RefCounted
 ##   {kind: "message", id, text}.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Monsters = preload("res://game/data/monsters.gd")
 const Spells = preload("res://game/data/spells.gd")
@@ -145,8 +146,8 @@ static func line_of_sight(from: Vector2i, to: Vector2i) -> bool:
 	var steps: int = maxi(absi(to.x - from.x), absi(to.y - from.y))
 	for step: int in range(1, steps):
 		var cell := Vector2i(Vector2(from).lerp(Vector2(to), float(step) / steps).round())
-		var tile: String = World.terrain(cell)
-		if tile.is_empty() or tile == " " or tile in World.WALLS or tile in World.TREES:
+		var tile: String = WorldMap.terrain(cell)
+		if tile.is_empty() or tile == " " or tile in WorldMap.WALLS or tile in WorldMap.TREES:
 			return false
 	return true
 
@@ -161,7 +162,7 @@ static func step_toward(from: Vector2i, goal: Vector2i, blocked: Callable) -> Ve
 	var best_score: int = distance(from, goal) * 100 + absi(goal.x - from.x) + absi(goal.y - from.y)
 	for step: Vector2i in STEPS:
 		var next: Vector2i = from + step
-		if not World.walkable(next) or blocked.call(next):
+		if not WorldMap.walkable(next) or blocked.call(next):
 			continue
 		var score: int = distance(next, goal) * 100 + absi(goal.x - next.x) + absi(goal.y - next.y)
 		if score < best_score:
@@ -191,7 +192,7 @@ static func path_step(from: Vector2i, goal: Vector2i, blocked: Callable, limit: 
 				while previous[back] != from:
 					back = previous[back]
 				return (next if cell == from else back) - from
-			if not World.walkable(next) or blocked.call(next):
+			if not WorldMap.walkable(next) or blocked.call(next):
 				continue
 			previous[next] = cell
 			queue.append(next)
@@ -237,7 +238,7 @@ static func attack_style(vocation: String, equipment: Dictionary) -> String:
 
 
 func in_pvp_zone(id: int) -> bool:
-	return World.zone_at(creature(id)["cell"]).get("pvp", false)
+	return WorldMap.zone_at(creature(id)["cell"]).get("pvp", false)
 
 
 ## Players fight monsters anywhere, and each other only when both stand in a PvP zone with PvP on.
@@ -247,7 +248,7 @@ func hostile(attacker: int, target: int) -> bool:
 	if attacker < 0 and target < 0:
 		return false
 	# The overworld and each dungeon copy are separate spaces, even where they are close on the map.
-	if World.dungeon_at(creature(attacker)["cell"]) != World.dungeon_at(creature(target)["cell"]):
+	if WorldMap.dungeon_at(creature(attacker)["cell"]) != WorldMap.dungeon_at(creature(target)["cell"]):
 		return false
 	if attacker > 0 and target > 0:
 		if same_party(attacker, target) or not world.pvp_on(attacker) or not world.pvp_on(target):
@@ -305,9 +306,9 @@ func monster_snapshot(now: float) -> Dictionary:
 ## player or bot comes near it (_wake_camps), so startup and memory do not grow with the map.
 func populate(now: float, everywhere: bool = false) -> Array:
 	var events: Array = []
-	for index: int in World.MONSTER_SPAWNS.size():
+	for index: int in WorldMap.MONSTER_SPAWNS.size():
 		if not everywhere:
-			var chunk: Vector2i = World.MONSTER_SPAWNS[index]["cell"] / SLEEP_CHUNK
+			var chunk: Vector2i = WorldMap.MONSTER_SPAWNS[index]["cell"] / SLEEP_CHUNK
 			if not _dormant.has(chunk):
 				_dormant[chunk] = []
 			_dormant[chunk].append(index)
@@ -317,7 +318,7 @@ func populate(now: float, everywhere: bool = false) -> Array:
 
 
 func _fill_camp(index: int, now: float, events: Array) -> void:
-	for count: int in World.MONSTER_SPAWNS[index]["count"]:
+	for count: int in WorldMap.MONSTER_SPAWNS[index]["count"]:
 		if not _spawn_at_marker(index, now, events):
 			respawns.append([now + SPAWN_RETRY_SECONDS, index])
 
@@ -363,8 +364,8 @@ func _rest_camps(now: float, events: Array) -> void:
 		if now - float(_awake_since[chunk]) < REST_SECONDS:
 			continue
 		var camps: Dictionary = {}
-		for index: int in World.MONSTER_SPAWNS.size():
-			if World.MONSTER_SPAWNS[index]["cell"] / SLEEP_CHUNK == chunk:
+		for index: int in WorldMap.MONSTER_SPAWNS.size():
+			if WorldMap.MONSTER_SPAWNS[index]["cell"] / SLEEP_CHUNK == chunk:
 				camps[index] = true
 		var leaving: Array[int] = []
 		var busy: bool = false
@@ -392,14 +393,14 @@ func dormant_camps() -> int:
 
 
 func _spawn_at_marker(index: int, now: float, events: Array) -> bool:
-	var spawn: Dictionary = World.MONSTER_SPAWNS[index]
+	var spawn: Dictionary = WorldMap.MONSTER_SPAWNS[index]
 	if not Monsters.MONSTERS.has(spawn["monster"]):
 		return false
 	for attempt: int in 12:
 		var offset := Vector2i(rng.randi_range(-spawn["radius"], spawn["radius"]),
 			rng.randi_range(-spawn["radius"], spawn["radius"])) if attempt > 0 else Vector2i.ZERO
 		var cell: Vector2i = spawn["cell"] + offset
-		if World.walkable(cell) and not world.occupied(cell, now):
+		if WorldMap.walkable(cell) and not world.occupied(cell, now):
 			spawn_monster(spawn["monster"], spawn["level"], cell, now, index, events)
 			return true
 	return false
@@ -609,7 +610,7 @@ func wall_cells(id: int, radius: int) -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
 	for step: int in range(-radius, radius + 1):
 		var cell: Vector2i = middle + across * step
-		if World.walkable(cell) and line_of_sight(player["cell"], cell):
+		if WorldMap.walkable(cell) and line_of_sight(player["cell"], cell):
 			cells.append(cell)
 	return cells
 
@@ -869,8 +870,8 @@ func _recall(id: int, slot: int, now: float) -> Dictionary:
 	player["backpack"][slot] = World.make_entry(kind, left) if left > 0 else ""
 	player["groups"]["rune"] = now + Spells.GROUP_SECONDS["rune"]
 	var events: Array = [{"kind": "area", "cells": [player["cell"]], "color": Spells.RUNES_BY_ELEMENT["home"]["color"], "element": "heal"}]
-	var home: Vector2i = World.SPAWNS[0]
-	for spawn: Vector2i in World.SPAWNS:
+	var home: Vector2i = WorldMap.SPAWNS[0]
+	for spawn: Vector2i in WorldMap.SPAWNS:
 		if not world.occupied(spawn, now, id):
 			home = spawn
 			break
@@ -891,8 +892,8 @@ static func circle(center: Vector2i, radius: int) -> Array[Vector2i]:
 	for dy: int in range(-radius, radius + 1):
 		for dx: int in range(-radius, radius + 1):
 			var cell: Vector2i = center + Vector2i(dx, dy)
-			var tile: String = World.terrain(cell)
-			if dx * dx + dy * dy <= radius * radius + radius and tile not in [" ", ""] and tile not in World.WALLS:
+			var tile: String = WorldMap.terrain(cell)
+			if dx * dx + dy * dy <= radius * radius + radius and tile not in [" ", ""] and tile not in WorldMap.WALLS:
 				cells.append(cell)
 	return cells
 
@@ -909,7 +910,7 @@ func _area(center: Vector2i, radius: int, color: Color, events: Array, element: 
 	for dy: int in range(-radius, radius + 1):
 		for dx: int in range(-radius, radius + 1):
 			var cell: Vector2i = center + Vector2i(dx, dy)
-			if World.terrain(cell) not in [" ", ""] and World.terrain(cell) not in World.WALLS:
+			if WorldMap.terrain(cell) not in [" ", ""] and WorldMap.terrain(cell) not in WorldMap.WALLS:
 				cells.append(cell)
 	var area: Dictionary = {"kind": "area", "cells": cells, "color": color}
 	if not element.is_empty():
@@ -991,9 +992,9 @@ func _award_trophies(boss: String, fought: Dictionary, at: Vector2i, events: Arr
 
 ## Who trades `boss`'s trophies for relics, for messages ("Ysolde in Reedmere").
 static func relic_keeper_text(boss: String) -> String:
-	for id: String in World.QUEST_GIVERS:
-		if World.QUEST_GIVERS[id]["boss"] == boss:
-			return "%s in %s" % [World.QUEST_GIVERS[id]["name"], World.QUEST_GIVERS[id]["place"]]
+	for id: String in WorldMap.QUEST_GIVERS:
+		if WorldMap.QUEST_GIVERS[id]["boss"] == boss:
+			return "%s in %s" % [WorldMap.QUEST_GIVERS[id]["name"], WorldMap.QUEST_GIVERS[id]["place"]]
 	return "the relic keepers"
 
 
@@ -1009,10 +1010,10 @@ static func relic_boss(relic: String) -> String:
 func claim_relic(id: int, npc: Variant, relic: Variant, _now: float) -> Dictionary:
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player", "events": []}
-	if typeof(npc) != TYPE_STRING or not World.QUEST_GIVERS.has(npc) or World.QUEST_GIVERS[npc]["boss"].is_empty():
+	if typeof(npc) != TYPE_STRING or not WorldMap.QUEST_GIVERS.has(npc) or WorldMap.QUEST_GIVERS[npc]["boss"].is_empty():
 		return {"ok": false, "reason": "Unknown quest giver", "events": []}
 	var player: Dictionary = world.players[id]
-	var keeper: Dictionary = World.QUEST_GIVERS[npc]
+	var keeper: Dictionary = WorldMap.QUEST_GIVERS[npc]
 	if not World.in_talk_range(player["cell"], keeper["cell"]):
 		return {"ok": false, "reason": "Walk closer to %s" % keeper["name"], "events": []}
 	var boss: String = relic_boss(relic) if typeof(relic) == TYPE_STRING else ""
@@ -1045,7 +1046,7 @@ func empower_spell(id: int, npc: Variant, spell: Variant, _now: float) -> Dictio
 	var player: Dictionary = world.players[id]
 	if not World.serves(npc, "runes", player["cell"]):
 		return {"ok": false, "reason": "Walk closer to a class trainer", "events": []}
-	var trainer: Dictionary = World.QUEST_GIVERS[npc]
+	var trainer: Dictionary = WorldMap.QUEST_GIVERS[npc]
 	if Quests.TRAINERS[npc][0] != player["vocation"]:
 		return {"ok": false, "reason": "%s only teaches %ss" % [trainer["name"],
 			Balance.VOCATIONS[Quests.TRAINERS[npc][0]]["name"]], "events": []}
@@ -1077,12 +1078,12 @@ func task_action(id: int, npc: Variant, task: Variant, action: Variant, _now: fl
 	if not world.players.has(id):
 		return {"ok": false, "reason": "Unknown player", "events": []}
 	var player: Dictionary = world.players[id]
-	if not World.serves(npc, "quests", player["cell"]) or World.QUEST_GIVERS[npc]["tasks"].is_empty():
+	if not World.serves(npc, "quests", player["cell"]) or WorldMap.QUEST_GIVERS[npc]["tasks"].is_empty():
 		return {"ok": false, "reason": "Walk closer to a quest giver", "events": []}
-	if typeof(task) != TYPE_STRING or task not in World.QUEST_GIVERS[npc]["tasks"]:
-		return {"ok": false, "reason": "%s has no such task" % World.QUEST_GIVERS[npc]["name"], "events": []}
+	if typeof(task) != TYPE_STRING or task not in WorldMap.QUEST_GIVERS[npc]["tasks"]:
+		return {"ok": false, "reason": "%s has no such task" % WorldMap.QUEST_GIVERS[npc]["name"], "events": []}
 	var definition: Dictionary = Quests.TASKS[task]
-	var giver: String = World.QUEST_GIVERS[npc]["name"]
+	var giver: String = WorldMap.QUEST_GIVERS[npc]["name"]
 	if player["done_tasks"].has(task):
 		return {"ok": false, "reason": "You already finished %s" % definition["title"], "events": []}
 	var target: String = Quests.target_name(task)
@@ -1196,7 +1197,7 @@ static func next_task_hint(player: Dictionary, current_giver: String) -> String:
 	var next: String = World.next_task(player)
 	if next.is_empty() or Quests.TASKS[next]["giver"] == current_giver:
 		return ""
-	var giver: Dictionary = World.QUEST_GIVERS[Quests.TASKS[next]["giver"]]
+	var giver: Dictionary = WorldMap.QUEST_GIVERS[Quests.TASKS[next]["giver"]]
 	var band: Vector2i = World.task_levels(next)
 	return " Next: %s in %s has work for levels %d-%d." % [giver["name"], giver["place"], band.x, band.y]
 
@@ -1542,7 +1543,7 @@ func spill(origin: Vector2i, items: Array[String]) -> Array[Vector2i]:
 		var cell: Vector2i = cells[index]
 		index += 1
 		var stack: Array = world.ground.get(cell, [])
-		if World.walkable(cell):
+		if WorldMap.walkable(cell):
 			var placed: bool = false
 			while not items.is_empty() and World.stack_onto(stack, items.back()):
 				items.pop_back()
@@ -1552,7 +1553,7 @@ func spill(origin: Vector2i, items: Array[String]) -> Array[Vector2i]:
 				changed.append(cell)
 		for step: Vector2i in STEPS:
 			var next: Vector2i = cell + step
-			if not seen.has(next) and distance(next, origin) <= SPILL_RADIUS and World.terrain(next) not in ["", " "]:
+			if not seen.has(next) and distance(next, origin) <= SPILL_RADIUS and WorldMap.terrain(next) not in ["", " "]:
 				seen[next] = true
 				cells.append(next)
 	return changed
@@ -1616,8 +1617,8 @@ func _kill_player(id: int, now: float, events: Array, killer: int = 0) -> void:
 	var result: Array = level_from_total(total - lost)
 	player["level"] = result[0]
 	player["experience"] = result[1]
-	var home: Vector2i = World.SPAWNS[0]
-	for spawn: Vector2i in World.SPAWNS:
+	var home: Vector2i = WorldMap.SPAWNS[0]
+	for spawn: Vector2i in WorldMap.SPAWNS:
 		if not world.occupied(spawn, now, id):
 			home = spawn
 			break
@@ -1659,7 +1660,7 @@ func _drop_belongings(id: int, events: Array) -> Array[String]:
 	var dropped: Array[String] = []
 	var lost_worn: Array[String] = []
 	# High-risk zones (the Hollow Reach) drop everything worn, like a red skull.
-	var full_loot: bool = World.zone_at(player["cell"]).get("full_loot", false)
+	var full_loot: bool = WorldMap.zone_at(player["cell"]).get("full_loot", false)
 	for index: int in player["backpack"].size():
 		if not player["backpack"][index].is_empty() and not World.bound(player["backpack"][index]):
 			dropped.append(player["backpack"][index])
@@ -1709,7 +1710,7 @@ func tick(now: float) -> Array:
 		if now >= respawns[index][0]:
 			var spawn: int = respawns[index][1]
 			respawns.remove_at(index)
-			if _player_near(World.MONSTER_SPAWNS[spawn]["cell"], 4) or not _spawn_at_marker(spawn, now, events):
+			if _player_near(WorldMap.MONSTER_SPAWNS[spawn]["cell"], 4) or not _spawn_at_marker(spawn, now, events):
 				respawns.append([now + SPAWN_RETRY_SECONDS, spawn])
 	return events
 
@@ -1749,7 +1750,7 @@ func _player_tick(id: int, now: float, events: Array) -> void:
 ## Starts, keeps, or ends a player's town rest; returns whether it boosts this regeneration tick.
 func _town_rest(id: int, limits: Dictionary, now: float, events: Array) -> bool:
 	var player: Dictionary = world.players[id]
-	var in_town: bool = World.zone_at(player["cell"]).get("town", false)
+	var in_town: bool = WorldMap.zone_at(player["cell"]).get("town", false)
 	var missing: bool = player["health"] < limits["health"] or player["mana"] < limits["mana"]
 	if player["town_rest"]:
 		if in_town and missing:
@@ -1933,9 +1934,9 @@ func _can_chase(monster: Dictionary, player: int) -> bool:
 	if not world.players.has(player):
 		return false
 	var cell: Vector2i = world.players[player]["cell"]
-	var into_town: bool = World.zone_at(cell).get("town", false) and not World.zone_at(monster["home"]).get("town", false)
+	var into_town: bool = WorldMap.zone_at(cell).get("town", false) and not WorldMap.zone_at(monster["home"]).get("town", false)
 	return not into_town and distance(cell, monster["home"]) <= Monsters.LEASH \
-		and distance(cell, monster["cell"]) <= Monsters.CHASE_RANGE and World.dungeon_at(cell) == World.dungeon_at(monster["home"])
+		and distance(cell, monster["cell"]) <= Monsters.CHASE_RANGE and WorldMap.dungeon_at(cell) == WorldMap.dungeon_at(monster["home"])
 
 
 ## Forgets the fight: full health, no experience or trophy claims, and (for bosses) no timer.
@@ -2042,10 +2043,10 @@ func _monster_step(id: int, goal: Vector2i, now: float, events: Array) -> void:
 	var own: Dictionary = {monster["cell"]: 1}
 	if now < monster["next_move"]:
 		own[monster["from"]] = own.get(monster["from"], 0) + 1
-	var home_zoned: bool = not World.zone_at(home).is_empty()
+	var home_zoned: bool = not WorldMap.zone_at(home).is_empty()
 	var step: Vector2i = path_step(monster["cell"], goal, func(cell: Vector2i) -> bool:
 		return taken.get(cell, 0) > own.get(cell, 0) or distance(cell, home) > Monsters.LEASH or world.walled(cell, now) \
-			or World.zone_at(cell).is_empty() == home_zoned)
+			or WorldMap.zone_at(cell).is_empty() == home_zoned)
 	# Chasing is quicker than a player's step (Balance.chase_seconds); idling and going home use the monster's own pace.
 	var hunted: int = monster["target"]
 	var pace: float = monster["step"]

@@ -7,6 +7,7 @@ extends SceneTree
 ##   godot --position 99999,99999 --resolution 64x64 --path . --script res://tests/integration/soak_test.gd
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const ROUNDS: int = 36
 const FRAMES_PER_ROUND: int = 20
 ## Clock jump per round: long enough for respawns, and over the run for ground to decay.
@@ -56,9 +57,9 @@ func _run() -> void:
 	var player: Dictionary = game.world.players[1]
 	player["level"] = 50
 	var spots: Array[Vector2i] = []
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
 		spots.append(spawn["cell"])
-	for zone: Dictionary in World.ZONES:
+	for zone: Dictionary in WorldMap.ZONES:
 		if zone["town"]:
 			spots.append(zone["rect"].get_center())
 	var drops: int = 0
@@ -80,7 +81,7 @@ func _run() -> void:
 						game.replication.handle_events(events)
 						break
 			# A dropped stack of junk on the player's tile (decays later).
-			if frame == 1 and World.walkable(cell):
+			if frame == 1 and WorldMap.walkable(cell):
 				game.world.ground[cell] = ["glowcap#3"]
 				game.replication.publish_ground([cell])
 				drops += 1
@@ -97,9 +98,9 @@ func _free_near(spot: Vector2i) -> Vector2i:
 		for dy: int in range(-radius, radius + 1):
 			for dx: int in range(-radius, radius + 1):
 				var cell: Vector2i = spot + Vector2i(dx, dy)
-				if World.walkable(cell) and not game.world.occupied(cell, game._now(), 1):
+				if WorldMap.walkable(cell) and not game.world.occupied(cell, game._now(), 1):
 					return cell
-	return World.SPAWNS[0]
+	return WorldMap.SPAWNS[0]
 
 
 func _sample() -> Dictionary:
@@ -144,10 +145,10 @@ func _report(drops: int) -> void:
 	# Stacks older than the decay time are gone: only recent drops (and starting items) remain.
 	var recent: int = ceili(World.GROUND_DECAY_SECONDS / SKEW_PER_ROUND) + 1
 	printerr("SOAK ground cells ever %d, now %d" % [ever_ground.size(), final["ground"]])
-	if final["ground"] > World.GROUND_ITEMS.size() + recent * 8:
+	if final["ground"] > WorldMap.GROUND_ITEMS.size() + recent * 8:
 		failures.append("ground stacks are not decaying (%d now, %d ever)" % [final["ground"], ever_ground.size()])
 	var spawned: int = 0
-	for spawn: Dictionary in World.MONSTER_SPAWNS:
+	for spawn: Dictionary in WorldMap.MONSTER_SPAWNS:
 		spawned += spawn["count"]
 	if final["monsters"] > spawned + 40:
 		failures.append("more monsters than spawn slots (%d > %d)" % [final["monsters"], spawned])

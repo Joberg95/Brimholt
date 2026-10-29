@@ -3,6 +3,7 @@ extends Node
 ## beside your bars), the buff bar (game/ui/buff_bar.gd), and the Controls menu.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Balance = preload("res://game/data/balance.gd")
 const Layout = preload("res://game/ui/layout.gd")
 const ControlsMenu = preload("res://game/ui/controls_menu.gd")
@@ -25,7 +26,7 @@ var buff_bar: Node
 var target_frame: Control
 var _action: Label
 var _zone_name: String = ""
-## The continent you were last on (World.continent_at): sailing to another one is announced.
+## The continent you were last on (WorldMap.continent_at): sailing to another one is announced.
 var _continent: String = ""
 ## The space you are in (plan 41: a continent, or the cave or dungeon copy you went down into).
 ## Crossing into another draws the travel curtain over the game window: a dark card naming
@@ -35,7 +36,7 @@ var curtain: ColorRect
 var _curtain_label: Label
 const CURTAIN_HOLD: float = 0.35
 const CURTAIN_FADE: float = 0.6
-## Under the minimap: where you are and its monster levels (World.location_at).
+## Under the minimap: where you are and its monster levels (WorldMap.location_at).
 var location_label: Label
 var _location_key: String = ""
 var _shown_message: String = ""
@@ -202,7 +203,7 @@ func _update_location() -> void:
 		location_label.text = ""
 		return
 	var state: Dictionary = actors[game.client.self_id]["state"]
-	var place: Dictionary = World.location_at(state["cell"])
+	var place: Dictionary = WorldMap.location_at(state["cell"])
 	var rest: String = _rest_text(state, actors[game.client.self_id]) if place.get("kind", "") == "town" else ""
 	var key: String = "%s|%d|%s" % [place.get("name", ""), state.get("level", 1), rest]
 	if key == _location_key:
@@ -259,7 +260,7 @@ func _update_zone() -> void:
 	var actors: Dictionary = game.client.actors
 	var self_id: int = game.client.self_id
 	_update_location()
-	var zone: Dictionary = World.zone_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else {}
+	var zone: Dictionary = WorldMap.zone_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else {}
 	var zone_name: String = zone.get("name", "")
 	var message: String = game.last_action_message
 	# Caves and dungeons need no banner or announcement: the line under the minimap names them.
@@ -269,7 +270,7 @@ func _update_zone() -> void:
 			and (message.is_empty() or game._now() - _message_since > 2.0):
 		game.last_action_message = "Entering %s." % zone_name
 	_zone_name = zone_name
-	var continent: String = World.continent_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else ""
+	var continent: String = WorldMap.continent_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else ""
 	if not continent.is_empty() and continent != _continent:
 		if not _continent.is_empty():
 			game.last_action_message = "You arrive on %s." % continent

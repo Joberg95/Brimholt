@@ -10,6 +10,7 @@ extends RefCounted
 ## zones hold for the policy as for everyone; a choice the rules refuse simply does nothing.
 
 const World = preload("res://game/core/world.gd")
+const WorldMap = preload("res://game/world_map/world_map.gd")
 const Combat = preload("res://game/core/combat.gd")
 const Spells = preload("res://game/data/spells.gd")
 const Balance = preload("res://game/data/balance.gd")
@@ -97,7 +98,7 @@ static func observe(world: World, combat: Combat, id: int, foe: int, now: float)
 	var at: int = 0
 	var me: Dictionary = world.players[id]
 	at = _body(obs, at, world, combat, id, now)
-	obs[at] = 1.0 if World.zone_at(me["cell"]).get("pvp", false) else 0.0
+	obs[at] = 1.0 if WorldMap.zone_at(me["cell"]).get("pvp", false) else 0.0
 	obs[at + 1] = 1.0 if me["skull"] == "white" else 0.0
 	obs[at + 2] = 1.0 if me["skull"] == "red" else 0.0
 	obs[at + 3] = 1.0 if now >= me["next_move"] else 0.0
@@ -132,7 +133,7 @@ static func observe(world: World, combat: Combat, id: int, foe: int, now: float)
 	for dy: int in range(-GRID_RADIUS, GRID_RADIUS + 1):
 		for dx: int in range(-GRID_RADIUS, GRID_RADIUS + 1):
 			var cell: Vector2i = me["cell"] + Vector2i(dx, dy)
-			obs[at] = 1.0 if World.walkable(cell) and not world.walled(cell, now) and not _blocked(cell) else 0.0
+			obs[at] = 1.0 if WorldMap.walkable(cell) and not world.walled(cell, now) and not _blocked(cell) else 0.0
 			at += 1
 	assert(at == OBS_SIZE)
 	return obs
@@ -192,4 +193,4 @@ static func apply(world: World, combat: Combat, id: int, foe: int, move: int, ac
 
 ## Stairways block a bot's steps (bots never take stairs on their own), as in Bots.
 static func _blocked(cell: Vector2i) -> bool:
-	return World.terrain(cell) in ["v", "^"]
+	return WorldMap.terrain(cell) in ["v", "^"]
