@@ -84,10 +84,10 @@ func _process(_delta: float) -> bool:
 		_loss_client_tick()
 		return false
 	if role == "persist_duplicate":
-		if game._status_message.contains("That character is already in the world"):
+		if game.session.status_message.contains("That character is already in the world"):
 			finish()
 		return false
-	if not game.connected:
+	if not game.session.connected:
 		return false
 	match role:
 		"host": _host_tick(now)
@@ -153,7 +153,7 @@ func fail(message: String) -> void:
 func finish() -> void:
 	finishing = true
 	print("BRIMHOLT_TEST_PASS " + role)
-	await game.leave_game()
+	await game.session.leave_game()
 	quit()
 
 
@@ -717,15 +717,15 @@ func _dedicated_client_tick(now: float) -> void:
 ## written as exactly one signed save.
 func _persist_host_tick() -> void:
 	if restarted < 0:
-		var folder: String = game.store.dir + "/characters"
+		var folder: String = game.session.store.dir + "/characters"
 		restarted = 1 if DirAccess.dir_exists_absolute(folder) and not DirAccess.get_files_at(folder).is_empty() else 0
 	had_player = had_player or not game.world.players.is_empty()
 	# A refused peer sits in _closing_peers until it is disconnected.
-	refused_duplicate = refused_duplicate or not game._closing_peers.is_empty()
+	refused_duplicate = refused_duplicate or not game.session.closing_peers.is_empty()
 	if had_player and game.world.players.is_empty() and multiplayer_peers_gone() and (restarted == 0 or refused_duplicate):
-		var saves: PackedStringArray = DirAccess.get_files_at(game.store.dir + "/characters")
+		var saves: PackedStringArray = DirAccess.get_files_at(game.session.store.dir + "/characters")
 		var json: Array = Array(saves).filter(func(file: String) -> bool: return file.ends_with(".json"))
-		if json.size() != 1 or game.store.load_character(String(json[0]).get_basename())["status"] != "ok":
+		if json.size() != 1 or game.session.store.load_character(String(json[0]).get_basename())["status"] != "ok":
 			fail("Expected one valid save, found %s" % saves)
 			return
 		finish()
@@ -768,7 +768,7 @@ func _persist_return_tick(now: float) -> void:
 		1:
 			# Stay until the second login with this identity (started on BRIMHOLT_PERSIST_IN) has
 			# been refused: the host warns whoever plays the character.
-			if game.last_action_message == game.DUPLICATE_LOGIN_WARNING and now - stage_since > 0.5:
+			if game.last_action_message == game.session.DUPLICATE_LOGIN_WARNING and now - stage_since > 0.5:
 				finish()
 
 
@@ -791,7 +791,7 @@ func _has_dungeon_monster() -> bool:
 
 func _loss_host_tick() -> void:
 	# A host bot (a training dummy) must reach the client like any player.
-	if game.bots.bots.is_empty() and not game.spawn_bot("knight", 20, "dummy").is_empty():
+	if game.bots.bots.is_empty() and not game.session.spawn_bot("knight", 20, "dummy").is_empty():
 		fail("The host could not add a bot")
 		return
 	for id: int in game.client.actors:
@@ -801,9 +801,9 @@ func _loss_host_tick() -> void:
 
 
 func _loss_client_tick() -> void:
-	if stage == 0 and game.connected and game.client.actors.has(game.client.self_id) and game.client.actors.keys().any(func(id: int) -> bool:
+	if stage == 0 and game.session.connected and game.client.actors.has(game.client.self_id) and game.client.actors.keys().any(func(id: int) -> bool:
 			return game.client.actors[id]["state"].get("bot", false) and game.client.actors[id]["state"]["level"] == 20):
-		if game.bots.bots.size() != 0 or not game.spawn_bot("knight", 1, "dummy").begins_with("Only the host"):
+		if game.bots.bots.size() != 0 or not game.session.spawn_bot("knight", 1, "dummy").begins_with("Only the host"):
 			fail("A client holds or can create bots")
 			return
 		# This host was started without --allow-start-vocation: asking for a vocation gets an Adventurer.
@@ -812,8 +812,8 @@ func _loss_client_tick() -> void:
 			return
 		game.equip_local("helmet")
 		advance()
-	elif stage == 1 and not game.connected:
-		if game._status_message != "The host disconnected. Your LAN session has ended." \
+	elif stage == 1 and not game.session.connected:
+		if game.session.status_message != "The host disconnected. Your LAN session has ended." \
 				or not game.client.actors.is_empty() or not game.client.ground_view.is_empty() or game.client.self_id != 0:
 			fail("Host loss did not report an error and clear stale actors")
 		else:

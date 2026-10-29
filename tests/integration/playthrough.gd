@@ -302,13 +302,13 @@ func _process(delta: float) -> bool:
 		report("finding", "the process stalled for %.1f s (macOS may pause hidden windows)" % delta)
 	if game == null or finished:
 		return false
-	if not game.connected or me().is_empty():
+	if not game.session.connected or me().is_empty():
 		if phase != "join" and now() - phase_since > 5.0:
-			report("fail", "lost the connection: %s (connected %s, self %d, actors %s, message '%s')" % [game._status_message,
-				game.connected, game.client.self_id, game.client.actors.keys(), game.last_action_message])
+			report("fail", "lost the connection: %s (connected %s, self %d, actors %s, message '%s')" % [game.session.status_message,
+				game.session.connected, game.client.self_id, game.client.actors.keys(), game.last_action_message])
 			_finish()
 		elif phase == "join" and now() - phase_since > 20.0:
-			report("fail", "could not join: %s" % game._status_message)
+			report("fail", "could not join: %s" % game.session.status_message)
 			_finish()
 		return false
 	track_events()
@@ -674,5 +674,5 @@ func _finish() -> void:
 	finished = true
 	report("info", "done after %d kills and %d deaths" % [kills, deaths])
 	print("PLAYTEST_DONE %s" % role)
-	await game.leave_game()
+	await game.session.leave_game()
 	quit()

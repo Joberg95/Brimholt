@@ -116,8 +116,8 @@ func setup(game_node: Node, address: LineEdit) -> void:
 	difficulty.tooltip_text = "How well bots fight you in PvP: Easy hesitates and slips, Hard plays its best"
 	for level: String in Bots.DIFFICULTIES:
 		difficulty.add_item(level.capitalize())
-	difficulty.select(maxi(0, Bots.DIFFICULTIES.find(game.bot_difficulty)))
-	difficulty.item_selected.connect(func(index: int) -> void: game.bot_difficulty = Bots.DIFFICULTIES[index])
+	difficulty.select(maxi(0, Bots.DIFFICULTIES.find(game.session.bot_difficulty)))
+	difficulty.item_selected.connect(func(index: int) -> void: game.session.bot_difficulty = Bots.DIFFICULTIES[index])
 	solo_row.add_child(difficulty)
 	var actions := HBoxContainer.new()
 	_play.add_child(actions)
@@ -174,7 +174,7 @@ func reload() -> void:
 
 
 func rebuild() -> void:
-	var wanted: String = game.identity_profile if not _have_selection else selected
+	var wanted: String = game.session.identity_profile if not _have_selection else selected
 	if not _have_selection and wanted.is_empty():
 		wanted = Identity.last_profile()
 	if not characters.any(func(entry: Dictionary) -> bool: return entry["profile"] == wanted):
@@ -213,9 +213,9 @@ func _show_form(shown: bool) -> void:
 func _create() -> void:
 	var profile: String = Identity.create(_name_field.text)
 	if profile.is_empty():
-		game._status_message = "Names need 2 to %d letters or digits." % Identity.MAX_NAME
+		game.session.status_message = "Names need 2 to %d letters or digits." % Identity.MAX_NAME
 		return
-	game._status_message = ""
+	game.session.status_message = ""
 	_have_selection = true
 	selected = profile
 	reload()
@@ -229,26 +229,26 @@ func _delete_pressed() -> void:
 	if now > _delete_armed_until:
 		_delete_armed_until = now + 4.0
 		_delete.text = "Really delete?"
-		game._status_message = "Click again to forget %s on this computer. This cannot be undone." % entry["name"]
+		game.session.status_message = "Click again to forget %s on this computer. This cannot be undone." % entry["name"]
 		return
 	Identity.delete(selected)
-	game._status_message = "%s was forgotten." % entry["name"]
+	game.session.status_message = "%s was forgotten." % entry["name"]
 	_have_selection = false
 	reload()
 
 
 func _start(hosting: bool, alone: bool = false) -> void:
 	if not _have_selection:
-		game._status_message = "Create a character first."
+		game.session.status_message = "Create a character first."
 		_show_form(true)
 		return
-	game.select_character(selected)
+	game.session.select_character(selected)
 	if alone:
-		game.play_solo()
+		game.session.play_solo()
 	elif hosting:
-		game.host_game()
+		game.session.host_game()
 	else:
-		game.join_game()
+		game.session.join_game()
 
 
 func _entry(profile: String) -> Dictionary:
@@ -261,11 +261,11 @@ func _entry(profile: String) -> Dictionary:
 ## Per frame: shown while offline (never on a dedicated server), with the latest status.
 func refresh() -> void:
 	var was: bool = visible
-	visible = not game.connected and not game.dedicated
+	visible = not game.session.connected and not game.session.dedicated
 	if visible and not was:
 		reload()
 	if visible:
-		_status.text = game._status_message
+		_status.text = game.session.status_message
 		if _delete_armed_until > 0.0 and Time.get_ticks_msec() / 1000.0 > _delete_armed_until:
 			_delete_armed_until = 0.0
 			_delete.text = "Delete"

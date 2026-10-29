@@ -99,8 +99,8 @@ func build(game_node: Node, open_controls: Callable) -> void:
 func refresh() -> void:
 	if not visible:
 		return
-	var connected: bool = game.connected
-	status.text = game._status_message + ("  ·  %d/%d players" % [game.client.actors.size(), World.MAX_PLAYERS] if connected else "")
+	var connected: bool = game.session.connected
+	status.text = game.session.status_message + ("  ·  %d/%d players" % [game.client.actors.size(), World.MAX_PLAYERS] if connected else "")
 	status.add_theme_color_override("font_color", Color("#9ccea4") if connected else Color("#e4bd8a"))
 	var ids: Array = game.client.actors.keys()
 	ids.sort()

@@ -94,7 +94,7 @@ func handle_events(events: Array) -> void:
 func remote_players() -> Array[int]:
 	var result: Array[int] = []
 	for id: int in game.world.players:
-		if id != 1 and not game._closing_peers.has(id) and id in multiplayer.get_peers():
+		if id != 1 and not game.session.closing_peers.has(id) and id in multiplayer.get_peers():
 			result.append(id)
 	return result
 
@@ -197,8 +197,8 @@ func apply_actor(state: Dictionary, movement: bool = false) -> void:
 		if state.get("title", 0) > previous["state"].get("title", 0):
 			game._world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Titles.color_of(state["title"]))
 	game.client.put_actor(state, start, game._now())
-	if id == game.client.self_id and game.connected:
-		game._remember_character(state)
+	if id == game.client.self_id and game.session.connected:
+		game.session.remember_character(state)
 	if id == game.client.self_id and movement:
 		game._move_pending_since = -1.0
 		game._next_move_attempt = game._now() + state["remaining"] + 0.01

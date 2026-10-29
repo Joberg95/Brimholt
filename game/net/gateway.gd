@@ -27,7 +27,7 @@ func forget(id: int) -> void:
 ## Whether a request comes from a joined remote player who is under the rate limit; a player
 ## over it is disconnected.
 func _valid_sender(sender: int) -> bool:
-	if not game.hosting or sender <= 1 or not game.world.players.has(sender) or game._closing_peers.has(sender):
+	if not game.session.hosting or sender <= 1 or not game.world.players.has(sender) or game.session.closing_peers.has(sender):
 		return false
 	var now: float = game._now()
 	var window: Dictionary = _request_windows.get(sender, {"start": now, "count": 0})
@@ -36,7 +36,7 @@ func _valid_sender(sender: int) -> bool:
 	window["count"] += 1
 	_request_windows[sender] = window
 	if window["count"] > MAX_REQUESTS_PER_SECOND:
-		game._reject_connection(sender, "Too many commands. Reconnect and slow down.")
+		game.session.reject_connection(sender, "Too many commands. Reconnect and slow down.")
 		return false
 	return true
 
@@ -279,7 +279,7 @@ func _events_or_reason(id: int, result: Dictionary, save: bool = false) -> void:
 	if result["ok"]:
 		game.replication.handle_events(result["events"])
 		if save:
-			game._save_player(id)
+			game.session.save_player(id)
 	else:
 		game.replication.send_feedback(id, result["reason"], 0.0, false)
 

@@ -41,10 +41,10 @@ func _setup() -> void:
 	root.add_child(screen)
 	game = load("res://game/main.tscn").instantiate()
 	game.close_ends_session = false
-	game.save_enabled = false
+	game.session.save_enabled = false
 	screen.add_child(game)
-	game.port = 0
-	game.host_game()
+	game.session.port = 0
+	game.session.host_game()
 	_run()
 
 
@@ -154,7 +154,7 @@ func _report(drops: int) -> void:
 	# Loot claims are swept with their stacks: never more claims than loot on the ground.
 	if final["claims"] > final["ground"]:
 		failures.append("loot claims outlive their loot (%d claims, %d ground tiles)" % [final["claims"], final["ground"]])
-	game.leave_game()
+	game.session.leave_game()
 	await process_frame
 	if failures.is_empty():
 		print("BRIMHOLT_SOAK_PASS %d rounds, %d clock-skipped hours, objects/nodes/memory level, pools bounded"

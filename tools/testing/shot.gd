@@ -30,13 +30,13 @@ func _run() -> void:
 	game = load("res://game/main.tscn").instantiate()
 	game.close_ends_session = false
 	game.keybinds.persistent = false
-	game.start_vocation = "knight"
-	game.allow_start_vocation = true
+	game.session.start_vocation = "knight"
+	game.session.allow_start_vocation = true
 	screen.add_child(game)
-	game.save_enabled = false
-	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
-	game.port = 0
-	game.host_game()
+	game.session.save_enabled = false
+	game.session.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
+	game.session.port = 0
+	game.session.host_game()
 	game._world_view.lighting.time_override = 0.5
 	Weather.override = "clear"
 	for argument: String in OS.get_cmdline_user_args():

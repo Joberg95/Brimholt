@@ -500,7 +500,7 @@ func potion_cooldown(kind: String) -> float:
 
 func item_drag(_at: Vector2, source: Control, location: Dictionary) -> Variant:
 	var kind: String = World.kind_of(local_item(location))
-	if not game.connected or kind.is_empty():
+	if not game.session.connected or kind.is_empty():
 		return null
 	var preview := Control.new()
 	preview.draw.connect(func() -> void: SpriteArt.draw_item(preview, Vector2.ZERO, kind))
@@ -509,7 +509,7 @@ func item_drag(_at: Vector2, source: Control, location: Dictionary) -> Variant:
 
 
 func item_can_drop(_at: Vector2, data: Variant, target: Dictionary, slot: Control = null) -> bool:
-	return game.connected and typeof(data) == TYPE_DICTIONARY and data.has("brimholt_item") \
+	return game.session.connected and typeof(data) == TYPE_DICTIONARY and data.has("brimholt_item") \
 		and data["brimholt_item"] != target and not _locked(target, slot)
 
 

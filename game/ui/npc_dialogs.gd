@@ -156,7 +156,7 @@ func party_options(person: int) -> Array[String]:
 	var mine: Dictionary = actors[self_id]["state"]
 	var theirs: Dictionary = actors[person]["state"]
 	var my_party: int = mine.get("party", 0)
-	if person == self_id or game.solo_mode:
+	if person == self_id or game.session.solo_mode:
 		return options
 	if person in mine.get("invites", []) and my_party == 0:
 		options.append("join")

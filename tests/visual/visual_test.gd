@@ -60,18 +60,18 @@ func _run() -> void:
 	# Never touch the player's real key bindings, saves, or identity.
 	game.keybinds.persistent = false
 	# The checks play a Paladin; real new characters start as Adventurers (see _check_training_hall).
-	game.start_vocation = "paladin"
-	game.allow_start_vocation = true
+	game.session.start_vocation = "paladin"
+	game.session.allow_start_vocation = true
 	screen.add_child(game)
-	game.save_enabled = false
-	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
-	game.port = 0
-	game.host_game()
+	game.session.save_enabled = false
+	game.session.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
+	game.session.port = 0
+	game.session.host_game()
 	# Pixel checks compare against sprite texels, so pin bright noon and clear skies; night and
 	# weather are checked near the end.
 	game._world_view.lighting.time_override = 0.5
 	Weather.override = "clear"
-	if not game.connected:
+	if not game.session.connected:
 		quit(1)
 		return
 	# Remove the map's monsters so pixel checks are deterministic; combat is checked at the end.
@@ -205,7 +205,7 @@ func _run() -> void:
 		+ "mouse drag/right-click, smooth midpoint/endpoint, following camera, trees, NPC menu and ferry trips, "
 		+ "PvP island banner, action bar spell key, world map, click-to-target combat, relic quest and glow, vendor/potion key/bank depot/pack slots, cellar stairs and Rat King copy, mine caves, shop roof and sign (roof fades inside), storm and rainy night, dry desert with cacti, Hollow Reach gate and throne room, night lighting and particles, town lamp posts lit at night and steady while walking past, players dark without a torch, pitch-dark spider cave lit by a held torch, a fire rune cast from the action bar, a Glacier wall and a sudden death rune, spell book and spell tooltips with drag to the action bar, micro menu and character window, party window, target frame, own-tile loot right-click, training hall vocation choice, lexicon search and quest marks, top bar without bot controls and a host test bot")
 	finished = true
-	await game.leave_game()
+	await game.session.leave_game()
 	quit()
 
 
@@ -286,10 +286,10 @@ func _check_mouse_inventory() -> bool:
 	if not await _drag_to_map(slot_center, _tile_center(own)):
 		return false
 	await create_timer(World.ITEM_SECONDS + 0.05).timeout
-	game.solo_mode = true
+	game.session.solo_mode = true
 	await _push_mouse(_tile_center(own), MOUSE_BUTTON_RIGHT, true)
 	await _push_mouse(_tile_center(own), MOUSE_BUTTON_RIGHT, false)
-	game.solo_mode = false
+	game.session.solo_mode = false
 	if not _expect(game.world.ground_stack(own).is_empty() and player["backpack"][0] == "ringmail_coif",
 			"Right-clicking loot on your own tile did not pick it up"):
 		return false
@@ -1386,12 +1386,12 @@ func _check_bots() -> bool:
 	if not _expect(labels == ["Controls", "Leave game", "Close"] and listed and not game.game_menu.visible,
 			"The cogwheel should open the game menu with you listed, Controls, Leave game, and Close (%s)" % [labels]):
 		return false
-	var refused: String = game.spawn_bot("knight", 30, "dummy")
+	var refused: String = game.session.spawn_bot("knight", 30, "dummy")
 	await create_timer(0.4).timeout
 	var ids: Array = game.bots.bots.keys()
 	var shown: bool = refused.is_empty() and ids.size() == 1 and game.client.actors.has(ids[0]) and game.client.actors[ids[0]]["state"].get("bot", false) \
 		and Combat.distance(game.world.players[ids[0]]["cell"], game.world.players[1]["cell"]) <= 2
-	game.remove_bot(ids[0] if not ids.is_empty() else 0)
+	game.session.remove_bot(ids[0] if not ids.is_empty() else 0)
 	await process_frame
 	return _expect(shown and game.bots.bots.is_empty(), "A host bot did not appear beside you, or removing it failed")
 

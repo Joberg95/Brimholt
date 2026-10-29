@@ -1,7 +1,10 @@
 extends Node2D
-## The entry scene (/root/Main): ENet hosting and joining, the sender-validated RPC endpoint,
-## replicated client state, the camera, and input. The UI components in game/ui/ build and
-## draw the panels; main keeps shortcuts to their controls and thin wrappers for tests.
+## The entry scene (/root/Main): builds the pieces and wires them together. The simulation (world,
+## combat, economy, crafting, instances, bots) runs here on the host each frame; the network layer is
+## game/net/ (Session, Gateway, and Replication as child nodes, so their RPCs have the same path on
+## every peer); what this peer draws is game/client/client_state.gd; the UI components in game/ui/
+## build and draw the panels. Main still holds the client API (the *_local requests), input, and the
+## camera until plan 48 step 2e.
 
 const World = preload("res://game/core/world.gd")
 const Keybinds = preload("res://game/input/keybinds.gd")
@@ -36,6 +39,7 @@ const Bots = preload("res://game/core/bots.gd")
 const Solo = preload("res://game/core/solo.gd")
 const Gateway = preload("res://game/net/gateway.gd")
 const Replication = preload("res://game/net/replication.gd")
+const Session = preload("res://game/net/session.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -51,8 +55,6 @@ var crafting := Crafting.new(world)
 ## Gathering nodes this peer knows are regrowing: cell -> local _now() when they regrow.
 var worked_nodes: Dictionary = {}
 var instances := Instances.new(world, combat)
-## Shown to a player when someone else is refused for joining with their identity.
-const DUPLICATE_LOGIN_WARNING: String = "Someone tried to join as your character from another computer and was turned away."
 ## Opt-in frame profile (tools/testing/bench.gd): section -> [microseconds, frames, worst]. Off in play.
 var profiling: bool = false
 var frame_profile: Dictionary = {}
@@ -62,50 +64,19 @@ var client := ClientState.new()
 var gateway: Gateway
 ## Host updates to every peer and their application here (game/net/replication.gd), at /root/Main/Replication.
 var replication: Replication
+## Hosting, joining, the handshake, saves, and bots (game/net/session.gd), at /root/Main/Session.
+var session: Session
 ## How long a kill's green loot text stays over the body.
 const LOOT_TEXT_SECONDS: float = 4.0
-var connected: bool = false
-var hosting: bool = false
-## Playing solo: a private world (bound to this computer only) with companions and rival bands.
-var solo_mode: bool = false
 var solo: Solo
-var dedicated: bool = false
-var port: int = World.PORT
 var last_action_message: String = ""
-var peer: ENetMultiplayerPeer
-var _pending_peers: Dictionary = {}
-var _closing_peers: Dictionary = {}
-var _joining_since: float = -1.0
-var _leaving: bool = false
 var _move_pending_since: float = -1.0
 var _next_move_attempt: float = 0.0
-var _status_message: String = "Offline — host a world or join a LAN address."
 var _view: GameWindow
 var _world_view: Node2D
 ## Clients add this to their clock to follow the host's time of day.
 var _clock_offset: float = 0.0
 var keybinds := Keybinds.new()
-## Hosts save characters (game/persistence/character_store.gd) unless started with --no-save;
-## --save-dir=PATH picks the folder (default user://saves).
-var save_enabled: bool = true
-## How well bots fight players with the trained policy (Bots.DIFFICULTY): picked next to
-## "Play solo", or --bot-difficulty=easy|normal|hard.
-var bot_difficulty: String = "normal"
-var save_dir: String = CharacterStore.DEFAULT_DIR
-var store: CharacterStore
-## Peer id -> save account (SHA-256 of the identity token) of every character in the world.
-var _accounts: Dictionary = {}
-var _next_autosave: float = 0.0
-## Welcome-back messages for restored characters, sent after their snapshot.
-var _greetings: Dictionary = {}
-## This computer's identity token (game/persistence/identity.gd): from --profile=NAME, a new
-## one per run with --fresh-identity (tests), or --token=HEX.
-var identity_token: String = ""
-var identity_profile: String = ""
-## Whether identity_token came from identity_profile's file (so the start menu's summary of that
-## character may be updated), and the summary last written.
-var _profile_backed: bool = false
-var _remembered: String = ""
 ## Automated tests and bots run in hidden windows and set this false, so a stray OS close
 ## request (a click or shortcut meant for another app) cannot end their session.
 var close_ends_session: bool = true
@@ -128,10 +99,6 @@ var dialogs: NpcDialogs
 var start_panel: StartPanel
 # Shortcuts to component controls, used by input handling and the tests.
 var _address: LineEdit
-## The vocation a new character asks to start with (--vocation=, for tests and bots); hosts only
-## grant it when started with --allow-start-vocation, otherwise every new character is an Adventurer.
-var start_vocation: String = Balance.ADVENTURER
-var allow_start_vocation: bool = false
 var _controls: PanelContainer
 var _zone_label: Label
 var _minimap: Control
@@ -150,7 +117,9 @@ var _npc_menu_target: String:
 		return dialogs.npc_menu_target
 
 
-func _ready() -> void:
+## The network layer exists from the start, so tests and tools can set session options before the
+## scene enters the tree.
+func _init() -> void:
 	gateway = Gateway.new()
 	gateway.name = "Gateway"
 	gateway.game = self
@@ -159,69 +128,20 @@ func _ready() -> void:
 	replication.name = "Replication"
 	replication.game = self
 	add_child(replication)
+	session = Session.new()
+	session.name = "Session"
+	session.game = self
+	add_child(session)
+
+
+func _ready() -> void:
 	keybinds.load_saved()
 	# Menus and dialogs read small and minimal: every control without its own size uses this.
 	ThemeDB.get_default_theme().default_font_size = UiTheme.FONT_SIZE
 	_build_ui()
 	get_tree().auto_accept_quit = false
-	multiplayer.peer_connected.connect(_peer_connected)
-	multiplayer.peer_disconnected.connect(_peer_left)
-	multiplayer.connected_to_server.connect(_connected_to_host)
-	multiplayer.connection_failed.connect(_connection_failed)
-	multiplayer.server_disconnected.connect(_host_lost)
-	var args: PackedStringArray = OS.get_cmdline_user_args()
-	for arg: String in args:
-		if arg.begins_with("--vocation="):
-			var choice: String = arg.trim_prefix("--vocation=")
-			if not Balance.is_vocation(choice):
-				_fail("Class must be one of: %s, %s." % [", ".join(Balance.VOCATIONS.keys()), Balance.ADVENTURER])
-				get_tree().quit(1)
-				return
-			start_vocation = choice
-		elif arg == "--allow-start-vocation":
-			allow_start_vocation = true
-	for arg: String in args:
-		if arg.begins_with("--port="):
-			var value: String = arg.trim_prefix("--port=")
-			if not value.is_valid_int() or int(value) < 1 or int(value) > 65535:
-				_fail("Port must be an integer from 1 to 65535.")
-				get_tree().quit(1)
-				return
-			port = int(value)
-	for arg: String in args:
-		if arg == "--no-save":
-			save_enabled = false
-		elif arg.begins_with("--save-dir="):
-			save_dir = arg.trim_prefix("--save-dir=")
-		elif arg == "--fresh-identity":
-			identity_token = Identity.fresh()
-		elif arg.begins_with("--token="):
-			identity_token = arg.trim_prefix("--token=")
-		elif arg.begins_with("--profile="):
-			identity_profile = arg.trim_prefix("--profile=")
-		elif arg.begins_with("--bot-difficulty="):
-			bot_difficulty = arg.trim_prefix("--bot-difficulty=")
-			if not bot_difficulty in Bots.DIFFICULTIES:
-				_fail("Bot difficulty must be one of: %s." % ", ".join(Bots.DIFFICULTIES))
-				get_tree().quit(1)
-				return
-	if not Identity.valid_profile(identity_profile) or not (identity_token.is_empty() or Identity.valid_token(identity_token)):
-		_fail("Profiles use letters, digits, - and _; tokens are 64 lowercase hex digits.")
+	if not session.configure(OS.get_cmdline_user_args()):
 		get_tree().quit(1)
-		return
-	dedicated = "--headless-server" in args
-	if "--host" in args or dedicated:
-		host_game()
-		if not connected:
-			get_tree().quit(1)
-			return
-	for arg: String in args:
-		if arg.begins_with("--join="):
-			_address.text = arg.trim_prefix("--join=")
-			join_game()
-			if _joining_since < 0.0:
-				get_tree().quit(1)
-				return
 
 
 ## Test-only: seconds added to the clock, so soak tests can jump ahead (respawns, ground decay).
@@ -239,29 +159,16 @@ func world_clock() -> float:
 
 func _process(delta: float) -> void:
 	var now: float = _now()
-	if _joining_since >= 0.0 and now - _joining_since > 8.0:
-		_fail("Connection timed out. Check the LAN address, UDP port %d and firewall." % port)
+	session.tick(now)
 	if _move_pending_since >= 0.0 and now - _move_pending_since > 3.0:
-		_fail("The host stopped answering movement requests.")
-	if hosting and not _leaving:
-		for id: int in _pending_peers.keys():
-			if now - _pending_peers[id] > 5.0:
-				_pending_peers.erase(id)
-				_reject_connection(id, "Client handshake timed out.")
-		for id: int in multiplayer.get_peers():
-			# ENet picks client ids at random: one that a bot already holds must join again.
-			if bots.is_bot(id) and not _closing_peers.has(id):
-				_reject_connection(id, "Your connection id is in use by a bot. Join again.")
-			elif not world.players.has(id) and not _pending_peers.has(id):
-				if not _closing_peers.has(id):
-					_pending_peers[id] = now
+		session.fail("The host stopped answering movement requests.")
 	var mark: int = Time.get_ticks_usec()
-	if hosting and not _leaving:
+	if session.running():
 		replication.handle_events(combat.tick(now))
 		mark = _profiled("combat", mark)
 		replication.handle_events(bots.tick(now))
 		mark = _profiled("bots", mark)
-		if solo_mode:
+		if session.solo_mode:
 			replication.handle_events(solo.tick(now))
 		replication.handle_events(instances.tick(now))
 		replication.handle_events(crafting.tick(now))
@@ -269,11 +176,9 @@ func _process(delta: float) -> void:
 		mark = _profiled("other ticks", mark)
 		replication.tick(now)
 		mark = _profiled("interest", mark)
-		if store != null and now >= _next_autosave:
-			_next_autosave = now + CharacterStore.AUTOSAVE_SECONDS
-			save_all()
+		session.autosave(now)
 	client.advance(delta, Time.get_ticks_msec() / 1000.0)
-	if connected and client.self_id != 0 and not typing() and not _controls.visible \
+	if session.connected and client.self_id != 0 and not typing() and not _controls.visible \
 			and _move_pending_since < 0.0 and now >= _next_move_attempt:
 		var direction: Vector2i = _input_direction()
 		if direction == Vector2i.ZERO:
@@ -299,6 +204,29 @@ func _process(delta: float) -> void:
 	micro_menu.redraw()
 	maps.redraw()
 	_profiled("windows and maps", mark)
+
+
+## A fresh simulation and view, for a new session: the world, its rules, bots, and what this peer drew.
+func reset_world() -> void:
+	world = World.new()
+	combat = Combat.new(world)
+	economy = Economy.new(world)
+	crafting = Crafting.new(world)
+	worked_nodes.clear()
+	instances = Instances.new(world, combat)
+	bots = Bots.new(world, combat)
+	bots.instances = instances
+	bots.difficulty = session.bot_difficulty
+	solo = Solo.new(world, combat, bots)
+	replication.reset()
+	gateway.reset()
+	client.clear()
+	if _travel_panel != null:
+		_close_travel()
+		_world_map.hide()
+	_move_pending_since = -1.0
+	_next_move_attempt = 0.0
+	last_action_message = ""
 
 
 ## Adds the time since `since` to a profile section (when profiling); returns now.
@@ -389,7 +317,7 @@ func panel_open(action: String) -> bool:
 
 ## Casts the spell in an action-bar slot (0-8).
 func use_bar_slot(slot: int) -> void:
-	if slot < 0 or slot >= Keybinds.SLOTS or not connected:
+	if slot < 0 or slot >= Keybinds.SLOTS or not session.connected:
 		return
 	if keybinds.bar[slot].begins_with("spell:"):
 		cast_local(keybinds.bar[slot].trim_prefix("spell:"))
@@ -399,9 +327,9 @@ func use_bar_slot(slot: int) -> void:
 
 ## Casts a rune item from your backpack at your target (Combat.use_rune).
 func rune_local(kind: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_rune(1, kind)
 	else:
 		gateway.request_rune.rpc_id(1, kind)
@@ -422,7 +350,7 @@ func _run_action(action: String) -> void:
 		party_window.toggle()
 	elif action == "lexicon":
 		lexicon.toggle()
-	elif not connected:
+	elif not session.connected:
 		return
 	elif action == "pick_up":
 		pick_up_local()
@@ -434,102 +362,9 @@ func _run_action(action: String) -> void:
 		gather_nearby()
 
 
-func _reset_session() -> void:
-	if peer != null:
-		peer.close()
-	peer = null
-	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
-	world = World.new()
-	combat = Combat.new(world)
-	economy = Economy.new(world)
-	crafting = Crafting.new(world)
-	worked_nodes.clear()
-	instances = Instances.new(world, combat)
-	bots = Bots.new(world, combat)
-	bots.instances = instances
-	bots.difficulty = bot_difficulty
-	solo = Solo.new(world, combat, bots)
-	solo_mode = false
-	if replication != null:
-		replication.reset()
-	store = null
-	_accounts.clear()
-	_greetings.clear()
-	client.clear()
-	if _travel_panel != null:
-		_close_travel()
-		_world_map.hide()
-	_pending_peers.clear()
-	_closing_peers.clear()
-	if gateway != null:
-		gateway.reset()
-	hosting = false
-	connected = false
-	_remembered = ""
-	_joining_since = -1.0
-	_leaving = false
-	_move_pending_since = -1.0
-	_next_move_attempt = 0.0
-	last_action_message = ""
-
-
-func _fail(message: String) -> void:
-	_reset_session()
-	_status_message = message
-	push_error(message)
-	_update_labels()
-
-
-## Hosts a game on the LAN, or (private) a solo world only this computer can reach, with your
-## companions and rival bands (game/core/solo.gd).
-func host_game(private: bool = false) -> void:
-	_reset_session()
-	solo_mode = private
-	peer = ENetMultiplayerPeer.new()
-	if private:
-		peer.set_bind_ip("127.0.0.1")
-	var error: Error = peer.create_server(0 if private else port, World.MAX_PLAYERS)
-	if error != OK:
-		_fail("Cannot host on UDP port %d: %s" % [port, error_string(error)])
-		return
-	if save_enabled:
-		store = CharacterStore.new(save_dir)
-		var unusable: String = store.open()
-		if not unusable.is_empty():
-			_fail(unusable)
-			return
-		_next_autosave = _now() + CharacterStore.AUTOSAVE_SECONDS
-	multiplayer.multiplayer_peer = peer
-	hosting = true
-	connected = true
-	client.ground_view = world.ground_snapshot()
-	if not dedicated:
-		client.self_id = 1
-		var refused: String = _admit(1, own_token(), selected_vocation())
-		if not refused.is_empty():
-			_fail(refused)
-			return
-		replication.apply_actor(world.export_player(1, _now(), true))
-		action_bar.fill_spell_slots(world.players[1]["vocation"])
-		last_action_message = _greetings.get(1, "")
-		_greetings.erase(1)
-	replication.handle_events(combat.populate(_now()))
-	_status_message = "Hosting on UDP %d%s" % [port, " (dedicated)" if dedicated else " — you are the host"]
-	if solo_mode and world.players.has(1):
-		replication.handle_events(solo.start(1, _now()))
-		_status_message = "Playing solo — invite companions in the party window; rivals roam the world"
-	get_viewport().gui_release_focus()
-	print("BRIMHOLT_HOST_READY port=%d" % port)
-
-
-## Starts a private solo world (the start screen's Play solo).
-func play_solo() -> void:
-	host_game(true)
-
-
 ## Solo only: gathers a full raid around you, or sends it home (Solo.raid).
 func raid_local(on: bool) -> void:
-	if not solo_mode or not hosting:
+	if not session.solo_mode or not session.hosting:
 		return
 	var result: Dictionary = solo.raid(on, _now())
 	if result["ok"]:
@@ -540,7 +375,7 @@ func raid_local(on: bool) -> void:
 
 ## Solo only: gives a companion slot another class (Solo.set_companion).
 func companion_local(slot: int, vocation: String) -> void:
-	if not solo_mode or not hosting:
+	if not session.solo_mode or not session.hosting:
 		return
 	var result: Dictionary = solo.set_companion(slot, vocation, _now())
 	replication.handle_events(result["events"])
@@ -550,7 +385,7 @@ func companion_local(slot: int, vocation: String) -> void:
 
 ## Solo only: brings a companion slot's companion to your side, or sends it home (Solo.invite, Solo.dismiss).
 func invite_local(slot: int, on: bool) -> void:
-	if not solo_mode or not hosting:
+	if not session.solo_mode or not session.hosting:
 		return
 	var result: Dictionary = solo.invite(slot, _now()) if on else solo.dismiss(slot)
 	replication.handle_events(result["events"])
@@ -560,280 +395,25 @@ func invite_local(slot: int, on: bool) -> void:
 
 ## Solo only: one more or one fewer of a class in the raid plan (Solo.set_raid_plan).
 func raid_plan_local(vocation: String, delta: int) -> void:
-	if not solo_mode or not hosting:
+	if not session.solo_mode or not session.hosting:
 		return
 	var result: Dictionary = solo.set_raid_plan(vocation, delta)
 	if not result["ok"]:
 		last_action_message = result["reason"]
 
 
-func join_game() -> void:
-	var address: String = _address.text.strip_edges()
-	_reset_session()
-	if address.is_empty():
-		_fail("Enter the host's LAN IP address first.")
-		return
-	peer = ENetMultiplayerPeer.new()
-	var error: Error = peer.create_client(address, port)
-	if error != OK:
-		_fail("Cannot connect to %s:%d: %s" % [address, port, error_string(error)])
-		return
-	multiplayer.multiplayer_peer = peer
-	_joining_since = _now()
-	_status_message = "Connecting to %s:%d…" % [address, port]
-	get_viewport().gui_release_focus()
-
-
-func leave_game() -> void:
-	if hosting:
-		save_all()
-	var leaving_peer: ENetMultiplayerPeer = peer
-	_leaving = true
-	connected = false
-	_move_pending_since = -1.0
-	_joining_since = -1.0
-	if leaving_peer != null:
-		if hosting:
-			for id: int in multiplayer.get_peers():
-				leaving_peer.disconnect_peer(id)
-		elif 1 in multiplayer.get_peers():
-			leaving_peer.disconnect_peer(1)
-		await get_tree().create_timer(0.2).timeout
-	if peer == leaving_peer:
-		_reset_session()
-		_status_message = "Disconnected — host or join to play again."
-
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and close_ends_session:
-		await leave_game()
+		await session.leave_game()
 		get_tree().quit()
 
 
-func _peer_connected(id: int) -> void:
-	if peer != null and (hosting or id == 1):
-		peer.get_peer(id).set_timeout(16, 1000, 5000)
-
-
-func _connected_to_host() -> void:
-	hello.rpc_id(1, World.signature(), selected_vocation(), own_token())
-
-
-## This computer's identity token, loaded or created on first use.
-func own_token() -> String:
-	if identity_token.is_empty():
-		identity_token = Identity.load_or_create(identity_profile)
-		_profile_backed = not identity_token.is_empty()
-	return identity_token
-
-
-## Plays as a character profile from the start menu (game/persistence/identity.gd).
-func select_character(profile: String) -> void:
-	if not Identity.valid_profile(profile) or connected:
-		return
-	identity_profile = profile
-	identity_token = ""
-	_profile_backed = false
-	Identity.set_last_profile(profile)
-
-
-## Keeps the start menu's summary of the playing character current (class, level, and look as
-## the host sends them; local only, never sent anywhere).
-func _remember_character(state: Dictionary) -> void:
-	if not _profile_backed:
-		return
-	var look: Dictionary = {}
-	for slot: String in state["equipment"]:
-		if slot != "bag":
-			look[slot] = state["equipment"][slot]
-	var key: String = "%s|%s|%s" % [state.get("vocation"), state.get("level"), look]
-	if key != _remembered:
-		_remembered = key
-		Identity.remember(identity_profile, String(state.get("vocation", "")), int(state.get("level", 1)), look)
-
-
-## Adds a joining player: their saved character if the host has one for this identity, else a
-## new one of the chosen vocation (saved at once). Returns "" or why they cannot join.
-func _admit(id: int, token: String, vocation: String) -> String:
-	if not Identity.valid_token(token):
-		return "Your client sent no valid identity."
-	var account: String = CharacterStore.account(token)
-	if account in _accounts.values():
-		# Tell whoever plays the character: someone else holds their identity token.
-		for holder: int in _accounts:
-			if _accounts[holder] == account:
-				replication.send_feedback(holder, DUPLICATE_LOGIN_WARNING, 0.0, false)
-		return "That character is already in the world."
-	var saved: Dictionary = {}
-	if store != null:
-		var loaded: Dictionary = store.load_character(account)
-		if loaded["status"] == "invalid":
-			push_warning("Refused a join: the save %s %s." % [ProjectSettings.globalize_path(store.path_for(account)), loaded["reason"]])
-			return "Your saved character on this host %s. Ask the host to restore its .bak file." % loaded["reason"]
-		saved = loaded["data"]
-	var returning: bool = not CharacterStore.saved_vocation(saved).is_empty()
-	var fresh: String = vocation if allow_start_vocation and Balance.VOCATIONS.has(vocation) else Balance.ADVENTURER
-	if not world.add_player(id, _now(), CharacterStore.saved_vocation(saved) if returning else fresh):
-		return "This world is full (%d players maximum)." % World.MAX_PLAYERS
-	_accounts[id] = account
-	if returning:
-		CharacterStore.restore(world, id, saved, _now())
-		# A character saved inside a dungeon returns to its stairway: copies do not persist.
-		instances.evacuate(id, _now())
-		var player: Dictionary = world.players[id]
-		_greetings[id] = "Welcome back: your level %d %s." % [player["level"], Balance.profile_of(player["vocation"])["name"]]
-	else:
-		if fresh == Balance.ADVENTURER:
-			_greetings[id] = "Welcome, adventurer. Master Hesk outside the training hall has a trial for you."
-		if store != null:
-			_save_player(id)
-	return ""
-
-
-func _save_player(id: int) -> void:
-	if store != null and _accounts.has(id) and world.players.has(id):
-		if not store.save_character(_accounts[id], CharacterStore.capture(world, id, _now())):
-			push_warning("Could not save a character to %s." % ProjectSettings.globalize_path(store.dir))
-
-
-## Saves every character in the world (autosave, and when the host leaves).
-func save_all() -> void:
-	for id: int in _accounts:
-		_save_player(id)
-
-
-func _connection_failed() -> void:
-	_fail("Could not reach the host. Check the address, UDP %d and firewall." % port)
-
-
-func _host_lost() -> void:
-	if not _leaving:
-		_fail("The host disconnected. Your LAN session has ended.")
-
-
-## Host only: adds a bot beside you (or the first spawn on a dedicated server). Returns "" or why not.
-func spawn_bot(vocation: String, level: int, stance: String) -> String:
-	if not hosting:
-		return "Only the host can add bots"
-	var near: Vector2i = world.players[client.self_id]["cell"] if world.players.has(client.self_id) else World.SPAWNS[0]
-	var added: Dictionary = bots.add(vocation, level, stance, near, _now())
-	if not added["ok"]:
-		return added["reason"]
-	replication.publish_actor(added["id"])
-	return ""
-
-
-## Host only: removes a bot as if it had left.
-func remove_bot(id: int) -> void:
-	if not hosting or not bots.is_bot(id):
-		return
-	var events: Array = []
-	combat.leave_party(id, events)
-	bots.remove(id)
-	client.actors.erase(id)
-	replication.actor_left.rpc(id)
-	for other: int in world.players:
-		if world.players[other]["target"] == id:
-			world.players[other]["target"] = 0
-			events.append({"kind": "player", "id": other})
-	replication.handle_events(events)
-
-
-func _peer_left(id: int) -> void:
-	if not hosting:
-		return
-	_pending_peers.erase(id)
-	_closing_peers.erase(id)
-	gateway.forget(id)
-	replication.forget(id)
-	_greetings.erase(id)
-	if world.players.has(id):
-		_save_player(id)
-		_accounts.erase(id)
-		var events: Array = []
-		combat.leave_party(id, events)
-		world.remove_player(id)
-		client.actors.erase(id)
-		if not _leaving:
-			replication.actor_left.rpc(id)
-			replication.handle_events(events)
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func hello(map_signature: Variant, vocation: Variant, token: Variant) -> void:
-	if not hosting:
-		return
-	var sender: int = multiplayer.get_remote_sender_id()
-	if sender <= 1 or sender not in multiplayer.get_peers() \
-			or world.players.has(sender) or _closing_peers.has(sender):
-		return
-	_pending_peers.erase(sender)
-	if typeof(map_signature) != TYPE_STRING or map_signature != World.signature():
-		_reject_connection(sender, "World/protocol mismatch. Use the same project files as the host.")
-		return
-	if not Balance.is_vocation(vocation):
-		_reject_connection(sender, "Unknown class.")
-		return
-	var refused: String = _admit(sender, token if typeof(token) == TYPE_STRING else "", vocation)
-	if not refused.is_empty():
-		_reject_connection(sender, refused)
-		return
-	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), replication.interest_snapshot(sender, _now()), world_clock())
-	var regrowing: Dictionary = {}
-	for cell: Vector2i in crafting.depleted:
-		regrowing[cell] = crafting.depleted[cell] - _now()
-	replication.nodes_worked.rpc_id(sender, regrowing)
-	replication.publish_actor(sender)
-	if _greetings.has(sender):
-		replication.send_feedback(sender, _greetings[sender], 0.0, false)
-		_greetings.erase(sender)
-
-
-func _reject_connection(id: int, reason: String) -> void:
-	if _closing_peers.has(id):
-		return
-	_closing_peers[id] = true
-	var rejecting_peer: ENetMultiplayerPeer = peer
-	connection_rejected.rpc_id(id, reason)
-	await get_tree().create_timer(0.2).timeout
-	if peer != null and peer == rejecting_peer and hosting and id in multiplayer.get_peers():
-		peer.disconnect_peer(id)
-
-
-@rpc("authority", "call_remote", "reliable")
-func connection_rejected(reason: String) -> void:
-	_fail(reason)
-
-
-@rpc("authority", "call_remote", "reliable")
-func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dictionary, host_clock: float) -> void:
-	if hosting:
-		return
-	_clock_offset = host_clock - _now()
-	client.actors.clear()
-	for id: int in states:
-		replication.apply_actor(states[id])
-	client.ground_view = ground_state.duplicate(true)
-	client.clear_monsters()
-	for id: int in monster_states:
-		client.put_monster(monster_states[id])
-	client.self_id = multiplayer.get_unique_id()
-	if not client.actors.has(client.self_id):
-		_fail("The host sent a snapshot without your player.")
-		return
-	connected = true
-	_joining_since = -1.0
-	_remember_character(client.actors[client.self_id]["state"])
-	_status_message = "Connected to %s:%d" % [_address.text, port]
-	action_bar.fill_spell_slots(client.actors[client.self_id]["state"]["vocation"])
-
-
 func move_local(direction: Vector2i) -> void:
-	if not connected or client.self_id == 0 or _move_pending_since >= 0.0:
+	if not session.connected or client.self_id == 0 or _move_pending_since >= 0.0:
 		return
 	_move_pending_since = _now()
 	_next_move_attempt = _now() + World.MOVE_SECONDS
-	if hosting:
+	if session.hosting:
 		gateway.handle_move(1, direction)
 	else:
 		gateway.request_move.rpc_id(1, direction)
@@ -841,27 +421,27 @@ func move_local(direction: Vector2i) -> void:
 
 ## Party actions: "invite", "revoke", "join" (with the inviting leader), or "leave" (other = 0).
 func party_local(action: String, other: int) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_party(1, action, other)
 	else:
 		gateway.request_party.rpc_id(1, action, other)
 
 
 func equip_local(slot: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_equipment(1, slot)
 	else:
 		gateway.request_equipment.rpc_id(1, slot)
 
 
 func move_item_local(source: Dictionary, target: Dictionary) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_item_move(1, source, target)
 	else:
 		gateway.request_item_move.rpc_id(1, source, target)
@@ -879,18 +459,18 @@ func pick_up_local() -> void:
 
 
 func travel_local(ferryman: String, destination: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_travel(1, ferryman, destination)
 	else:
 		gateway.request_travel.rpc_id(1, ferryman, destination)
 
 
 func quest_local(npc: String, relic: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_quest(1, npc, relic)
 	else:
 		gateway.request_quest.rpc_id(1, npc, relic)
@@ -899,9 +479,9 @@ func quest_local(npc: String, relic: String) -> void:
 # ---------------------------------------------------------------- town services
 
 func task_local(npc: String, task: String, action: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_task(1, npc, task, action)
 	else:
 		gateway.request_task.rpc_id(1, npc, task, action)
@@ -914,9 +494,9 @@ func node_worked(cell: Vector2i) -> bool:
 
 ## Starts gathering at a node (the host checks reach, skill, and the node).
 func gather_local(cell: Vector2i) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_gather(1, cell)
 	else:
 		gateway.request_gather.rpc_id(1, cell)
@@ -949,9 +529,9 @@ func gather_nearby() -> void:
 
 ## Asks an artisan to craft `count` of a recipe (the host checks the skill and resources).
 func craft_local(npc: String, recipe: String, count: int) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_craft(1, npc, recipe, count)
 	else:
 		gateway.request_craft.rpc_id(1, npc, recipe, count)
@@ -959,9 +539,9 @@ func craft_local(npc: String, recipe: String, count: int) -> void:
 
 ## Asks your class trainer to raise a spell's rank for rune shards (the host checks everything).
 func empower_local(npc: String, spell: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_empower(1, npc, spell)
 	else:
 		gateway.request_empower.rpc_id(1, npc, spell)
@@ -969,9 +549,9 @@ func empower_local(npc: String, spell: String) -> void:
 
 ## Asks a trainer to make you their vocation (permanent; the host checks the trial and level).
 func vocation_local(npc: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_vocation(1, npc)
 	else:
 		gateway.request_vocation.rpc_id(1, npc)
@@ -979,18 +559,18 @@ func vocation_local(npc: String) -> void:
 
 ## Turns your PvP on or off at the warden (Combat.set_pvp checks reach, skull, fight, and cooldown).
 func pvp_local(npc: String, on: bool) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_pvp(1, npc, on)
 	else:
 		gateway.request_pvp.rpc_id(1, npc, on)
 
 
 func buy_local(npc: String, kind: String, count: int) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_buy(1, npc, kind, count)
 	else:
 		gateway.request_buy.rpc_id(1, npc, kind, count)
@@ -998,27 +578,27 @@ func buy_local(npc: String, kind: String, count: int) -> void:
 
 ## Sells the backpack stack at `index`, or with -1 every monster material.
 func sell_local(npc: String, index: int) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_sell(1, npc, index)
 	else:
 		gateway.request_sell.rpc_id(1, npc, index)
 
 
 func bank_local(npc: String, action: String, amount: int) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_bank(1, npc, action, amount)
 	else:
 		gateway.request_bank.rpc_id(1, npc, action, amount)
 
 
 func drink_local(index: int) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_drink(1, index)
 	else:
 		gateway.request_drink.rpc_id(1, index)
@@ -1050,18 +630,18 @@ func drink_kind(kind: String) -> void:
 # ---------------------------------------------------------------- combat
 
 func target_local(target: int) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_target(1, target)
 	else:
 		gateway.request_target.rpc_id(1, target)
 
 
 func cast_local(spell: String) -> void:
-	if not connected or client.self_id == 0:
+	if not session.connected or client.self_id == 0:
 		return
-	if hosting:
+	if session.hosting:
 		gateway.handle_spell(1, spell)
 	else:
 		gateway.request_spell.rpc_id(1, spell)
@@ -1258,15 +838,11 @@ func _close_travel() -> void:
 	dialogs.close()
 
 
-func selected_vocation() -> String:
-	return start_vocation
-
-
 ## Map pixel the camera centres: your character's interpolated position, else the map centre.
 func camera_focus() -> Vector2:
 	if client.actors.has(client.self_id):
 		return (client.actors[client.self_id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
-	if dedicated:
+	if session.dedicated:
 		return Vector2(World.width(), World.height()) * World.TILE_SIZE / 2.0
 	# Before joining, show the starting town rather than the middle of the map.
 	return (Vector2(World.SPAWNS[0]) + Vector2(4.5, 2.5)) * World.TILE_SIZE
@@ -1303,7 +879,7 @@ func _map_input(event: InputEvent) -> void:
 			dialogs.open_npc_menu(npc, Vector2i(VIEW_ORIGIN + event.position))
 			return
 		var creature: int = client.creature_at(cell)
-		if event.button_index == MOUSE_BUTTON_RIGHT and connected:
+		if event.button_index == MOUSE_BUTTON_RIGHT and session.connected:
 			# Creatures never block a tile, so loot under someone is picked up rather than opening their menu.
 			var person: int = creature if creature > 0 and not client.ground_view.has(cell) else 0
 			if person > 0 and dialogs.open_player_menu(person, Vector2i(VIEW_ORIGIN + event.position)):

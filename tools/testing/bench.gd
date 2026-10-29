@@ -39,18 +39,18 @@ func _run() -> void:
 	game = load("res://game/main.tscn").instantiate()
 	game.close_ends_session = false
 	game.keybinds.persistent = false
-	game.start_vocation = "knight"
-	game.allow_start_vocation = true
+	game.session.start_vocation = "knight"
+	game.session.allow_start_vocation = true
 	screen.add_child(game)
-	game.save_enabled = false
-	game.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
-	game.port = 0
+	game.session.save_enabled = false
+	game.session.identity_token = Crypto.new().generate_random_bytes(32).hex_encode()
+	game.session.port = 0
 	var started: int = Time.get_ticks_usec()
-	game.play_solo()
+	game.session.play_solo()
 	_line("BENCH startup %d ms  monsters live %d  camps dormant %d" % [(Time.get_ticks_usec() - started) / 1000,
 		game.world.monsters.size(), game.combat.dormant_camps()])
 	Weather.override = "clear"
-	if not game.connected:
+	if not game.session.connected:
 		quit(1)
 		return
 	var me: Dictionary = game.world.players[game.client.self_id]

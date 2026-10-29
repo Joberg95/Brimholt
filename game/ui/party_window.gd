@@ -84,8 +84,8 @@ func _state_key() -> String:
 		if game.client.actors.has(id):
 			named.append([id, game.client.actors[id]["state"].get("level", 1), game.client.actors[id]["state"].get("vocation", "")])
 	return str([named, state.get("party", 0), state.get("invites", []), state.get("invited", []), state.get("level", 1),
-		game.solo_mode, game.solo.raiding if game.solo_mode and game.solo != null else false,
-		[game.solo.party_plan, game.solo.slot_ids, game.solo.raid_plan] if game.solo_mode and game.solo != null else []])
+		game.session.solo_mode, game.solo.raiding if game.session.solo_mode and game.solo != null else false,
+		[game.solo.party_plan, game.solo.slot_ids, game.solo.raid_plan] if game.session.solo_mode and game.solo != null else []])
 
 
 func _rebuild() -> void:
@@ -106,7 +106,7 @@ func _rebuild() -> void:
 	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(hide)
 	header.add_child(close)
-	if game.solo_mode:
+	if game.session.solo_mode:
 		_column.add_child(_hint("You play alone until you invite companions: they follow you everywhere and share experience and loot. At level %d, gather a raid of %d for the final bosses." % [Balance.MAX_LEVEL, _raid_size()], 12, MUTED))
 	elif party == 0:
 		_column.add_child(_hint("You are not in a party. Right-click another player to invite them; party members share experience.", 12, MUTED))
@@ -136,9 +136,9 @@ func _rebuild() -> void:
 		bar.draw.connect(_draw_health.bind(bar, id))
 		grid.add_child(bar)
 		_bars.append(bar)
-		var slot: int = game.solo.slot_ids.find(id) if game.solo_mode else -1
+		var slot: int = game.solo.slot_ids.find(id) if game.session.solo_mode else -1
 		grid.add_child(_slot_controls(slot, true) if slot >= 0 else Control.new())
-	if game.solo_mode:
+	if game.session.solo_mode:
 		# Empty companion slots: pick a class and invite it.
 		for slot: int in game.solo.slot_ids.size():
 			if game.client.actors.has(game.solo.slot_ids[slot]):
@@ -159,7 +159,7 @@ func _rebuild() -> void:
 	for invited: int in state.get("invited", []):
 		if game.client.actors.has(invited):
 			_row("You invited %s." % _name_of(invited), "Withdraw", func() -> void: game.party_local("revoke", invited))
-	if game.solo_mode:
+	if game.session.solo_mode:
 		var raiding: bool = game.solo.raiding
 		_raid_plan(raiding)
 		raid_button = Button.new()

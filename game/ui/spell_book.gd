@@ -71,7 +71,7 @@ func refresh() -> void:
 	if not visible:
 		return
 	var state: Dictionary = game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
-	var vocation: String = state.get("vocation", game.selected_vocation())
+	var vocation: String = state.get("vocation", game.session.start_vocation)
 	var level: int = state.get("level", 1)
 	var equipment: Dictionary = state.get("equipment", {})
 	var ranks: Dictionary = state.get("spell_ranks", {})
