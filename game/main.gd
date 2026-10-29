@@ -35,6 +35,7 @@ const LexiconWindow = preload("res://game/ui/lexicon_window.gd")
 const Bots = preload("res://game/core/bots.gd")
 const Solo = preload("res://game/core/solo.gd")
 const Gateway = preload("res://game/net/gateway.gd")
+const Replication = preload("res://game/net/replication.gd")
 ## Tibia-style game window: 15x11 tiles at 2x, centred on your character.
 const ZOOM: float = Layout.ZOOM
 const VIEW_TILES: Vector2i = Layout.VIEW_TILES
@@ -50,21 +51,17 @@ var crafting := Crafting.new(world)
 ## Gathering nodes this peer knows are regrowing: cell -> local _now() when they regrow.
 var worked_nodes: Dictionary = {}
 var instances := Instances.new(world, combat)
-## Clients receive client.monsters and combat client.effects only within INTEREST_RADIUS tiles of their
-## character; peer id -> {monster id: true} they currently know about.
-const INTEREST_RADIUS: int = 24
-const INTEREST_SECONDS: float = 0.25
-var _known_monsters: Dictionary = {}
 ## Shown to a player when someone else is refused for joining with their identity.
 const DUPLICATE_LOGIN_WARNING: String = "Someone tried to join as your character from another computer and was turned away."
-var _next_interest: float = 0.0
 ## Opt-in frame profile (tools/testing/bench.gd): section -> [microseconds, frames, worst]. Off in play.
 var profiling: bool = false
 var frame_profile: Dictionary = {}
-## What this peer draws: the players, client.monsters, ground, and client.effects the host sent (game/client/).
+## What this peer draws: the players, monsters, ground, and effects the host sent (game/client/).
 var client := ClientState.new()
 ## Every request a player sends the host (game/net/gateway.gd), at /root/Main/Gateway on every peer.
 var gateway: Gateway
+## Host updates to every peer and their application here (game/net/replication.gd), at /root/Main/Replication.
+var replication: Replication
 ## How long a kill's green loot text stays over the body.
 const LOOT_TEXT_SECONDS: float = 4.0
 var connected: bool = false
@@ -158,6 +155,10 @@ func _ready() -> void:
 	gateway.name = "Gateway"
 	gateway.game = self
 	add_child(gateway)
+	replication = Replication.new()
+	replication.name = "Replication"
+	replication.game = self
+	add_child(replication)
 	keybinds.load_saved()
 	# Menus and dialogs read small and minimal: every control without its own size uses this.
 	ThemeDB.get_default_theme().default_font_size = UiTheme.FONT_SIZE
@@ -256,19 +257,17 @@ func _process(delta: float) -> void:
 					_pending_peers[id] = now
 	var mark: int = Time.get_ticks_usec()
 	if hosting and not _leaving:
-		_handle_events(combat.tick(now))
+		replication.handle_events(combat.tick(now))
 		mark = _profiled("combat", mark)
-		_handle_events(bots.tick(now))
+		replication.handle_events(bots.tick(now))
 		mark = _profiled("bots", mark)
 		if solo_mode:
-			_handle_events(solo.tick(now))
-		_handle_events(instances.tick(now))
-		_handle_events(crafting.tick(now))
-		_handle_events(world.decay_ground(now))
+			replication.handle_events(solo.tick(now))
+		replication.handle_events(instances.tick(now))
+		replication.handle_events(crafting.tick(now))
+		replication.handle_events(world.decay_ground(now))
 		mark = _profiled("other ticks", mark)
-		if now >= _next_interest:
-			_next_interest = now + INTEREST_SECONDS
-			_sync_interest(now)
+		replication.tick(now)
 		mark = _profiled("interest", mark)
 		if store != null and now >= _next_autosave:
 			_next_autosave = now + CharacterStore.AUTOSAVE_SECONDS
@@ -451,8 +450,8 @@ func _reset_session() -> void:
 	bots.difficulty = bot_difficulty
 	solo = Solo.new(world, combat, bots)
 	solo_mode = false
-	_known_monsters.clear()
-	_next_interest = 0.0
+	if replication != null:
+		replication.reset()
 	store = null
 	_accounts.clear()
 	_greetings.clear()
@@ -510,14 +509,14 @@ func host_game(private: bool = false) -> void:
 		if not refused.is_empty():
 			_fail(refused)
 			return
-		_apply_actor(world.export_player(1, _now(), true))
+		replication.apply_actor(world.export_player(1, _now(), true))
 		action_bar.fill_spell_slots(world.players[1]["vocation"])
 		last_action_message = _greetings.get(1, "")
 		_greetings.erase(1)
-	_handle_events(combat.populate(_now()))
+	replication.handle_events(combat.populate(_now()))
 	_status_message = "Hosting on UDP %d%s" % [port, " (dedicated)" if dedicated else " — you are the host"]
 	if solo_mode and world.players.has(1):
-		_handle_events(solo.start(1, _now()))
+		replication.handle_events(solo.start(1, _now()))
 		_status_message = "Playing solo — invite companions in the party window; rivals roam the world"
 	get_viewport().gui_release_focus()
 	print("BRIMHOLT_HOST_READY port=%d" % port)
@@ -534,7 +533,7 @@ func raid_local(on: bool) -> void:
 		return
 	var result: Dictionary = solo.raid(on, _now())
 	if result["ok"]:
-		_handle_events(result["events"])
+		replication.handle_events(result["events"])
 	else:
 		last_action_message = result["reason"]
 
@@ -544,7 +543,7 @@ func companion_local(slot: int, vocation: String) -> void:
 	if not solo_mode or not hosting:
 		return
 	var result: Dictionary = solo.set_companion(slot, vocation, _now())
-	_handle_events(result["events"])
+	replication.handle_events(result["events"])
 	if not result["ok"]:
 		last_action_message = result["reason"]
 
@@ -554,7 +553,7 @@ func invite_local(slot: int, on: bool) -> void:
 	if not solo_mode or not hosting:
 		return
 	var result: Dictionary = solo.invite(slot, _now()) if on else solo.dismiss(slot)
-	_handle_events(result["events"])
+	replication.handle_events(result["events"])
 	if not result["ok"]:
 		last_action_message = result["reason"]
 
@@ -663,7 +662,7 @@ func _admit(id: int, token: String, vocation: String) -> String:
 		# Tell whoever plays the character: someone else holds their identity token.
 		for holder: int in _accounts:
 			if _accounts[holder] == account:
-				_send_feedback(holder, DUPLICATE_LOGIN_WARNING, 0.0, false)
+				replication.send_feedback(holder, DUPLICATE_LOGIN_WARNING, 0.0, false)
 		return "That character is already in the world."
 	var saved: Dictionary = {}
 	if store != null:
@@ -720,7 +719,7 @@ func spawn_bot(vocation: String, level: int, stance: String) -> String:
 	var added: Dictionary = bots.add(vocation, level, stance, near, _now())
 	if not added["ok"]:
 		return added["reason"]
-	_publish_actor(added["id"])
+	replication.publish_actor(added["id"])
 	return ""
 
 
@@ -732,12 +731,12 @@ func remove_bot(id: int) -> void:
 	combat.leave_party(id, events)
 	bots.remove(id)
 	client.actors.erase(id)
-	actor_left.rpc(id)
+	replication.actor_left.rpc(id)
 	for other: int in world.players:
 		if world.players[other]["target"] == id:
 			world.players[other]["target"] = 0
 			events.append({"kind": "player", "id": other})
-	_handle_events(events)
+	replication.handle_events(events)
 
 
 func _peer_left(id: int) -> void:
@@ -746,7 +745,7 @@ func _peer_left(id: int) -> void:
 	_pending_peers.erase(id)
 	_closing_peers.erase(id)
 	gateway.forget(id)
-	_known_monsters.erase(id)
+	replication.forget(id)
 	_greetings.erase(id)
 	if world.players.has(id):
 		_save_player(id)
@@ -756,8 +755,8 @@ func _peer_left(id: int) -> void:
 		world.remove_player(id)
 		client.actors.erase(id)
 		if not _leaving:
-			actor_left.rpc(id)
-			_handle_events(events)
+			replication.actor_left.rpc(id)
+			replication.handle_events(events)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -779,14 +778,14 @@ func hello(map_signature: Variant, vocation: Variant, token: Variant) -> void:
 	if not refused.is_empty():
 		_reject_connection(sender, refused)
 		return
-	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), _interest_snapshot(sender, _now()), world_clock())
+	welcome.rpc_id(sender, world.snapshot(_now(), sender), world.ground_snapshot(), replication.interest_snapshot(sender, _now()), world_clock())
 	var regrowing: Dictionary = {}
 	for cell: Vector2i in crafting.depleted:
 		regrowing[cell] = crafting.depleted[cell] - _now()
-	nodes_worked.rpc_id(sender, regrowing)
-	_publish_actor(sender)
+	replication.nodes_worked.rpc_id(sender, regrowing)
+	replication.publish_actor(sender)
 	if _greetings.has(sender):
-		_send_feedback(sender, _greetings[sender], 0.0, false)
+		replication.send_feedback(sender, _greetings[sender], 0.0, false)
 		_greetings.erase(sender)
 
 
@@ -813,11 +812,11 @@ func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dicti
 	_clock_offset = host_clock - _now()
 	client.actors.clear()
 	for id: int in states:
-		_apply_actor(states[id])
+		replication.apply_actor(states[id])
 	client.ground_view = ground_state.duplicate(true)
 	client.clear_monsters()
 	for id: int in monster_states:
-		_apply_monster(monster_states[id])
+		client.put_monster(monster_states[id])
 	client.self_id = multiplayer.get_unique_id()
 	if not client.actors.has(client.self_id):
 		_fail("The host sent a snapshot without your player.")
@@ -1084,153 +1083,6 @@ func target_nearest() -> void:
 		target_local(best)
 
 
-## Nodes being worked, with seconds until they regrow (one when worked, all on joining).
-@rpc("authority", "call_remote", "reliable")
-func nodes_worked(regrowing: Dictionary) -> void:
-	for cell: Variant in regrowing:
-		if typeof(cell) == TYPE_VECTOR2I and typeof(regrowing[cell]) in [TYPE_INT, TYPE_FLOAT]:
-			worked_nodes[cell] = _now() + float(regrowing[cell])
-
-
-## Replicates combat events: visuals immediately, then each changed creature once, then messages.
-func _handle_events(events: Array) -> void:
-	var players_changed: Dictionary = {}
-	var monsters_changed: Dictionary = {}
-	var messages: Array = []
-	for event: Dictionary in events:
-		match event["kind"]:
-			"player":
-				players_changed[event["id"]] = players_changed.get(event["id"], false) or event.get("movement", false)
-			"monster":
-				monsters_changed[event["id"]] = monsters_changed.get(event["id"], false) or event["movement"]
-			"monster_gone":
-				monsters_changed.erase(event["id"])
-				_monster_died(event["id"])
-				for peer_id: int in _remote_players():
-					if _known_monsters.get(peer_id, {}).has(event["id"]):
-						_known_monsters[peer_id].erase(event["id"])
-						monster_gone.rpc_id(peer_id, event["id"])
-			"ground":
-				_publish_ground(event["cells"])
-			"message":
-				messages.append(event)
-			"loot":
-				# Loot text is only for the players the kill is credited to.
-				for looter: int in event["ids"]:
-					if looter == client.self_id:
-						_show_effect(event)
-					elif looter in _remote_players():
-						combat_event.rpc_id(looter, event)
-			"bot_left":
-				client.actors.erase(event["id"])
-				actor_left.rpc(event["id"])
-			"node":
-				var regrowing: Dictionary = {event["cell"]: event["seconds"]}
-				nodes_worked(regrowing)
-				for peer_id: int in _remote_players():
-					nodes_worked.rpc_id(peer_id, regrowing)
-			_:
-				_show_effect(event)
-				var at: Vector2i = _event_cell(event)
-				for peer_id: int in _remote_players():
-					if _near_peer(peer_id, at):
-						combat_event.rpc_id(peer_id, event)
-	for id: int in players_changed:
-		if world.players.has(id):
-			_publish_actor(id, players_changed[id])
-	for id: int in monsters_changed:
-		if world.monsters.has(id):
-			_publish_monster(id)
-	for event: Dictionary in messages:
-		if world.players.has(event["id"]):
-			_send_feedback(event["id"], event["text"], 0.0, false)
-
-
-## The tile an effect happens on, for interest management.
-func _event_cell(event: Dictionary) -> Vector2i:
-	match event["kind"]:
-		"missile":
-			return event["from"]
-		"area":
-			return event["cells"][0] if not event["cells"].is_empty() else Vector2i(-9999, -9999)
-	return event.get("cell", Vector2i(-9999, -9999))
-
-
-func _near_peer(peer_id: int, cell: Vector2i) -> bool:
-	if not world.players.has(peer_id):
-		return false
-	var own: Vector2i = world.players[peer_id]["cell"]
-	return Combat.distance(own, cell) <= INTEREST_RADIUS and World.dungeon_at(own) == World.dungeon_at(cell)
-
-
-## Sends a monster's state to the host's view and to remote players near it; peers it left
-## behind are told it is gone.
-func _publish_monster(id: int) -> void:
-	var state: Dictionary = combat.export_monster(id, _now())
-	_apply_monster(state)
-	for peer_id: int in _remote_players():
-		var known: Dictionary = _known_monsters.get_or_add(peer_id, {})
-		if _near_peer(peer_id, state["cell"]):
-			known[id] = true
-			monster_updated.rpc_id(peer_id, state)
-		elif known.has(id):
-			known.erase(id)
-			monster_gone.rpc_id(peer_id, id)
-
-
-## Monsters near a joining player; remembered as what that peer knows.
-func _interest_snapshot(peer_id: int, now: float) -> Dictionary:
-	var result: Dictionary = {}
-	var known: Dictionary = {}
-	for id: int in world.monsters:
-		if _near_peer(peer_id, world.monsters[id]["cell"]):
-			result[id] = combat.export_monster(id, now)
-			known[id] = true
-	_known_monsters[peer_id] = known
-	return result
-
-
-## Brings each remote player's client.monsters up to date as they move: new ones in range, gone
-## ones out of range (client.monsters that moved are already sent by _publish_monster).
-func _sync_interest(now: float) -> void:
-	for peer_id: int in _remote_players():
-		var known: Dictionary = _known_monsters.get_or_add(peer_id, {})
-		for id: int in world.monsters:
-			var near: bool = _near_peer(peer_id, world.monsters[id]["cell"])
-			if near and not known.has(id):
-				known[id] = true
-				monster_updated.rpc_id(peer_id, combat.export_monster(id, now))
-		for id: int in known.keys():
-			if not world.monsters.has(id) or not _near_peer(peer_id, world.monsters[id]["cell"]):
-				known.erase(id)
-				monster_gone.rpc_id(peer_id, id)
-
-
-@rpc("authority", "call_remote", "reliable")
-func monster_updated(state: Dictionary) -> void:
-	_apply_monster(state)
-
-
-@rpc("authority", "call_remote", "reliable")
-func monster_gone(id: int) -> void:
-	_monster_died(id)
-
-
-func _monster_died(id: int) -> void:
-	if client.monsters.has(id) and _world_view != null:
-		_world_view.fx.burst("death", (client.monsters[id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color(0.75, 0.7, 0.8))
-	client.remove_monster(id)
-
-
-@rpc("authority", "call_remote", "reliable")
-func combat_event(event: Dictionary) -> void:
-	_show_effect(event)
-
-
-func _apply_monster(state: Dictionary) -> void:
-	client.put_monster(state)
-
-
 func _map_point(cell: Vector2i) -> Vector2:
 	return (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
 
@@ -1292,81 +1144,6 @@ func _show_effect(event: Dictionary) -> void:
 			client.effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born,
 				"element": event.get("element", ""), "life": maxf(1.1, float(event.get("life", 0.0)))})
 			_world_view.fx.area(event["cells"], event["color"])
-
-
-func _send_feedback(id: int, reason: String, retry: float, movement: bool) -> void:
-	if id == 1:
-		action_feedback(reason, retry, movement)
-	elif id in multiplayer.get_peers():
-		action_feedback.rpc_id(id, reason, retry, movement)
-
-
-@rpc("authority", "call_remote", "reliable")
-func action_feedback(reason: String, retry: float, movement: bool) -> void:
-	last_action_message = reason
-	if movement:
-		_move_pending_since = -1.0
-		_next_move_attempt = _now() + retry + 0.02
-
-
-func _remote_players() -> Array[int]:
-	var result: Array[int] = []
-	for id: int in world.players:
-		if id != 1 and not _closing_peers.has(id) and id in multiplayer.get_peers():
-			result.append(id)
-	return result
-
-
-## Everyone receives public state; only the owner receives its backpack.
-func _publish_actor(id: int, movement: bool = false) -> void:
-	var now: float = _now()
-	_apply_actor(world.export_player(id, now, id == client.self_id), movement)
-	for peer_id: int in _remote_players():
-		actor_updated.rpc_id(peer_id, world.export_player(id, now, peer_id == id), movement)
-
-
-func _publish_ground(cells: Array) -> void:
-	for cell: Vector2i in cells:
-		var stack: Array = world.ground_stack(cell)
-		_apply_ground(cell, stack)
-		for peer_id: int in _remote_players():
-			ground_updated.rpc_id(peer_id, cell, stack)
-
-
-@rpc("authority", "call_remote", "reliable")
-func ground_updated(cell: Vector2i, stack: Array) -> void:
-	_apply_ground(cell, stack)
-
-
-func _apply_ground(cell: Vector2i, stack: Array) -> void:
-	client.put_ground(cell, stack)
-
-
-@rpc("authority", "call_remote", "reliable")
-func actor_updated(state: Dictionary, movement: bool) -> void:
-	_apply_actor(state, movement)
-
-
-func _apply_actor(state: Dictionary, movement: bool = false) -> void:
-	var id: int = state["id"]
-	var start: Vector2 = client.actor_start(state)
-	var previous: Dictionary = client.actors.get(id, {})
-	if not previous.is_empty() and _world_view != null:
-		if state.get("level", 1) > previous["state"].get("level", 1):
-			_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color("#ffd86a"))
-		if state.get("title", 0) > previous["state"].get("title", 0):
-			_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Titles.color_of(state["title"]))
-	client.put_actor(state, start, _now())
-	if id == client.self_id and connected:
-		_remember_character(state)
-	if id == client.self_id and movement:
-		_move_pending_since = -1.0
-		_next_move_attempt = _now() + state["remaining"] + 0.01
-
-
-@rpc("authority", "call_remote", "reliable")
-func actor_left(id: int) -> void:
-	client.actors.erase(id)
 
 
 # ---------------------------------------------------------------- UI

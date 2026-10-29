@@ -68,7 +68,7 @@ func _run() -> void:
 		player["cell"] = cell
 		player["from"] = cell
 		player["health"] = game.world.player_stats(1)["health"]
-		game._publish_actor(1)
+		game.replication.publish_actor(1)
 		for frame: int in FRAMES_PER_ROUND:
 			var now: float = game._now()
 			# Kill a nearby monster now and then: loot spills, death effects fire, a respawn queues.
@@ -77,12 +77,12 @@ func _run() -> void:
 					if game.combat.distance(game.world.monsters[id]["cell"], cell) <= 6:
 						var events: Array = []
 						game.combat._damage(1, id, 999999, "critical", now, events)
-						game._handle_events(events)
+						game.replication.handle_events(events)
 						break
 			# A dropped stack of junk on the player's tile (decays later).
 			if frame == 1 and World.walkable(cell):
 				game.world.ground[cell] = ["glowcap#3"]
-				game._publish_ground([cell])
+				game.replication.publish_ground([cell])
 				drops += 1
 			await process_frame
 		game.clock_skew += SKEW_PER_ROUND

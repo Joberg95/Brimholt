@@ -94,7 +94,7 @@ func _run() -> void:
 				push_error("Visual test equipment setup failed")
 				quit(1)
 				return
-		game._apply_actor(game.world.export_player(id, 10.0, id == 1))
+		game.replication.apply_actor(game.world.export_player(id, 10.0, id == 1))
 	game.world.ground[TEST_ITEM_CELL] = ["iron_coif"]
 	game.client.put_ground(TEST_ITEM_CELL, ["iron_coif"])
 	await process_frame
@@ -119,7 +119,7 @@ func _run() -> void:
 				push_error("Visual test unequip failed: " + unequip_result["reason"])
 				quit(1)
 				return
-		game._apply_actor(game.world.export_player(id, 25.0, id == 1))
+		game.replication.apply_actor(game.world.export_player(id, 25.0, id == 1))
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var unequipped: Image = screen.get_texture().get_image()
@@ -333,7 +333,7 @@ func _move_beside(npc: String) -> void:
 				best = spot
 	player["cell"] = best
 	player["from"] = best
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await process_frame
 
@@ -417,7 +417,7 @@ func _check_town_services() -> bool:
 		return false
 	player["backpack"][0] = "health_potion#10"
 	player["health"] = 1
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await _press("health_potion")
 	await process_frame
@@ -435,7 +435,7 @@ func _check_town_services() -> bool:
 			"Right-clicking a backpack item with the bank open did not deposit it"):
 		return false
 	game.world.wear_pack(1, "pathfinder_pack")
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -520,7 +520,7 @@ func _check_ferry_and_maps() -> bool:
 		return false
 	player["cell"] = spot[1]
 	player["from"] = spot[1]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var forest: Image = screen.get_texture().get_image()
@@ -536,7 +536,7 @@ func _check_ferry_and_maps() -> bool:
 	var dock: Vector2i = game.world.arrival_cell("cinder_landing", game._now())
 	player["cell"] = dock
 	player["from"] = dock
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-landing.png")
@@ -548,7 +548,7 @@ func _check_ferry_and_maps() -> bool:
 	player["cell"] = dock
 	player["from"] = dock
 	player["next_travel"] = 0.0
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	if not await _sail("reedmere", "blackreed_isle"):
 		return false
@@ -588,13 +588,13 @@ func _check_ferry_and_maps() -> bool:
 		return false
 	# With a hunting task, gold rings mark its camps on the world map and the minimap points to them.
 	player["tasks"]["outlaw_bounty"] = 0
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-map-task.png")
 	player["tasks"].erase("outlaw_bounty")
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	if not _expect(not World.task_targets("outlaw_bounty", {"tasks": {"outlaw_bounty": 0}}).is_empty(),
 			"An outlaw bounty has no camps to point to"):
 		return false
@@ -739,7 +739,7 @@ func _check_combat() -> bool:
 			# Hold still so the click lands on the monster's tile.
 			game.world.monsters[id]["next_move"] = INF
 			game.world.monsters[id]["next_attack"] = INF
-			game._handle_events(events)
+			game.replication.handle_events(events)
 			spawned.append(id)
 	if not _expect(spawned.size() == 2, "No room for monsters beside the player"):
 		return false
@@ -807,7 +807,7 @@ func _check_relics() -> bool:
 	player["trophies"] = {"morvain": 1}
 	player["backpack"][World.BACKPACK_SIZE - 1] = ""
 	player["next_item"] = 0.0
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await process_frame
 	await _push_mouse(_tile_center(keeper), MOUSE_BUTTON_RIGHT, true)
@@ -850,7 +850,7 @@ func _check_relics() -> bool:
 	player["equipment"]["helmet"] = "abyssal_greathelm"
 	player["equipment"]["main_hand"] = "cinderheart_bow"
 	player["facing"] = Vector2i.DOWN
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	var free: Array[Vector2i] = []
 	for dy: int in range(-3, 4):
 		for dx: int in range(-4, 5):
@@ -869,7 +869,7 @@ func _check_relics() -> bool:
 		var id: int = game.combat.spawn_monster(kind, 50, cell, game._now(), -1, events)
 		game.world.monsters[id]["next_move"] = INF
 		game.world.monsters[id]["next_attack"] = INF
-		game._handle_events(events)
+		game.replication.handle_events(events)
 		bosses.append(id)
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
@@ -910,7 +910,7 @@ func _check_dungeons() -> bool:
 				player["cell"] = hole + side
 				break
 		player["from"] = player["cell"]
-		game._publish_actor(1)
+		game.replication.publish_actor(1)
 		await create_timer(0.4).timeout
 		await RenderingServer.frame_post_draw
 		screen.get_texture().get_image().save_png("res://.tools/visual-entrance-%s.png" % dungeon)
@@ -922,7 +922,7 @@ func _check_dungeons() -> bool:
 	player["cell"] = stairway - step
 	player["from"] = player["cell"]
 	player["next_move"] = 0.0
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	# Held movement keys are polled from the OS keyboard, so step through the same client request.
 	game.move_local(step)
@@ -939,7 +939,7 @@ func _check_dungeons() -> bool:
 	player["cell"] = king + Vector2i(-3, 0)
 	player["from"] = player["cell"]
 	player["facing"] = Vector2i.RIGHT
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
 	var cellar: Image = screen.get_texture().get_image()
@@ -950,7 +950,7 @@ func _check_dungeons() -> bool:
 		return false
 	player["cell"] = Dungeons.origin("highmoor_mine", 0) + Dungeons.cells("highmoor_mine", "@")[0]
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
 	var mine: Image = screen.get_texture().get_image()
@@ -964,7 +964,7 @@ func _check_waystone() -> bool:
 	var stone: Vector2i = World.FERRYMEN["cinder_coach"]["cell"]
 	player["cell"] = stone + Vector2i(-2, 1)
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.6).timeout
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-waystone.png")
@@ -986,7 +986,7 @@ func _check_town_lamps() -> bool:
 			break
 	player["cell"] = stand
 	player["from"] = stand
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	var lighting: Node2D = game._world_view.lighting
 	lighting.time_override = 0.0
 	await create_timer(0.8).timeout
@@ -1011,7 +1011,7 @@ func _check_town_lamps() -> bool:
 			before = now
 	player["cell"] = stand
 	player["from"] = stand
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.3).timeout
 	lighting.time_override = 0.5
 	if not _expect(steady, "The town lamp light jumps while walking past it (%s)" % jump):
@@ -1081,10 +1081,10 @@ func _check_rune_bar() -> bool:
 		game.world.monsters[id]["health"] = 100000
 		game.world.monsters[id]["next_move"] = INF
 		game.world.monsters[id]["next_attack"] = INF
-		game._handle_events(events)
+		game.replication.handle_events(events)
 		pack.append(id)
 	player["target"] = pack[0]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	game.keybinds.set_bar(8, "item:fire_rune")
 	await create_timer(0.3).timeout
 	await _press("slot_9")
@@ -1106,7 +1106,7 @@ func _check_rune_bar() -> bool:
 	game.gateway.handle_spell(1, "glacier_wall")
 	await create_timer(1.0).timeout
 	var used: Dictionary = game.combat.use_rune(1, "sudden_death_rune", game._now())
-	game._handle_events(used.get("events", []))
+	game.replication.handle_events(used.get("events", []))
 	await create_timer(0.2).timeout
 	await RenderingServer.frame_post_draw
 	var walled: Image = screen.get_texture().get_image()
@@ -1139,12 +1139,12 @@ func _check_dark_cave() -> bool:
 				game.world.monsters[id]["next_move"] = INF
 				game.world.monsters[id]["next_attack"] = INF
 				spiders.append(id)
-			game._handle_events(events)
+			game.replication.handle_events(events)
 		else:
 			player["equipment"].erase("off_hand")
 		player["cell"] = arrival
 		player["from"] = arrival
-		game._publish_actor(1)
+		game.replication.publish_actor(1)
 		await create_timer(0.8).timeout
 		await RenderingServer.frame_post_draw
 		shots.append(screen.get_texture().get_image())
@@ -1153,19 +1153,19 @@ func _check_dark_cave() -> bool:
 	var gone: Array = []
 	for id: int in spiders:
 		game.combat.despawn(id, gone)
-	game._handle_events(gone)
+	game.replication.handle_events(gone)
 	# The cave mouth in Thornfield Wilds, by day.
 	var mouth: Vector2i = World.ENTRANCE_OF["silkhollow"] + Vector2i(0, 3)
 	player["cell"] = mouth
 	player["from"] = mouth
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-cave-mouth.png")
 	player["equipment"] = worn
 	player["cell"] = home
 	player["from"] = home
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.5).timeout
 	var centre: Vector2 = game.map_to_screen(Vector2(home) * World.TILE_SIZE + Vector2(16, 16))
 	var dark: float = _mean_luminance(shots[0], Rect2i(Vector2i(centre) - Vector2i(240, 200), Vector2i(480, 400)))
@@ -1273,7 +1273,7 @@ func _check_training_hall() -> bool:
 	player["backpack"] = player["backpack"].map(func(_entry: String) -> String: return "")
 	player["cell"] = front
 	player["from"] = front
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	if not await _open_service("trainer_paladin", "Class"):
 		return false
@@ -1296,7 +1296,7 @@ func _check_training_hall() -> bool:
 	player["done_tasks"] = saved["done"]
 	player["cell"] = saved["cell"]
 	player["from"] = saved["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.5).timeout
 	return _expect(chosen, "Choosing a class at the trainer did not make the Adventurer a Hunter")
 
@@ -1331,7 +1331,7 @@ func _check_lexicon_and_marks() -> bool:
 	player["done_tasks"] = {}
 	player["cell"] = ilse["cell"] + Vector2i(0, 2)
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-quest-marks.png")
@@ -1343,7 +1343,7 @@ func _check_lexicon_and_marks() -> bool:
 	player["done_tasks"] = saved["done"]
 	player["cell"] = saved["cell"]
 	player["from"] = saved["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.5).timeout
 	return _expect(marked == "!" and "\n".join(listed).contains("Next: Wolves at the woodline"),
 		"Harbourmaster Ilse shows no quest mark, or the quest list no next stop (%s)" % [listed])
@@ -1408,7 +1408,7 @@ func _check_quest_list() -> bool:
 	var player: Dictionary = game.world.players[1]
 	var before: Dictionary = player["tasks"].duplicate()
 	player["tasks"] = {"cellar_vermin": 12, "rat_king": 1}
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -1426,7 +1426,7 @@ func _check_quest_list() -> bool:
 	var hidden: bool = not game.quest_list.visible
 	game._run_action("quest_list")
 	player["tasks"] = before
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await process_frame
 	return _expect(ok, "The quest list should show each task's giver and progress:\n%s" % text) \
 		and _expect(hidden, "The quest list key should hide the list")
@@ -1448,7 +1448,7 @@ func _check_roofs_and_signs() -> bool:
 		return false
 	player["cell"] = door + building["outward"][door] * (WorldViewScript.ROOF_NEAR + 1)
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	var outside: Image = screen.get_texture().get_image()
@@ -1456,7 +1456,7 @@ func _check_roofs_and_signs() -> bool:
 	var named_outside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
 	player["cell"] = door + building["outward"][door] * 2
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	var near: Image = screen.get_texture().get_image()
@@ -1468,7 +1468,7 @@ func _check_roofs_and_signs() -> bool:
 	var door_area := Rect2(door_spot - Vector2(24, 28), Vector2(40, 32))
 	player["cell"] = keeper + Vector2i.DOWN * 2
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	var inside: Image = screen.get_texture().get_image()
@@ -1504,7 +1504,7 @@ func _check_ore_vein() -> bool:
 			player["cell"] = vein + offset
 			break
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	var shown: Image = screen.get_texture().get_image()
@@ -1543,13 +1543,13 @@ func _check_loot_display() -> bool:
 	var player: Dictionary = game.world.players[1]
 	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	var cells: Array = []
 	for index: int in 6:
 		var cell: Vector2i = player["cell"] + Vector2i(index - 3, 2)
 		game.world.ground[cell] = [World.make_entry("gold_coins", [1, 2, 3, 6, 15, 60][index])]
 		cells.append(cell)
-	game._publish_ground(cells)
+	game.replication.publish_ground(cells)
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
 	var bare: Image = screen.get_texture().get_image()
@@ -1568,7 +1568,7 @@ func _check_loot_display() -> bool:
 			green = green or (pixel.g > 0.8 and pixel.r < 0.5 and pixel.b < 0.5 and bare.get_pixel(x, y) != pixel)
 	for cell: Vector2i in cells:
 		game.world.ground.erase(cell)
-	game._publish_ground(cells)
+	game.replication.publish_ground(cells)
 	return _expect(green, "A kill's green loot text must show over the body")
 
 
@@ -1578,7 +1578,7 @@ func _check_weather_and_desert() -> bool:
 	var player: Dictionary = game.world.players[1]
 	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
 	player["from"] = player["cell"]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	# Floor chunks around a new spot build one per frame; let them finish before comparing.
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
@@ -1616,7 +1616,7 @@ func _check_weather_and_desert() -> bool:
 	player["cell"] = plant + Vector2i(-2, 0)
 	player["from"] = player["cell"]
 	Weather.override = "storm"
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.8).timeout
 	await RenderingServer.frame_post_draw
 	var desert: Image = screen.get_texture().get_image()
@@ -1658,13 +1658,13 @@ func _check_hollow_reach() -> bool:
 		player["cell"] = stop[0]
 		player["from"] = stop[0]
 		player["facing"] = Vector2i.RIGHT
-		game._publish_actor(1)
+		game.replication.publish_actor(1)
 		if stop[1] == "visual-hollow-throne.png":
 			var events: Array = []
 			var boss: int = game.combat.spawn_monster("vaelith", 50, EndgameZone.THRONE_SEAT, game._now(), -1, events)
 			game.world.monsters[boss]["next_move"] = INF
 			game.world.monsters[boss]["next_attack"] = INF
-			game._handle_events(events)
+			game.replication.handle_events(events)
 		await create_timer(0.3).timeout
 		await RenderingServer.frame_post_draw
 		var image: Image = screen.get_texture().get_image()
@@ -1700,7 +1700,7 @@ func _check_night_and_particles() -> bool:
 	var player: Dictionary = game.world.players[1]
 	player["cell"] = World.SPAWNS[0]
 	player["from"] = World.SPAWNS[0]
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	var lighting: Node2D = game._world_view.lighting
 	await create_timer(0.2).timeout
 	await RenderingServer.frame_post_draw
@@ -1719,12 +1719,12 @@ func _check_night_and_particles() -> bool:
 		return false
 	var worn: Dictionary = player["equipment"].duplicate()
 	player["equipment"]["off_hand"] = "torch"
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.5).timeout
 	await RenderingServer.frame_post_draw
 	var torchlit: Image = screen.get_texture().get_image()
 	player["equipment"] = worn
-	game._publish_actor(1)
+	game.replication.publish_actor(1)
 	await create_timer(0.2).timeout
 	if not _expect(torchlit.get_pixelv(near).get_luminance() > night.get_pixelv(near).get_luminance() * 1.3,
 			"Only a held torch lights the ground around a player at night (%.3f -> %.3f)" % [

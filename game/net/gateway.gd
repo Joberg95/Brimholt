@@ -2,7 +2,7 @@ extends Node
 ## The request gateway (plan 48), /root/Main/Gateway on every peer: every request a player sends the
 ## host. Each @rpc checks its sender (a joined player, not being disconnected, under the rate limit)
 ## and hands the request to its handler; the handlers run the rule (world, combat, economy, crafting)
-## and publish the result through main's replication. The host's own player calls the handlers
+## and publish the result through replication (game/net/replication.gd). The host's own player calls the handlers
 ## directly with id 1.
 
 const World = preload("res://game/core/world.gd")
@@ -186,10 +186,10 @@ func request_bank(npc: Variant, action: Variant, amount: Variant) -> void:
 func handle_move(id: int, direction: Vector2i) -> void:
 	var result: Dictionary = game.world.move(id, direction, game._now())
 	if result["ok"]:
-		game._publish_actor(id, true)
-		game._handle_events(game.instances.after_move(id, game._now()))
+		game.replication.publish_actor(id, true)
+		game.replication.handle_events(game.instances.after_move(id, game._now()))
 	else:
-		game._send_feedback(id, result["reason"], result["retry"], true)
+		game.replication.send_feedback(id, result["reason"], result["retry"], true)
 
 
 func handle_equipment(id: int, slot: String) -> void:
@@ -203,18 +203,18 @@ func handle_item_move(id: int, source: Variant, target: Variant) -> void:
 func handle_travel(id: int, ferryman: Variant, destination: Variant) -> void:
 	var result: Dictionary = game.world.travel(id, ferryman, destination, game._now())
 	if result["ok"]:
-		game._publish_actor(id)
-		game._send_feedback(id, result["message"], 0.0, false)
+		game.replication.publish_actor(id)
+		game.replication.send_feedback(id, result["message"], 0.0, false)
 	else:
-		game._send_feedback(id, result["reason"], 0.0, false)
+		game.replication.send_feedback(id, result["reason"], 0.0, false)
 
 
 func handle_target(id: int, target: Variant) -> void:
 	var result: Dictionary = game.combat.set_target(id, target, game._now())
 	if result["ok"]:
-		game._publish_actor(id)
+		game.replication.publish_actor(id)
 	else:
-		game._send_feedback(id, result["reason"], 0.0, false)
+		game.replication.send_feedback(id, result["reason"], 0.0, false)
 
 
 func handle_spell(id: int, spell: Variant) -> void:
@@ -277,25 +277,25 @@ func handle_bank(id: int, npc: Variant, action: Variant, amount: Variant) -> voi
 ## Replicates a result's events, saving the player when `save`; or tells them why it failed.
 func _events_or_reason(id: int, result: Dictionary, save: bool = false) -> void:
 	if result["ok"]:
-		game._handle_events(result["events"])
+		game.replication.handle_events(result["events"])
 		if save:
 			game._save_player(id)
 	else:
-		game._send_feedback(id, result["reason"], 0.0, false)
+		game.replication.send_feedback(id, result["reason"], 0.0, false)
 
 
 func _item_result(id: int, result: Dictionary) -> void:
 	if result["ok"]:
-		game._publish_actor(id)
-		game._publish_ground(result["ground"])
+		game.replication.publish_actor(id)
+		game.replication.publish_ground(result["ground"])
 	else:
-		game._send_feedback(id, result["reason"], 0.0, false)
+		game.replication.send_feedback(id, result["reason"], 0.0, false)
 
 
 ## Vendor and bank results change only the requesting player's private state.
 func _service_result(id: int, result: Dictionary) -> void:
 	if result["ok"]:
-		game._publish_actor(id)
-		game._send_feedback(id, result["message"], 0.0, false)
+		game.replication.publish_actor(id)
+		game.replication.send_feedback(id, result["message"], 0.0, false)
 	else:
-		game._send_feedback(id, result["reason"], 0.0, false)
+		game.replication.send_feedback(id, result["reason"], 0.0, false)

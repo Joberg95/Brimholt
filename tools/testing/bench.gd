@@ -120,4 +120,4 @@ func _place(cell: Vector2i) -> void:
 			me["cell"] = cell + offset
 			me["from"] = me["cell"]
 			break
-	game._publish_actor(game.client.self_id)
+	game.replication.publish_actor(game.client.self_id)

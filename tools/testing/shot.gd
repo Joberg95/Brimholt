@@ -60,7 +60,7 @@ func _run() -> void:
 		var player: Dictionary = game.world.players[game.client.self_id]
 		player["cell"] = cell
 		player["from"] = cell
-		game._publish_actor(game.client.self_id)
+		game.replication.publish_actor(game.client.self_id)
 		await create_timer(1.2).timeout
 		await RenderingServer.frame_post_draw
 		screen.get_texture().get_image().save_png("res://.tools/shot-%d-%d.png" % [cell.x, cell.y])

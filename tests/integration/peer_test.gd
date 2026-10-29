@@ -327,9 +327,9 @@ func _late_tick(now: float) -> void:
 			# Monsters must arrive when a camp lies well inside the interest radius; the start town's
 			# camps are outside its walls, and then none of the map's monsters may arrive at all.
 			var camp_near: bool = World.MONSTER_SPAWNS.any(func(spawn: Dictionary) -> bool:
-				return Combat.distance(spawn["cell"], own_cell) + int(spawn["radius"]) + 2 < game.INTEREST_RADIUS)
+				return Combat.distance(spawn["cell"], own_cell) + int(spawn["radius"]) + 2 < game.replication.INTEREST_RADIUS)
 			if (camp_near and game.client.monsters.is_empty()) or game.client.monsters.keys().any(func(id: int) -> bool:
-					return id >= 0 or Combat.distance(game.client.monsters[id]["state"]["cell"], own_cell) > game.INTEREST_RADIUS):
+					return id >= 0 or Combat.distance(game.client.monsters[id]["state"]["cell"], own_cell) > game.replication.INTEREST_RADIUS):
 				fail("Late join did not receive only its nearby monsters")
 				return
 			print("BRIMHOLT_LATE_SNAPSHOT_OK")
@@ -378,11 +378,11 @@ func _dedicated_host_tick() -> void:
 		var player: Dictionary = game.world.players[id]
 		if ring_given_at < 0.0 and saw_pickup and player["backpack"].has(""):
 			player["backpack"][player["backpack"].find("")] = "garnet_ring"
-			game._publish_actor(id)
+			game.replication.publish_actor(id)
 			ring_given_at = game._now()
 		elif ring_given_at >= 0.0 and game._now() - ring_given_at > 1.0 and player["level"] < Items.ACCESSORY_LEVEL:
 			player["level"] = Items.ACCESSORY_LEVEL
-			game._publish_actor(id)
+			game.replication.publish_actor(id)
 	# Test-only shortcut on the server: carry the client to Cinder Crossing harbour instead of a long walk.
 	for id: int in game.world.players:
 		var player: Dictionary = game.world.players[id]
@@ -390,7 +390,7 @@ func _dedicated_host_tick() -> void:
 			var dock: Vector2i = game.world.arrival_cell("cinder_landing", game._now())
 			player["cell"] = dock
 			player["from"] = dock
-			game._publish_actor(id)
+			game.replication.publish_actor(id)
 			ferried = true
 		var lastlight: Vector2i = World.FERRYMEN["lastlight"]["cell"]
 		if ferried and World.chebyshev(player["cell"], lastlight) <= World.TALK_RANGE:
@@ -404,7 +404,7 @@ func _dedicated_host_tick() -> void:
 					var events: Array = []
 					sparring = game.combat.spawn_monster("black_cat", 1, cell + step, game._now(), -1, events)
 					game.world.monsters[sparring]["health"] = 6
-					game._handle_events(events)
+					game.replication.handle_events(events)
 	# Test-only: after the fight, grant a boss trophy and carry the client to the Relic keeper.
 	if saw_voyage and sparring != 0 and not game.world.monsters.has(sparring) and not quest_ready:
 		for id: int in game.world.players:
@@ -414,7 +414,7 @@ func _dedicated_host_tick() -> void:
 			player["trophies"] = {"kharzul": 1}
 			player["cell"] = beside
 			player["from"] = beside
-			game._publish_actor(id)
+			game.replication.publish_actor(id)
 			quest_ready = true
 	for id: int in game.world.players:
 		var player: Dictionary = game.world.players[id]
@@ -458,7 +458,7 @@ func _dedicated_host_tick() -> void:
 									player["from"] = rock + step
 									player["facing"] = -step
 									errand = "copper_rock"
-			game._publish_actor(id)
+			game.replication.publish_actor(id)
 			next = ""
 		saw_dungeon = saw_dungeon or World.dungeon_at(player["cell"]) == ["cinder_cellar", 0]
 		if saw_dungeon and World.OVERWORLD.has_point(player["cell"]) and not hunting_weapon_given:
@@ -468,7 +468,7 @@ func _dedicated_host_tick() -> void:
 				return
 			player["backpack"][free] = "alder_crook"
 			hunting_weapon_given = true
-			game._publish_actor(id)
+			game.replication.publish_actor(id)
 		saw_hunting_weapon = saw_hunting_weapon or player["equipment"].get("main_hand", "") == "alder_crook"
 		if not next.is_empty():
 			var cell: Vector2i = World.ENTRANCE_OF[next] if next == "cinder_cellar" else World.npc(next)["cell"]
@@ -486,7 +486,7 @@ func _dedicated_host_tick() -> void:
 			if next == "cinder_vendor":
 				player["health"] = 1
 				player["gold"] += 200
-			game._publish_actor(id)
+			game.replication.publish_actor(id)
 			errand = next
 	if saw_late_move and saw_drop and saw_pickup and saw_ring and saw_voyage and sparring != 0 and saw_relic \
 			and saw_task and saw_dungeon and saw_hunting_weapon and saw_crafted and saw_gathered and not game.world.monsters.has(sparring) \
@@ -777,7 +777,7 @@ func _only_dungeon_monsters(own_cell: Vector2i) -> bool:
 		return false
 	for id: int in game.client.monsters:
 		var cell: Vector2i = game.client.monsters[id]["state"]["cell"]
-		if World.dungeon_at(cell) != World.dungeon_at(own_cell) or World.chebyshev(cell, own_cell) > game.INTEREST_RADIUS:
+		if World.dungeon_at(cell) != World.dungeon_at(own_cell) or World.chebyshev(cell, own_cell) > game.replication.INTEREST_RADIUS:
 			return false
 	return true
 
