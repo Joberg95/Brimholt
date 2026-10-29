@@ -18,6 +18,9 @@ game/
     bot_loot.gd          Bots collect the loot their group earned (Combat.loot_claims) and sell it at vendors
     solo.gd              Solo play: optional companions (invite/dismiss), rival bands, lone roamers, PvP ambushes, raid fill and disband
     nav.gd               Long-range bot navigation: AStarGrid2D over the walkable overworld
+    ecs/                 Plan 48's component core: entities.gd (ids), store.gd (components by entity,
+                         one owner each), events.gd (the event bus), scheduler.gd (system order);
+                         not used by the game yet
     ai/                  LimboAI behavior tree for bots: bot_tree.gd (builder), bot_agent.gd, tasks/;
                          pvp_brain.gd and policy_net.gd run the trained PvP policy (docs/bot-training.md)
   data/                  Static catalogs and curves

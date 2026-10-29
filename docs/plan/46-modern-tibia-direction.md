@@ -2,7 +2,7 @@
 
 **Effort:** XL (umbrella plan; phases split into their own plans as they start)
 
-Status: direction agreed and Phase 0 decided, no code changed yet (2026-10-21). See
+Status: art phases (1-7) closed by plan 48 (2026-10-29): the art is the OpenTibia pack's (plan 49); the world and floor parts stay. Earlier: direction agreed and Phase 0 decided (2026-10-21). See
 "Phase 0 decisions" below.
 
 ## Goal

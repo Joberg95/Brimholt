@@ -9,7 +9,7 @@ RL_PYTHON ?= .tools/rl-venv/bin/python
 GAME_ARGS := --port=$(PORT)
 
 .DEFAULT_GOAL := help
-.PHONY: help run editor host join server import lint test test-unit test-lan test-visual soak fight-sim duel-sim duel-eval train-setup train export-policy bench playtest check \
+.PHONY: help run editor host join server import lint test test-unit golden test-lan test-visual soak fight-sim duel-sim duel-eval train-setup train export-policy bench playtest check \
 	sprites landscape cliffs mountains hunts camp-density world-map void-throne reedmere swamp town-paths caves frost-isles fill-gaps clear-walls cobble-towns clear-boulders move-bands sectors islands region bake-map relocate mainland orcs underground caves-below map map-force endgame-zone dungeons desert towns island bot-tree gear-table balance-table export-windows clean
 
 help: ## List commands
@@ -46,6 +46,11 @@ test-unit: ## Deterministic rule checks
 	@out=$$($(GODOT) --headless --path . --script res://tests/unit/rules_test.gd 2>&1); \
 		echo "$$out" | grep -E 'BRIMHOLT_RULES|FAIL|ERROR|SCRIPT'; \
 		echo "$$out" | grep -q 'BRIMHOLT_RULES: [0-9]* checks, 0 failures'
+	$(GODOT) --headless --path . --script res://tests/unit/ecs_test.gd
+	$(GODOT) --headless --path . --script res://tests/unit/golden_test.gd
+
+golden: ## Record the refactor safety net's golden digests (only with a deliberate rule change)
+	$(GODOT) --headless --path . --script res://tests/unit/golden_test.gd -- --record
 
 test-lan: ## Real ENet scenarios: playing host, dedicated, host loss, occupied port, persistence
 	$(PYTHON) tools/testing/test_lan.py --godot $(GODOT)

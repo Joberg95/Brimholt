@@ -6,7 +6,8 @@ Run these through `make` (see `make help`) or directly. Every check uses Godot 4
 | --- | --- | --- |
 | `make import` | Headless import; parses every script and resource | ~10 s |
 | `make lint` | `tools/testing/lint.gd`: parses every script with the strict warnings in `project.godot` | ~5 s |
-| `make test-unit` | `tests/unit/rules_test.gd`: deterministic rule checks (about 780 assertions) | ~3 s |
+| `make test-unit` | `tests/unit/rules_test.gd`: deterministic rule checks (about 1,330 assertions); `ecs_test.gd`: the ECS core; `golden_test.gd`: the refactor safety net | ~10 s |
+| `make golden` | Records `tests/unit/golden.txt` after a deliberate rule change (its own commit) | ~5 s |
 | `make test-lan` | `tools/testing/test_lan.py`: five real ENet scenarios | ~1 min |
 | `make test` | Lint, unit, and LAN | ~1 min |
 | `make test-visual` | `tools/testing/test_visual.py`: offscreen graphical checks, `.tools/visual-report.html` | ~30 s |
@@ -54,6 +55,20 @@ stacks that never decay, more monsters than spawn slots, or loot claims outlivin
 anything that creates nodes, caches, or per-player/per-monster state.
 
 ## Unit rules
+
+**The golden session** (`tests/unit/golden_test.gd`, plan 48's safety net): a fixed, seeded session
+plays a party of three level-20 characters (knight, sorcerer, druid) against wild hogs and brigands in
+the first open field near the first spawn for two minutes of game time, with item moves, a potion, a
+death, and fresh monsters at fixed moments, then saves and restores every character. Its outcome is
+digested in six sections (saves, players as clients see them, the save round trip, monsters, ground,
+and every event) and compared with `tests/unit/golden.txt`; the full digests go to `.tools/golden/`
+for diffing. A refactor must leave every section unchanged; a rule change records a new golden
+(`make golden`) in its own commit.
+
+**The ECS core** (`tests/unit/ecs_test.gd`): entity ids rise and are never reused, players keep their
+peer ids, records are stored and listed by entity in insertion order, each component has one owner,
+events are delivered in raise order with reactions after what was queued, and systems run in a fixed
+order with the bus drained after each.
 
 Each `check()` call site is one assertion, however many cases a loop feeds it (every item,
 spawn, tile, or pose): the summary reads `BRIMHOLT_RULES: <assertions> checks, <failures>

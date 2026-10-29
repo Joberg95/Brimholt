@@ -11,11 +11,10 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 
 | # | Plan | Effort | Needs from you |
 | --- | --- | --- | --- |
+| 48 | [Direction: art from the pack, code split into components](48-components.md) | XL | Step order |
 | 49 | [All art from the OpenTibia sprite pack: items, outfits, creatures, world](49-opentibia-art.md) | XL | Review each phase's renders |
 | 47 | [The world plan: the frame frozen, every landmass and floor listed](47-world-plan.md) | S | New capital and town names; Frostvault's home |
 | 46 | [Direction: modern-Tibia feel (art, world, floors, hunts, quests)](46-modern-tibia-direction.md) | XL | Private Tibia reference screenshots; loot questions |
-| 39 | [Classic-style icons for the remaining item families](39-icon-families.md) | L | Paused until plan 46 phase 2 |
-| 38 | [Bring the old tiles up to the new art style](38-art-style-pass.md) | L | Paused until plan 46 phase 2 |
 | 20 | [Sound engine](20-sound-engine.md) | L | Choice of CC0 sounds |
 | 21 | [Rare mini-bosses](21-mini-bosses.md) | L | Later, when the game is stable |
 | 22 | [Outfits from quests](22-quest-outfits.md) | M-L | Later |
@@ -26,8 +25,7 @@ interiors, cellars, the map and area spells are in the `art-direction` skill.
 | 41 | [Performance: baked map, spaces, dormant camps](41-performance-spaces.md) | L | |
 | 40 | [The archipelago: biome islands with castle capitals](40-archipelago.md) | XL | Review each island |
 
-Build 26 after any plan that adds gear stats (25's runes and spells change the same sims), and 39
-family by family between other plans. 38 and 40 both repaint the world; 40 is being built now (owner, 2026-10-20), island by island: layout now, its art repainted after plan 46's phase 2 (owner, 2026-10-21). 38 and 39 are paused until then so nothing is repainted twice.
+Plan 48 (2026-10-29) freezes art: no plan draws or repaints sprites; plans 38 and 39 are closed.
 
 Always: typed GDScript, lint clean, rules covered in `tests/unit/rules_test.gd`, a visual-test
 capture for art (the `art-direction` skill), and the docs (`docs/gameplay.md`, `docs/balance.md`,
