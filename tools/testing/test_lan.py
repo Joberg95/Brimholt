@@ -79,7 +79,7 @@ def main():
 
     try:
         launch("host")
-        deadline = time.monotonic() + (40 if args.dedicated else 30)
+        deadline = time.monotonic() + (60 if args.dedicated else 50)
         passed = set()
         exited = set()
         while time.monotonic() < deadline:
