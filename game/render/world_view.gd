@@ -77,7 +77,7 @@ func _ready() -> void:
 
 ## Tiles to draw, as a rectangle clamped to the map.
 func visible_cells() -> Rect2i:
-	var focus: Vector2 = game.camera_focus() / World.TILE_SIZE
+	var focus: Vector2 = game.camera.focus() / World.TILE_SIZE
 	var half: Vector2 = Vector2(game.VIEW_TILES) / 2.0
 	var area := Rect2i(Vector2i((focus - half).floor()) + MARGIN.position,
 		Vector2i((half * 2.0).ceil()) + Vector2i.ONE + MARGIN.size)
@@ -197,7 +197,7 @@ func _draw() -> void:
 			WallArt.draw_wall(self, cell)
 			if World.WALL_DECOR.has(cell):
 				ObjectArt.draw_wall_decor(self, cell, World.WALL_DECOR[cell])
-			if Crafting.ORES.has(cell) and not game.node_worked(cell):
+			if Crafting.ORES.has(cell) and not game.api.node_worked(cell):
 				# Veins catch the eye: each glints for a moment every few seconds.
 				WallArt.draw_ore(self, cell, Crafting.ORES[cell], fmod(time + SpriteArt.noise(cell, 17) % 100 * 0.031, ORE_GLINT_EVERY) < ORE_GLINT)
 			continue
@@ -207,7 +207,7 @@ func _draw() -> void:
 			_draw_stack(cell, game.client.ground_view[cell])
 		if tile == "furniture":
 			ObjectArt.draw_furniture(self, cell, World.FURNITURE[cell])
-		elif tile == "herb" and not game.node_worked(cell):
+		elif tile == "herb" and not game.api.node_worked(cell):
 			ObjectArt.draw_herb(self, cell, Crafting.HERBS[cell])
 		if tile == "npc" and World.npc(World.NPC_CELLS[cell]).get("vehicle", "") in ["waystone", "gate"]:
 			ObjectArt.draw_waystone(self, cell)

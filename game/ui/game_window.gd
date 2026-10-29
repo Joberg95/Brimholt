@@ -22,8 +22,9 @@ func setup(game: Node) -> void:
 	position = Layout.VIEW_ORIGIN
 	size = Layout.VIEW_SIZE
 	clip_contents = true
-	set_drag_forwarding(Callable(game, "_map_drag"), Callable(game, "_map_can_drop"), Callable(game, "_map_drop"))
-	gui_input.connect(Callable(game, "_map_input"))
+	set_drag_forwarding(Callable(game.input_controller, "map_drag"), Callable(game.input_controller, "map_can_drop"),
+		Callable(game.input_controller, "map_drop"))
+	gui_input.connect(Callable(game.input_controller, "map_input"))
 	var container := SubViewportContainer.new()
 	container.size = Layout.VIEW_SIZE
 	container.stretch = true

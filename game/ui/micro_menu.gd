@@ -51,7 +51,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 		button.draw.connect(_draw_button.bind(button, entry[0]))
 		button.gui_input.connect(func(event: InputEvent) -> void:
 			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-				game.toggle_panel(entry[0]))
+				game.input_controller.toggle_panel(entry[0]))
 		layer.add_child(button)
 		buttons.append(button)
 
@@ -77,7 +77,7 @@ func redraw() -> void:
 
 func _draw_button(button: Control, action: String) -> void:
 	var area := Rect2(Vector2.ZERO, button.size)
-	var open: bool = game.panel_open(action)
+	var open: bool = game.input_controller.panel_open(action)
 	var hovered: bool = button.get_global_rect().has_point(button.get_global_mouse_position())
 	button.draw_rect(area, Color("#1a1612", 0.92))
 	button.draw_rect(area.grow(-2), Color("#2a231c") if not open else Color("#3a2e1e"))

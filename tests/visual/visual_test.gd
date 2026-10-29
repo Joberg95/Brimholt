@@ -99,7 +99,7 @@ func _run() -> void:
 	game.client.put_ground(TEST_ITEM_CELL, ["iron_coif"])
 	await process_frame
 	await RenderingServer.frame_post_draw
-	if not _expect(_centred(Vector2(5, 6)), "Camera is not centred on the local character (at %s, visual %s, focus %s)" % [game.world.players[1]["cell"], game.client.actors[1]["visual"], game.camera_focus()]):
+	if not _expect(_centred(Vector2(5, 6)), "Camera is not centred on the local character (at %s, visual %s, focus %s)" % [game.world.players[1]["cell"], game.client.actors[1]["visual"], game.camera.focus()]):
 		return
 	var image: Image = screen.get_texture().get_image()
 	if image == null or image.is_empty():
@@ -142,7 +142,7 @@ func _run() -> void:
 	if not await _check_mouse_inventory():
 		return
 	var camera_start: float = game._world_view.position.x
-	game.move_local(Vector2i.RIGHT)
+	game.api.move_local(Vector2i.RIGHT)
 	await create_timer(World.MOVE_SECONDS / 2.0).timeout
 	var midpoint: float = game.client.actors[1]["visual"].x
 	if midpoint <= 5.0 or midpoint >= 6.0:
@@ -244,13 +244,13 @@ func _drag_to_map(from: Vector2, to: Vector2) -> bool:
 			break
 		await _push_mouse(from, MOUSE_BUTTON_LEFT, false)
 	var local: Vector2 = to - game.VIEW_ORIGIN
-	var accepted: bool = started and game._map_can_drop(local, data)
+	var accepted: bool = started and game.input_controller.map_can_drop(local, data)
 	screen.gui_cancel_drag()
 	await _push_mouse(to, MOUSE_BUTTON_LEFT, false)
 	if not _expect(started, "Mouse drag did not pick up the backpack item") \
 			or not _expect(accepted, "Map rejected a valid item drop"):
 		return false
-	game._map_drop(local, data)
+	game.input_controller.map_drop(local, data)
 	return true
 
 
@@ -408,7 +408,7 @@ func _check_town_services() -> bool:
 	await process_frame
 	var scrolled: int = trade_scroll.scroll_vertical
 	await create_timer(World.ITEM_SECONDS + 0.05).timeout  # the earlier buy's item cooldown
-	game.buy_local("cinder_vendor", "health_potion", 1)
+	game.api.buy_local("cinder_vendor", "health_potion", 1)
 	for wait: int in 4:
 		await process_frame
 	var rebuilt: ScrollContainer = game.dialogs._list_scroll()
@@ -454,7 +454,7 @@ func _check_town_services() -> bool:
 
 
 func _tile_center(cell: Vector2) -> Vector2:
-	return game.map_to_screen((cell + Vector2(0.5, 0.5)) * World.TILE_SIZE)
+	return game.camera.to_screen((cell + Vector2(0.5, 0.5)) * World.TILE_SIZE)
 
 
 func _centred(cell: Vector2) -> bool:
@@ -474,7 +474,7 @@ func _matches_texel(image: Image, texture: Texture2D, region: Rect2, map_origin:
 	if best.x < 0:
 		return false
 	var expected: Color = sheet.get_pixelv(Vector2i(region.position) + best)
-	var at: Vector2 = game.map_to_screen(map_origin + Vector2(best) + Vector2(0.5, 0.5))
+	var at: Vector2 = game.camera.to_screen(map_origin + Vector2(best) + Vector2(0.5, 0.5))
 	return image.get_pixelv(Vector2i(at)).is_equal_approx(expected)
 
 
@@ -762,7 +762,7 @@ func _check_combat() -> bool:
 			"The target frame does not show the target's name and health (%s)" % [info]):
 		return false
 	var corner: Vector2 = Vector2(game.world.monsters[spawned[0]]["cell"]) * World.TILE_SIZE
-	var edge: Vector2 = game.map_to_screen(corner + Vector2(1.5, World.TILE_SIZE / 2.0))
+	var edge: Vector2 = game.camera.to_screen(corner + Vector2(1.5, World.TILE_SIZE / 2.0))
 	if not _expect(image.get_pixelv(Vector2i(edge)).is_equal_approx(WorldOverlay.TARGET_COLOR), "The target square is not drawn"):
 		return false
 	var hit: bool = false
@@ -772,7 +772,7 @@ func _check_combat() -> bool:
 		return false
 	# The weapon swings: the drawn character changes between the wind-up and the strike, toward the target.
 	var me: Dictionary = game.client.actors[1]
-	var centre: Vector2 = game.map_to_screen((me["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE)
+	var centre: Vector2 = game.camera.to_screen((me["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE)
 	var body := Rect2i(Vector2i(centre) - Vector2i(48, 72), Vector2i(96, 104))
 	var frames: Array[Image] = []
 	# Drawn-only: show the swing with a sword in hand (the server's equipment is untouched).
@@ -886,7 +886,7 @@ func _check_relics() -> bool:
 		if Monsters.MONSTERS[game.world.monsters[id]["kind"]].has("glow"):
 			spots[Monsters.MONSTERS[game.world.monsters[id]["kind"]]["name"]] = game.world.monsters[id]["cell"]
 	for label: String in spots:
-		var corner: Vector2 = game.map_to_screen(Vector2(spots[label]) * World.TILE_SIZE - Vector2(8, 24))
+		var corner: Vector2 = game.camera.to_screen(Vector2(spots[label]) * World.TILE_SIZE - Vector2(8, 24))
 		var region := Rect2i(Vector2i(corner), Vector2i(48, 56) * int(game.ZOOM))
 		if not _expect(lit.get_region(region).get_data() != plain.get_region(region).get_data(), "No glow around %s" % label):
 			return false
@@ -925,7 +925,7 @@ func _check_dungeons() -> bool:
 	game.replication.publish_actor(1)
 	await process_frame
 	# Held movement keys are polled from the OS keyboard, so step through the same client request.
-	game.move_local(step)
+	game.api.move_local(step)
 	await create_timer(0.3).timeout
 	var place: Array = World.dungeon_at(player["cell"])
 	if not _expect(place.size() == 2 and place[0] == "cinder_cellar" and game.last_action_message.contains("Cinder cellar")
@@ -1001,7 +1001,7 @@ func _check_town_lamps() -> bool:
 		if frame % 12 == 0:
 			game.gateway.handle_move(1, Vector2i.LEFT)
 		await RenderingServer.frame_post_draw
-		var at: Vector2 = game.map_to_screen((Vector2(lamp) + Vector2(0.5, -0.5)) * World.TILE_SIZE)
+		var at: Vector2 = game.camera.to_screen((Vector2(lamp) + Vector2(0.5, -0.5)) * World.TILE_SIZE)
 		var frame_image: Image = screen.get_texture().get_image()
 		if Rect2(Vector2.ZERO, Vector2(frame_image.get_size())).has_point(at):
 			var now: float = frame_image.get_pixelv(Vector2i(at)).get_luminance()
@@ -1027,7 +1027,7 @@ func _check_town_lamps() -> bool:
 	for dy: int in range(-8, 9):
 		for dx: int in range(-12, 13):
 			var cell: Vector2i = stand + Vector2i(dx, dy)
-			var at: Vector2 = game.map_to_screen((Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE)
+			var at: Vector2 = game.camera.to_screen((Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE)
 			if not World.terrain(cell) in World.LAND or not visible_area.has_point(at):
 				continue
 			var gap: int = 99
@@ -1039,8 +1039,8 @@ func _check_town_lamps() -> bool:
 	if not _expect(darkest >= 4, "No dark ground on screen near the lamp at %s" % lamp):
 		return false
 	# Averages over a patch, since textured ground has dark joints between its stones.
-	var near: float = _patch_luminance(night, game.map_to_screen((Vector2(lamp) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
-	var dark: float = _patch_luminance(night, game.map_to_screen((Vector2(far) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
+	var near: float = _patch_luminance(night, game.camera.to_screen((Vector2(lamp) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
+	var dark: float = _patch_luminance(night, game.camera.to_screen((Vector2(far) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
 	return _expect(near > dark + 0.08,
 		"A town lamp post does not light the street at night (%.2f beside %s, %.2f at %s)" % [near, lamp, dark, far])
 
@@ -1113,7 +1113,7 @@ func _check_rune_bar() -> bool:
 	walled.save_png("res://.tools/visual-glacier-wall.png")
 	player["vocation"] = vocation
 	var ice: Vector2i = player["cell"] + Vector2i(2, 0)
-	var at: Vector2 = game.map_to_screen((Vector2(ice) + Vector2(0.5, 0.3)) * World.TILE_SIZE)
+	var at: Vector2 = game.camera.to_screen((Vector2(ice) + Vector2(0.5, 0.3)) * World.TILE_SIZE)
 	var pixel: Color = walled.get_pixelv(Vector2i(at))
 	var standing: bool = game.client.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "ice_wall")
 	var dark: bool = game.client.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "death")
@@ -1167,7 +1167,7 @@ func _check_dark_cave() -> bool:
 	player["from"] = home
 	game.replication.publish_actor(1)
 	await create_timer(0.5).timeout
-	var centre: Vector2 = game.map_to_screen(Vector2(home) * World.TILE_SIZE + Vector2(16, 16))
+	var centre: Vector2 = game.camera.to_screen(Vector2(home) * World.TILE_SIZE + Vector2(16, 16))
 	var dark: float = _mean_luminance(shots[0], Rect2i(Vector2i(centre) - Vector2i(240, 200), Vector2i(480, 400)))
 	var lit: float = _mean_luminance(shots[1], Rect2i(Vector2i(centre) - Vector2i(240, 200), Vector2i(480, 400)))
 	return _expect(dark < 0.06 and lit > dark * 2.5 and lit > 0.08, "Silkhollow is not dark without a torch, or a torch does not light it (%.2f -> %.2f)" % [dark, lit])
@@ -1191,7 +1191,7 @@ func _check_spell_book() -> bool:
 	var key := InputEventKey.new()
 	key.pressed = true
 	key.physical_keycode = game.keybinds.keys["spell_book"][0]
-	game._unhandled_key_input(key)
+	game.input_controller._unhandled_key_input(key)
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -1222,7 +1222,7 @@ func _check_spell_book() -> bool:
 		target._drop_data(Vector2.ZERO, drag)
 	var dropped: bool = game.keybinds.bar[8] == "spell:" + last
 	game.keybinds.bar = saved_bar
-	game._unhandled_key_input(key)
+	game.input_controller._unhandled_key_input(key)
 	await process_frame
 	return _expect(dropped and not book.visible, "Dragging a spell from the book onto the bar failed, or the key did not close it")
 
@@ -1246,7 +1246,7 @@ func _check_micro_menu() -> bool:
 	var bar_right: float = game.action_bar._slots[-1].get_global_rect().end.x
 	var placed: bool = menu.buttons.all(func(button: Control) -> bool:
 		return button.position.x > bar_right and button.get_global_rect().end.x <= Layout.VIEW_ORIGIN.x + Layout.VIEW_SIZE.x)
-	if not _expect(window.visible and game.panel_open("character") and joined.contains("Defense") and joined.contains("Cuts physical damage") and joined.contains("Magic defense")
+	if not _expect(window.visible and game.input_controller.panel_open("character") and joined.contains("Defense") and joined.contains("Cuts physical damage") and joined.contains("Magic defense")
 			and joined.contains("Town rest") and joined.contains("Experience"), "The micro menu does not open a character window with stats explained"):
 		return false
 	if not _expect(placed and menu.buttons[1].tooltip_text.begins_with("Spell book  (B)"),
@@ -1365,13 +1365,13 @@ func _check_bots() -> bool:
 	screen.get_texture().get_image().save_png("res://.tools/visual-party.png")
 	var party_text: PackedStringArray = []
 	_texts(game.party_window, party_text)
-	var opened: bool = game.party_window.visible and game.panel_open("party") and "You" in party_text \
+	var opened: bool = game.party_window.visible and game.input_controller.panel_open("party") and "You" in party_text \
 		and "\n".join(party_text).contains("not in a party") and party_button.tooltip_text.begins_with("Party  (O)")
 	party_button.gui_input.emit(release)
 	await process_frame
 	if not _expect(opened and not game.party_window.visible, "The party window does not open and close from the micro menu (%s)" % [party_text]):
 		return false
-	game.toggle_panel("controls")
+	game.input_controller.toggle_panel("controls")
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -1380,8 +1380,8 @@ func _check_bots() -> bool:
 	var labels: Array = buttons.map(func(button: Button) -> String: return button.text)
 	var menu_text: PackedStringArray = []
 	_texts(game.game_menu, menu_text)
-	var listed: bool = "You" in menu_text and game.game_menu.visible and game.panel_open("controls")
-	game.toggle_panel("controls")
+	var listed: bool = "You" in menu_text and game.game_menu.visible and game.input_controller.panel_open("controls")
+	game.input_controller.toggle_panel("controls")
 	await process_frame
 	if not _expect(labels == ["Controls", "Leave game", "Close"] and listed and not game.game_menu.visible,
 			"The cogwheel should open the game menu with you listed, Controls, Leave game, and Close (%s)" % [labels]):
@@ -1420,11 +1420,11 @@ func _check_quest_list() -> bool:
 	var text: String = "\n".join(lines)
 	var ok: bool = game.quest_list.visible and text.contains("Vermin in the cellar") and text.contains("12/25 cellar rats") \
 		and text.contains("Cellarmaster Pell, Cinder Crossing") and text.contains("Done: return to Cellarmaster Pell")
-	game._run_action("quest_list")
+	game.input_controller.run_action("quest_list")
 	await process_frame
 	await process_frame
 	var hidden: bool = not game.quest_list.visible
-	game._run_action("quest_list")
+	game.input_controller.run_action("quest_list")
 	player["tasks"] = before
 	game.replication.publish_actor(1)
 	await process_frame
@@ -1463,7 +1463,7 @@ func _check_roofs_and_signs() -> bool:
 	near.save_png("res://.tools/visual-roofs-near.png")
 	var near_alpha: float = game._world_view._roof_alpha.get(World.ROOM_AT[keeper], 1.0)
 	var named_near: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
-	var door_spot: Vector2 = game.map_to_screen((Vector2(door) + Vector2(0.5, 0.55)) * World.TILE_SIZE)
+	var door_spot: Vector2 = game.camera.to_screen((Vector2(door) + Vector2(0.5, 0.55)) * World.TILE_SIZE)
 	# Pack doors rise up and left from their cell, like the walls they are set into.
 	var door_area := Rect2(door_spot - Vector2(24, 28), Vector2(40, 32))
 	player["cell"] = keeper + Vector2i.DOWN * 2
@@ -1474,10 +1474,10 @@ func _check_roofs_and_signs() -> bool:
 	var inside: Image = screen.get_texture().get_image()
 	inside.save_png("res://.tools/visual-shop-inside.png")
 	var named_inside: bool = game._world_view.npc_names.any(func(entry: Array) -> bool: return entry[1] == World.npc("ashford_vendor")["name"])
-	var spot: Vector2 = game.map_to_screen((Vector2(keeper) + Vector2(0.5, 0.2)) * World.TILE_SIZE)
+	var spot: Vector2 = game.camera.to_screen((Vector2(keeper) + Vector2(0.5, 0.2)) * World.TILE_SIZE)
 	var keeper_area := Rect2i(Vector2i(spot) - Vector2i(10, 10), Vector2i(20, 20))
 	# Pack signs hang on the wall's face, which rises up and left of the wall's cell.
-	var sign_centre: Vector2 = game.map_to_screen(Vector2(sign["cell"]) * World.TILE_SIZE)
+	var sign_centre: Vector2 = game.camera.to_screen(Vector2(sign["cell"]) * World.TILE_SIZE)
 	return _expect(not named_outside and named_inside, "The merchant's name must hide under the roof and show inside (%s, %s)"
 			% [named_outside, named_inside]) \
 		and _expect(is_equal_approx(near_alpha, WorldViewScript.ROOF_NEAR_ALPHA) and named_near,
@@ -1509,7 +1509,7 @@ func _check_ore_vein() -> bool:
 	await RenderingServer.frame_post_draw
 	var shown: Image = screen.get_texture().get_image()
 	shown.save_png("res://.tools/visual-ore.png")
-	var face: Vector2 = game.map_to_screen((Vector2(vein) + Vector2(0.5, 0.75)) * World.TILE_SIZE)
+	var face: Vector2 = game.camera.to_screen((Vector2(vein) + Vector2(0.5, 0.75)) * World.TILE_SIZE)
 	var area := Rect2(face - Vector2(28, 14), Vector2(56, 28))
 	game.worked_nodes[vein] = game._now() + 30.0
 	await create_timer(0.2).timeout
@@ -1553,13 +1553,13 @@ func _check_loot_display() -> bool:
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
 	var bare: Image = screen.get_texture().get_image()
-	game._show_effect({"kind": "loot", "cell": cells[2], "ids": [1],
+	game.effect_view.show({"kind": "loot", "cell": cells[2], "ids": [1],
 		"text": "Loot of a crypt skeleton: 250 gold coins, a bone, a flint hatchet.", "label": ["Epic!", Color("#b47cff")]})
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
 	var shown: Image = screen.get_texture().get_image()
 	shown.save_png("res://.tools/visual-loot.png")
-	var over := Rect2i(Vector2i(game.map_to_screen((Vector2(cells[2]) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
+	var over := Rect2i(Vector2i(game.camera.to_screen((Vector2(cells[2]) + Vector2(0.5, 0.5)) * World.TILE_SIZE))
 		+ Vector2i(-120, -90), Vector2i(240, 80))
 	var green: bool = false
 	for y: int in range(over.position.y, over.end.y):
@@ -1622,8 +1622,8 @@ func _check_weather_and_desert() -> bool:
 	var desert: Image = screen.get_texture().get_image()
 	desert.save_png("res://.tools/visual-desert.png")
 	var plant_drawn: bool = false
-	var origin: Vector2 = game.map_to_screen((Vector2(plant) + Vector2(0.5, 0.5)) * World.TILE_SIZE)
-	var sand: Color = desert.get_pixelv(Vector2i(game.map_to_screen((Vector2(plant) + Vector2(-1.0, 0.5)) * World.TILE_SIZE)))
+	var origin: Vector2 = game.camera.to_screen((Vector2(plant) + Vector2(0.5, 0.5)) * World.TILE_SIZE)
+	var sand: Color = desert.get_pixelv(Vector2i(game.camera.to_screen((Vector2(plant) + Vector2(-1.0, 0.5)) * World.TILE_SIZE)))
 	for dy: int in range(-40, 0, 2):
 		var pixel: Color = desert.get_pixelv(Vector2i(origin) + Vector2i(0, dy))
 		# A dry tree (the pack has no cacti): anything clearly not sand above the plant's tile.
@@ -1711,8 +1711,8 @@ func _check_night_and_particles() -> bool:
 	await RenderingServer.frame_post_draw
 	var night: Image = screen.get_texture().get_image()
 	night.save_png("res://.tools/visual-night.png")
-	var near: Vector2i = Vector2i(game.map_to_screen((Vector2(World.SPAWNS[0]) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
-	var far: Vector2i = Vector2i(game.map_to_screen((Vector2(World.SPAWNS[0]) + Vector2(6.5, -2.5)) * World.TILE_SIZE))
+	var near: Vector2i = Vector2i(game.camera.to_screen((Vector2(World.SPAWNS[0]) + Vector2(1.5, 0.5)) * World.TILE_SIZE))
+	var far: Vector2i = Vector2i(game.camera.to_screen((Vector2(World.SPAWNS[0]) + Vector2(6.5, -2.5)) * World.TILE_SIZE))
 	var panel: Vector2i = Vector2i(game.PANEL_ORIGIN + Vector2(4, 300))
 	if not _expect(night.get_pixelv(far).get_luminance() < day.get_pixelv(far).get_luminance() * 0.75,
 			"Night does not darken the world"):
@@ -1734,8 +1734,8 @@ func _check_night_and_particles() -> bool:
 		return false
 	var fx: Node2D = game._world_view.fx
 	var before: int = fx.get_child_count()
-	game._show_effect({"kind": "hit", "target": 1, "amount": 12, "style": "critical"})
-	game._show_effect({"kind": "area", "cells": [World.SPAWNS[0] + Vector2i(2, 0), World.SPAWNS[0] + Vector2i(2, 1)],
+	game.effect_view.show({"kind": "hit", "target": 1, "amount": 12, "style": "critical"})
+	game.effect_view.show({"kind": "area", "cells": [World.SPAWNS[0] + Vector2i(2, 0), World.SPAWNS[0] + Vector2i(2, 1)],
 		"color": Color("#ff9a5a")})
 	if not _expect(fx.get_child_count() >= before + 3, "Hits and spells did not emit particles"):
 		return false

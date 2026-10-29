@@ -524,11 +524,11 @@ func item_drop(at: Vector2, data: Variant, target: Dictionary, slot: Control = n
 		var backpack: Array = state.get("backpack", [])
 		for index: int in range(region.x, region.x + region.y):
 			if backpack[index].is_empty():
-				game.move_item_local(data["brimholt_item"], {"type": "backpack", "index": index})
+				game.api.move_item_local(data["brimholt_item"], {"type": "backpack", "index": index})
 				return
 		game.last_action_message = "That bag is full" if region.y > 0 else "Put a bag in that slot first"
 		return
-	game.move_item_local(data["brimholt_item"], target)
+	game.api.move_item_local(data["brimholt_item"], target)
 
 
 ## Right-click: unequip or pick up into the backpack, or equip from the backpack. Click a bag
@@ -544,16 +544,16 @@ func slot_input(event: InputEvent, location: Dictionary) -> void:
 	if kind.is_empty():
 		return
 	if location["type"] != "backpack":
-		game.move_item_local(location, {"type": "backpack"})
+		game.api.move_item_local(location, {"type": "backpack"})
 	elif game.dialogs.banking():
-		game.move_item_local(location, {"type": "depot"})
+		game.api.move_item_local(location, {"type": "depot"})
 	elif World.ITEMS[kind].has("drink") or World.ITEMS[kind].has("eat"):
-		game.drink_local(location["index"])
+		game.api.drink_local(location["index"])
 	elif World.is_bag(kind) and game.client.actors.has(game.client.self_id):
 		var bags: Array = game.client.actors[game.client.self_id]["state"].get("bags", ["", "", ""])
 		if bags.has(""):
-			game.move_item_local(location, {"type": "bag", "bag": bags.find("")})
+			game.api.move_item_local(location, {"type": "bag", "bag": bags.find("")})
 	elif game.client.actors.has(game.client.self_id):
 		var slot: String = World.slot_for(kind, game.client.actors[game.client.self_id]["state"]["equipment"])
 		if not slot.is_empty():
-			game.move_item_local(location, {"type": "equipment", "slot": slot})
+			game.api.move_item_local(location, {"type": "equipment", "slot": slot})

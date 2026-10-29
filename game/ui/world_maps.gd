@@ -433,7 +433,7 @@ func _build_controls(layer: CanvasLayer) -> void:
 		if world_map.visible:
 			zoom = maxf(OPEN_ZOOM, _fit_zoom())
 			# Underground (dungeon copies lie outside the overworld) it opens on the painted world's centre.
-			var here: Vector2 = game.camera_focus() / World.TILE_SIZE
+			var here: Vector2 = game.camera.focus() / World.TILE_SIZE
 			var level: int = Atlas.floor_of(Vector2i(here))
 			if level != Atlas.NO_FLOOR:
 				here -= Vector2(Atlas.FLOOR_X[level], 0)
@@ -670,7 +670,7 @@ func _draw_minimap() -> void:
 	var view := Rect2(Vector2.ZERO, minimap.size)
 	minimap.draw_rect(view, Color.BLACK)
 	var tiles: Vector2 = minimap.size / MINIMAP_SCALE
-	var focus: Vector2 = game.camera_focus()
+	var focus: Vector2 = game.camera.focus()
 	var cell := Vector2i(focus / World.TILE_SIZE)
 	var region := Rect2(focus / World.TILE_SIZE - tiles / 2.0, tiles)
 	var origin: Vector2 = -region.position * MINIMAP_SCALE

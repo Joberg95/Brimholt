@@ -46,7 +46,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 		button.gui_input.connect(func(event: InputEvent) -> void:
 			if event is InputEventMouseButton:
 				if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-					game.use_bar_slot(slot)
+					game.input_controller.use_bar_slot(slot)
 				elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 					_open_menu(slot, Vector2i(button.global_position + event.position)))
 		layer.add_child(button)

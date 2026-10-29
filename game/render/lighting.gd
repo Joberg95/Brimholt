@@ -86,7 +86,7 @@ static func daylight(phase: float) -> Color:
 func ambient() -> Color:
 	var light: Color = daylight(time_of_day())
 	var game: Node = view.game
-	var focus: Vector2i = Vector2i((game.camera_focus() / World.TILE_SIZE).floor())
+	var focus: Vector2i = Vector2i((game.camera.focus() / World.TILE_SIZE).floor())
 	var zone: Dictionary = World.zone_at(focus)
 	if zone.has("ambient"):
 		light = light * zone["ambient"]
@@ -182,7 +182,7 @@ func _light(at: Vector2, color: Color, tiles: float, energy: float, key: String 
 ## the same lights win every frame when there are too many; newly arrived ones fade in.
 func _place_lights(time: float) -> void:
 	_in_use = 0
-	for request: Dictionary in nearest(_requests, view.game.camera_focus(), MAX_LIGHTS):
+	for request: Dictionary in nearest(_requests, view.game.camera.focus(), MAX_LIGHTS):
 		var energy: float = request["energy"]
 		if not request["key"].is_empty():
 			_seen[request["key"]] = true

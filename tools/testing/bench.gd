@@ -62,7 +62,7 @@ func _run() -> void:
 	_place(Vector2i(80, 746))
 	await _scene("isles")
 	me["level"] = Balance.MAX_LEVEL
-	game.raid_local(true)
+	game.api.raid_local(true)
 	await _scene("raid")
 	var file := FileAccess.open("res://.tools/bench.txt", FileAccess.WRITE)
 	file.store_string("\n".join(lines) + "\n")

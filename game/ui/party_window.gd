@@ -155,10 +155,10 @@ func _rebuild() -> void:
 			grid.add_child(_slot_controls(slot, false))
 	for leader: int in state.get("invites", []):
 		if game.client.actors.has(leader) and party == 0:
-			_row("%s invites you to their party." % _name_of(leader), "Join", func() -> void: game.party_local("join", leader))
+			_row("%s invites you to their party." % _name_of(leader), "Join", func() -> void: game.api.party_local("join", leader))
 	for invited: int in state.get("invited", []):
 		if game.client.actors.has(invited):
-			_row("You invited %s." % _name_of(invited), "Withdraw", func() -> void: game.party_local("revoke", invited))
+			_row("You invited %s." % _name_of(invited), "Withdraw", func() -> void: game.api.party_local("revoke", invited))
 	if game.session.solo_mode:
 		var raiding: bool = game.solo.raiding
 		_raid_plan(raiding)
@@ -171,13 +171,13 @@ func _rebuild() -> void:
 			if not raiding and too_low else ("Plan a raid of %d first." % _raid_size() if raid_button.disabled
 			else "Send the raid home and keep your companions." if raiding
 			else "Fill your party to the planned raid (rival bands step aside).")
-		raid_button.pressed.connect(func() -> void: game.raid_local(not raiding))
+		raid_button.pressed.connect(func() -> void: game.api.raid_local(not raiding))
 		_column.add_child(raid_button)
 	elif party != 0:
 		var leave := Button.new()
 		leave.text = "Leave party"
 		leave.focus_mode = Control.FOCUS_NONE
-		leave.pressed.connect(func() -> void: game.party_local("leave", 0))
+		leave.pressed.connect(func() -> void: game.api.party_local("leave", 0))
 		_column.add_child(leave)
 
 
@@ -193,7 +193,7 @@ func _slot_controls(slot: int, present: bool) -> HBoxContainer:
 	button.disabled = game.solo.raiding
 	button.tooltip_text = "Disband the raid to change companions" if game.solo.raiding \
 		else ("Send this companion home" if present else "Bring this companion to your side")
-	button.pressed.connect(func() -> void: game.invite_local(slot, not present))
+	button.pressed.connect(func() -> void: game.api.invite_local(slot, not present))
 	row.add_child(button)
 	return row
 
@@ -210,7 +210,7 @@ func _class_picker(slot: int, present: bool) -> OptionButton:
 	picker.disabled = game.solo.raiding
 	picker.tooltip_text = "Disband the raid to change companions" if game.solo.raiding \
 		else ("Swap this companion for another class" if present else "The class to invite")
-	picker.item_selected.connect(func(index: int) -> void: game.companion_local(slot, CLASSES[index]))
+	picker.item_selected.connect(func(index: int) -> void: game.api.companion_local(slot, CLASSES[index]))
 	return picker
 
 
@@ -235,7 +235,7 @@ func _raid_plan(raiding: bool) -> void:
 			step.focus_mode = Control.FOCUS_NONE
 			step.disabled = raiding
 			step.custom_minimum_size = Vector2(30, 0)
-			step.pressed.connect(func() -> void: game.raid_plan_local(vocation, delta))
+			step.pressed.connect(func() -> void: game.api.raid_plan_local(vocation, delta))
 			row.add_child(step)
 	var check: Dictionary = Balance.raid_check(plan)
 	var verdict: String = "This raid beats the final boss in about %d:%02d." % [int(check["seconds"]) / 60, int(check["seconds"]) % 60] \

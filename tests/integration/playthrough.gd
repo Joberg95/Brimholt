@@ -74,9 +74,8 @@ func _start() -> void:
 	# RPCs address nodes by path; root this branch's multiplayer at the buffer so the game is
 	# "Main" here exactly as on the server.
 	set_multiplayer(MultiplayerAPI.create_default_interface(), screen.get_path())
-	game = load("res://game/main.tscn").instantiate()
-	game.close_ends_session = false
-	screen.add_child(game)
+	# The path grid covers the whole overworld and takes seconds to build: build it before the game
+	# starts joining, so the join deadline does not run out while it blocks.
 	astar.region = Rect2i(0, 0, World.width(), World.height())
 	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
@@ -86,6 +85,9 @@ func _start() -> void:
 			var cell := Vector2i(x, y)
 			if not World.walkable(cell):
 				astar.set_point_solid(cell)
+	game = load("res://game/main.tscn").instantiate()
+	game.close_ends_session = false
+	screen.add_child(game)
 	var spawns: Array = World.MONSTER_SPAWNS.filter(func(spawn: Dictionary) -> bool: return World.zone_at(spawn["cell"]).is_empty())
 	spawns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return Vector2(a["cell"]).distance_to(Vector2(11, 18)) < Vector2(b["cell"]).distance_to(Vector2(11, 18)))
@@ -179,13 +181,13 @@ func walk_to(target: Vector2i, reach: int = 0) -> bool:
 		path.clear()
 		for step: Vector2i in [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]:
 			if World.walkable(cell + step):
-				game.move_local(step)
+				game.api.move_local(step)
 				break
 		return false
-	if not path.is_empty() and game._move_pending_since < 0.0 and now() >= game._next_move_attempt:
+	if not path.is_empty() and game.api.move_pending_since < 0.0 and now() >= game.api.next_move_attempt:
 		var step: Vector2i = path[0] - cell
 		if absi(step.x) + absi(step.y) == 1:
-			game.move_local(step)
+			game.api.move_local(step)
 		else:
 			path.clear()
 	return false
@@ -231,12 +233,12 @@ func sail(ferryman: String, destination: String) -> bool:
 func fight(spell_target: bool = true, radius: int = Combat.TARGET_RANGE) -> void:
 	var state: Dictionary = me()
 	if state["health"] < stats()["health"] * 0.55 and throttle(0.6):
-		game.cast_local(HEAL_SPELLS[state["vocation"]])
+		game.api.cast_local(HEAL_SPELLS[state["vocation"]])
 		return
 	if game.client.own_target() == 0:
 		var monster: int = nearest_monster(radius)
 		if monster != 0 and throttle(0.3):
-			game.target_local(monster)
+			game.api.target_local(monster)
 		return
 	if not _making_progress():
 		return
@@ -245,7 +247,7 @@ func fight(spell_target: bool = true, radius: int = Combat.TARGET_RANGE) -> void
 	if state["vocation"] == "knight" and game.client.monsters.has(target):
 		walk_to(game.client.monsters[target]["state"]["cell"], 1)
 	if spell_target and throttle(0.6):
-		game.cast_local(ATTACK_SPELLS[state["vocation"]])
+		game.api.cast_local(ATTACK_SPELLS[state["vocation"]])
 
 
 ## Whether the locked monster is still losing health; one that has not for GIVE_UP_SECONDS is out
@@ -264,7 +266,7 @@ func _making_progress() -> bool:
 		return true
 	ignored[target] = true
 	report("info", "gave up on a monster at %s that never took damage (out of reach)" % game.client.monsters[target]["state"]["cell"])
-	game.target_local(0)
+	game.api.target_local(0)
 	return false
 
 
@@ -341,9 +343,9 @@ func _join() -> void:
 	# The Knight invites, the Sorcerer accepts through the same options as the right-click menu.
 	if me().get("party", 0) == 0:
 		if role == "knight" and not partner() in me().get("invited", []) and throttle(1.0):
-			game.party_local("invite", partner())
+			game.api.party_local("invite", partner())
 		elif role == "sorcerer" and "join" in game.party_options(partner()) and throttle(0.5):
-			game.party_local("join", partner())
+			game.api.party_local("join", partner())
 		if now() - phase_since < 20.0:
 			return
 		report("fail", "could not form a party")
@@ -361,7 +363,7 @@ func _gear() -> void:
 		var slot: String = World.slot_for(kind, state["equipment"])
 		if not slot.is_empty() and not state["equipment"].has(slot):
 			if throttle(0.3):
-				game.move_item_local({"type": "backpack", "index": index}, {"type": "equipment", "slot": slot})
+				game.api.move_item_local({"type": "backpack", "index": index}, {"type": "equipment", "slot": slot})
 			return
 	report("ok", "equipped %s; attack %d, defense %d" % [", ".join(state["equipment"].values()), stats()["attack"], stats()["defense"]])
 	shot("geared", "Start kit equipped from the backpack")
@@ -400,7 +402,7 @@ func _hunt() -> void:
 			var gap: int = partner_state().get("level", 1) - me()["level"]
 			report("ok" if absi(gap) <= 1 else "finding",
 				"party sharing kept the tanking Warrior within %d level(s) of the Sorcerer" % absi(gap))
-		game.target_local(0)
+		game.api.target_local(0)
 		avoid_monsters(true)
 		_enter("to_port")
 		return
@@ -424,7 +426,7 @@ func _hunt() -> void:
 				continue
 			if arrived and throttle(0.3):
 				var gold: int = me()["gold"]
-				game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
+				game.api.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 				if top == "gold_coins" and not flags.get("loot_reported", false):
 					flags["loot_reported"] = true
 					report("ok", "picked up dropped gold (purse was %d)" % gold)
@@ -443,7 +445,7 @@ func defend() -> bool:
 		fight(true, 2)
 		return true
 	if game.client.own_target() != 0:
-		game.target_local(0)
+		game.api.target_local(0)
 	return false
 
 
@@ -492,7 +494,7 @@ func _to_warden() -> void:
 	var warden: Dictionary = World.TOWNSFOLK["reedmere_warden"]
 	if walk_to(warden["cell"] + warden["facing"]):
 		if throttle(1.2):
-			game.pvp_local("reedmere_warden", true)
+			game.api.pvp_local("reedmere_warden", true)
 	elif now() - phase_since > WALK_SECONDS:
 		report("fail", "could not turn PvP on at the warden from %s: %s" % [me()["cell"], game.last_action_message])
 		_finish()
@@ -529,7 +531,7 @@ func _duel() -> void:
 	# Party members cannot fight each other, so the Knight leaves before the duel.
 	if me().get("party", 0) != 0:
 		if role == "knight" and throttle(1.0):
-			game.party_local("leave", 0)
+			game.api.party_local("leave", 0)
 		return
 	# The duel clock starts once both have arrived on the island.
 	if not flags.get("both_here", false):
@@ -558,7 +560,7 @@ func _duel() -> void:
 			flags["victim_level"] = them["level"]
 			if not flags.get("attacked", false):
 				if throttle(0.5):
-					game.target_local(other)
+					game.api.target_local(other)
 				if game.client.own_target() == other:
 					flags["attacked"] = true
 					report("info", "attacked the unmarked Sorcerer")
@@ -568,7 +570,7 @@ func _duel() -> void:
 				report("ok", "white skull for attacking an unmarked player")
 			if Combat.distance(me()["cell"], them["cell"]) > 1 or not throttle(0.6):
 				return
-			game.cast_local("brutal_blow")
+			game.api.cast_local("brutal_blow")
 			return
 		if not flags.get("loot_done", false):
 			if flags.get("victim_level", 1) < Combat.PROTECTION_LEVEL and me().get("unjustified", 0) >= 1:
@@ -584,7 +586,7 @@ func _duel() -> void:
 					if walk_to(cell, 1) and throttle(0.4):
 						report("info", "pick up %s from %s at %s (gold %d, last message '%s')" % [game.client.ground_view[cell].back(), cell,
 							me()["cell"], me()["gold"], game.last_action_message])
-						game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
+						game.api.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 						flags["picked"] = flags.get("picked", 0) + 1
 					if me()["backpack"].count("") < World.BACKPACK_SIZE or flags.get("picked", 0) >= 6:
 						flags["loot_done"] = true
@@ -631,13 +633,13 @@ func _duel() -> void:
 		if flags.get("skull_seen", false) and not flags.get("defended", false):
 			if game.client.own_target() != partner():
 				if throttle(0.5):
-					game.target_local(partner())
+					game.api.target_local(partner())
 				return
 			if not flags.has("defend_since"):
 				flags["defend_since"] = now()
 			if now() - flags["defend_since"] > 3.0:
 				flags["defended"] = true
-				game.target_local(0)
+				game.api.target_local(0)
 				report("ok" if me()["skull"] == "" else "fail", "fought back in self-defence; own skull: '%s'" % me()["skull"])
 
 
@@ -657,7 +659,7 @@ func _recover() -> void:
 		if Combat.distance(cell, corpse) <= Combat.SPILL_RADIUS and not stack.is_empty() \
 				and not World.ITEMS.get(World.kind_of(stack[-1]), {}).has("value"):
 			if walk_to(cell, 1) and throttle(0.3):
-				game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
+				game.api.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 			return
 	if Combat.distance(me()["cell"], corpse) > 4:
 		walk_to(corpse, 2)

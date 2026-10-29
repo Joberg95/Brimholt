@@ -69,7 +69,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 	_player_menu = PopupMenu.new()
 	_player_menu.id_pressed.connect(func(index: int) -> void:
 		var action: String = _player_menu.get_item_metadata(_player_menu.get_item_index(index))
-		game.party_local(action, 0 if action == "leave" else _player_menu_target))
+		game.api.party_local(action, 0 if action == "leave" else _player_menu_target))
 	add_child(_player_menu)
 
 
@@ -206,7 +206,7 @@ func talk_to(ferryman: String) -> void:
 		button.text = "%s  —  %d gold" % [World.FERRYMEN[destination]["place"], fare]
 		button.disabled = gold < fare
 		button.pressed.connect(func() -> void:
-			game.travel_local(ferryman, destination)
+			game.api.travel_local(ferryman, destination)
 			close())
 		list.add_child(button)
 	var farewell := Button.new()
@@ -322,7 +322,7 @@ func open_vocation(npc: String) -> void:
 	_label("%s Level %d or higher" % ["✓" if levelled else "✗", Balance.CHOOSE_LEVEL], Color("#9fe07a") if levelled else Color("#e05a4a"))
 	_label("The choice is permanent. You wear %s and receive the %s's starting kit." % [Balance.ARMOR_OF[vocation], profile["name"]],
 		Color("#ffcf6a"))
-	_button("Become a %s" % profile["name"], passed and levelled, func() -> void: game.vocation_local(npc))
+	_button("Become a %s" % profile["name"], passed and levelled, func() -> void: game.api.vocation_local(npc))
 	_farewell()
 	_show(npc, "vocation")
 
@@ -347,7 +347,7 @@ func open_pvp(npc: String) -> void:
 	if not blocked.is_empty():
 		_label(blocked, Color("#e05a4a"))
 	_label("After a change you must wait %d minutes to change it again." % int(Balance.PVP_TOGGLE_SECONDS / 60.0), Color("#ffcf6a"))
-	_button("Turn PvP off" if on else "Turn PvP on", blocked.is_empty(), func() -> void: game.pvp_local(npc, not on))
+	_button("Turn PvP off" if on else "Turn PvP on", blocked.is_empty(), func() -> void: game.api.pvp_local(npc, not on))
 	_farewell()
 	_show(npc, "pvp")
 
@@ -383,7 +383,7 @@ func open_runes(npc: String) -> void:
 			_label("%s: needs level %d." % [definition["name"], definition["level"]], Color("#7a8088"))
 		else:
 			_button("%s: rank %d → %d for %d shards" % [definition["name"], rank, rank + 1, cost], shards >= cost,
-				func() -> void: game.empower_local(npc, spell))
+				func() -> void: game.api.empower_local(npc, spell))
 	_farewell()
 	_show(npc, "runes")
 
@@ -473,9 +473,9 @@ func open_craft(npc: String) -> void:
 		needs.add_theme_font_size_override("font_size", 11)
 		needs.add_theme_color_override("font_color", Color("#9fe07a") if craftable else Color("#a7b0b8"))
 		text.add_child(needs)
-		_button("Craft", craftable, func() -> void: game.craft_local(npc, recipe["id"], 1), row)
+		_button("Craft", craftable, func() -> void: game.api.craft_local(npc, recipe["id"], 1), row)
 		if not gear:
-			_button("×5", craftable, func() -> void: game.craft_local(npc, recipe["id"], 5), row)
+			_button("×5", craftable, func() -> void: game.api.craft_local(npc, recipe["id"], 5), row)
 	_farewell()
 	_show(npc, "craft")
 
@@ -526,7 +526,7 @@ func open_trade(npc: String) -> void:
 		row.move_child(picture, 0)
 		for count: int in ([1, 10] if World.stackable(kind) else [1]):
 			_button("Buy %d" % count if World.stackable(kind) else "Buy", gold >= item["price"] * count,
-				func() -> void: game.buy_local(npc, kind, count), row)
+				func() -> void: game.api.buy_local(npc, kind, count), row)
 	var sell_heading := Label.new()
 	sell_heading.text = "Sell"
 	rows.add_child(sell_heading)
@@ -551,9 +551,9 @@ func open_trade(npc: String) -> void:
 		item_label.text = "%s%s  %d gold" % [World.ITEMS[kind]["name"], " ×%d" % count if count > 1 else "", price * count]
 		item_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(item_label)
-		_button("Sell", true, func() -> void: game.sell_local(npc, index), row)
+		_button("Sell", true, func() -> void: game.api.sell_local(npc, index), row)
 	if materials > 0:
-		_button("Sell all materials  (+%d gold)" % materials, true, func() -> void: game.sell_local(npc, -1), rows)
+		_button("Sell all materials  (+%d gold)" % materials, true, func() -> void: game.api.sell_local(npc, -1), rows)
 	if not any:
 		var nothing := Label.new()
 		nothing.text = "You carry nothing the vendor wants."
@@ -581,9 +581,9 @@ func open_bank(npc: String) -> void:
 	amount.value = clampi(_bank_amount, 1, int(amount.max_value))
 	amount.value_changed.connect(func(value: float) -> void: _bank_amount = int(value))
 	row.add_child(amount)
-	_button("Deposit", gold > 0, func() -> void: game.bank_local(npc, "deposit", mini(_bank_amount, gold)), row)
-	_button("Withdraw", balance > 0, func() -> void: game.bank_local(npc, "withdraw", mini(_bank_amount, balance)), row)
-	_button("Deposit all", gold > 0, func() -> void: game.bank_local(npc, "deposit", gold), row)
+	_button("Deposit", gold > 0, func() -> void: game.api.bank_local(npc, "deposit", mini(_bank_amount, gold)), row)
+	_button("Withdraw", balance > 0, func() -> void: game.api.bank_local(npc, "withdraw", mini(_bank_amount, balance)), row)
+	_button("Deposit all", gold > 0, func() -> void: game.api.bank_local(npc, "deposit", gold), row)
 	_label("Depot  —  drag items to and from your backpack, or right-click them.", Color("#a7b0b8"))
 	var grid := GridContainer.new()
 	grid.columns = DEPOT_COLUMNS
@@ -624,11 +624,11 @@ func _open_task(npc: String) -> void:
 			var finished: bool = tasks[task] >= definition["count"]
 			_label("%s: %d/%d %s slain." % [definition["title"], tasks[task], definition["count"], target],
 				Color("#9fe07a") if finished else Color("#ffcf6a"))
-			_button("Turn in: %s" % definition["title"], finished, func() -> void: game.task_local(npc, task, "complete"))
+			_button("Turn in: %s" % definition["title"], finished, func() -> void: game.api.task_local(npc, task, "complete"))
 		else:
 			_label("%s: slay %s and return to %s." % [definition["title"],
 				target if definition["count"] == 1 else "%d %s" % [definition["count"], target], giver["name"]], Color("#ffcf6a"))
-			_button("Accept: %s" % definition["title"], true, func() -> void: game.task_local(npc, task, "accept"))
+			_button("Accept: %s" % definition["title"], true, func() -> void: game.api.task_local(npc, task, "accept"))
 		_reward_label(task, state)
 	_farewell()
 	_show(npc, "quests")
@@ -699,7 +699,7 @@ func open_quests(npc: String) -> void:
 			button.add_theme_color_override("font_color", World.ITEMS[relic]["glow"])
 			button.disabled = trophies.get(boss, 0) <= 0 or not room
 			button.pressed.connect(func() -> void:
-				game.quest_local(npc, relic)
+				game.api.quest_local(npc, relic)
 				close())
 			list.add_child(button)
 			game.inventory.tip(button, relic)

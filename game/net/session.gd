@@ -248,7 +248,7 @@ func leave_game() -> void:
 	var leaving_peer: ENetMultiplayerPeer = peer
 	_leaving = true
 	connected = false
-	game._move_pending_since = -1.0
+	game.api.move_pending_since = -1.0
 	_joining_since = -1.0
 	if leaving_peer != null:
 		if hosting:

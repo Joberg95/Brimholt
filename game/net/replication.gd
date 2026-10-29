@@ -62,7 +62,7 @@ func handle_events(events: Array) -> void:
 				# Loot text is only for the players the kill is credited to.
 				for looter: int in event["ids"]:
 					if looter == game.client.self_id:
-						game._show_effect(event)
+						game.effect_view.show(event)
 					elif looter in remote_players():
 						combat_event.rpc_id(looter, event)
 			"bot_left":
@@ -74,7 +74,7 @@ func handle_events(events: Array) -> void:
 				for peer_id: int in remote_players():
 					nodes_worked.rpc_id(peer_id, regrowing)
 			_:
-				game._show_effect(event)
+				game.effect_view.show(event)
 				var at: Vector2i = _event_cell(event)
 				for peer_id: int in remote_players():
 					if _near_peer(peer_id, at):
@@ -200,8 +200,8 @@ func apply_actor(state: Dictionary, movement: bool = false) -> void:
 	if id == game.client.self_id and game.session.connected:
 		game.session.remember_character(state)
 	if id == game.client.self_id and movement:
-		game._move_pending_since = -1.0
-		game._next_move_attempt = game._now() + state["remaining"] + 0.01
+		game.api.move_pending_since = -1.0
+		game.api.next_move_attempt = game._now() + state["remaining"] + 0.01
 
 
 func _monster_died(id: int) -> void:
@@ -238,7 +238,7 @@ func ground_updated(cell: Vector2i, stack: Array) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func combat_event(event: Dictionary) -> void:
-	game._show_effect(event)
+	game.effect_view.show(event)
 
 
 ## Nodes being worked, with seconds until they regrow (one when worked, all on joining).
@@ -253,5 +253,5 @@ func nodes_worked(regrowing: Dictionary) -> void:
 func action_feedback(reason: String, retry: float, movement: bool) -> void:
 	game.last_action_message = reason
 	if movement:
-		game._move_pending_since = -1.0
-		game._next_move_attempt = game._now() + retry + 0.02
+		game.api.move_pending_since = -1.0
+		game.api.next_move_attempt = game._now() + retry + 0.02

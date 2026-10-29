@@ -159,7 +159,7 @@ func finish() -> void:
 
 func _host_tick(now: float) -> void:
 	if stage == 0:
-		game.equip_local("armor")
+		game.api.equip_local("armor")
 		if not state(1)["equipment"].has("armor"):
 			fail("Host input did not equip armor")
 			return
@@ -183,7 +183,7 @@ func _host_tick(now: float) -> void:
 		return
 	if stage == 1 and saw_equipped and saw_unequipped and saw_late_move and saw_drop and saw_pickup \
 			and game.client.actors.size() == 1:
-		game.move_local(Vector2i.DOWN)
+		game.api.move_local(Vector2i.DOWN)
 		advance()
 	if stage == 2 and now - stage_since > World.MOVE_SECONDS:
 		if state(1)["cell"] != Vector2i(5, 7) or not state(1)["equipment"].has("armor"):
@@ -214,7 +214,7 @@ func _client_tick(now: float) -> void:
 				advance()
 		2:
 			if game.last_action_message == "Unknown equipment slot":
-				game.move_local(Vector2i.LEFT)
+				game.api.move_local(Vector2i.LEFT)
 				game.gateway.request_move.rpc_id(1, Vector2i.RIGHT)
 				advance()
 		3:
@@ -222,7 +222,7 @@ func _client_tick(now: float) -> void:
 				if state(own)["cell"] != Vector2i(6, 6):
 					fail("Server cooldown failed")
 					return
-				game.move_local(Vector2i.LEFT)
+				game.api.move_local(Vector2i.LEFT)
 				advance()
 		4:
 			# Players walk through each other: the client steps onto the host's tile.
@@ -230,25 +230,25 @@ func _client_tick(now: float) -> void:
 				if state(1)["cell"] != Vector2i(5, 6):
 					fail("Remote input moved the host")
 					return
-				game.move_local(Vector2i.RIGHT)
+				game.api.move_local(Vector2i.RIGHT)
 				advance()
 		5:
 			if state(own)["cell"] == Vector2i(6, 6) and now - stage_since > 0.25:
-				game.move_local(Vector2i.LEFT)
+				game.api.move_local(Vector2i.LEFT)
 				stage_since = now
 			elif state(own)["cell"] == Vector2i(5, 6) and now - stage_since > 0.25:
-				game.move_local(Vector2i.UP)
+				game.api.move_local(Vector2i.UP)
 				advance()
 		6:
 			if state(own)["cell"] == STAND and now - stage_since > 0.25:
-				game.move_local(BLOCKED - STAND)
+				game.api.move_local(BLOCKED - STAND)
 				advance()
 		7:
 			if game.last_action_message == "Blocked tile":
 				if state(own)["cell"] != STAND:
 					fail("Wall collision failed")
 					return
-				game.equip_local("helmet")
+				game.api.equip_local("helmet")
 				advance()
 		8:
 			if state(own)["equipment"].has("helmet"):
@@ -259,14 +259,14 @@ func _client_tick(now: float) -> void:
 				advance()
 		9:
 			if game.last_action_message == "Unknown item location" and now - stage_since > 0.2:
-				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": BLOCKED})
+				game.api.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": BLOCKED})
 				advance()
 		10:
 			if game.last_action_message == "Items cannot be placed there" and now - stage_since > 0.2:
 				if state(own)["backpack"][DROPPED_INDEX] != DROPPED:
 					fail("Rejected drop changed the backpack")
 					return
-				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": DROP})
+				game.api.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": DROP})
 				advance()
 		11:
 			if game.client.ground_view.get(DROP, []) == [DROPPED] and state(own)["backpack"][DROPPED_INDEX] == "":
@@ -278,8 +278,8 @@ func _client_tick(now: float) -> void:
 			for id: int in game.client.actors:
 				if id != 1 and id != own and state(id)["equipment"].has("armor"):
 					late_id = id
-					game.equip_local("helmet")
-					game.party_local("invite", late_id)
+					game.api.equip_local("helmet")
+					game.api.party_local("invite", late_id)
 					advance()
 					break
 		13:
@@ -333,16 +333,16 @@ func _late_tick(now: float) -> void:
 				fail("Late join did not receive only its nearby monsters")
 				return
 			print("BRIMHOLT_LATE_SNAPSHOT_OK")
-			game.move_item_local({"type": "ground", "cell": DROP}, {"type": "backpack"})
+			game.api.move_item_local({"type": "ground", "cell": DROP}, {"type": "backpack"})
 			advance()
 		1:
 			if not game.client.ground_view.has(DROP) \
 					and state(game.client.self_id)["backpack"][World.start_kit("paladin").size()] == DROPPED and now - stage_since > 0.2:
-				game.equip_local("armor")
+				game.api.equip_local("armor")
 				advance()
 		2:
 			if not state(client_id)["equipment"].has("helmet") and state(game.client.self_id)["equipment"].has("armor"):
-				game.move_local(Vector2i.DOWN)
+				game.api.move_local(Vector2i.DOWN)
 				advance()
 		3:
 			if state(game.client.self_id)["cell"] == late_spawn + Vector2i.DOWN and now - stage_since > 0.25 \
@@ -350,7 +350,7 @@ func _late_tick(now: float) -> void:
 				if game.party_options(client_id) != ["join"]:
 					fail("The right-click menu does not offer to join an inviting player")
 					return
-				game.party_local("join", client_id)
+				game.api.party_local("join", client_id)
 				advance()
 		4:
 			if state(game.client.self_id)["party"] == client_id and state(client_id)["party"] == client_id:
@@ -502,8 +502,8 @@ func _dedicated_client_tick(now: float) -> void:
 			if game.client.actors.size() != 1 or own == 1 or game.client.actors.has(1):
 				fail("Dedicated snapshot contains a phantom host")
 				return
-			game.equip_local("main_hand")
-			game.move_local(Vector2i.DOWN)
+			game.api.equip_local("main_hand")
+			game.api.move_local(Vector2i.DOWN)
 			# Vocations are chosen at a trainer the host checks, never by a forged or distant request.
 			game.gateway.request_vocation.rpc_id(1, 42)
 			advance()
@@ -511,14 +511,14 @@ func _dedicated_client_tick(now: float) -> void:
 			if state(own)["cell"] == Vector2i(5, 7) and state(own)["equipment"].has("main_hand") \
 					and stage_messages.has("Walk closer to a trainer") and state(own)["vocation"] == "druid" \
 					and now - stage_since > 0.25:
-				game.move_item_local({"type": "backpack", "index": 0}, {"type": "ground", "cell": Vector2i(5, 7)})
+				game.api.move_item_local({"type": "backpack", "index": 0}, {"type": "ground", "cell": Vector2i(5, 7)})
 				# PvP is switched only at the warden the host checks, never by a forged or distant request.
 				game.gateway.request_pvp.rpc_id(1, "reedmere_warden", true)
 				advance()
 		2:
 			if game.client.ground_view.get(Vector2i(5, 7), []) == ["ember_cap"] and stage_messages.has("Walk closer to the warden") \
 					and not state(own)["pvp"] and now - stage_since > 0.2:
-				game.move_item_local({"type": "ground", "cell": Vector2i(5, 7)}, {"type": "backpack"})
+				game.api.move_item_local({"type": "ground", "cell": Vector2i(5, 7)}, {"type": "backpack"})
 				advance()
 		3:
 			if not game.client.ground_view.has(Vector2i(5, 7)) and state(own)["backpack"][0] == "ember_cap" \
@@ -527,7 +527,7 @@ func _dedicated_client_tick(now: float) -> void:
 		4:
 			var ring: int = state(own)["backpack"].find("garnet_ring")
 			if ring >= 0 and state(own)["level"] == 1:
-				game.move_item_local({"type": "backpack", "index": ring}, {"type": "equipment", "slot": "ring_2"})
+				game.api.move_item_local({"type": "backpack", "index": ring}, {"type": "equipment", "slot": "ring_2"})
 				advance()
 		5:
 			if stage_messages.has("The Garnet ring requires level %d" % Items.ACCESSORY_LEVEL):
@@ -537,16 +537,16 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		6:
 			if state(own)["level"] == Items.ACCESSORY_LEVEL and now - stage_since > 0.2:
-				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("garnet_ring")},
+				game.api.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("garnet_ring")},
 					{"type": "equipment", "slot": "ring_2"})
 				advance()
 		7:
 			if state(own)["equipment"].get("ring_2", "") == "garnet_ring" and not state(own)["backpack"].has("garnet_ring"):
-				game.travel_local("cinder_landing", "lastlight")
+				game.api.travel_local("cinder_landing", "lastlight")
 				advance()
 		8:
 			if stage_messages.has("Walk closer to the ferryman"):
-				game.move_local(Vector2i.RIGHT)
+				game.api.move_local(Vector2i.RIGHT)
 				advance()
 		9:
 			var landing: Vector2i = World.FERRYMEN["cinder_landing"]["cell"]
@@ -559,7 +559,7 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		11:
 			if stage_messages.has("Unknown ferryman"):
-				game.travel_local("cinder_landing", "lastlight")
+				game.api.travel_local("cinder_landing", "lastlight")
 				advance()
 		12:
 			var fare: int = World.FERRYMEN["cinder_landing"]["routes"]["lastlight"]
@@ -574,11 +574,11 @@ func _dedicated_client_tick(now: float) -> void:
 					advance()
 		14:
 			if stage_messages.has("Unknown target"):
-				game.target_local(sparring)
+				game.api.target_local(sparring)
 				advance()
 		15:
 			if state(own)["target"] == sparring:
-				game.cast_local("piercing_shot")
+				game.api.cast_local("piercing_shot")
 				advance()
 			elif not game.client.monsters.has(sparring):
 				# The auto-attack killed the weak monster before the target update arrived.
@@ -592,16 +592,16 @@ func _dedicated_client_tick(now: float) -> void:
 			var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper_kharzul"]["cell"]
 			if state(own)["trophies"].get("kharzul", 0) == 1 and World.chebyshev(state(own)["cell"], keeper) <= World.TALK_RANGE:
 				# Ysolde keeps only Morvain's relics and sends the client to Brannoc.
-				game.quest_local("relic_keeper", "cinderheart_bow")
+				game.api.quest_local("relic_keeper", "cinderheart_bow")
 				advance()
 		18:
 			if _saw_start("Ysolde only keeps"):
-				game.quest_local("relic_keeper_kharzul", "cinderheart_bow")
+				game.api.quest_local("relic_keeper_kharzul", "cinderheart_bow")
 				advance()
 		19:
 			var relic: int = state(own)["backpack"].find("cinderheart_bow")
 			if relic >= 0 and state(own)["trophies"].is_empty():
-				game.move_item_local({"type": "backpack", "index": relic}, {"type": "ground", "cell": state(own)["cell"]})
+				game.api.move_item_local({"type": "backpack", "index": relic}, {"type": "ground", "cell": state(own)["cell"]})
 				advance()
 		20:
 			if stage_messages.has("The Cinderheart bow is bound to you") and now - stage_since > 0.2:
@@ -615,22 +615,22 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		22:
 			if stage_messages.has("The vendor does not sell that"):
-				game.sell_local("cinder_vendor", state(own)["backpack"].find("cinderheart_bow"))
+				game.api.sell_local("cinder_vendor", state(own)["backpack"].find("cinderheart_bow"))
 				advance()
 		23:
 			if stage_messages.has("The vendor will not buy the Cinderheart bow"):
-				game.buy_local("cinder_vendor", "health_potion", 3)
+				game.api.buy_local("cinder_vendor", "health_potion", 3)
 				advance()
 		24:
 			var potions: int = state(own)["backpack"].find("health_potion#3")
 			if potions >= 0 and state(own)["gold"] == World.START_GOLD - World.FERRYMEN["cinder_landing"]["routes"]["lastlight"] + 200 - 60 \
 					and now - stage_since > 0.2:
-				game.drink_local(potions)
+				game.api.drink_local(potions)
 				advance()
 		25:
 			if state(own)["backpack"].has("health_potion#2") and state(own)["health"] > 1 \
 					and World.chebyshev(state(own)["cell"], World.npc("reedmere_banker")["cell"]) <= World.TALK_RANGE:
-				game.bank_local("reedmere_banker", "deposit", 10)
+				game.api.bank_local("reedmere_banker", "deposit", 10)
 				advance()
 		26:
 			if state(own).get("bank", 0) == 10 and now - stage_since > 0.2:
@@ -638,12 +638,12 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		27:
 			if stage_messages.has("You only have 10 gold in the bank"):
-				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("health_potion#2")}, {"type": "depot"})
+				game.api.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("health_potion#2")}, {"type": "depot"})
 				advance()
 		28:
 			if state(own)["depot"][0] == "health_potion#2" and not state(own)["backpack"].has("health_potion#2") \
 					and World.chebyshev(state(own)["cell"], World.npc("warden_brask")["cell"]) <= World.TALK_RANGE:
-				game.task_local("warden_brask", "boar_cull", "accept")
+				game.api.task_local("warden_brask", "boar_cull", "accept")
 				advance()
 		29:
 			if state(own)["tasks"].get("boar_cull", -1) == 0 and _saw_start("Boar cull"):
@@ -651,13 +651,13 @@ func _dedicated_client_tick(now: float) -> void:
 		30:
 			var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
 			if World.chebyshev(state(own)["cell"], stairway) == 1 and now - stage_since > 0.2:
-				game.move_local(stairway - state(own)["cell"])
+				game.api.move_local(stairway - state(own)["cell"])
 				advance()
 		31:
 			var stairway: Vector2i = World.ENTRANCE_OF["cinder_cellar"]
 			if World.dungeon_at(state(own)["cell"]) == ["cinder_cellar", 0] and _only_dungeon_monsters(state(own)["cell"]) \
 					and now - stage_since > World.MOVE_SECONDS + 0.05:
-				game.move_local(Vector2i.LEFT)
+				game.api.move_local(Vector2i.LEFT)
 				advance()
 			elif now - stage_since > 4.0:
 				var cells: Array = game.client.monsters.values().map(func(monster: Dictionary) -> Vector2i: return monster["state"]["cell"])
@@ -665,17 +665,17 @@ func _dedicated_client_tick(now: float) -> void:
 					World.dungeon_at(state(own)["cell"]), game.last_action_message, cells])
 			elif World.chebyshev(state(own)["cell"], stairway) == 1 and now - stage_since > 0.5:
 				# The first step may hit the movement cooldown; try again.
-				game.move_local(stairway - state(own)["cell"])
+				game.api.move_local(stairway - state(own)["cell"])
 				stage_since = now
 		32:
 			if World.OVERWORLD.has_point(state(own)["cell"]) and _saw_part("Cinder Crossing") \
 					and not _has_dungeon_monster() and state(own)["backpack"].has("alder_crook"):
-				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("alder_crook")},
+				game.api.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("alder_crook")},
 					{"type": "equipment", "slot": "main_hand"})
 				advance()
 		33:
 			if state(own)["equipment"].get("main_hand", "") == "alder_crook" and now - stage_since > World.ITEM_SECONDS + 0.05:
-				game.move_item_local({"type": "equipment", "slot": "main_hand"}, {"type": "backpack"})
+				game.api.move_item_local({"type": "equipment", "slot": "main_hand"}, {"type": "backpack"})
 				advance()
 		34:
 			if state(own)["backpack"].has("copper_ore#6") and World.chebyshev(state(own)["cell"], World.npc("artisan_cinder")["cell"]) <= World.TALK_RANGE:
@@ -683,12 +683,12 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		35:
 			if stage_messages.has("Unknown recipe"):
-				game.craft_local("artisan_cinder", "rusted_breastplate", 1)
+				game.api.craft_local("artisan_cinder", "rusted_breastplate", 1)
 				advance()
 		36:
 			if state(own)["backpack"].has("rusted_breastplate") and not state(own)["backpack"].has("copper_ore#6") \
 					and int(state(own).get("skills", {}).get("smithing", [1, 0])[1]) > 0 and now - stage_since > 0.2:
-				game.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("leather_satchel")}, {"type": "bag", "bag": 0})
+				game.api.move_item_local({"type": "backpack", "index": state(own)["backpack"].find("leather_satchel")}, {"type": "bag", "bag": 0})
 				advance()
 		37:
 			if state(own)["bags"][0] == "leather_satchel" and state(own)["backpack"].size() == World.main_size(state(own)) + 6 \
@@ -697,7 +697,7 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		38:
 			if stage_messages.has("Unknown place"):
-				game.gather_nearby()
+				game.api.gather_nearby()
 				advance()
 		39:
 			if state(own).has("gathering"):
@@ -741,11 +741,11 @@ func _persist_first_tick(now: float) -> void:
 	match stage:
 		0:
 			if game.client.actors.has(own) and state(own)["cell"] == Vector2i(5, 6):
-				game.move_local(Vector2i.DOWN)
+				game.api.move_local(Vector2i.DOWN)
 				advance()
 		1:
 			if state(own)["cell"] == Vector2i(5, 7) and now - stage_since > 0.25:
-				game.equip_local("main_hand")
+				game.api.equip_local("main_hand")
 				advance()
 		2:
 			if state(own)["equipment"].get("main_hand", "") == "sapling_rod":
@@ -810,7 +810,7 @@ func _loss_client_tick() -> void:
 		if state(game.client.self_id)["vocation"] != "adventurer":
 			fail("A client chose its own starting vocation (%s)" % state(game.client.self_id)["vocation"])
 			return
-		game.equip_local("helmet")
+		game.api.equip_local("helmet")
 		advance()
 	elif stage == 1 and not game.session.connected:
 		if game.session.status_message != "The host disconnected. Your LAN session has ended." \
