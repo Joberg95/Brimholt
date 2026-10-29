@@ -169,3 +169,13 @@ sound (plan 20), and balance passes.
   `tests/unit/ecs_test.gd`. Not used by the game yet. The facade that keeps
   `world.players[id]["level"]` readable comes with the first component that moves (step 4), where it
   has something to front.
+- **Step 2 (2026-10-29):** `main.gd` 1,956 -> 282 lines. `game/client/client_state.gd` (the
+  replicated view), `game/net/gateway.gd` (requests), `game/net/replication.gd` (updates and
+  interest), `game/net/session.gd` (hosting, joining, saves, bots, options), `game/client/client_api.gd`,
+  `input_controller.gd`, `camera.gd`, `effect_view.gd`, and `game/ui/ui_root.gd`. The network pieces
+  are child nodes of Main created in `_init`, so their RPC paths match on every peer. No rule
+  changed: the golden session, unit, visual, playthrough, and four LAN scenarios pass. The LAN
+  `--dedicated` scenario already failed before this plan on this machine (it polls
+  `last_action_message` once a frame and misses a refusal that a zone message overwrites in the
+  same frame); still to fix. Two test fixes on the way: LAN deadlines for a 6.5 s scene load,
+  and the playthrough builds its path grid before joining.

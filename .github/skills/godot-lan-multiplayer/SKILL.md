@@ -18,4 +18,4 @@ description: Use when implementing or changing Brimholt ENet hosting/joining, RP
 
 This is trusted-LAN prototyping, not Internet-ready authentication, encryption, anti-cheat, or an MMO backend. Characters persist on the host only (signed saves keyed by a hashed per-computer identity token, sent unencrypted in `hello`); see `game/persistence/`.
 
-Current implementation: `game/main.gd` holds the shared `/root/Main` RPC endpoint; `game/core/world.gd` owns deterministic rules. Run the actual ENet harness in `tools/testing/test_lan.py` with `make test-lan` (see `docs/testing.md`).
+Current implementation: `game/net/` holds the RPC endpoints, child nodes of `/root/Main` (Session, Gateway, Replication); `game/core/world.gd` owns deterministic rules. Run the actual ENet harness in `tools/testing/test_lan.py` with `make test-lan` (see `docs/testing.md`).

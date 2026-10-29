@@ -6,7 +6,17 @@
 project.godot            Godot project; the entry scene is game/main.tscn
 Makefile                 Developer commands (`make help`)
 game/
-  main.tscn, main.gd     Entry scene: ENet lifecycle, RPC endpoint (/root/Main), camera, input; assembles the UI
+  main.tscn, main.gd     Entry scene (/root/Main): builds the pieces and runs the host's simulation each frame
+  net/                   The network layer, child nodes of Main so their RPCs have one path on every peer
+    session.gd           /root/Main/Session: hosting, joining, the handshake, admitting and saving characters, bots, options
+    gateway.gd           /root/Main/Gateway: every player request (sender checks, rate limit) and its host handler
+    replication.gd       /root/Main/Replication: events to peers by interest, and the update RPCs applied on every peer
+  client/                This peer's side
+    client_state.gd      The replicated view: players, monsters, ground, effects, interpolation, and lookups
+    client_api.gd        game.api: every request this peer makes (*_local), to the gateway as player 1 or by RPC
+    input_controller.gd  /root/Main/InputController: keys, walking and chasing, action bar, map clicks and drags
+    camera.gd            The camera: its focus and map/screen conversions
+    effect_view.gd       How combat events look: floating numbers, loot text, missiles, areas, bursts
   core/                  Server-authoritative simulation shared by every peer (no nodes)
     world.gd             Map loading, item catalog, movement, inventory and depot, packs, bag slots, travel
     combat.gd            Targeting, attacks, spells, monster AI, death, skulls, parties, loot, tasks, potions
@@ -107,12 +117,17 @@ Dependencies point one way: `render/`, `ui/`, and `input/` may use `core/` and `
 and `ui/` also uses `render/` (sprite drawing, the world view) and `input/` (key bindings);
 `core/` uses `data/` but never nodes, rendering, or input; `data/` depends on nothing
 else in the game. `main.gd` wires them together: UI components hold an untyped reference
-to the main node, read its replicated state (`actors`, `self_id`, `ground_view`), and send
-actions through its `*_local` functions, never through RPCs of their own.
+to the main node, read the replicated view (`game.client.actors`, `.self_id`, `.ground_view`), and
+send actions through the client API (`game.api.*_local`), never through RPCs of their own. Only
+`net/` has RPCs (plan 48).
 
 ```mermaid
 flowchart LR
-    main[main.gd<br/>RPCs, camera, input] --> core
+    main[main.gd<br/>wiring, host tick] --> core
+    main --> net[net/<br/>session, gateway, replication]
+    main --> client[client/<br/>view, api, input, camera]
+    net --> core
+    client -. requests .-> net
     main --> render
     main --> input
     main --> ui
@@ -120,7 +135,7 @@ flowchart LR
     render --> data
     ui[ui/<br/>hud, inventory, action bar,<br/>maps, dialogs, start menu] --> input
     ui --> render
-    ui -. state and *_local actions .-> main
+    ui -. view and api .-> client
     core[core/<br/>world, combat] --> data[data/<br/>balance, monsters, spells]
     core --> maps[maps/overworld.tscn]
 ```
@@ -135,8 +150,9 @@ cell maps to the same surface cell on every floor (`Atlas.to_floor`, `floor_of`,
 Floors are partial: `MapIO` bakes each one's painted bounds (`World.floor_bounds`), `HOLES` pairs a
 "^" with the "v" on the floor above, and the dungeon and cave bands lie on no floor (`NO_FLOOR`).
 `game/core/combat.gd` runs targeting, attacks, spells, monster AI, deaths, experience, loot,
-and respawns on the host; `game/data/monsters.gd` and `game/data/spells.gd` are their catalogs. `game/main.gd` handles ENet,
-sender-validated RPCs, the camera, input, and interpolation, and assembles the UI components in
+and respawns on the host; `game/data/monsters.gd` and `game/data/spells.gd` are their catalogs. `game/net/` handles ENet and the
+sender-validated RPCs (session, gateway, replication), `game/client/` the replicated view and its
+interpolation, requests, input, and camera, and `game/ui/ui_root.gd` assembles the UI components in
 `game/ui/` (inventory panel and drag-and-drop, action bar, NPC menus and dialogs, minimap and
 world map, HUD, start menu).
 `game/render/world_view.gd` draws the visible, depth-ordered part of the world from the OpenTibia
@@ -151,7 +167,7 @@ depth. On the host, monster steps share one occupied-tile set per tick
 Instanced dungeon copies live outside `World.OVERWORLD`; `game/core/instances.gd` assigns a
 party a copy, spawns its monsters only then, and resets it after it has been empty for 60 s.
 Clients receive monsters and combat effects only within 24 tiles in the same space (the
-overworld or the same copy); `main.gd` tracks what each peer knows and sends arrivals and
+overworld or the same copy); `net/replication.gd` tracks what each peer knows and sends arrivals and
 departures every 0.25 s. Backpack and ground entries are strings: an item id, or
 `"id#count"` for a stack (`World.kind_of`, `World.count_of`, `World.make_entry`).
 Peer 1 keeps gameplay authority; clients request actions,
@@ -159,7 +175,7 @@ never positions, item contents, or appearance.
 Characters persist on the host only: `game/persistence/character_store.gd` saves each player as
 signed JSON (HMAC-SHA256 with a per-host key) named after the SHA-256 of the client's identity
 token (`game/persistence/identity.gd`, sent in the `hello` handshake), and sanitizes every
-loaded field against the catalog. `main.gd` admits a joining identity once, restores its save
+loaded field against the catalog. `net/session.gd` admits a joining identity once, restores its save
 (or creates and saves a new character), and saves on leave, every 30 s, and when the host
 quits.
 The connection handshake checks matching map scene, catalog, ground items, inventory
