@@ -22,7 +22,7 @@ const WorldMaps = preload("res://game/ui/world_maps.gd")
 const ActionBar = preload("res://game/ui/action_bar.gd")
 const NpcDialogs = preload("res://game/ui/npc_dialogs.gd")
 const StartPanel = preload("res://game/ui/start_panel.gd")
-const CellIndex = preload("res://game/render/cell_index.gd")
+const ClientState = preload("res://game/client/client_state.gd")
 const QuestList = preload("res://game/ui/quest_list.gd")
 const SpellBook = preload("res://game/ui/spell_book.gd")
 const CharacterWindow = preload("res://game/ui/character_window.gd")
@@ -49,7 +49,7 @@ var crafting := Crafting.new(world)
 ## Gathering nodes this peer knows are regrowing: cell -> local _now() when they regrow.
 var worked_nodes: Dictionary = {}
 var instances := Instances.new(world, combat)
-## Clients receive monsters and combat effects only within INTEREST_RADIUS tiles of their
+## Clients receive client.monsters and combat client.effects only within INTEREST_RADIUS tiles of their
 ## character; peer id -> {monster id: true} they currently know about.
 const INTEREST_RADIUS: int = 24
 const INTEREST_SECONDS: float = 0.25
@@ -60,24 +60,8 @@ var _next_interest: float = 0.0
 ## Opt-in frame profile (tools/testing/bench.gd): section -> [microseconds, frames, worst]. Off in play.
 var profiling: bool = false
 var frame_profile: Dictionary = {}
-## Monsters whose view is still sliding between tiles; the rest stand still and are skipped.
-var _moving_monsters: Dictionary = {}
-var actors: Dictionary = {}
-## Client view of monsters, interpolated like actors.
-var monsters: Dictionary = {}
-## Short-lived visuals: floating numbers, missiles, and spell areas.
-var effects: Array = []
-var ground_view: Dictionary = {}:
-	set(value):
-		ground_view = value
-		_ground_index.clear()
-		for cell: Vector2i in ground_view:
-			_ground_index.put(cell, cell)
-## Monsters and ground stacks by map chunk, so drawing visits only what is near the camera
-## (the host knows every monster in the world). See monsters_in and ground_in.
-var _monster_index := CellIndex.new()
-var _ground_index := CellIndex.new()
-var self_id: int = 0
+## What this peer draws: the players, client.monsters, ground, and client.effects the host sent (game/client/).
+var client := ClientState.new()
 ## How long a kill's green loot text stays over the body.
 const LOOT_TEXT_SECONDS: float = 4.0
 var connected: bool = false
@@ -283,18 +267,12 @@ func _process(delta: float) -> void:
 		if store != null and now >= _next_autosave:
 			_next_autosave = now + CharacterStore.AUTOSAVE_SECONDS
 			save_all()
-	for id: int in actors:
-		_slide(actors[id], delta)
-	for id: int in _moving_monsters.keys():
-		if not monsters.has(id) or _slide(monsters[id], delta):
-			_moving_monsters.erase(id)
-	var clock: float = Time.get_ticks_msec() / 1000.0
-	effects = effects.filter(func(effect: Dictionary) -> bool: return clock - effect["born"] < effect.get("life", 1.1))
-	if connected and self_id != 0 and not typing() and not _controls.visible \
+	client.advance(delta, Time.get_ticks_msec() / 1000.0)
+	if connected and client.self_id != 0 and not typing() and not _controls.visible \
 			and _move_pending_since < 0.0 and now >= _next_move_attempt:
 		var direction: Vector2i = _input_direction()
 		if direction == Vector2i.ZERO:
-			direction = _chase_direction()
+			direction = client.chase_direction()
 		if direction != Vector2i.ZERO:
 			move_local(direction)
 	mark = _profiled("actors and input", mark)
@@ -316,14 +294,6 @@ func _process(delta: float) -> void:
 	micro_menu.redraw()
 	maps.redraw()
 	_profiled("windows and maps", mark)
-
-
-## Moves a creature's view along its step; true once it stands on its tile.
-static func _slide(view: Dictionary, delta: float) -> bool:
-	view["elapsed"] = minf(view["elapsed"] + delta, view["duration"])
-	var weight: float = view["elapsed"] / view["duration"] if view["duration"] > 0.0 else 1.0
-	view["visual"] = view["start"].lerp(Vector2(view["state"]["cell"]), weight)
-	return weight >= 1.0
 
 
 ## Adds the time since `since` to a profile section (when profiling); returns now.
@@ -349,7 +319,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE:
 		if not _world_map.visible and not _travel_panel.visible and not _controls.visible and not spell_book.visible \
 				and not character_window.visible and not professions_window.visible and not party_window.visible and not lexicon.visible \
-				and own_target() != 0:
+				and client.own_target() != 0:
 			target_local(0)
 		_world_map.hide()
 		_close_travel()
@@ -424,7 +394,7 @@ func use_bar_slot(slot: int) -> void:
 
 ## Casts a rune item from your backpack at your target (Combat.use_rune).
 func rune_local(kind: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_rune(1, kind)
@@ -480,18 +450,13 @@ func _reset_session() -> void:
 	store = null
 	_accounts.clear()
 	_greetings.clear()
-	actors.clear()
-	monsters.clear()
-	_monster_index.clear()
-	effects.clear()
-	ground_view = {}
+	client.clear()
 	if _travel_panel != null:
 		_close_travel()
 		_world_map.hide()
 	_pending_peers.clear()
 	_closing_peers.clear()
 	_request_windows.clear()
-	self_id = 0
 	hosting = false
 	connected = false
 	_remembered = ""
@@ -531,9 +496,9 @@ func host_game(private: bool = false) -> void:
 	multiplayer.multiplayer_peer = peer
 	hosting = true
 	connected = true
-	ground_view = world.ground_snapshot()
+	client.ground_view = world.ground_snapshot()
 	if not dedicated:
-		self_id = 1
+		client.self_id = 1
 		var refused: String = _admit(1, own_token(), selected_vocation())
 		if not refused.is_empty():
 			_fail(refused)
@@ -744,7 +709,7 @@ func _host_lost() -> void:
 func spawn_bot(vocation: String, level: int, stance: String) -> String:
 	if not hosting:
 		return "Only the host can add bots"
-	var near: Vector2i = world.players[self_id]["cell"] if world.players.has(self_id) else World.SPAWNS[0]
+	var near: Vector2i = world.players[client.self_id]["cell"] if world.players.has(client.self_id) else World.SPAWNS[0]
 	var added: Dictionary = bots.add(vocation, level, stance, near, _now())
 	if not added["ok"]:
 		return added["reason"]
@@ -759,7 +724,7 @@ func remove_bot(id: int) -> void:
 	var events: Array = []
 	combat.leave_party(id, events)
 	bots.remove(id)
-	actors.erase(id)
+	client.actors.erase(id)
 	actor_left.rpc(id)
 	for other: int in world.players:
 		if world.players[other]["target"] == id:
@@ -782,7 +747,7 @@ func _peer_left(id: int) -> void:
 		var events: Array = []
 		combat.leave_party(id, events)
 		world.remove_player(id)
-		actors.erase(id)
+		client.actors.erase(id)
 		if not _leaving:
 			actor_left.rpc(id)
 			_handle_events(events)
@@ -839,27 +804,26 @@ func welcome(states: Dictionary, ground_state: Dictionary, monster_states: Dicti
 	if hosting:
 		return
 	_clock_offset = host_clock - _now()
-	actors.clear()
+	client.actors.clear()
 	for id: int in states:
 		_apply_actor(states[id])
-	ground_view = ground_state.duplicate(true)
-	monsters.clear()
-	_monster_index.clear()
+	client.ground_view = ground_state.duplicate(true)
+	client.clear_monsters()
 	for id: int in monster_states:
 		_apply_monster(monster_states[id])
-	self_id = multiplayer.get_unique_id()
-	if not actors.has(self_id):
+	client.self_id = multiplayer.get_unique_id()
+	if not client.actors.has(client.self_id):
 		_fail("The host sent a snapshot without your player.")
 		return
 	connected = true
 	_joining_since = -1.0
-	_remember_character(actors[self_id]["state"])
+	_remember_character(client.actors[client.self_id]["state"])
 	_status_message = "Connected to %s:%d" % [_address.text, port]
-	action_bar.fill_spell_slots(actors[self_id]["state"]["vocation"])
+	action_bar.fill_spell_slots(client.actors[client.self_id]["state"]["vocation"])
 
 
 func move_local(direction: Vector2i) -> void:
-	if not connected or self_id == 0 or _move_pending_since >= 0.0:
+	if not connected or client.self_id == 0 or _move_pending_since >= 0.0:
 		return
 	_move_pending_since = _now()
 	_next_move_attempt = _now() + World.MOVE_SECONDS
@@ -871,7 +835,7 @@ func move_local(direction: Vector2i) -> void:
 
 ## Party actions: "invite", "revoke", "join" (with the inviting leader), or "leave" (other = 0).
 func party_local(action: String, other: int) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_party(1, action, other)
@@ -880,7 +844,7 @@ func party_local(action: String, other: int) -> void:
 
 
 func equip_local(slot: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_equipment(1, slot)
@@ -889,7 +853,7 @@ func equip_local(slot: String) -> void:
 
 
 func move_item_local(source: Dictionary, target: Dictionary) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_item_move(1, source, target)
@@ -899,17 +863,17 @@ func move_item_local(source: Dictionary, target: Dictionary) -> void:
 
 ## Picks up the top item on your tile, or else on the tile you face.
 func pick_up_local() -> void:
-	if not actors.has(self_id):
+	if not client.actors.has(client.self_id):
 		return
-	var state: Dictionary = actors[self_id]["state"]
+	var state: Dictionary = client.actors[client.self_id]["state"]
 	var cell: Vector2i = state["cell"]
-	if not ground_view.has(cell):
+	if not client.ground_view.has(cell):
 		cell += Vector2i(state["facing"])
 	move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 
 
 func travel_local(ferryman: String, destination: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_travel(1, ferryman, destination)
@@ -918,7 +882,7 @@ func travel_local(ferryman: String, destination: String) -> void:
 
 
 func quest_local(npc: String, relic: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_quest(1, npc, relic)
@@ -929,7 +893,7 @@ func quest_local(npc: String, relic: String) -> void:
 # ---------------------------------------------------------------- town services
 
 func task_local(npc: String, task: String, action: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_task(1, npc, task, action)
@@ -944,7 +908,7 @@ func node_worked(cell: Vector2i) -> bool:
 
 ## Starts gathering at a node (the host checks reach, skill, and the node).
 func gather_local(cell: Vector2i) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_gather(1, cell)
@@ -954,9 +918,9 @@ func gather_local(cell: Vector2i) -> void:
 
 ## Gathers from the nearest unworked node within reach: the tile you face first.
 func gather_nearby() -> void:
-	if not actors.has(self_id):
+	if not client.actors.has(client.self_id):
 		return
-	var state: Dictionary = actors[self_id]["state"]
+	var state: Dictionary = client.actors[client.self_id]["state"]
 	var own: Vector2i = state["cell"]
 	var best := Vector2i(-1, -1)
 	var best_score: int = 1 << 30
@@ -979,7 +943,7 @@ func gather_nearby() -> void:
 
 ## Asks an artisan to craft `count` of a recipe (the host checks the skill and resources).
 func craft_local(npc: String, recipe: String, count: int) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_craft(1, npc, recipe, count)
@@ -989,7 +953,7 @@ func craft_local(npc: String, recipe: String, count: int) -> void:
 
 ## Asks your class trainer to raise a spell's rank for rune shards (the host checks everything).
 func empower_local(npc: String, spell: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_empower(1, npc, spell)
@@ -999,7 +963,7 @@ func empower_local(npc: String, spell: String) -> void:
 
 ## Asks a trainer to make you their vocation (permanent; the host checks the trial and level).
 func vocation_local(npc: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_vocation(1, npc)
@@ -1009,7 +973,7 @@ func vocation_local(npc: String) -> void:
 
 ## Turns your PvP on or off at the warden (Combat.set_pvp checks reach, skull, fight, and cooldown).
 func pvp_local(npc: String, on: bool) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_pvp(1, npc, on)
@@ -1018,7 +982,7 @@ func pvp_local(npc: String, on: bool) -> void:
 
 
 func buy_local(npc: String, kind: String, count: int) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_buy(1, npc, kind, count)
@@ -1028,7 +992,7 @@ func buy_local(npc: String, kind: String, count: int) -> void:
 
 ## Sells the backpack stack at `index`, or with -1 every monster material.
 func sell_local(npc: String, index: int) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_sell(1, npc, index)
@@ -1037,7 +1001,7 @@ func sell_local(npc: String, index: int) -> void:
 
 
 func bank_local(npc: String, action: String, amount: int) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_bank(1, npc, action, amount)
@@ -1046,7 +1010,7 @@ func bank_local(npc: String, action: String, amount: int) -> void:
 
 
 func drink_local(index: int) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_drink(1, index)
@@ -1057,9 +1021,9 @@ func drink_local(index: int) -> void:
 ## Drinks the strongest potion sharing `kind`'s timer in the backpack (the potion keys: a
 ## great health potion before a strong one before a plain one).
 func drink_kind(kind: String) -> void:
-	if not actors.has(self_id):
+	if not client.actors.has(client.self_id):
 		return
-	var backpack: Array = actors[self_id]["state"].get("backpack", [])
+	var backpack: Array = client.actors[client.self_id]["state"].get("backpack", [])
 	var best: int = -1
 	var strength: float = 0.0
 	for index: int in backpack.size():
@@ -1080,7 +1044,7 @@ func drink_kind(kind: String) -> void:
 # ---------------------------------------------------------------- combat
 
 func target_local(target: int) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_target(1, target)
@@ -1089,7 +1053,7 @@ func target_local(target: int) -> void:
 
 
 func cast_local(spell: String) -> void:
-	if not connected or self_id == 0:
+	if not connected or client.self_id == 0:
 		return
 	if hosting:
 		_handle_spell(1, spell)
@@ -1099,70 +1063,18 @@ func cast_local(spell: String) -> void:
 
 ## Locks the nearest monster within targeting range.
 func target_nearest() -> void:
-	if not actors.has(self_id):
+	if not client.actors.has(client.self_id):
 		return
-	var own: Vector2i = actors[self_id]["state"]["cell"]
+	var own: Vector2i = client.actors[client.self_id]["state"]["cell"]
 	var best: int = 0
 	var best_distance: int = Combat.TARGET_RANGE + 1
-	for id: int in monsters:
-		var gap: int = Combat.distance(own, monsters[id]["state"]["cell"])
+	for id: int in client.monsters:
+		var gap: int = Combat.distance(own, client.monsters[id]["state"]["cell"])
 		if gap < best_distance:
 			best = id
 			best_distance = gap
 	if best != 0:
 		target_local(best)
-
-
-func own_target() -> int:
-	return actors[self_id]["state"].get("target", 0) if actors.has(self_id) else 0
-
-
-## Ids of monsters in view whose tile (or the tile they are stepping from) is in `area`.
-func monsters_in(area: Rect2i) -> Array[int]:
-	var result: Array[int] = []
-	for id: int in _monster_index.query(area.grow(1)):
-		if monsters.has(id):
-			result.append(id)
-		else:
-			_monster_index.remove(id)
-	return result
-
-
-## Cells with a ground stack in `area`.
-func ground_in(area: Rect2i) -> Array[Vector2i]:
-	var result: Array[Vector2i] = []
-	for cell: Vector2i in _ground_index.query(area):
-		if area.has_point(cell) and ground_view.has(cell):
-			result.append(cell)
-	return result
-
-
-func creature_view(id: int) -> Dictionary:
-	if id > 0:
-		return actors.get(id, {})
-	return monsters.get(id, {}) if id < 0 else {}
-
-
-## Walks toward a locked target that is out of reach, like Tibia's chase mode.
-func _chase_direction() -> Vector2i:
-	var target: Dictionary = creature_view(own_target())
-	if target.is_empty() or not actors.has(self_id):
-		return Vector2i.ZERO
-	var own: Dictionary = actors[self_id]["state"]
-	var goal: Vector2i = target["state"]["cell"]
-	if Combat.in_reach(own["cell"], goal, Combat.VOCATION_RANGE.get(Combat.attack_style(own["vocation"], own["equipment"]), 1)):
-		return Vector2i.ZERO
-	# Creatures never block a player, so only the land shapes the path.
-	return Combat.path_step(own["cell"], goal, func(_cell: Vector2i) -> bool: return false)
-
-
-func _creature_at(cell: Vector2i) -> int:
-	for probe: Vector2i in [cell, cell + Vector2i.DOWN]:
-		for group: Dictionary in [monsters, actors]:
-			for id: int in group:
-				if id != self_id and Vector2i(group[id]["visual"].round()) == probe:
-					return id
-	return 0
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1424,12 +1336,12 @@ func _handle_events(events: Array) -> void:
 			"loot":
 				# Loot text is only for the players the kill is credited to.
 				for looter: int in event["ids"]:
-					if looter == self_id:
+					if looter == client.self_id:
 						_show_effect(event)
 					elif looter in _remote_players():
 						combat_event.rpc_id(looter, event)
 			"bot_left":
-				actors.erase(event["id"])
+				client.actors.erase(event["id"])
 				actor_left.rpc(event["id"])
 			"node":
 				var regrowing: Dictionary = {event["cell"]: event["seconds"]}
@@ -1497,8 +1409,8 @@ func _interest_snapshot(peer_id: int, now: float) -> Dictionary:
 	return result
 
 
-## Brings each remote player's monsters up to date as they move: new ones in range, gone
-## ones out of range (monsters that moved are already sent by _publish_monster).
+## Brings each remote player's client.monsters up to date as they move: new ones in range, gone
+## ones out of range (client.monsters that moved are already sent by _publish_monster).
 func _sync_interest(now: float) -> void:
 	for peer_id: int in _remote_players():
 		var known: Dictionary = _known_monsters.get_or_add(peer_id, {})
@@ -1524,10 +1436,9 @@ func monster_gone(id: int) -> void:
 
 
 func _monster_died(id: int) -> void:
-	if monsters.has(id) and _world_view != null:
-		_world_view.fx.burst("death", (monsters[id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color(0.75, 0.7, 0.8))
-	monsters.erase(id)
-	_monster_index.remove(id)
+	if client.monsters.has(id) and _world_view != null:
+		_world_view.fx.burst("death", (client.monsters[id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color(0.75, 0.7, 0.8))
+	client.remove_monster(id)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -1536,24 +1447,7 @@ func combat_event(event: Dictionary) -> void:
 
 
 func _apply_monster(state: Dictionary) -> void:
-	var id: int = state["id"]
-	var remaining: float = state["remaining"]
-	var total: float = maxf(state.get("duration", World.MOVE_SECONDS), 0.01)
-	var start: Vector2 = Vector2(state["from"]).lerp(Vector2(state["cell"]), 1.0 - clampf(remaining / total, 0.0, 1.0))
-	if monsters.has(id) and monsters[id]["state"]["cell"] == state["cell"]:
-		start = monsters[id]["visual"]
-	var previous: Dictionary = monsters.get(id, {})
-	monsters[id] = {"state": state.duplicate(true), "start": start, "visual": start, "duration": remaining, "elapsed": 0.0}
-	_moving_monsters[id] = true
-	_monster_index.put(id, state["cell"])
-	_keep_attack(previous, monsters[id])
-
-
-## An update arriving mid-swing must not cut the attack animation short.
-func _keep_attack(previous: Dictionary, view: Dictionary) -> void:
-	if previous.has("attack_born"):
-		view["attack_born"] = previous["attack_born"]
-		view["attack_facing"] = previous["attack_facing"]
+	client.put_monster(state)
 
 
 func _map_point(cell: Vector2i) -> Vector2:
@@ -1564,7 +1458,7 @@ func _show_effect(event: Dictionary) -> void:
 	var born: float = Time.get_ticks_msec() / 1000.0
 	match event.get("kind", ""):
 		"hit":
-			var view: Dictionary = creature_view(event["target"])
+			var view: Dictionary = client.creature_view(event["target"])
 			if view.is_empty() or (event["amount"] <= 0 and event["style"] != "damage"):
 				return
 			var styles: Dictionary = {
@@ -1575,9 +1469,9 @@ func _show_effect(event: Dictionary) -> void:
 			var style: Array = styles.get(event["style"], styles["damage"])
 			var at: Vector2 = (view["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 			if game_menu == null or game_menu.settings.get("damage_numbers", true):
-				effects.append({"kind": "text", "pos": at, "text": style[0], "color": style[1], "born": born,
+				client.effects.append({"kind": "text", "pos": at, "text": style[0], "color": style[1], "born": born,
 					"big": event["style"] == "critical"})
-			var attacker: Dictionary = creature_view(int(event.get("source", 0)))
+			var attacker: Dictionary = client.creature_view(int(event.get("source", 0)))
 			if not attacker.is_empty() and event["style"] in ["damage", "critical"]:
 				# Presentation only: the attacker swings toward the target; its real facing is unchanged.
 				attacker["attack_born"] = born
@@ -1588,13 +1482,13 @@ func _show_effect(event: Dictionary) -> void:
 				_world_view.fx.burst("heal", at, style[1])
 		"loot":
 			var over: Vector2 = _map_point(event["cell"])
-			effects.append({"kind": "loot", "pos": over, "text": event["text"], "born": born, "life": LOOT_TEXT_SECONDS})
+			client.effects.append({"kind": "loot", "pos": over, "text": event["text"], "born": born, "life": LOOT_TEXT_SECONDS})
 			if event.has("label"):
-				effects.append({"kind": "label", "pos": over, "text": event["label"][0], "color": event["label"][1],
+				client.effects.append({"kind": "label", "pos": over, "text": event["label"][0], "color": event["label"][1],
 					"born": born, "life": 2.5})
 		"missile":
 			var element: String = event.get("element", "")
-			effects.append({"kind": "missile", "from": _map_point(event["from"]), "to": _map_point(event["to"]),
+			client.effects.append({"kind": "missile", "from": _map_point(event["from"]), "to": _map_point(event["to"]),
 				"color": event["color"], "born": born, "element": element})
 			var landing: Vector2 = _map_point(event["to"])
 			var tint: Color = event["color"]
@@ -1607,14 +1501,14 @@ func _show_effect(event: Dictionary) -> void:
 					return
 				_world_view.fx.burst("impact", landing, tint)
 				if not element.is_empty():
-					effects.append({"kind": "area", "cells": [target], "color": tint, "born": Time.get_ticks_msec() / 1000.0,
+					client.effects.append({"kind": "area", "cells": [target], "color": tint, "born": Time.get_ticks_msec() / 1000.0,
 						"element": element})
 			if lands <= 0.0:
 				impact.call()
 			else:
 				get_tree().create_timer(lands).timeout.connect(impact)
 		"area":
-			effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born,
+			client.effects.append({"kind": "area", "cells": event["cells"], "color": event["color"], "born": born,
 				"element": event.get("element", ""), "life": maxf(1.1, float(event.get("life", 0.0)))})
 			_world_view.fx.area(event["cells"], event["color"])
 
@@ -1722,7 +1616,7 @@ func _remote_players() -> Array[int]:
 ## Everyone receives public state; only the owner receives its backpack.
 func _publish_actor(id: int, movement: bool = false) -> void:
 	var now: float = _now()
-	_apply_actor(world.export_player(id, now, id == self_id), movement)
+	_apply_actor(world.export_player(id, now, id == client.self_id), movement)
 	for peer_id: int in _remote_players():
 		actor_updated.rpc_id(peer_id, world.export_player(id, now, peer_id == id), movement)
 
@@ -1741,12 +1635,7 @@ func ground_updated(cell: Vector2i, stack: Array) -> void:
 
 
 func _apply_ground(cell: Vector2i, stack: Array) -> void:
-	if stack.is_empty():
-		ground_view.erase(cell)
-		_ground_index.remove(cell)
-	else:
-		ground_view[cell] = stack.duplicate()
-		_ground_index.put(cell, cell)
+	client.put_ground(cell, stack)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -1756,32 +1645,24 @@ func actor_updated(state: Dictionary, movement: bool) -> void:
 
 func _apply_actor(state: Dictionary, movement: bool = false) -> void:
 	var id: int = state["id"]
-	var remaining: float = state["remaining"]
-	var start: Vector2 = Vector2(state["from"]).lerp(
-		Vector2(state["cell"]), 1.0 - clampf(remaining / state.get("duration", World.MOVE_SECONDS), 0.0, 1.0))
-	if actors.has(id) and actors[id]["state"]["cell"] == state["cell"]:
-		start = actors[id]["visual"]
-	if actors.has(id) and state.get("level", 1) > actors[id]["state"].get("level", 1) and _world_view != null:
-		_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color("#ffd86a"))
-	if actors.has(id) and state.get("title", 0) > actors[id]["state"].get("title", 0) and _world_view != null:
-		_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Titles.color_of(state["title"]))
-	var previous: Dictionary = actors.get(id, {})
-	actors[id] = {
-		"state": state.duplicate(true), "start": start, "visual": start,
-		"duration": remaining, "elapsed": 0.0, "received": _now(),
-	}
-	_keep_attack(previous, actors[id])
-	if id == self_id and connected:
+	var start: Vector2 = client.actor_start(state)
+	var previous: Dictionary = client.actors.get(id, {})
+	if not previous.is_empty() and _world_view != null:
+		if state.get("level", 1) > previous["state"].get("level", 1):
+			_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Color("#ffd86a"))
+		if state.get("title", 0) > previous["state"].get("title", 0):
+			_world_view.fx.burst("level_up", (start + Vector2(0.5, 0.5)) * World.TILE_SIZE, Titles.color_of(state["title"]))
+	client.put_actor(state, start, _now())
+	if id == client.self_id and connected:
 		_remember_character(state)
-	if id == self_id:
-		if movement:
-			_move_pending_since = -1.0
-			_next_move_attempt = _now() + remaining + 0.01
+	if id == client.self_id and movement:
+		_move_pending_since = -1.0
+		_next_move_attempt = _now() + state["remaining"] + 0.01
 
 
 @rpc("authority", "call_remote", "reliable")
 func actor_left(id: int) -> void:
-	actors.erase(id)
+	client.actors.erase(id)
 
 
 # ---------------------------------------------------------------- UI
@@ -1902,8 +1783,8 @@ func selected_vocation() -> String:
 
 ## Map pixel the camera centres: your character's interpolated position, else the map centre.
 func camera_focus() -> Vector2:
-	if actors.has(self_id):
-		return (actors[self_id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
+	if client.actors.has(client.self_id):
+		return (client.actors[client.self_id]["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 	if dedicated:
 		return Vector2(World.width(), World.height()) * World.TILE_SIZE / 2.0
 	# Before joining, show the starting town rather than the middle of the map.
@@ -1940,17 +1821,17 @@ func _map_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_RIGHT and not npc.is_empty():
 			dialogs.open_npc_menu(npc, Vector2i(VIEW_ORIGIN + event.position))
 			return
-		var creature: int = _creature_at(cell)
+		var creature: int = client.creature_at(cell)
 		if event.button_index == MOUSE_BUTTON_RIGHT and connected:
 			# Creatures never block a tile, so loot under someone is picked up rather than opening their menu.
-			var person: int = creature if creature > 0 and not ground_view.has(cell) else 0
+			var person: int = creature if creature > 0 and not client.ground_view.has(cell) else 0
 			if person > 0 and dialogs.open_player_menu(person, Vector2i(VIEW_ORIGIN + event.position)):
 				return
-			if person == 0 and not Crafting.node_at(cell).is_empty() and not ground_view.has(cell):
+			if person == 0 and not Crafting.node_at(cell).is_empty() and not client.ground_view.has(cell):
 				gather_local(cell)
 				return
 		if event.button_index == MOUSE_BUTTON_LEFT and creature != 0:
-			target_local(0 if creature == own_target() else creature)
+			target_local(0 if creature == client.own_target() else creature)
 			return
 		inventory.slot_input(event, _map_location(event.position))
 

@@ -77,7 +77,7 @@ func toggle() -> void:
 func refresh() -> void:
 	if not visible:
 		return
-	var skills: Dictionary = game.actors[game.self_id]["state"].get("skills", {}) if game.actors.has(game.self_id) else {}
+	var skills: Dictionary = game.client.actors[game.client.self_id]["state"].get("skills", {}) if game.client.actors.has(game.client.self_id) else {}
 	var key: String = "%s|%s" % [skills, game.keybinds.label("gather")]
 	if key == _key:
 		return

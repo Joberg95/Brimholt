@@ -50,9 +50,9 @@ func refresh() -> void:
 ## The effects on your character now: {title, text, left (seconds), item or spell, harmful}.
 func effects() -> Array[Dictionary]:
 	var shown: Array[Dictionary] = []
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		return shown
-	var view: Dictionary = game.actors[game.self_id]
+	var view: Dictionary = game.client.actors[game.client.self_id]
 	var state: Dictionary = view["state"]
 	var since: float = game._now() - view.get("received", game._now())
 	if state.has("fed"):

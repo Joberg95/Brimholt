@@ -91,17 +91,17 @@ func covered(cell: Vector2i) -> bool:
 
 ## The building the local character stands in (or its doorway), or -1.
 func inside_building() -> int:
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		return -1
-	var visual: Vector2 = game.actors[game.self_id]["visual"]
+	var visual: Vector2 = game.client.actors[game.client.self_id]["visual"]
 	return World.ROOM_AT.get(Vector2i(roundi(visual.x), roundi(visual.y)), -1)
 
 
 ## The local character's tile (rounded from where it is drawn), or (-1000, -1000) without one.
 func own_cell() -> Vector2i:
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		return Vector2i(-1000, -1000)
-	var visual: Vector2 = game.actors[game.self_id]["visual"]
+	var visual: Vector2 = game.client.actors[game.client.self_id]["visual"]
 	return Vector2i(roundi(visual.x), roundi(visual.y))
 
 
@@ -153,7 +153,7 @@ func _draw() -> void:
 	var next_roof: int = 0
 	if not _tall_area.encloses(area):
 		_cache_tall(area.grow(TALL_MARGIN).intersection(Rect2i(0, 0, World.width(), World.height())))
-	for effect: Dictionary in game.effects:
+	for effect: Dictionary in game.client.effects:
 		if effect["kind"] == "area" and not effect.get("element", "").is_empty():
 			continue
 		if effect["kind"] == "area":
@@ -167,10 +167,10 @@ func _draw() -> void:
 	for cell: Vector2i in _tall:
 		if area.has_point(cell):
 			keys.append(cell.y * width + cell.x)
-	var nearby: Array = game.actors.keys()
-	nearby.append_array(game.monsters_in(area))
+	var nearby: Array = game.client.actors.keys()
+	nearby.append_array(game.client.monsters_in(area))
 	for id: int in nearby:
-		var visual: Vector2 = (game.actors[id] if id > 0 else game.monsters[id])["visual"]
+		var visual: Vector2 = (game.client.actors[id] if id > 0 else game.client.monsters[id])["visual"]
 		# A stepping creature belongs to the further south/east of its two tiles.
 		var cell: Vector2i = Vector2i(ceili(visual.x - 0.001), ceili(visual.y - 0.001))
 		if not area.has_point(cell):
@@ -180,7 +180,7 @@ func _draw() -> void:
 			if not _tall.has(cell):
 				keys.append(cell.y * width + cell.x)
 		occupants[cell].append(id)
-	for cell: Vector2i in game.ground_in(area):
+	for cell: Vector2i in game.client.ground_in(area):
 		if not _tall.has(cell) and not occupants.has(cell):
 			keys.append(cell.y * width + cell.x)
 	keys.sort()
@@ -203,8 +203,8 @@ func _draw() -> void:
 			continue
 		if tile == "door":
 			WallArt.draw_door(self, cell)
-		if game.ground_view.has(cell):
-			_draw_stack(cell, game.ground_view[cell])
+		if game.client.ground_view.has(cell):
+			_draw_stack(cell, game.client.ground_view[cell])
 		if tile == "furniture":
 			ObjectArt.draw_furniture(self, cell, World.FURNITURE[cell])
 		elif tile == "herb" and not game.node_worked(cell):
@@ -230,7 +230,7 @@ func _draw() -> void:
 		next_roof += 1
 	npc_names = names
 	# Rune spells play on top of everything they hit, one frame set per tile.
-	for effect: Dictionary in game.effects:
+	for effect: Dictionary in game.client.effects:
 		if effect["kind"] == "area" and not effect.get("element", "").is_empty():
 			for cell: Vector2i in effect["cells"]:
 				SpriteArt.draw_rune_fx(self, cell, effect["element"], time - effect["born"], effect.get("life", 0.0))
@@ -292,16 +292,16 @@ func _draw_occupants(cell: Vector2i) -> void:
 
 
 func _draw_actor(id: int) -> void:
-	var actor: Dictionary = game.actors[id]
+	var actor: Dictionary = game.client.actors[id]
 	var center: Vector2 = (actor["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 	var stride: float = 0.0
 	if actor["duration"] > 0.0 and actor["elapsed"] < actor["duration"]:
 		stride = actor["elapsed"] / actor["duration"]
-	SpriteArt.draw_actor(self, center, SpriteArt.posed(actor, Time.get_ticks_msec() / 1000.0), id == game.self_id, stride)
+	SpriteArt.draw_actor(self, center, SpriteArt.posed(actor, Time.get_ticks_msec() / 1000.0), id == game.client.self_id, stride)
 
 
 func _draw_monster(id: int) -> void:
-	var monster: Dictionary = game.monsters[id]
+	var monster: Dictionary = game.client.monsters[id]
 	var center: Vector2 = (monster["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 	var stride: float = 0.0
 	if monster["duration"] > 0.0 and monster["elapsed"] < monster["duration"]:

@@ -64,7 +64,7 @@ func build(game_node: Node, layer: CanvasLayer) -> void:
 func redraw() -> void:
 	for slot: Control in _slots:
 		slot.queue_redraw()
-	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
 	var key: String = "%s|%s|%s|%s" % [keybinds.bar, state.get("level", 0), state.get("vocation", ""), state.get("equipment", {})]
 	if key == _tooltip_key:
 		return
@@ -119,8 +119,8 @@ func fill_spell_slots(vocation: String) -> void:
 
 ## Lists the spells of your vocation, with their level, and an option to clear the slot.
 func _open_menu(slot: int, at: Vector2i) -> void:
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
+	var actors: Dictionary = game.client.actors
+	var self_id: int = game.client.self_id
 	_menu_slot = slot
 	_menu.clear()
 	var entries: Array[String] = []
@@ -175,7 +175,7 @@ func _draw_slot(button: Control, slot: int) -> void:
 ## A rune item slot: its icon, how many you carry (dimmed at none or below its level), and the
 ## shared rune cooldown.
 func _draw_rune_slot(button: Control, kind: String) -> void:
-	var view: Dictionary = game.actors.get(game.self_id, {})
+	var view: Dictionary = game.client.actors.get(game.client.self_id, {})
 	var state: Dictionary = view.get("state", {})
 	var count: int = 0
 	for entry: String in state.get("backpack", []):
@@ -200,8 +200,8 @@ func _draw_rune_slot(button: Control, kind: String) -> void:
 
 ## A spell slot: coloured rune with initials, dimmed when unusable, with a cooldown shade.
 func _draw_spell_slot(button: Control, spell: String) -> void:
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
+	var actors: Dictionary = game.client.actors
+	var self_id: int = game.client.self_id
 	var definition: Dictionary = Spells.SPELLS[spell]
 	var center: Vector2 = button.size / 2.0
 	var state: Dictionary = actors[self_id]["state"] if actors.has(self_id) else {}

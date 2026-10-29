@@ -89,7 +89,7 @@ func toggle() -> void:
 func refresh() -> void:
 	if not visible:
 		return
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		if _key != "":
 			_key = ""
 			_title.text = "Character"
@@ -100,7 +100,7 @@ func refresh() -> void:
 				_values[stat].text = "-"
 				_notes[stat].text = ""
 		return
-	var view: Dictionary = game.actors[game.self_id]
+	var view: Dictionary = game.client.actors[game.client.self_id]
 	var state: Dictionary = view["state"]
 	var rest_left: int = ceili(state.get("town_rest_left", 0.0) - (game._now() - view.get("received", game._now())))
 	var meal_left: int = 0
@@ -176,10 +176,10 @@ func _status_lines(state: Dictionary, rest_left: int, meal_left: int) -> PackedS
 		lines.append("No party: right-click another player to invite them and share experience.")
 	else:
 		var members: int = 0
-		for id: int in game.actors:
-			if game.actors[id]["state"].get("party", 0) == party:
+		for id: int in game.client.actors:
+			if game.client.actors[id]["state"].get("party", 0) == party:
 				members += 1
-		lines.append("In a party of %d%s." % [members, " (you lead it)" if party == game.self_id else ""])
+		lines.append("In a party of %d%s." % [members, " (you lead it)" if party == game.client.self_id else ""])
 	match String(state.get("skull", "")):
 		"white":
 			lines.append("White skull: you attacked an unmarked player. Others may kill you freely while it lasts.")

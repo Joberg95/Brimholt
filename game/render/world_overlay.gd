@@ -29,7 +29,7 @@ const QUEST_MARK: Color = Color("#ffd84a")
 func _draw() -> void:
 	_draw_overlays(view.visible_cells(), Time.get_ticks_msec() / 1000.0)
 	var font: Font = ThemeDB.fallback_font
-	var own: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var own: Dictionary = game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
 	var time: float = Time.get_ticks_msec() / 1000.0
 	for entry: Array in view.npc_names:
 		var width: float = font.get_string_size(entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
@@ -50,9 +50,9 @@ func _center_of(state_view: Dictionary) -> Vector2:
 
 ## "leader"/"member" for your party, "invited" for an open invitation either way, else "".
 func _party_mark(id: int, state: Dictionary) -> String:
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		return ""
-	var mine: Dictionary = game.actors[game.self_id]["state"]
+	var mine: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var party: int = mine.get("party", 0)
 	if party != 0 and state.get("party", 0) == party:
 		return "leader" if id == party else "member"
@@ -63,25 +63,25 @@ func _party_mark(id: int, state: Dictionary) -> String:
 
 ## Target square, nameplates, missiles, and floating numbers, drawn above the world.
 func _draw_overlays(area: Rect2i, time: float) -> void:
-	var target: int = game.own_target()
-	var target_view: Dictionary = game.creature_view(target)
+	var target: int = game.client.own_target()
+	var target_view: Dictionary = game.client.creature_view(target)
 	if not target_view.is_empty():
 		var corner: Vector2 = target_view["visual"] * World.TILE_SIZE
 		draw_rect(Rect2(corner + Vector2.ONE, Vector2.ONE * (World.TILE_SIZE - 2)), TARGET_COLOR, false, 2.0)
 	var shown := Rect2(Vector2(area.position) * World.TILE_SIZE, Vector2(area.size) * World.TILE_SIZE)
-	for id: int in game.monsters_in(area):
-		var monster: Dictionary = game.monsters[id]
+	for id: int in game.client.monsters_in(area):
+		var monster: Dictionary = game.client.monsters[id]
 		var center: Vector2 = _center_of(monster)
 		if shown.has_point(center) and not view.covered(Vector2i(monster["visual"].round())):
 			var definition: Dictionary = Monsters.MONSTERS.get(monster["state"]["kind"], {"name": "?", "size": 1.0})
-			var own_level: int = game.actors[game.self_id]["state"].get("level", 1) if game.actors.has(game.self_id) else 1
+			var own_level: int = game.client.actors[game.client.self_id]["state"].get("level", 1) if game.client.actors.has(game.client.self_id) else 1
 			var title: String = Monsters.title(monster["state"]["kind"], monster["state"]["level"],
 				monster["state"].get("enraged", false))
 			SpriteArt.draw_nameplate(self, center, title,
 				monster["state"]["health"], monster["state"]["max_health"], definition["size"], "",
 				SpriteArt.danger_color(monster["state"]["level"], own_level), "", true)
-	for id: int in game.actors:
-		var actor: Dictionary = game.actors[id]
+	for id: int in game.client.actors:
+		var actor: Dictionary = game.client.actors[id]
 		var center: Vector2 = _center_of(actor)
 		if shown.has_point(center) and actor["state"].has("health") and not view.covered(Vector2i(actor["visual"].round())):
 			var state: Dictionary = actor["state"]
@@ -99,7 +99,7 @@ func _draw_overlays(area: Rect2i, time: float) -> void:
 				draw_rect(bar.grow(1), SpriteArt.OUTLINE)
 				draw_rect(Rect2(bar.position, Vector2(bar.size.x * done, bar.size.y)), GATHER_COLOR)
 	var font: Font = ThemeDB.fallback_font
-	for effect: Dictionary in game.effects:
+	for effect: Dictionary in game.client.effects:
 		var age: float = time - effect["born"]
 		if effect["kind"] == "missile":
 			var weight: float = clampf(age / 0.25, 0.0, 1.0)

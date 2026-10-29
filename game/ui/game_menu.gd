@@ -100,13 +100,13 @@ func refresh() -> void:
 	if not visible:
 		return
 	var connected: bool = game.connected
-	status.text = game._status_message + ("  ·  %d/%d players" % [game.actors.size(), World.MAX_PLAYERS] if connected else "")
+	status.text = game._status_message + ("  ·  %d/%d players" % [game.client.actors.size(), World.MAX_PLAYERS] if connected else "")
 	status.add_theme_color_override("font_color", Color("#9ccea4") if connected else Color("#e4bd8a"))
-	var ids: Array = game.actors.keys()
+	var ids: Array = game.client.actors.keys()
 	ids.sort()
 	var rows: Array = []
 	for id: int in ids:
-		var state: Dictionary = game.actors[id]["state"]
+		var state: Dictionary = game.client.actors[id]["state"]
 		if not state.has("vocation"):
 			continue
 		rows.append([id, _name_of(id, state), state.get("vocation", ""), int(state.get("title", 0)), int(state.get("level", 1))])
@@ -122,7 +122,7 @@ func refresh() -> void:
 		who.text = entry[1]
 		who.custom_minimum_size = Vector2(170, 0)
 		who.clip_text = true
-		who.add_theme_color_override("font_color", UiTheme.GOLD if entry[0] == game.self_id else UiTheme.TEXT)
+		who.add_theme_color_override("font_color", UiTheme.GOLD if entry[0] == game.client.self_id else UiTheme.TEXT)
 		line.add_child(who)
 		var rank := Label.new()
 		var title: String = Titles.name_of(entry[2], entry[3])
@@ -194,7 +194,7 @@ func _centre() -> void:
 
 
 func _name_of(id: int, state: Dictionary) -> String:
-	if id == game.self_id:
+	if id == game.client.self_id:
 		return "You"
 	if state.has("name"):
 		return String(state["name"]).get_slice(" of ", 0)

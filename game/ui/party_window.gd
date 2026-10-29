@@ -50,7 +50,7 @@ func toggle() -> void:
 
 
 func refresh() -> void:
-	if not visible or not game.actors.has(game.self_id):
+	if not visible or not game.client.actors.has(game.client.self_id):
 		return
 	var key: String = _state_key()
 	if key != _key:
@@ -65,24 +65,24 @@ func refresh() -> void:
 
 ## The party's members, its leader first (just you without a party).
 func members() -> Array[int]:
-	var party: int = game.actors[game.self_id]["state"].get("party", 0)
+	var party: int = game.client.actors[game.client.self_id]["state"].get("party", 0)
 	var result: Array[int] = []
 	if party == 0:
-		result.append(game.self_id)
+		result.append(game.client.self_id)
 		return result
-	for id: int in game.actors:
-		if game.actors[id]["state"].get("party", 0) == party:
+	for id: int in game.client.actors:
+		if game.client.actors[id]["state"].get("party", 0) == party:
 			result.append(id)
 	result.sort_custom(func(a: int, b: int) -> bool: return a == party or (b != party and a < b))
 	return result
 
 
 func _state_key() -> String:
-	var state: Dictionary = game.actors[game.self_id]["state"]
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var named: Array = []
 	for id: int in members() + Array(state.get("invites", [])) + Array(state.get("invited", [])):
-		if game.actors.has(id):
-			named.append([id, game.actors[id]["state"].get("level", 1), game.actors[id]["state"].get("vocation", "")])
+		if game.client.actors.has(id):
+			named.append([id, game.client.actors[id]["state"].get("level", 1), game.client.actors[id]["state"].get("vocation", "")])
 	return str([named, state.get("party", 0), state.get("invites", []), state.get("invited", []), state.get("level", 1),
 		game.solo_mode, game.solo.raiding if game.solo_mode and game.solo != null else false,
 		[game.solo.party_plan, game.solo.slot_ids, game.solo.raid_plan] if game.solo_mode and game.solo != null else []])
@@ -94,7 +94,7 @@ func _rebuild() -> void:
 		child.queue_free()
 	_bars.clear()
 	raid_button = null
-	var state: Dictionary = game.actors[game.self_id]["state"]
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var party: int = state.get("party", 0)
 	var header := HBoxContainer.new()
 	_column.add_child(header)
@@ -118,8 +118,8 @@ func _rebuild() -> void:
 	grid.add_theme_constant_override("v_separation", 4)
 	_column.add_child(grid)
 	for id: int in members():
-		var member: Dictionary = game.actors[id]["state"]
-		var named: Label = _label(("★ " if id == party else "") + _name_of(id), 13, TITLE if id == game.self_id else TEXT)
+		var member: Dictionary = game.client.actors[id]["state"]
+		var named: Label = _label(("★ " if id == party else "") + _name_of(id), 13, TITLE if id == game.client.self_id else TEXT)
 		named.custom_minimum_size = Vector2(150, 0)
 		named.autowrap_mode = TextServer.AUTOWRAP_OFF
 		grid.add_child(named)
@@ -141,7 +141,7 @@ func _rebuild() -> void:
 	if game.solo_mode:
 		# Empty companion slots: pick a class and invite it.
 		for slot: int in game.solo.slot_ids.size():
-			if game.actors.has(game.solo.slot_ids[slot]):
+			if game.client.actors.has(game.solo.slot_ids[slot]):
 				continue
 			var open: Label = _label("Open slot", 13, MUTED)
 			open.custom_minimum_size = Vector2(150, 0)
@@ -154,10 +154,10 @@ func _rebuild() -> void:
 			grid.add_child(Control.new())
 			grid.add_child(_slot_controls(slot, false))
 	for leader: int in state.get("invites", []):
-		if game.actors.has(leader) and party == 0:
+		if game.client.actors.has(leader) and party == 0:
 			_row("%s invites you to their party." % _name_of(leader), "Join", func() -> void: game.party_local("join", leader))
 	for invited: int in state.get("invited", []):
-		if game.actors.has(invited):
+		if game.client.actors.has(invited):
 			_row("You invited %s." % _name_of(invited), "Withdraw", func() -> void: game.party_local("revoke", invited))
 	if game.solo_mode:
 		var raiding: bool = game.solo.raiding
@@ -257,9 +257,9 @@ func _row(text: String, action: String, callback: Callable) -> void:
 
 
 func _draw_health(bar: Control, id: int) -> void:
-	if not game.actors.has(id):
+	if not game.client.actors.has(id):
 		return
-	var member: Dictionary = game.actors[id]["state"]
+	var member: Dictionary = game.client.actors[id]["state"]
 	var area := Rect2(Vector2.ZERO, bar.size)
 	var share: float = clampf(float(member.get("health", 0)) / maxf(1.0, member.get("max_health", 1)), 0.0, 1.0)
 	bar.draw_rect(area, Color(0, 0, 0, 0.6))
@@ -271,9 +271,9 @@ func _draw_health(bar: Control, id: int) -> void:
 
 ## A named bot's name, "You", or the player's class.
 func _name_of(id: int) -> String:
-	if id == game.self_id:
+	if id == game.client.self_id:
 		return "You"
-	var state: Dictionary = game.actors[id]["state"]
+	var state: Dictionary = game.client.actors[id]["state"]
 	if state.has("name"):
 		return String(state["name"]).get_slice(" of ", 0)
 	return "%s (player %d)" % [Balance.profile_of(state.get("vocation", ""))["name"], id]

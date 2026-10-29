@@ -76,7 +76,7 @@ func _process(_delta: float) -> bool:
 	var deadline: float = 40.0 if role.begins_with("dedicated") else 20.0
 	if now - started > deadline:
 		fail("Timeout stage %d feedback='%s' peers=%s equipped=%s unequipped=%s late_move=%s drop=%s pickup=%s" % [
-			stage, game.last_action_message, game.actors.keys(),
+			stage, game.last_action_message, game.client.actors.keys(),
 			saw_equipped, saw_unequipped, saw_late_move, saw_drop, saw_pickup,
 		])
 		return false
@@ -127,19 +127,19 @@ func advance() -> void:
 
 
 func state(id: int) -> Dictionary:
-	return game.actors[id]["state"]
+	return game.client.actors[id]["state"]
 
 
 func _watch_ground(cell: Vector2i, kind: String) -> void:
-	if game.ground_view.get(cell, []) == [kind]:
+	if game.client.ground_view.get(cell, []) == [kind]:
 		saw_drop = true
-	elif saw_drop and not game.ground_view.has(cell):
+	elif saw_drop and not game.client.ground_view.has(cell):
 		saw_pickup = true
 
 
 func _others_hide_backpacks() -> bool:
-	for id: int in game.actors:
-		if (id == game.self_id) != state(id).has("backpack") or (id == game.self_id) != state(id).has("invites"):
+	for id: int in game.client.actors:
+		if (id == game.client.self_id) != state(id).has("backpack") or (id == game.client.self_id) != state(id).has("invites"):
 			return false
 	return true
 
@@ -164,7 +164,7 @@ func _host_tick(now: float) -> void:
 			fail("Host input did not equip armor")
 			return
 		advance()
-	for id: int in game.actors:
+	for id: int in game.client.actors:
 		if id == 1:
 			continue
 		if state(id)["equipment"].has("helmet"):
@@ -182,21 +182,21 @@ func _host_tick(now: float) -> void:
 		fail("Host view exposes another player's backpack")
 		return
 	if stage == 1 and saw_equipped and saw_unequipped and saw_late_move and saw_drop and saw_pickup \
-			and game.actors.size() == 1:
+			and game.client.actors.size() == 1:
 		game.move_local(Vector2i.DOWN)
 		advance()
 	if stage == 2 and now - stage_since > World.MOVE_SECONDS:
 		if state(1)["cell"] != Vector2i(5, 7) or not state(1)["equipment"].has("armor"):
 			fail("Host movement/equipment parity failed")
-		elif game.ground_view != game.world.ground:
+		elif game.client.ground_view != game.world.ground:
 			fail("Host ground view diverged from authoritative ground")
 		else:
 			finish()
 
 
 func _client_tick(now: float) -> void:
-	var own: int = game.self_id
-	if not game.actors.has(1) or not game.actors.has(own):
+	var own: int = game.client.self_id
+	if not game.client.actors.has(1) or not game.client.actors.has(own):
 		fail("Missing actors")
 		return
 	match stage:
@@ -269,13 +269,13 @@ func _client_tick(now: float) -> void:
 				game.move_item_local({"type": "backpack", "index": DROPPED_INDEX}, {"type": "ground", "cell": DROP})
 				advance()
 		11:
-			if game.ground_view.get(DROP, []) == [DROPPED] and state(own)["backpack"][DROPPED_INDEX] == "":
+			if game.client.ground_view.get(DROP, []) == [DROPPED] and state(own)["backpack"][DROPPED_INDEX] == "":
 				print("BRIMHOLT_CLIENT_EQUIPPED")
 				advance()
 		12:
 			if now - stage_since < 0.2:
 				return
-			for id: int in game.actors:
+			for id: int in game.client.actors:
 				if id != 1 and id != own and state(id)["equipment"].has("armor"):
 					late_id = id
 					game.equip_local("helmet")
@@ -283,16 +283,16 @@ func _client_tick(now: float) -> void:
 					advance()
 					break
 		13:
-			if game.actors.has(late_id) and state(own)["party"] == own and state(late_id)["party"] == own:
+			if game.client.actors.has(late_id) and state(own)["party"] == own and state(late_id)["party"] == own:
 				saw_party = true
-			if not state(own)["equipment"].has("helmet") and not game.actors.has(late_id):
+			if not state(own)["equipment"].has("helmet") and not game.client.actors.has(late_id):
 				if not saw_party:
 					fail("Client never saw the late joiner accept its party invitation")
 				elif state(own)["party"] != 0 or not state(own)["invited"].is_empty():
 					fail("The party did not disband when its other member disconnected")
 				elif not state(1)["equipment"].has("armor"):
 					fail("Host equipment missing on client")
-				elif game.ground_view.has(DROP):
+				elif game.client.ground_view.has(DROP):
 					fail("Client did not see the late joiner pick up the dropped item")
 				else:
 					finish()
@@ -301,59 +301,59 @@ func _client_tick(now: float) -> void:
 func _late_tick(now: float) -> void:
 	match stage:
 		0:
-			if game.actors.size() != 3 or not state(1)["equipment"].has("armor"):
+			if game.client.actors.size() != 3 or not state(1)["equipment"].has("armor"):
 				fail("Late-join snapshot incomplete")
 				return
-			for id: int in game.actors:
-				if id != 1 and id != game.self_id and state(id)["equipment"].has("helmet"):
+			for id: int in game.client.actors:
+				if id != 1 and id != game.client.self_id and state(id)["equipment"].has("helmet"):
 					client_id = id
 			if client_id == 0 or state(client_id)["cell"] != STAND or state(client_id)["vocation"] != "druid" \
-					or state(game.self_id)["vocation"] != "paladin":
+					or state(game.client.self_id)["vocation"] != "paladin":
 				fail("Late join did not receive current movement and equipment")
 				return
-			late_spawn = state(game.self_id)["cell"]
+			late_spawn = state(game.client.self_id)["cell"]
 			if late_spawn == state(1)["cell"] or late_spawn == state(client_id)["cell"]:
 				fail("Late join reused an occupied spawn")
 				return
-			if game.ground_view.get(DROP, []) != [DROPPED] \
-					or game.ground_view.get(Vector2i(10, 1), []) != ["glowcap#2"]:
+			if game.client.ground_view.get(DROP, []) != [DROPPED] \
+					or game.client.ground_view.get(Vector2i(10, 1), []) != ["glowcap#2"]:
 				fail("Late join did not receive the ground snapshot")
 				return
 			var kit: Array = World.start_kit("paladin")
-			if not _others_hide_backpacks() or state(game.self_id)["backpack"].slice(0, kit.size()) != kit:
+			if not _others_hide_backpacks() or state(game.client.self_id)["backpack"].slice(0, kit.size()) != kit:
 				fail("Late join backpack snapshot is wrong")
 				return
-			var own_cell: Vector2i = state(game.self_id)["cell"]
+			var own_cell: Vector2i = state(game.client.self_id)["cell"]
 			# Monsters must arrive when a camp lies well inside the interest radius; the start town's
 			# camps are outside its walls, and then none of the map's monsters may arrive at all.
 			var camp_near: bool = World.MONSTER_SPAWNS.any(func(spawn: Dictionary) -> bool:
 				return Combat.distance(spawn["cell"], own_cell) + int(spawn["radius"]) + 2 < game.INTEREST_RADIUS)
-			if (camp_near and game.monsters.is_empty()) or game.monsters.keys().any(func(id: int) -> bool:
-					return id >= 0 or Combat.distance(game.monsters[id]["state"]["cell"], own_cell) > game.INTEREST_RADIUS):
+			if (camp_near and game.client.monsters.is_empty()) or game.client.monsters.keys().any(func(id: int) -> bool:
+					return id >= 0 or Combat.distance(game.client.monsters[id]["state"]["cell"], own_cell) > game.INTEREST_RADIUS):
 				fail("Late join did not receive only its nearby monsters")
 				return
 			print("BRIMHOLT_LATE_SNAPSHOT_OK")
 			game.move_item_local({"type": "ground", "cell": DROP}, {"type": "backpack"})
 			advance()
 		1:
-			if not game.ground_view.has(DROP) \
-					and state(game.self_id)["backpack"][World.start_kit("paladin").size()] == DROPPED and now - stage_since > 0.2:
+			if not game.client.ground_view.has(DROP) \
+					and state(game.client.self_id)["backpack"][World.start_kit("paladin").size()] == DROPPED and now - stage_since > 0.2:
 				game.equip_local("armor")
 				advance()
 		2:
-			if not state(client_id)["equipment"].has("helmet") and state(game.self_id)["equipment"].has("armor"):
+			if not state(client_id)["equipment"].has("helmet") and state(game.client.self_id)["equipment"].has("armor"):
 				game.move_local(Vector2i.DOWN)
 				advance()
 		3:
-			if state(game.self_id)["cell"] == late_spawn + Vector2i.DOWN and now - stage_since > 0.25 \
-					and client_id in state(game.self_id)["invites"]:
+			if state(game.client.self_id)["cell"] == late_spawn + Vector2i.DOWN and now - stage_since > 0.25 \
+					and client_id in state(game.client.self_id)["invites"]:
 				if game.party_options(client_id) != ["join"]:
 					fail("The right-click menu does not offer to join an inviting player")
 					return
 				game.party_local("join", client_id)
 				advance()
 		4:
-			if state(game.self_id)["party"] == client_id and state(client_id)["party"] == client_id:
+			if state(game.client.self_id)["party"] == client_id and state(client_id)["party"] == client_id:
 				if game.party_options(client_id) != ["leave"] or game.party_options(1) != []:
 					fail("Party menu options are wrong for members and outsiders")
 					return
@@ -361,14 +361,14 @@ func _late_tick(now: float) -> void:
 
 
 func _dedicated_host_tick() -> void:
-	if game.self_id != 0 or game.actors.has(1):
+	if game.client.self_id != 0 or game.client.actors.has(1):
 		fail("Dedicated host created a playing character")
 		return
-	for id: int in game.actors:
+	for id: int in game.client.actors:
 		if state(id)["equipment"].has("main_hand") and state(id)["cell"] == Vector2i(5, 7):
 			saw_late_move = true
 	_watch_ground(Vector2i(5, 7), "ember_cap")
-	for id: int in game.actors:
+	for id: int in game.client.actors:
 		if state(id)["equipment"].get("ring_2", "") == "garnet_ring" and state(id)["level"] == Items.ACCESSORY_LEVEL \
 				and not state(id).has("backpack"):
 			saw_ring = true
@@ -490,16 +490,16 @@ func _dedicated_host_tick() -> void:
 			errand = next
 	if saw_late_move and saw_drop and saw_pickup and saw_ring and saw_voyage and sparring != 0 and saw_relic \
 			and saw_task and saw_dungeon and saw_hunting_weapon and saw_crafted and saw_gathered and not game.world.monsters.has(sparring) \
-			and game.actors.is_empty():
+			and game.client.actors.is_empty():
 		finish()
 
 
 func _dedicated_client_tick(now: float) -> void:
-	var own: int = game.self_id
+	var own: int = game.client.self_id
 	stage_messages[game.last_action_message] = true
 	match stage:
 		0:
-			if game.actors.size() != 1 or own == 1 or game.actors.has(1):
+			if game.client.actors.size() != 1 or own == 1 or game.client.actors.has(1):
 				fail("Dedicated snapshot contains a phantom host")
 				return
 			game.equip_local("main_hand")
@@ -516,12 +516,12 @@ func _dedicated_client_tick(now: float) -> void:
 				game.request_pvp.rpc_id(1, "reedmere_warden", true)
 				advance()
 		2:
-			if game.ground_view.get(Vector2i(5, 7), []) == ["ember_cap"] and stage_messages.has("Walk closer to the warden") \
+			if game.client.ground_view.get(Vector2i(5, 7), []) == ["ember_cap"] and stage_messages.has("Walk closer to the warden") \
 					and not state(own)["pvp"] and now - stage_since > 0.2:
 				game.move_item_local({"type": "ground", "cell": Vector2i(5, 7)}, {"type": "backpack"})
 				advance()
 		3:
-			if not game.ground_view.has(Vector2i(5, 7)) and state(own)["backpack"][0] == "ember_cap" \
+			if not game.client.ground_view.has(Vector2i(5, 7)) and state(own)["backpack"][0] == "ember_cap" \
 					and now - stage_since > 0.2:
 				advance()
 		4:
@@ -567,8 +567,8 @@ func _dedicated_client_tick(now: float) -> void:
 					and state(own)["gold"] == World.START_GOLD - fare and _saw_part("Lastlight"):
 				advance()
 		13:
-			for id: int in game.monsters:
-				if World.chebyshev(game.monsters[id]["state"]["cell"], state(own)["cell"]) == 1:
+			for id: int in game.client.monsters:
+				if World.chebyshev(game.client.monsters[id]["state"]["cell"], state(own)["cell"]) == 1:
 					sparring = id
 					game.request_target.rpc_id(1, "not-a-creature")
 					advance()
@@ -581,9 +581,9 @@ func _dedicated_client_tick(now: float) -> void:
 				game.cast_local("piercing_shot")
 				advance()
 		16:
-			for effect: Dictionary in game.effects:
+			for effect: Dictionary in game.client.effects:
 				saw_hit = saw_hit or effect["kind"] == "text"
-			if not game.monsters.has(sparring) and state(own)["experience"] > 0 and state(own)["target"] == 0 and saw_hit:
+			if not game.client.monsters.has(sparring) and state(own)["experience"] > 0 and state(own)["target"] == 0 and saw_hit:
 				advance()
 		17:
 			var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper_kharzul"]["cell"]
@@ -602,7 +602,7 @@ func _dedicated_client_tick(now: float) -> void:
 				advance()
 		20:
 			if stage_messages.has("The Cinderheart bow is bound to you") and now - stage_since > 0.2:
-				if not state(own)["backpack"].has("cinderheart_bow") or game.ground_view.has(state(own)["cell"]):
+				if not state(own)["backpack"].has("cinderheart_bow") or game.client.ground_view.has(state(own)["cell"]):
 					fail("A bound relic left the backpack")
 					return
 				advance()
@@ -657,7 +657,7 @@ func _dedicated_client_tick(now: float) -> void:
 				game.move_local(Vector2i.LEFT)
 				advance()
 			elif now - stage_since > 4.0:
-				var cells: Array = game.monsters.values().map(func(monster: Dictionary) -> Vector2i: return monster["state"]["cell"])
+				var cells: Array = game.client.monsters.values().map(func(monster: Dictionary) -> Vector2i: return monster["state"]["cell"])
 				fail("Stuck entering the cellar at %s (%s), message '%s', monsters %s" % [state(own)["cell"],
 					World.dungeon_at(state(own)["cell"]), game.last_action_message, cells])
 			elif World.chebyshev(state(own)["cell"], stairway) == 1 and now - stage_since > 0.5:
@@ -734,10 +734,10 @@ func multiplayer_peers_gone() -> bool:
 
 ## First visit: a druid steps down from its spawn and equips its weapon, then leaves.
 func _persist_first_tick(now: float) -> void:
-	var own: int = game.self_id
+	var own: int = game.client.self_id
 	match stage:
 		0:
-			if game.actors.has(own) and state(own)["cell"] == Vector2i(5, 6):
+			if game.client.actors.has(own) and state(own)["cell"] == Vector2i(5, 6):
 				game.move_local(Vector2i.DOWN)
 				advance()
 		1:
@@ -751,10 +751,10 @@ func _persist_first_tick(now: float) -> void:
 
 ## After the host restarted: the same identity (asking for a knight) gets the saved druid back.
 func _persist_return_tick(now: float) -> void:
-	var own: int = game.self_id
+	var own: int = game.client.self_id
 	match stage:
 		0:
-			if game.actors.has(own) and game.last_action_message.begins_with("Welcome back"):
+			if game.client.actors.has(own) and game.last_action_message.begins_with("Welcome back"):
 				var mine: Dictionary = state(own)
 				if mine["vocation"] != "druid" or mine["cell"] != Vector2i(5, 7) \
 						or mine["equipment"].get("main_hand", "") != "sapling_rod" or mine["backpack"].has("sapling_rod"):
@@ -770,18 +770,18 @@ func _persist_return_tick(now: float) -> void:
 
 
 func _only_dungeon_monsters(own_cell: Vector2i) -> bool:
-	if game.monsters.is_empty():
+	if game.client.monsters.is_empty():
 		return false
-	for id: int in game.monsters:
-		var cell: Vector2i = game.monsters[id]["state"]["cell"]
+	for id: int in game.client.monsters:
+		var cell: Vector2i = game.client.monsters[id]["state"]["cell"]
 		if World.dungeon_at(cell) != World.dungeon_at(own_cell) or World.chebyshev(cell, own_cell) > game.INTEREST_RADIUS:
 			return false
 	return true
 
 
 func _has_dungeon_monster() -> bool:
-	for id: int in game.monsters:
-		if not World.dungeon_at(game.monsters[id]["state"]["cell"]).is_empty():
+	for id: int in game.client.monsters:
+		if not World.dungeon_at(game.client.monsters[id]["state"]["cell"]).is_empty():
 			return true
 	return false
 
@@ -791,27 +791,27 @@ func _loss_host_tick() -> void:
 	if game.bots.bots.is_empty() and not game.spawn_bot("knight", 20, "dummy").is_empty():
 		fail("The host could not add a bot")
 		return
-	for id: int in game.actors:
+	for id: int in game.client.actors:
 		if id != 1 and not game.bots.is_bot(id) and state(id)["equipment"].has("helmet"):
 			finish()
 			return
 
 
 func _loss_client_tick() -> void:
-	if stage == 0 and game.connected and game.actors.has(game.self_id) and game.actors.keys().any(func(id: int) -> bool:
-			return game.actors[id]["state"].get("bot", false) and game.actors[id]["state"]["level"] == 20):
+	if stage == 0 and game.connected and game.client.actors.has(game.client.self_id) and game.client.actors.keys().any(func(id: int) -> bool:
+			return game.client.actors[id]["state"].get("bot", false) and game.client.actors[id]["state"]["level"] == 20):
 		if game.bots.bots.size() != 0 or not game.spawn_bot("knight", 1, "dummy").begins_with("Only the host"):
 			fail("A client holds or can create bots")
 			return
 		# This host was started without --allow-start-vocation: asking for a vocation gets an Adventurer.
-		if state(game.self_id)["vocation"] != "adventurer":
-			fail("A client chose its own starting vocation (%s)" % state(game.self_id)["vocation"])
+		if state(game.client.self_id)["vocation"] != "adventurer":
+			fail("A client chose its own starting vocation (%s)" % state(game.client.self_id)["vocation"])
 			return
 		game.equip_local("helmet")
 		advance()
 	elif stage == 1 and not game.connected:
 		if game._status_message != "The host disconnected. Your LAN session has ended." \
-				or not game.actors.is_empty() or not game.ground_view.is_empty() or game.self_id != 0:
+				or not game.client.actors.is_empty() or not game.client.ground_view.is_empty() or game.client.self_id != 0:
 			fail("Host loss did not report an error and clear stale actors")
 		else:
 			finish()

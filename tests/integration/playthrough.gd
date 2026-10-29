@@ -120,19 +120,19 @@ func _enter(next: String) -> void:
 
 
 func me() -> Dictionary:
-	return game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	return game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
 
 
 func partner() -> int:
-	for id: int in game.actors:
-		if id != game.self_id:
+	for id: int in game.client.actors:
+		if id != game.client.self_id:
 			return id
 	return 0
 
 
 func partner_state() -> Dictionary:
 	var id: int = partner()
-	return game.actors[id]["state"] if id != 0 else {}
+	return game.client.actors[id]["state"] if id != 0 else {}
 
 
 func stats() -> Dictionary:
@@ -194,10 +194,10 @@ func walk_to(target: Vector2i, reach: int = 0) -> bool:
 func nearest_monster(radius: int) -> int:
 	var best: int = 0
 	var best_distance: int = radius + 1
-	for id: int in game.monsters:
+	for id: int in game.client.monsters:
 		if ignored.has(id):
 			continue
-		var gap: int = Combat.distance(me()["cell"], game.monsters[id]["state"]["cell"])
+		var gap: int = Combat.distance(me()["cell"], game.client.monsters[id]["state"]["cell"])
 		if gap < best_distance:
 			best = id
 			best_distance = gap
@@ -233,7 +233,7 @@ func fight(spell_target: bool = true, radius: int = Combat.TARGET_RANGE) -> void
 	if state["health"] < stats()["health"] * 0.55 and throttle(0.6):
 		game.cast_local(HEAL_SPELLS[state["vocation"]])
 		return
-	if game.own_target() == 0:
+	if game.client.own_target() == 0:
 		var monster: int = nearest_monster(radius)
 		if monster != 0 and throttle(0.3):
 			game.target_local(monster)
@@ -241,9 +241,9 @@ func fight(spell_target: bool = true, radius: int = Combat.TARGET_RANGE) -> void
 	if not _making_progress():
 		return
 	# A Warrior hits only what stands beside it: close in on a target that does not come.
-	var target: int = game.own_target()
-	if state["vocation"] == "knight" and game.monsters.has(target):
-		walk_to(game.monsters[target]["state"]["cell"], 1)
+	var target: int = game.client.own_target()
+	if state["vocation"] == "knight" and game.client.monsters.has(target):
+		walk_to(game.client.monsters[target]["state"]["cell"], 1)
 	if spell_target and throttle(0.6):
 		game.cast_local(ATTACK_SPELLS[state["vocation"]])
 
@@ -251,26 +251,26 @@ func fight(spell_target: bool = true, radius: int = Combat.TARGET_RANGE) -> void
 ## Whether the locked monster is still losing health; one that has not for GIVE_UP_SECONDS is out
 ## of reach (behind rock or water, or walking home), so it is ignored from then on.
 func _making_progress() -> bool:
-	var target: int = game.own_target()
-	if not game.monsters.has(target):
+	var target: int = game.client.own_target()
+	if not game.client.monsters.has(target):
 		return true
 	if ignored.has(target):
 		return false  # already given up; the server has not cleared the target yet
-	var health: int = int(game.monsters[target]["state"].get("health", 0))
+	var health: int = int(game.client.monsters[target]["state"].get("health", 0))
 	if engaged[0] != target or health < engaged[2]:
 		engaged = [target, now(), health]
 		return true
 	if now() - engaged[1] < GIVE_UP_SECONDS:
 		return true
 	ignored[target] = true
-	report("info", "gave up on a monster at %s that never took damage (out of reach)" % game.monsters[target]["state"]["cell"])
+	report("info", "gave up on a monster at %s that never took damage (out of reach)" % game.client.monsters[target]["state"]["cell"])
 	game.target_local(0)
 	return false
 
 
 func track_events() -> void:
-	var target: int = game.own_target()
-	if last_target < 0 and target == 0 and not game.monsters.has(last_target):
+	var target: int = game.client.own_target()
+	if last_target < 0 and target == 0 and not game.client.monsters.has(last_target):
 		kills += 1
 		if kills == 1:
 			shot("first-kill", "First kill: floating experience and the gold it dropped")
@@ -305,7 +305,7 @@ func _process(delta: float) -> bool:
 	if not game.connected or me().is_empty():
 		if phase != "join" and now() - phase_since > 5.0:
 			report("fail", "lost the connection: %s (connected %s, self %d, actors %s, message '%s')" % [game._status_message,
-				game.connected, game.self_id, game.actors.keys(), game.last_action_message])
+				game.connected, game.client.self_id, game.client.actors.keys(), game.last_action_message])
 			_finish()
 		elif phase == "join" and now() - phase_since > 20.0:
 			report("fail", "could not join: %s" % game._status_message)
@@ -348,7 +348,7 @@ func _join() -> void:
 			return
 		report("fail", "could not form a party")
 	else:
-		report("ok", "formed a party (leader: %s)" % ("me" if me()["party"] == game.self_id else "partner"))
+		report("ok", "formed a party (leader: %s)" % ("me" if me()["party"] == game.client.self_id else "partner"))
 	_enter("gear")
 
 
@@ -386,7 +386,7 @@ func _hunt() -> void:
 	var elapsed: float = now() - phase_since
 	if sorcerer_level >= HUNT_LEVEL or elapsed > HUNT_SECONDS:
 		# Finish the current fight first: walking off drags the pack along to the port.
-		if (game.own_target() != 0 or nearest_monster(3) != 0) and elapsed < HUNT_SECONDS + 30.0:
+		if (game.client.own_target() != 0 or nearest_monster(3) != 0) and elapsed < HUNT_SECONDS + 30.0:
 			fight(true, 3)
 			return
 		if sorcerer_level < HUNT_LEVEL:
@@ -404,16 +404,16 @@ func _hunt() -> void:
 		avoid_monsters(true)
 		_enter("to_port")
 		return
-	if nearest_monster(Combat.TARGET_RANGE) != 0 or game.own_target() != 0:
+	if nearest_monster(Combat.TARGET_RANGE) != 0 or game.client.own_target() != 0:
 		quiet_since = now()
-		if game.own_target() != 0 and not flags.get("fight_shot", false) and not game.effects.is_empty():
+		if game.client.own_target() != 0 and not flags.get("fight_shot", false) and not game.client.effects.is_empty():
 			flags["fight_shot"] = true
 			shot("fighting", "Fighting: locked target, spells, floating damage")
 		fight()
 		return
 	var room: bool = me()["backpack"].has("")
-	for cell: Vector2i in game.ground_view:
-		var stack: Array = game.ground_view[cell]
+	for cell: Vector2i in game.client.ground_view:
+		var stack: Array = game.client.ground_view[cell]
 		var top: String = World.kind_of(stack[-1]) if not stack.is_empty() else ""
 		# Gold is worth a detour; materials only when close, so looting does not pull into other spawns.
 		var reach: int = 8 if top == "gold_coins" else (3 if room and World.ITEMS.get(top, {}).has("value") else -1)
@@ -442,7 +442,7 @@ func defend() -> bool:
 	if now() - flags.get("hurt_at", -INF) < 3.0 and nearest_monster(2) != 0:
 		fight(true, 2)
 		return true
-	if game.own_target() != 0:
+	if game.client.own_target() != 0:
 		game.target_local(0)
 	return false
 
@@ -559,7 +559,7 @@ func _duel() -> void:
 			if not flags.get("attacked", false):
 				if throttle(0.5):
 					game.target_local(other)
-				if game.own_target() == other:
+				if game.client.own_target() == other:
 					flags["attacked"] = true
 					report("info", "attacked the unmarked Sorcerer")
 				return
@@ -579,10 +579,10 @@ func _duel() -> void:
 			if me().get("unjustified", 0) >= 1 and not flags.get("kill_reported", false):
 				flags["kill_reported"] = true
 				report("ok", "unjustified kill counted (%d of 3 before a red skull); message: %s" % [me()["unjustified"], game.last_action_message])
-			for cell: Vector2i in game.ground_view:
+			for cell: Vector2i in game.client.ground_view:
 				if Combat.distance(cell, flags["drop_near"]) <= Combat.SPILL_RADIUS and World.zone_at(cell).get("pvp", false):
 					if walk_to(cell, 1) and throttle(0.4):
-						report("info", "pick up %s from %s at %s (gold %d, last message '%s')" % [game.ground_view[cell].back(), cell,
+						report("info", "pick up %s from %s at %s (gold %d, last message '%s')" % [game.client.ground_view[cell].back(), cell,
 							me()["cell"], me()["gold"], game.last_action_message])
 						game.move_item_local({"type": "ground", "cell": cell}, {"type": "backpack"})
 						flags["picked"] = flags.get("picked", 0) + 1
@@ -598,10 +598,10 @@ func _duel() -> void:
 				shot("looting", "Warrior with a white skull after looting the Sorcerer's dropped items")
 				return
 			if elapsed > 90.0:
-				var nearby: Array = game.ground_view.keys().filter(func(cell: Vector2i) -> bool:
+				var nearby: Array = game.client.ground_view.keys().filter(func(cell: Vector2i) -> bool:
 					return Combat.distance(cell, flags["drop_near"]) <= 8)
 				report("fail", "found no dropped items near %s; own cell %s, ground nearby %s, gold %d" % [flags["drop_near"],
-					me()["cell"], nearby.map(func(cell: Vector2i) -> String: return "%s=%s" % [cell, game.ground_view[cell]]), me()["gold"]])
+					me()["cell"], nearby.map(func(cell: Vector2i) -> String: return "%s=%s" % [cell, game.client.ground_view[cell]]), me()["gold"]])
 				flags["loot_done"] = true
 			return
 		report("ok", "duel complete")
@@ -629,7 +629,7 @@ func _duel() -> void:
 			report("ok", "the Warrior shows a white skull")
 			shot("white-skull", "The attacking Warrior wears a white skull")
 		if flags.get("skull_seen", false) and not flags.get("defended", false):
-			if game.own_target() != partner():
+			if game.client.own_target() != partner():
 				if throttle(0.5):
 					game.target_local(partner())
 				return
@@ -651,8 +651,8 @@ func _recover() -> void:
 	if nearest_monster(2) != 0:
 		fight(true, 2)
 		return
-	for cell: Vector2i in game.ground_view:
-		var stack: Array = game.ground_view[cell]
+	for cell: Vector2i in game.client.ground_view:
+		var stack: Array = game.client.ground_view[cell]
 		# Own belongings are gold and gear; monster materials from earlier kills stay behind.
 		if Combat.distance(cell, corpse) <= Combat.SPILL_RADIUS and not stack.is_empty() \
 				and not World.ITEMS.get(World.kind_of(stack[-1]), {}).has("value"):

@@ -70,7 +70,7 @@ func toggle() -> void:
 func refresh() -> void:
 	if not visible:
 		return
-	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
 	var vocation: String = state.get("vocation", game.selected_vocation())
 	var level: int = state.get("level", 1)
 	var equipment: Dictionary = state.get("equipment", {})

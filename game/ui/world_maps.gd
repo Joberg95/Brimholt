@@ -607,13 +607,13 @@ func _draw_markers(canvas: Control, origin: Vector2, scale: float, area: Rect2, 
 		var at: Vector2 = _marker_at(Vector2(World.TOWNSFOLK[id]["cell"]), origin, scale, folded)
 		if area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2(2, 2), Vector2(4, 4)), TOWNSFOLK_COLORS[World.TOWNSFOLK[id]["role"]])
-	var actors: Dictionary = game.actors
+	var actors: Dictionary = game.client.actors
 	for id: int in actors:
 		var at: Vector2 = _marker_at(actors[id]["visual"], origin, scale, folded)
-		if id != game.self_id and area.has_point(at):
+		if id != game.client.self_id and area.has_point(at):
 			canvas.draw_rect(Rect2(at - Vector2.ONE * 1.5, Vector2.ONE * 3.0), Color.WHITE)
-	if actors.has(game.self_id):
-		var me: Dictionary = actors[game.self_id]
+	if actors.has(game.client.self_id):
+		var me: Dictionary = actors[game.client.self_id]
 		var at: Vector2 = _marker_at(me["visual"], origin, scale, folded)
 		if area.has_point(at):
 			_draw_self(canvas, at, Vector2(me["state"].get("facing", Vector2i.DOWN)), 6.0 if canvas == world_map else 5.0)
@@ -635,9 +635,9 @@ func _draw_self(canvas: Control, at: Vector2, facing: Vector2, size: float) -> v
 ## Gold rings where your tasks send you (World.task_targets); on the minimap, an arrow at its
 ## edge toward the nearest place for your first task when none of them is on it.
 func _draw_guidance(canvas: Control, origin: Vector2, scale: float, area: Rect2) -> void:
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		return
-	var state: Dictionary = game.actors[game.self_id]["state"]
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var tasks: Array = state.get("tasks", {}).keys()
 	tasks.sort()
 	var radius: float = maxf(4.0, 2.5 * scale)
@@ -795,9 +795,9 @@ func _draw_other_floor(origin: Vector2, scale: float, shown: Rect2, font: Font) 
 
 ## Gold "!" and "?" over quest givers that have something for you (World.quest_mark).
 func _draw_quest_marks(origin: Vector2, scale: float, area: Rect2) -> void:
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		return
-	var state: Dictionary = game.actors[game.self_id]["state"]
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 	var font: Font = ThemeDB.fallback_font
 	for id: String in World.QUEST_GIVERS:
 		var mark: String = World.quest_mark(id, state)

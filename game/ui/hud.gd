@@ -128,11 +128,11 @@ func refresh() -> void:
 
 ## Your target's title, danger-coloured like its nameplate, and its health; {} without a target.
 func target_info() -> Dictionary:
-	var view: Dictionary = game.creature_view(game.own_target())
+	var view: Dictionary = game.client.creature_view(game.client.own_target())
 	if view.is_empty() or not view.has("state") or not view["state"].has("health"):
 		return {}
 	var state: Dictionary = view["state"]
-	var own_level: int = game.actors[game.self_id]["state"].get("level", 1) if game.actors.has(game.self_id) else 1
+	var own_level: int = game.client.actors[game.client.self_id]["state"].get("level", 1) if game.client.actors.has(game.client.self_id) else 1
 	var title: String
 	if state.has("kind"):
 		title = Monsters.title(state["kind"], state.get("level", 1), state.get("enraged", false))
@@ -177,8 +177,8 @@ func update_labels() -> void:
 
 
 func _draw_vitals() -> void:
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
+	var actors: Dictionary = game.client.actors
+	var self_id: int = game.client.self_id
 	if not actors.has(self_id) or not actors[self_id]["state"].has("mana"):
 		return
 	var state: Dictionary = actors[self_id]["state"]
@@ -197,13 +197,13 @@ func _draw_vitals() -> void:
 
 ## The location line under the minimap, and "Entering ..." when you cross into a new region.
 func _update_location() -> void:
-	var actors: Dictionary = game.actors
-	if not actors.has(game.self_id):
+	var actors: Dictionary = game.client.actors
+	if not actors.has(game.client.self_id):
 		location_label.text = ""
 		return
-	var state: Dictionary = actors[game.self_id]["state"]
+	var state: Dictionary = actors[game.client.self_id]["state"]
 	var place: Dictionary = World.location_at(state["cell"])
-	var rest: String = _rest_text(state, actors[game.self_id]) if place.get("kind", "") == "town" else ""
+	var rest: String = _rest_text(state, actors[game.client.self_id]) if place.get("kind", "") == "town" else ""
 	var key: String = "%s|%d|%s" % [place.get("name", ""), state.get("level", 1), rest]
 	if key == _location_key:
 		return
@@ -256,8 +256,8 @@ func _rest_text(state: Dictionary, view: Dictionary) -> String:
 
 
 func _update_zone() -> void:
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
+	var actors: Dictionary = game.client.actors
+	var self_id: int = game.client.self_id
 	_update_location()
 	var zone: Dictionary = World.zone_at(actors[self_id]["state"]["cell"]) if actors.has(self_id) else {}
 	var zone_name: String = zone.get("name", "")

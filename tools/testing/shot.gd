@@ -45,22 +45,22 @@ func _run() -> void:
 			continue
 		if argument == "buffs":
 			# A meal and a slow on you, to look at the buff bar.
-			var fed: Dictionary = game.world.players[game.self_id]
+			var fed: Dictionary = game.world.players[game.client.self_id]
 			var food: String = World.ITEMS.keys().filter(func(kind: String) -> bool: return World.ITEMS[kind].has("eat"))[0]
 			fed["fed"] = {"kind": food, "until": game._now() + 600.0}
 			fed["slowed_until"] = game._now() + 30.0
 			continue
 		if argument.begins_with("level="):
-			var me: Dictionary = game.world.players[game.self_id]
+			var me: Dictionary = game.world.players[game.client.self_id]
 			me["level"] = argument.get_slice("=", 1).to_int()
-			me["health"] = game.world.player_stats(game.self_id)["health"]
+			me["health"] = game.world.player_stats(game.client.self_id)["health"]
 			continue
 		var parts: PackedStringArray = argument.split(",")
 		var cell := Vector2i(parts[0].to_int(), parts[1].to_int())
-		var player: Dictionary = game.world.players[game.self_id]
+		var player: Dictionary = game.world.players[game.client.self_id]
 		player["cell"] = cell
 		player["from"] = cell
-		game._publish_actor(game.self_id)
+		game._publish_actor(game.client.self_id)
 		await create_timer(1.2).timeout
 		await RenderingServer.frame_post_draw
 		screen.get_texture().get_image().save_png("res://.tools/shot-%d-%d.png" % [cell.x, cell.y])

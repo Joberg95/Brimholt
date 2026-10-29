@@ -42,7 +42,7 @@ func _init() -> void:
 
 ## Per frame: rebuild when your tasks or progress change.
 func refresh() -> void:
-	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
 	var tasks: Dictionary = state.get("tasks", {})
 	var next: String = World.next_task(state) if not state.is_empty() else ""
 	# An Adventurer past the trial has one thing left to do: choose a class.

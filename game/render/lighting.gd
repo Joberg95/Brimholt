@@ -115,8 +115,8 @@ func _process(delta: float) -> void:
 	var time: float = Time.get_ticks_msec() / 1000.0
 	if darkness > 0.01:
 		# Only a held torch lights a player: without one they stand in the dark like everyone else.
-		for id: int in game.actors:
-			var actor: Dictionary = game.actors[id]
+		for id: int in game.client.actors:
+			var actor: Dictionary = game.client.actors[id]
 			if area.has_point(Vector2i(actor["visual"])) and holds_torch(actor["state"]["equipment"]):
 				var flicker: float = 0.92 + 0.08 * sin(time * 8.0 + id) * sin(time * 4.7)
 				_light(_centre(actor["visual"]) - Vector2(0, 10), TORCH_GLOW, TORCH_TILES * flicker, 1.2 * darkness, "torch%d" % id)
@@ -134,24 +134,24 @@ func _process(delta: float) -> void:
 		var stone: Dictionary = World.FERRYMEN[id]
 		if stone["vehicle"] in ["waystone", "gate"] and area.has_point(stone["cell"]):
 			_light(_centre(Vector2(stone["cell"])) - Vector2(0, 12), WAYSTONE_GLOW, 2.0, 0.8 * tint)
-	for id: int in game.actors:
-		var actor: Dictionary = game.actors[id]
+	for id: int in game.client.actors:
+		var actor: Dictionary = game.client.actors[id]
 		var glow: Variant = _glow_color(actor["state"]["equipment"])
 		if glow != null and area.has_point(Vector2i(actor["visual"])):
 			_light(_centre(actor["visual"]), glow, GLOW_TILES, 0.9 * tint)
-	for id: int in game.monsters_in(area):
-		var monster: Dictionary = game.monsters[id]
+	for id: int in game.client.monsters_in(area):
+		var monster: Dictionary = game.client.monsters[id]
 		var definition: Dictionary = Monsters.MONSTERS.get(monster["state"]["kind"], {})
 		var glow: Variant = definition.get("glow", null)
 		if glow != null and area.has_point(Vector2i(monster["visual"])):
 			_light(_centre(monster["visual"]), glow, GLOW_TILES * definition.get("size", 1.0), 1.0 * tint)
-	for cell: Vector2i in game.ground_in(area):
-		var stack: Array = game.ground_view[cell]
+	for cell: Vector2i in game.client.ground_in(area):
+		var stack: Array = game.client.ground_view[cell]
 		if area.has_point(cell) and not stack.is_empty() and World.bound(stack.back()):
 			_light(_centre(Vector2(cell)), World.ITEMS[World.kind_of(stack.back())]["glow"], 2.0, 0.8 * tint)
 	# Spells light their surroundings briefly, by day too.
-	for index: int in game.effects.size():
-		var effect: Dictionary = game.effects[index]
+	for index: int in game.client.effects.size():
+		var effect: Dictionary = game.client.effects[index]
 		var age: float = time - effect["born"]
 		if effect["kind"] == "missile" and age < 0.3:
 			var at: Vector2 = effect["from"].lerp(effect["to"], clampf(age / 0.25, 0.0, 1.0))

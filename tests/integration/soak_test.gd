@@ -114,7 +114,7 @@ func _sample() -> Dictionary:
 		"monsters": game.world.monsters.size(),
 		"lights": view.lighting._pool.size(),
 		"particles": view.fx.get_child_count(),
-		"effects": game.effects.size(),
+		"effects": game.client.effects.size(),
 		"chunks": view.floor_layer._chunks.size(),
 	}
 

@@ -53,7 +53,7 @@ func _run() -> void:
 	if not game.connected:
 		quit(1)
 		return
-	var me: Dictionary = game.world.players[game.self_id]
+	var me: Dictionary = game.world.players[game.client.self_id]
 	me["level"] = 20
 	await _scene("town")
 	_place(_camp_of("star_mage"))
@@ -114,10 +114,10 @@ func _camp_of(monster: String) -> Vector2i:
 
 ## Puts you (and so your companions) beside `cell`.
 func _place(cell: Vector2i) -> void:
-	var me: Dictionary = game.world.players[game.self_id]
+	var me: Dictionary = game.world.players[game.client.self_id]
 	for offset: Vector2i in [Vector2i(0, 3), Vector2i(3, 0), Vector2i(0, -3), Vector2i(-3, 0)]:
 		if World.walkable(cell + offset):
 			me["cell"] = cell + offset
 			me["from"] = me["cell"]
 			break
-	game._publish_actor(game.self_id)
+	game._publish_actor(game.client.self_id)

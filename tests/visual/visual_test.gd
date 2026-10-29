@@ -76,7 +76,7 @@ func _run() -> void:
 		return
 	# Remove the map's monsters so pixel checks are deterministic; combat is checked at the end.
 	game.world.monsters.clear()
-	game.monsters.clear()
+	game.client.monsters.clear()
 	game.combat.respawns.clear()
 	var directions: Array[Vector2i] = [
 		Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT,
@@ -96,10 +96,10 @@ func _run() -> void:
 				return
 		game._apply_actor(game.world.export_player(id, 10.0, id == 1))
 	game.world.ground[TEST_ITEM_CELL] = ["iron_coif"]
-	game._apply_ground(TEST_ITEM_CELL, ["iron_coif"])
+	game.client.put_ground(TEST_ITEM_CELL, ["iron_coif"])
 	await process_frame
 	await RenderingServer.frame_post_draw
-	if not _expect(_centred(Vector2(5, 6)), "Camera is not centred on the local character (at %s, visual %s, focus %s)" % [game.world.players[1]["cell"], game.actors[1]["visual"], game.camera_focus()]):
+	if not _expect(_centred(Vector2(5, 6)), "Camera is not centred on the local character (at %s, visual %s, focus %s)" % [game.world.players[1]["cell"], game.client.actors[1]["visual"], game.camera_focus()]):
 		return
 	var image: Image = screen.get_texture().get_image()
 	if image == null or image.is_empty():
@@ -144,7 +144,7 @@ func _run() -> void:
 	var camera_start: float = game._world_view.position.x
 	game.move_local(Vector2i.RIGHT)
 	await create_timer(World.MOVE_SECONDS / 2.0).timeout
-	var midpoint: float = game.actors[1]["visual"].x
+	var midpoint: float = game.client.actors[1]["visual"].x
 	if midpoint <= 5.0 or midpoint >= 6.0:
 		push_error("Movement did not interpolate between approved tiles")
 		quit(1)
@@ -155,7 +155,7 @@ func _run() -> void:
 		return
 	await create_timer(World.MOVE_SECONDS).timeout
 	await process_frame
-	if not game.actors[1]["visual"].is_equal_approx(Vector2(6, 6)):
+	if not game.client.actors[1]["visual"].is_equal_approx(Vector2(6, 6)):
 		push_error("Movement interpolation missed its endpoint")
 		quit(1)
 		return
@@ -296,7 +296,7 @@ func _check_mouse_inventory() -> bool:
 	await create_timer(World.ITEM_SECONDS + 0.05).timeout
 	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, true)
 	await _push_mouse(slot_center, MOUSE_BUTTON_RIGHT, false)
-	if not _expect(player["equipment"].get("helmet", "") == "ringmail_coif" and game.actors[1]["state"]["backpack"][0] == "",
+	if not _expect(player["equipment"].get("helmet", "") == "ringmail_coif" and game.client.actors[1]["state"]["backpack"][0] == "",
 			"Right-clicking the backpack item did not equip it"):
 		return false
 	await process_frame
@@ -747,7 +747,7 @@ func _check_combat() -> bool:
 	var target_cell: Vector2i = game.world.monsters[spawned[0]]["cell"]
 	await _push_mouse(_tile_center(target_cell), MOUSE_BUTTON_LEFT, true)
 	await _push_mouse(_tile_center(target_cell), MOUSE_BUTTON_LEFT, false)
-	if not _expect(player["target"] == spawned[0] and game.own_target() == spawned[0], "Left-clicking a monster did not lock it"):
+	if not _expect(player["target"] == spawned[0] and game.client.own_target() == spawned[0], "Left-clicking a monster did not lock it"):
 		return false
 	await create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
@@ -766,12 +766,12 @@ func _check_combat() -> bool:
 	if not _expect(image.get_pixelv(Vector2i(edge)).is_equal_approx(WorldOverlay.TARGET_COLOR), "The target square is not drawn"):
 		return false
 	var hit: bool = false
-	for effect: Dictionary in game.effects:
+	for effect: Dictionary in game.client.effects:
 		hit = hit or effect["kind"] == "text"
 	if not _expect(hit and game.world.monsters[spawned[0]]["health"] < 1000, "The locked monster was not attacked"):
 		return false
 	# The weapon swings: the drawn character changes between the wind-up and the strike, toward the target.
-	var me: Dictionary = game.actors[1]
+	var me: Dictionary = game.client.actors[1]
 	var centre: Vector2 = game.map_to_screen((me["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE)
 	var body := Rect2i(Vector2i(centre) - Vector2i(48, 72), Vector2i(96, 104))
 	var frames: Array[Image] = []
@@ -796,7 +796,7 @@ func _check_combat() -> bool:
 ## glow layer lights relic gear, a relic on the ground, and two bosses.
 func _check_relics() -> bool:
 	game.world.monsters.clear()
-	game.monsters.clear()
+	game.client.monsters.clear()
 	var player: Dictionary = game.world.players[1]
 	var keeper: Vector2i = World.QUEST_GIVERS["relic_keeper"]["cell"]
 	var beside: Vector2i = keeper + Vector2i.DOWN
@@ -861,7 +861,7 @@ func _check_relics() -> bool:
 		return false
 	var relic_cell: Vector2i = free[0]
 	game.world.ground[relic_cell] = ["abyssal_ward"]
-	game._apply_ground(relic_cell, ["abyssal_ward"])
+	game.client.put_ground(relic_cell, ["abyssal_ward"])
 	var bosses: Array[int] = []
 	for kind: String in ["morvain", "kharzul"]:
 		var events: Array = []
@@ -898,9 +898,9 @@ func _check_relics() -> bool:
 ## King's room in the private cellar copy and the cave-rock Highmoor mine.
 func _check_dungeons() -> bool:
 	game.world.monsters.clear()
-	game.monsters.clear()
+	game.client.monsters.clear()
 	game.world.ground.clear()
-	game.ground_view.clear()
+	game.client.ground_view.clear()
 	var player: Dictionary = game.world.players[1]
 	# Every dungeon's stairway from the overworld, as you find it: one hole per entrance.
 	for dungeon: String in World.ENTRANCE_OF:
@@ -929,8 +929,8 @@ func _check_dungeons() -> bool:
 	await create_timer(0.3).timeout
 	var place: Array = World.dungeon_at(player["cell"])
 	if not _expect(place.size() == 2 and place[0] == "cinder_cellar" and game.last_action_message.contains("Cinder cellar")
-			and game.monsters.size() > 3, "The cellar stairway did not open a copy with rats: %s %s '%s' %d" % [
-				player["cell"], place, game.last_action_message, game.monsters.size()]):
+			and game.client.monsters.size() > 3, "The cellar stairway did not open a copy with rats: %s %s '%s' %d" % [
+				player["cell"], place, game.last_action_message, game.client.monsters.size()]):
 		return false
 	var king: Vector2i = Dungeons.origin("cinder_cellar", place[1]) + Dungeons.cells("cinder_cellar", "K")[0]
 	for id: int in game.world.monsters:
@@ -944,7 +944,7 @@ func _check_dungeons() -> bool:
 	await RenderingServer.frame_post_draw
 	var cellar: Image = screen.get_texture().get_image()
 	cellar.save_png("res://.tools/visual-cellar.png")
-	var king_seen: bool = game.monsters.values().any(func(monster: Dictionary) -> bool: return monster["state"]["kind"] == "rat_king")
+	var king_seen: bool = game.client.monsters.values().any(func(monster: Dictionary) -> bool: return monster["state"]["kind"] == "rat_king")
 	if not _expect(king_seen and game._zone_label.text.contains("Cinder cellar") and not game._zone_label.visible,
 			"The Rat King's copy is not drawn, or a dungeon shows the zone banner"):
 		return false
@@ -1019,8 +1019,8 @@ func _check_town_lamps() -> bool:
 	# The ground on screen farthest from every light: lamps, lantern-carrying NPCs, and characters
 	# (held torches and glowing gear light the ground around them too).
 	var lights: Array = World.LAMPS + World.NPC_CELLS.keys()
-	for id: int in game.actors:
-		lights.append(Vector2i(game.actors[id]["visual"].round()))
+	for id: int in game.client.actors:
+		lights.append(Vector2i(game.client.actors[id]["visual"].round()))
 	var far: Vector2i = lamp
 	var darkest: int = 0
 	var visible_area := Rect2(Vector2(40, 120), Vector2(night.get_size()) - Vector2(80, 240))
@@ -1068,7 +1068,7 @@ func _check_rune_bar() -> bool:
 		if clear:
 			field = spawn["cell"]
 	game.world.monsters.clear()
-	game.monsters.clear()
+	game.client.monsters.clear()
 	player["cell"] = field + Vector2i(-3, 0)
 	player["from"] = player["cell"]
 	player["level"] = 50
@@ -1092,7 +1092,7 @@ func _check_rune_bar() -> bool:
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-rune.png")
 	var burned: int = pack.filter(func(id: int) -> bool: return game.world.monsters[id]["health"] < 100000).size()
-	var shown: bool = game.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "fire")
+	var shown: bool = game.client.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "fire")
 	if not _expect(player["backpack"][0] == "fire_rune#2" and burned == pack.size() and shown,
 			"The action bar's fire rune did not burn the pack (%s, %d burned)" % [player["backpack"][0], burned]):
 		return false
@@ -1115,8 +1115,8 @@ func _check_rune_bar() -> bool:
 	var ice: Vector2i = player["cell"] + Vector2i(2, 0)
 	var at: Vector2 = game.map_to_screen((Vector2(ice) + Vector2(0.5, 0.3)) * World.TILE_SIZE)
 	var pixel: Color = walled.get_pixelv(Vector2i(at))
-	var standing: bool = game.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "ice_wall")
-	var dark: bool = game.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "death")
+	var standing: bool = game.client.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "ice_wall")
+	var dark: bool = game.client.effects.any(func(effect: Dictionary) -> bool: return effect.get("element", "") == "death")
 	return _expect(game.world.walled(ice, game._now()) and standing and dark and pixel.b > pixel.r + 0.15,
 		"Glacier wall or sudden death did not show (walled %s, ice %s, death %s, pixel %s)" % [
 			game.world.walled(ice, game._now()), standing, dark, pixel])
@@ -1197,7 +1197,7 @@ func _check_spell_book() -> bool:
 	await RenderingServer.frame_post_draw
 	screen.get_texture().get_image().save_png("res://.tools/visual-spellbook.png")
 	var book: Control = game.spell_book
-	var vocation: String = game.actors[game.self_id]["state"]["vocation"]
+	var vocation: String = game.client.actors[game.client.self_id]["state"]["vocation"]
 	var text: PackedStringArray = []
 	_texts(book, text)
 	var listed: bool = Spells.for_vocation(vocation).all(func(spell: String) -> bool:
@@ -1290,7 +1290,7 @@ func _check_training_hall() -> bool:
 	become.pressed.emit()
 	await create_timer(0.3).timeout
 	var chosen: bool = player["vocation"] == "paladin" and player["backpack"].has("willow_shortbow") \
-		and game.actors[1]["state"]["vocation"] == "paladin"
+		and game.client.actors[1]["state"]["vocation"] == "paladin"
 	game.dialogs.close()
 	player["backpack"] = saved["backpack"]
 	player["done_tasks"] = saved["done"]
@@ -1337,7 +1337,7 @@ func _check_lexicon_and_marks() -> bool:
 	screen.get_texture().get_image().save_png("res://.tools/visual-quest-marks.png")
 	var listed: PackedStringArray = []
 	_texts(game.quest_list, listed)
-	var marked: String = World.quest_mark("harbourmaster_ilse", game.actors[1]["state"])
+	var marked: String = World.quest_mark("harbourmaster_ilse", game.client.actors[1]["state"])
 	player["level"] = saved["level"]
 	player["tasks"] = saved["tasks"]
 	player["done_tasks"] = saved["done"]
@@ -1389,7 +1389,7 @@ func _check_bots() -> bool:
 	var refused: String = game.spawn_bot("knight", 30, "dummy")
 	await create_timer(0.4).timeout
 	var ids: Array = game.bots.bots.keys()
-	var shown: bool = refused.is_empty() and ids.size() == 1 and game.actors.has(ids[0]) and game.actors[ids[0]]["state"].get("bot", false) \
+	var shown: bool = refused.is_empty() and ids.size() == 1 and game.client.actors.has(ids[0]) and game.client.actors[ids[0]]["state"].get("bot", false) \
 		and Combat.distance(game.world.players[ids[0]]["cell"], game.world.players[1]["cell"]) <= 2
 	game.remove_bot(ids[0] if not ids.is_empty() else 0)
 	await process_frame
@@ -1574,7 +1574,7 @@ func _check_loot_display() -> bool:
 
 func _check_weather_and_desert() -> bool:
 	game.world.monsters.clear()
-	game.monsters.clear()
+	game.client.monsters.clear()
 	var player: Dictionary = game.world.players[1]
 	player["cell"] = World.SPAWNS[0] + Vector2i(1, 2)
 	player["from"] = player["cell"]
@@ -1648,9 +1648,9 @@ func _brightness(image: Image, area: Rect2i) -> float:
 
 func _check_hollow_reach() -> bool:
 	game.world.monsters.clear()
-	game.monsters.clear()
+	game.client.monsters.clear()
 	game.world.ground.clear()
-	game.ground_view.clear()
+	game.client.ground_view.clear()
 	var player: Dictionary = game.world.players[1]
 	var zone: Dictionary = World.ZONES.filter(func(candidate: Dictionary) -> bool: return candidate["name"] == "The Hollow Reach")[0]
 	var gate: Vector2i = Vector2i(zone["rect"].position.x - 3, EndgameZone.GATE_Y)
@@ -1696,7 +1696,7 @@ func _check_hollow_reach() -> bool:
 ## one with it, unlit UI, and particle bursts for a hit and a spell.
 func _check_night_and_particles() -> bool:
 	game.world.monsters.clear()
-	game.monsters.clear()
+	game.client.monsters.clear()
 	var player: Dictionary = game.world.players[1]
 	player["cell"] = World.SPAWNS[0]
 	player["from"] = World.SPAWNS[0]

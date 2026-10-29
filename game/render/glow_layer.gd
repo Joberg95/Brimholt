@@ -26,14 +26,14 @@ func _draw() -> void:
 	var time: float = Time.get_ticks_msec() / 1000.0
 	var area: Rect2i = view.visible_cells()
 	var shown := Rect2(Vector2(area.position) * World.TILE_SIZE, Vector2(area.size) * World.TILE_SIZE)
-	for id: int in game.monsters_in(area):
-		var monster: Dictionary = game.monsters[id]
+	for id: int in game.client.monsters_in(area):
+		var monster: Dictionary = game.client.monsters[id]
 		var center: Vector2 = (monster["visual"] + Vector2(0.5, 0.5)) * World.TILE_SIZE
 		if shown.has_point(center) and SpriteArt.draw_monster_glow(self, center, SpriteArt.posed(monster, time), _stride(monster), _pulse(time, id)):
 			var definition: Dictionary = Monsters.MONSTERS[monster["state"]["kind"]]
 			_sparks(center, definition["glow"], time, id, definition["size"])
-	for cell: Vector2i in game.ground_in(area):
-		var stack: Array = game.ground_view[cell]
+	for cell: Vector2i in game.client.ground_in(area):
+		var stack: Array = game.client.ground_view[cell]
 		var center: Vector2 = (Vector2(cell) + Vector2(0.5, 0.5)) * World.TILE_SIZE
 		if area.has_point(cell) and not stack.is_empty() and not view.covered(cell) and SpriteArt.draw_item_glow(self, center, stack.back(), _pulse(time, cell.x * 31 + cell.y)):
 			_sparks(center + Vector2(0, 8), World.ITEMS[World.kind_of(stack.back())]["glow"], time, cell.x * 31 + cell.y, 0.6)

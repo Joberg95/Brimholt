@@ -102,7 +102,7 @@ func _build_bag_window(layer: CanvasLayer) -> void:
 
 ## Opens or closes the window of the bag in bag slot `bag` (nothing happens for an empty slot).
 func toggle_bag(bag: int) -> void:
-	if not game.actors.has(game.self_id) or String(game.actors[game.self_id]["state"].get("bags", ["", "", ""])[bag]).is_empty():
+	if not game.client.actors.has(game.client.self_id) or String(game.client.actors[game.client.self_id]["state"].get("bags", ["", "", ""])[bag]).is_empty():
 		return
 	bag_windows[bag].visible = not bag_windows[bag].visible
 	_place_bag_windows()
@@ -120,7 +120,7 @@ func _place_bag_windows() -> void:
 
 ## Per frame: rebuild bag windows when the layout changed, and keep their titles current.
 func refresh_bags() -> void:
-	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
 	var bags: Array = state.get("bags", ["", "", ""])
 	var layout: String = "%s|%s" % [World.main_size(state) if state.has("equipment") else 0, bags]
 	if layout != _bag_layout:
@@ -157,9 +157,9 @@ func slot_position(location: Dictionary) -> Vector2:
 
 ## Main backpack slots you can use: 8, plus your pack's slots (bags have their own windows).
 func capacity() -> int:
-	if not game.actors.has(game.self_id):
+	if not game.client.actors.has(game.client.self_id):
 		return World.BACKPACK_SIZE
-	return World.main_size(game.actors[game.self_id]["state"])
+	return World.main_size(game.client.actors[game.client.self_id]["state"])
 
 
 ## A main backpack slot beyond your pack's size (slots in bag windows are never locked).
@@ -170,7 +170,7 @@ func _locked(location: Dictionary, slot: Control = null) -> bool:
 ## Per frame: refresh a slot only when its item or your level or vocation changed (tooltips
 ## and requirement colours), and keep relic slots redrawing for their glow pulse.
 func redraw_slots() -> void:
-	var state: Dictionary = game.actors[game.self_id]["state"] if game.actors.has(game.self_id) else {}
+	var state: Dictionary = game.client.actors[game.client.self_id]["state"] if game.client.actors.has(game.client.self_id) else {}
 	var who: String = "%s/%s/%d" % [state.get("level", 0), state.get("vocation", ""), capacity()]
 	var stale: bool = false
 	for slot: Control in _slots:
@@ -227,8 +227,8 @@ func _build_stat_sheet(layer: CanvasLayer) -> void:
 
 ## The backpack count and the stat sheet, with gear bonuses over the base stats.
 func update_stats() -> void:
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
+	var actors: Dictionary = game.client.actors
+	var self_id: int = game.client.self_id
 	var carried: int = 0
 	if actors.has(self_id):
 		carried = capacity() - actors[self_id]["state"].get("backpack", []).slice(0, capacity()).count("")
@@ -269,8 +269,8 @@ func update_stats() -> void:
 
 ## Why the local player cannot use an item (level or vocation), or "".
 func requirement_for(kind: String) -> String:
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
+	var actors: Dictionary = game.client.actors
+	var self_id: int = game.client.self_id
 	if not actors.has(self_id):
 		return ""
 	var state: Dictionary = actors[self_id]["state"]
@@ -428,10 +428,10 @@ func make_slot(location: Dictionary) -> Control:
 ## client sees it, or "".
 func local_item(location: Dictionary) -> String:
 	if location["type"] == "ground":
-		var stack: Array = game.ground_view.get(location["cell"], [])
+		var stack: Array = game.client.ground_view.get(location["cell"], [])
 		return stack.back() if not stack.is_empty() else ""
-	var actors: Dictionary = game.actors
-	var self_id: int = game.self_id
+	var actors: Dictionary = game.client.actors
+	var self_id: int = game.client.self_id
 	if not actors.has(self_id):
 		return ""
 	var state: Dictionary = actors[self_id]["state"]
@@ -491,9 +491,9 @@ func _draw_slot(slot: Control, location: Dictionary) -> void:
 
 ## Seconds until you can drink another potion of `kind` (0 when ready or not a potion).
 func potion_cooldown(kind: String) -> float:
-	if not World.ITEMS.get(kind, {}).has("drink") or not game.actors.has(game.self_id):
+	if not World.ITEMS.get(kind, {}).has("drink") or not game.client.actors.has(game.client.self_id):
 		return 0.0
-	var view: Dictionary = game.actors[game.self_id]
+	var view: Dictionary = game.client.actors[game.client.self_id]
 	var left: float = view["state"].get("cooldowns", {}).get(Combat.potion_timer(kind), 0.0)
 	return maxf(0.0, left - (game._now() - view.get("received", game._now())))
 
@@ -518,8 +518,8 @@ func item_drop(at: Vector2, data: Variant, target: Dictionary, slot: Control = n
 	if not item_can_drop(at, data, target, slot):
 		return
 	var kind: String = World.kind_of(local_item(data["brimholt_item"]))
-	if target["type"] == "bag" and not World.is_bag(kind) and game.actors.has(game.self_id):
-		var state: Dictionary = game.actors[game.self_id]["state"]
+	if target["type"] == "bag" and not World.is_bag(kind) and game.client.actors.has(game.client.self_id):
+		var state: Dictionary = game.client.actors[game.client.self_id]["state"]
 		var region: Vector2i = World.bag_range(state, target["bag"])
 		var backpack: Array = state.get("backpack", [])
 		for index: int in range(region.x, region.x + region.y):
@@ -549,11 +549,11 @@ func slot_input(event: InputEvent, location: Dictionary) -> void:
 		game.move_item_local(location, {"type": "depot"})
 	elif World.ITEMS[kind].has("drink") or World.ITEMS[kind].has("eat"):
 		game.drink_local(location["index"])
-	elif World.is_bag(kind) and game.actors.has(game.self_id):
-		var bags: Array = game.actors[game.self_id]["state"].get("bags", ["", "", ""])
+	elif World.is_bag(kind) and game.client.actors.has(game.client.self_id):
+		var bags: Array = game.client.actors[game.client.self_id]["state"].get("bags", ["", "", ""])
 		if bags.has(""):
 			game.move_item_local(location, {"type": "bag", "bag": bags.find("")})
-	elif game.actors.has(game.self_id):
-		var slot: String = World.slot_for(kind, game.actors[game.self_id]["state"]["equipment"])
+	elif game.client.actors.has(game.client.self_id):
+		var slot: String = World.slot_for(kind, game.client.actors[game.client.self_id]["state"]["equipment"])
 		if not slot.is_empty():
 			game.move_item_local(location, {"type": "equipment", "slot": slot})
